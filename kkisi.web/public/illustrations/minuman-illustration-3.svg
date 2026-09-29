@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Teh kemasan">
+<title>Teh kemasan</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="65" y="14" width="30" height="15" rx="4" fill="#35975d"/><path d="M67 29h26v18l14 18v66q0 12-13 12H66q-13 0-13-12V65l14-18z" fill="#d9a965"/><rect x="54" y="73" width="52" height="42" rx="4" fill="#e7efcc"/><path d="M67 99q5-22 26-17-3 22-26 17z" fill="#438d52"/><path d="M70 98l17-11" fill="none" stroke="#eaf3d9"/></g>
+</svg>

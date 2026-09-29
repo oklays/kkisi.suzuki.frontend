@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; background:#F7F8FA; }
+    * { box-sizing:border-box; }
+  </style>
+  <script type="text/babel" src="./ios-frame.jsx"></script>
+  <script src="./image-slot.js"></script>
+</helmet>
+
+<div style="display:flex;gap:36px;align-items:flex-start;justify-content:center;padding:40px 24px;min-height:100vh;background:#F7F8FA">
+
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402,874" style="flex-shrink:0">
+    {{ phoneScreen }}
+  </x-import>
+
+  <div style="width:220px;display:flex;flex-direction:column;gap:10px;padding-top:6px">
+    <div style="font-weight:700;font-size:13px;color:#101828;margin-bottom:4px">Lompat ke Layar</div>
+    <sc-for list="{{ screenJumps }}" as="j" hint-placeholder-count="11">
+      <button onClick="{{ j.onClick }}" style="{{ j.style }}">{{ j.label }}</button>
+    </sc-for>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const BLUE = '#003399', BLUE_SOFT = '#E8F0FF', RED = '#E20A17', RED_SOFT = '#FDEBEC';
+const N0='#FFFFFF', N25='#FCFCFD', N50='#F7F8FA', N100='#EEF0F3', N200='#D9DDE3', N300='#C2C8D0', N500='#737B87', N700='#3E4652', N900='#101828';
+const SUCCESS='#16A34A', SUCCESS_SOFT='#EAF8EF', WARNING='#F59E0B', WARNING_SOFT='#FFF7E6', ERROR='#DC2626', ERROR_SOFT='#FDECEC', INFO='#2563EB', INFO_SOFT='#EAF1FF';
+
+function rp(n) { return 'Rp ' + n.toLocaleString('id-ID'); }
+
+const PRODUCTS = [
+  { id:1, name:'Minyak Goreng 2L', price:32000, stock:'Stok tersedia', cat:'Sembako' },
+  { id:2, name:'Air Mineral 600ml', price:4000, stock:'Stok tersedia', cat:'Minuman' },
+  { id:3, name:'Mie Goreng Instan (5pcs)', price:16500, stock:'Stok tersedia', cat:'Makanan' },
+  { id:4, name:'Kopi Sachet Renceng', price:12000, stock:'Sisa 18', cat:'Minuman' },
+  { id:5, name:'Gula Pasir 1kg', price:16000, stock:'Habis', cat:'Sembako' },
+  { id:6, name:'Sabun Cuci Piring', price:9500, stock:'Sisa 12', cat:'Rumah Tangga' },
+  { id:7, name:'Roti Tawar', price:14000, stock:'Stok tersedia', cat:'Makanan' },
+  { id:8, name:'Deterjen Bubuk 800g', price:18500, stock:'Stok tersedia', cat:'Rumah Tangga' },
+];
+
+const FOOD_ITEMS = [
+  { id:'f1', name:'Nasi Ayam Geprek', price:15000, desc:'Nasi, ayam geprek sambal, lalapan' },
+  { id:'f2', name:'Nasi Rendang', price:17000, desc:'Nasi putih, rendang daging, sayur' },
+  { id:'f3', name:'Mie Ayam Bakso', price:13000, desc:'Mie ayam, bakso, pangsit' },
+  { id:'f4', name:'Es Teh Manis', price:4000, desc:'Teh manis dingin' },
+];
+
+const PPOB_SERVICES = [
+  { id:'pulsa', label:'Pulsa', color: BLUE, icon:'smartphone' },
+  { id:'data', label:'Paket Data', color: BLUE, icon:'wifi' },
+  { id:'listrik', label:'Token Listrik', color: WARNING, icon:'zap' },
+  { id:'tagihan', label:'Tagihan Listrik', color: WARNING, icon:'zap' },
+  { id:'pdam', label:'PDAM', color: INFO, icon:'droplet' },
+  { id:'bpjs', label:'BPJS', color: SUCCESS, icon:'shield' },
+  { id:'ewallet', label:'E-Wallet', color: RED, icon:'card' },
+  { id:'lainnya', label:'Lainnya', color: N500, icon:'grid' },
+];
+
+const HISTORY = [
+  { id:'h1', title:'Belanja — POS Konter', date:'22 Ags 2026, 12:14', amount:-47500, status:'Selesai', type:'Belanja' },
+  { id:'h2', title:'Token Listrik 100.000', date:'21 Ags 2026, 19:02', amount:-100000, status:'Selesai', type:'PPOB' },
+  { id:'h3', title:'Payroll Deduction — Juli', date:'31 Jul 2026, 09:00', amount:-186500, status:'Selesai', type:'Payroll Deduction' },
+  { id:'h4', title:'Nasi Ayam Geprek — Kantin', date:'20 Ags 2026, 12:32', amount:-15000, status:'Selesai', type:'Belanja' },
+  { id:'h5', title:'Top Up Wallet', date:'18 Ags 2026, 08:15', amount:150000, status:'Selesai', type:'Wallet' },
+  { id:'h6', title:'Pulsa Telkomsel 25rb', date:'15 Ags 2026, 21:40', amount:-25000, status:'Gagal', type:'PPOB' },
+];
+
+const SIMPANAN = { pokok: 500000, wajib: 1200000, sukarela: 850000 };
+const PINJAMAN_AKTIF = { plafon: 5000000, sisaPokok: 2100000, angsuranPerBulan: 350000, tenorBulan: 12, sisaTenor: 6, jatuhTempo: '5 Sep 2026' };
+const RIWAYAT_SIMPANAN = [
+  { title: 'Setoran Simpanan Sukarela', date: '20 Ags 2026', amount: 200000 },
+  { title: 'Simpanan Wajib — Agustus', date: '5 Ags 2026', amount: 100000 },
+  { title: 'Setoran Simpanan Sukarela', date: '12 Jul 2026', amount: 150000 },
+];
+const RIWAYAT_ANGSURAN = [
+  { title: 'Angsuran ke-6 dari 12', date: '5 Ags 2026', amount: -350000, status: 'Lunas' },
+  { title: 'Angsuran ke-5 dari 12', date: '5 Jul 2026', amount: -350000, status: 'Lunas' },
+  { title: 'Angsuran ke-4 dari 12', date: '5 Jun 2026', amount: -350000, status: 'Lunas' },
+];
+
+const NOTIFICATIONS = [
+  { title:'Pesanan dikonfirmasi', body:'Pesanan #ORD-2291 sedang diproses koperasi', time:'10 menit lalu', color: INFO },
+  { title:'Makanan siap diambil', body:'Nasi Ayam Geprek Anda sudah siap di kantin', time:'1 jam lalu', color: SUCCESS },
+  { title:'PPOB berhasil', body:'Token Listrik 100.000 berhasil diproses', time:'Kemarin', color: SUCCESS },
+  { title:'Potongan gaji tercatat', body:'Rp 186.500 akan dipotong dari gaji Juli', time:'3 hari lalu', color: WARNING },
+];
+
+const ICON_PATHS = {
+  home: 'M3 11l9-7 9 7M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9',
+  bag: 'M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 016 0v2',
+  ppob: 'M8 3h8a1 1 0 011 1v16a1 1 0 01-1 1H8a1 1 0 01-1-1V4a1 1 0 011-1zM11 18h2',
+  wallet: 'M3 7a2 2 0 012-2h13a1 1 0 011 1v3M3 7v11a2 2 0 002 2h14a2 2 0 002-2v-8a2 2 0 00-2-2H5a2 2 0 01-2-3z|M16 15h2',
+  user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
+  clock: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 7v5l3 3',
+  utensils: 'M6 2v8a2 2 0 002 2v10M6 2v8M9 2v8M18 2c-2 0-3 2-3 5v4a2 2 0 002 2h1v9',
+  smartphone: 'M7 2h10a1 1 0 011 1v18a1 1 0 01-1 1H7a1 1 0 01-1-1V3a1 1 0 011-1zM11 18h2',
+  wifi: 'M2 8.5a16 16 0 0120 0M5.5 12a11 11 0 0113 0M9 15.5a6 6 0 016 0M12 19h.01',
+  zap: 'M13 2L4 14h6l-1 8 9-12h-6l1-8z',
+  droplet: 'M12 2s7 8 7 13a7 7 0 01-14 0c0-5 7-13 7-13z',
+  shield: 'M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z',
+  card: 'M3 6h18a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V7a1 1 0 011-1z|M2 10h20',
+  grid: 'M4 4h6v6H4V4zM14 4h6v6h-6V4zM4 14h6v6H4v-6zM14 14h6v6h-6v-6z',
+  bell: 'M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9zM10 21a2 2 0 004 0',
+  chevronRight: 'M9 18l6-6-6-6',
+  chevronLeft: 'M15 18l-6-6 6-6',
+  piggy: 'M12 2a10 10 0 100 20 10 10 0 000-20z|M12 7v10|M9 9.5h3.5a1.75 1.75 0 010 3.5H9m0 0h4',
+  loan: 'M6 2h9l5 5v15a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z|M14 2v5h5|M8 13h8|M8 17h5',
+  plus: 'M12 5v14M5 12h14',
+};
+
+function Icon(name, { size = 20, color = 'currentColor', strokeWidth = 1.8 } = {}) {
+  const d = ICON_PATHS[name] || ICON_PATHS.grid;
+  const paths = d.split('|');
+  return React.createElement('svg', { width: size, height: size, viewBox: '0 0 24 24', fill: 'none' },
+    paths.map((p, i) => React.createElement('path', { key: i, d: p, stroke: color, strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round' }))
+  );
+}
+
+function ImgSlot(id, opts = {}) {
+  return React.createElement('image-slot', { id, placeholder: opts.placeholder || 'Drop gambar', shape: opts.shape || 'rect', style: { width: '100%', height: '100%', display: 'block', ...(opts.style || {}) } });
+}
+
+function Btn(label, onClick, opts={}) {
+  const base = { padding:'14px', borderRadius:12, border:'none', fontSize:14, fontWeight:600, cursor:'pointer', textAlign:'center', width:'100%' };
+  const variant = opts.variant === 'secondary'
+    ? { background:'#fff', color:BLUE, border:`1px solid ${BLUE}` }
+    : opts.variant === 'destructive'
+    ? { background: ERROR, color:'#fff' }
+    : { background:BLUE, color:'#fff' };
+  return React.createElement('button', { onClick, style:{...base, ...variant, ...(opts.style||{})} }, label);
+}
+
+class Component extends DCLogic {
+  state = {
+    screen: 'login',
+    empId: '', password: '',
+    tab: 'home',
+    shopSearch: '', shopCategory: 'Semua',
+    selectedProduct: null, detailQty: 1,
+    cart: [],
+    payMethod: 'Wallet',
+    checkoutDone: false,
+    foodCart: [],
+    ppobStage: 'grid', ppobService: null, ppobNumber: '', ppobAmount: null,
+    walletTab: 'wallet',
+    historyFilter: 'Semua',
+    profileTab: 'profile',
+    simpanPinjamTab: 'simpanan',
+    pinjamanStage: 'overview',
+    pinjamanNominal: 1000000,
+    pinjamanTenor: 6,
+    pinjamanTujuan: '',
+  };
+
+  go(screen) { this.setState({ screen }); }
+
+  renderVals() {
+    const s = this.state;
+    const cartCount = s.cart.reduce((n,c)=>n+c.qty,0);
+
+    const screenJumps = [
+      ['login','Login'], ['home','Home'], ['shop','Shop'], ['detail','Product Detail'],
+      ['cart','Cart'], ['checkout','Checkout'], ['food','Food Ordering'], ['ppob','PPOB'],
+      ['wallet','Wallet & Point'], ['history','Transaction History'], ['simpanpinjam','Simpan Pinjam'], ['profile','Profile & Notifikasi'],
+    ].map(([id,label]) => ({
+      label,
+      style: `text-align:left;padding:9px 11px;border-radius:10px;border:1px solid ${s.screen===id?BLUE:N200};background:${s.screen===id?BLUE_SOFT:'#fff'};color:${s.screen===id?BLUE:N700};font-size:12px;font-weight:600;cursor:pointer`,
+      onClick: () => this.go(id),
+    }));
+
+    return {
+      screenJumps,
+      phoneScreen: this.renderScreen(s, cartCount),
+    };
+  }
+
+  renderScreen(s, cartCount) {
+    const R = React.createElement;
+    const page = (children, opts={}) => R('div', { style:{ minHeight:'100%', background: opts.bg || N25, display:'flex', flexDirection:'column', paddingTop: opts.noTopPad ? 0 : 56 } }, children);
+
+    // ---------- LOGIN ----------
+    if (s.screen === 'login') {
+      return R(IOSDevice, { width:402, height:874 }, page([
+        R('div', { key:'body', style:{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 24px', gap:20 } }, [
+          R('div', { key:'logo', style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, marginBottom:12 } }, [
+            R('div', { key:'mark', style:{ width:64, height:64, borderRadius:18, background:'#fff', border:`1px solid ${N100}`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' } }, [
+              R('div', { key:'d', style:{ width:26, height:26, background:RED, transform:'rotate(45deg)', borderRadius:'4px 10px 4px 10px' } }),
+              R('div', { key:'dot', style:{ position:'absolute', width:6, height:6, background:'#fff', borderRadius:'50%' } }),
+            ]),
+            R('div', { key:'t', style:{ fontWeight:800, fontSize:19, color:N900, textAlign:'center' } }, ['KOPERASI ', R('span',{key:'s',style:{color:RED}},'SUZUKI'), ' MART']),
+            R('div', { key:'sub', style:{ fontSize:13, color:N500, textAlign:'center' } }, 'Masuk dengan akun karyawan Anda'),
+          ]),
+          R('div', { key:'f1', style:{ display:'flex', flexDirection:'column', gap:6 } }, [
+            R('label', { key:'l', style:{ fontSize:12, fontWeight:600, color:N700 } }, 'Employee ID'),
+            R('input', { key:'i', value:s.empId, onChange:e=>this.setState({empId:e.target.value}), placeholder:'Contoh: EMP-12345', style:{ height:48, borderRadius:12, border:`1px solid ${N200}`, padding:'0 14px', fontSize:15, fontFamily:'Inter,sans-serif' } }),
+          ]),
+          R('div', { key:'f2', style:{ display:'flex', flexDirection:'column', gap:6 } }, [
+            R('label', { key:'l', style:{ fontSize:12, fontWeight:600, color:N700 } }, 'Kata Sandi'),
+            R('input', { key:'i', type:'password', value:s.password, onChange:e=>this.setState({password:e.target.value}), placeholder:'••••••••', style:{ height:48, borderRadius:12, border:`1px solid ${N200}`, padding:'0 14px', fontSize:15, fontFamily:'Inter,sans-serif' } }),
+          ]),
+          R('div', { key:'fp', style:{ textAlign:'right', fontSize:12.5, color:BLUE, fontWeight:600, cursor:'pointer' } }, 'Lupa kata sandi?'),
+          Btn('Masuk', () => this.go('home'), { key:'btn' }),
+          R('div', { key:'note', style:{ fontSize:11.5, color:N500, textAlign:'center', marginTop:4 } }, 'Gunakan Employee ID perusahaan Suzuki Anda'),
+        ]),
+      ], { bg:'#fff', noTopPad:true }));
+    }
+
+    // ---------- HOME ----------
+    if (s.screen === 'home') {
+      return R(IOSDevice, { width:402, height:874 }, this.wrapTabs(s, R('div', { style:{ padding:'20px 16px 24px', display:'flex', flexDirection:'column', gap:20 } }, [
+        R('div', { key:'greet', style:{ display:'flex', justifyContent:'space-between', alignItems:'center' } }, [
+          R('div', { key:'g' }, [
+            R('div', { key:'a', style:{ fontSize:13, color:N500 } }, 'Selamat pagi 👋'),
+            R('div', { key:'b', style:{ fontSize:19, fontWeight:700, color:N900, marginTop:2 } }, 'Budi Santoso'),
+          ]),
+          R('div', { key:'avatar', style:{ width:40, height:40, borderRadius:'50%', background:BLUE_SOFT, color:BLUE, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 } }, 'BS'),
+        ]),
+        R('div', { key:'wallet', style:{ background:BLUE, borderRadius:16, padding:18, color:'#fff', display:'flex', flexDirection:'column', gap:10 } }, [
+          R('div', { key:'l', style:{ fontSize:12.5, color:'rgba(255,255,255,0.75)' } }, 'Saldo Koperasi'),
+          R('div', { key:'v', style:{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' } }, [
+            R('div', { key:'amt', style:{ fontSize:26, fontWeight:700 } }, 'Rp 250.000'),
+            R('button', { key:'top', onClick:()=>this.setState({tab:'wallet',screen:'wallet'}), style:{ background:'rgba(255,255,255,0.18)', border:'none', borderRadius:10, color:'#fff', fontSize:12.5, fontWeight:700, padding:'8px 14px', cursor:'pointer' } }, 'Top Up'),
+          ]),
+          R('div', { key:'pt', style:{ fontSize:11.5, color:'rgba(255,255,255,0.75)' } }, '1.240 Point tersedia'),
+        ]),
+        R('div', { key:'limit', style:{ background:'#fff', border:`1px solid ${N100}`, borderRadius:16, padding:14 } }, [
+          R('div', { key:'a', style:{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:8 } }, [
+            R('span', { key:'l', style:{ color:N500 } }, 'Belanja bulan ini'),
+            R('span', { key:'v', style:{ fontWeight:700, color:N900 } }, 'Rp 750.000 / 1.500.000'),
+          ]),
+          R('div', { key:'bar', style:{ height:8, background:N100, borderRadius:6 } }, R('div', { style:{ width:'50%', height:'100%', background:BLUE, borderRadius:6 } })),
+        ]),
+        R('button', { key:'sp', onClick:()=>this.go('simpanpinjam'), style:{ display:'flex', alignItems:'center', gap:12, background:'#fff', border:`1px solid ${N100}`, borderRadius:16, padding:14, cursor:'pointer', textAlign:'left' } }, [
+          R('div', { key:'ic', style:{ width:38, height:38, borderRadius:10, background:BLUE_SOFT, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 } }, Icon('piggy', { size:19, color:BLUE })),
+          R('div', { key:'t', style:{ flex:1 } }, [
+            R('div', { key:'a', style:{ fontSize:13, fontWeight:700, color:N900 } }, 'Simpan Pinjam Koperasi'),
+            R('div', { key:'b', style:{ fontSize:11.5, color:N500, marginTop:2 } }, 'Simpanan Rp 2.550.000 · Pinjaman aktif Rp 2.100.000'),
+          ]),
+          Icon('chevronRight', { size:16, color:N300 }),
+        ]),
+        R('div', { key:'qa', style:{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 } },
+          [['Belanja','shop',BLUE,'bag'],['PPOB','ppob',WARNING,'ppob'],['Kantin','food',SUCCESS,'utensils'],['Riwayat','history',N700,'clock']].map(([label,scr,c,icon]) =>
+            R('button', { key:label, onClick:()=>this.go(scr), style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:'12px 4px', cursor:'pointer' } }, [
+              R('div', { key:'d', style:{ width:34, height:34, borderRadius:10, background:c+'1A', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon(icon, { size:18, color:c })),
+              R('span', { key:'l', style:{ fontSize:11, fontWeight:600, color:N700 } }, label),
+            ])
+          )
+        ),
+        R('div', { key:'promo', style:{ background: RED_SOFT, border:`1px solid #F8C9CC`, borderRadius:16, padding:16, display:'flex', flexDirection:'column', gap:6 } }, [
+          R('div', { key:'t', style:{ fontSize:11, fontWeight:700, color:RED, textTransform:'uppercase', letterSpacing:0.4 } }, 'Promo Spesial'),
+          R('div', { key:'d', style:{ fontSize:14.5, fontWeight:700, color:N900 } }, 'Diskon hingga 20% produk sembako'),
+          R('button', { key:'b', onClick:()=>this.go('shop'), style:{ alignSelf:'flex-start', marginTop:4, background:RED, color:'#fff', border:'none', borderRadius:10, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer' } }, 'Belanja Sekarang'),
+        ]),
+        R('div', { key:'pending', style:{ background:INFO_SOFT, borderRadius:14, padding:'12px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' } }, [
+          R('div', { key:'t' }, [
+            R('div', { key:'a', style:{ fontSize:12.5, fontWeight:700, color:'#1E40AF' } }, '1 pesanan sedang diproses'),
+            R('div', { key:'b', style:{ fontSize:11, color:'#1E40AF' } }, 'Nasi Ayam Geprek — Kantin'),
+          ]),
+          R('button', { key:'btn', onClick:()=>this.go('food'), style:{ background:'none', border:'none', color:INFO, fontWeight:700, fontSize:12, cursor:'pointer' } }, 'Lihat'),
+        ]),
+        R('div', { key:'featTitle', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Produk Unggulan'),
+        R('div', { key:'feat', style:{ display:'flex', gap:10, overflowX:'auto' } }, PRODUCTS.slice(0,4).map(p =>
+          R('button', { key:p.id, onClick:()=>this.setState({selectedProduct:p, screen:'detail'}), style:{ flexShrink:0, width:120, textAlign:'left', background:'#fff', border:`1px solid ${N100}`, borderRadius:14, overflow:'hidden', cursor:'pointer', padding:0 } }, [
+            R('div', { key:'img', style:{ height:70 } }, ImgSlot('prod-img-'+p.id, { placeholder:p.name })),
+            R('div', { key:'info', style:{ padding:8 } }, [
+              R('div', { key:'n', style:{ fontSize:11.5, fontWeight:600, color:N900, lineHeight:1.3, minHeight:30 } }, p.name),
+              R('div', { key:'p', style:{ fontSize:12.5, fontWeight:700, color:BLUE, marginTop:4 } }, rp(p.price)),
+            ]),
+          ])
+        )),
+      ])));
+    }
+
+    // ---------- SHOP ----------
+    if (s.screen === 'shop') {
+      const cats = ['Semua','Sembako','Minuman','Makanan','Rumah Tangga'];
+      const list = PRODUCTS.filter(p => (s.shopCategory==='Semua'||p.cat===s.shopCategory) && p.name.toLowerCase().includes(s.shopSearch.toLowerCase()));
+      return R(IOSDevice, { width:402, height:874 }, this.wrapTabs(s, R('div', { style:{ padding:'16px 16px 24px', display:'flex', flexDirection:'column', gap:14 } }, [
+        R('div', { key:'title', style:{ fontSize:20, fontWeight:700, color:N900 } }, 'Belanja'),
+        R('input', { key:'search', value:s.shopSearch, onChange:e=>this.setState({shopSearch:e.target.value}), placeholder:'Cari produk...', style:{ height:44, borderRadius:12, border:`1px solid ${N200}`, padding:'0 14px', fontSize:14, fontFamily:'Inter,sans-serif' } }),
+        R('div', { key:'cats', style:{ display:'flex', gap:8, overflowX:'auto' } }, cats.map(c =>
+          R('button', { key:c, onClick:()=>this.setState({shopCategory:c}), style:{ flexShrink:0, padding:'8px 14px', borderRadius:999, border:`1px solid ${s.shopCategory===c?BLUE:N200}`, background:s.shopCategory===c?BLUE_SOFT:'#fff', color:s.shopCategory===c?BLUE:N700, fontSize:12.5, fontWeight:600, cursor:'pointer' } }, c)
+        )),
+        R('div', { key:'grid', style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 } }, list.map(p =>
+          R('button', { key:p.id, onClick:()=>this.setState({selectedProduct:p, detailQty:1, screen:'detail'}), style:{ textAlign:'left', background:'#fff', border:`1px solid ${N100}`, borderRadius:16, overflow:'hidden', cursor:'pointer', padding:0 } }, [
+            R('div', { key:'img', style:{ height:88 } }, ImgSlot('prod-img-'+p.id, { placeholder:p.name })),
+            R('div', { key:'info', style:{ padding:10 } }, [
+              R('div', { key:'n', style:{ fontSize:12.5, fontWeight:600, color:N900, lineHeight:1.3, minHeight:32 } }, p.name),
+              R('div', { key:'p', style:{ fontSize:14, fontWeight:700, color:BLUE, marginTop:6 } }, rp(p.price)),
+              R('div', { key:'s', style:{ fontSize:11, color: p.stock==='Habis'?ERROR:N500, marginTop:2 } }, p.stock),
+            ]),
+          ])
+        )),
+      ])));
+    }
+
+    // ---------- PRODUCT DETAIL ----------
+    if (s.screen === 'detail') {
+      const p = s.selectedProduct || PRODUCTS[0];
+      return R(IOSDevice, { width:402, height:874 }, page([
+        R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+          R('button', { key:'back', onClick:()=>this.go('shop'), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+          R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Detail Produk'),
+        ]),
+        R('div', { key:'img', style:{ height:200, margin:'0 16px', borderRadius:16, overflow:'hidden' } }, ImgSlot('prod-img-'+p.id, { placeholder:p.name })),
+        R('div', { key:'body', style:{ padding:'16px', display:'flex', flexDirection:'column', gap:12, flex:1 } }, [
+          R('div', { key:'name', style:{ fontSize:19, fontWeight:700, color:N900 } }, p.name),
+          R('div', { key:'price', style:{ fontSize:22, fontWeight:700, color:BLUE } }, rp(p.price)),
+          R('div', { key:'stock', style:{ display:'inline-flex', alignSelf:'flex-start', padding:'4px 10px', borderRadius:999, fontSize:11.5, fontWeight:700, background: p.stock==='Habis'?ERROR_SOFT:SUCCESS_SOFT, color: p.stock==='Habis'?ERROR:'#166534' } }, p.stock),
+          R('div', { key:'desc', style:{ fontSize:13.5, color:N700, lineHeight:1.6 } }, `${p.name} — produk koperasi kualitas terjamin, tersedia di Store & Main Warehouse. Cocok untuk kebutuhan harian karyawan.`),
+          R('div', { key:'qty', style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:8 } }, [
+            R('span', { key:'l', style:{ fontSize:13, fontWeight:600, color:N900 } }, 'Jumlah'),
+            R('div', { key:'stepper', style:{ display:'flex', alignItems:'center', gap:14 } }, [
+              R('button', { key:'-', onClick:()=>this.setState({detailQty:Math.max(1,s.detailQty-1)}), style:{ width:34, height:34, borderRadius:10, border:`1px solid ${N200}`, background:'#fff', fontSize:16, cursor:'pointer' } }, '−'),
+              R('span', { key:'v', style:{ fontSize:15, fontWeight:700, width:20, textAlign:'center' } }, s.detailQty),
+              R('button', { key:'+', onClick:()=>this.setState({detailQty:s.detailQty+1}), style:{ width:34, height:34, borderRadius:10, border:`1px solid ${N200}`, background:'#fff', fontSize:16, cursor:'pointer' } }, '+'),
+            ]),
+          ]),
+        ]),
+        R('div', { key:'cta', style:{ padding:16, borderTop:`1px solid ${N100}` } }, Btn(p.stock==='Habis' ? 'Stok Habis' : 'Tambah ke Keranjang', () => {
+          if (p.stock==='Habis') return;
+          const existing = s.cart.find(c=>c.id===p.id);
+          const cart = existing ? s.cart.map(c=>c.id===p.id?{...c,qty:c.qty+s.detailQty}:c) : [...s.cart,{id:p.id,name:p.name,price:p.price,qty:s.detailQty}];
+          this.setState({ cart, screen:'cart' });
+        }, { style: p.stock==='Habis' ? { background:N200, cursor:'not-allowed' } : {} })),
+      ]));
+    }
+
+    // ---------- CART ----------
+    if (s.screen === 'cart') {
+      const subtotal = s.cart.reduce((sum,c)=>sum+c.price*c.qty,0);
+      return R(IOSDevice, { width:402, height:874 }, page([
+        R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+          R('button', { key:'back', onClick:()=>this.go('shop'), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+          R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Keranjang'),
+        ]),
+        s.cart.length === 0
+          ? R('div', { key:'empty', style:{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:24 } }, [
+              R('div', { key:'icon', style:{ fontSize:40 } }, '🛒'),
+              R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Keranjang masih kosong'),
+              R('div', { key:'d', style:{ fontSize:13, color:N500, textAlign:'center' } }, 'Yuk cari kebutuhan harianmu di Koperasi Suzuki Mart'),
+              R('div', {key:'btnwrap', style:{width:'60%',marginTop:8}}, Btn('Mulai Belanja', ()=>this.go('shop'))),
+            ])
+          : R('div', { key:'list', style:{ flex:1, padding:'0 16px', display:'flex', flexDirection:'column', gap:10, overflowY:'auto' } }, s.cart.map(c =>
+              R('div', { key:c.id, style:{ display:'flex', alignItems:'center', gap:10, background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:12 } }, [
+                R('div', { key:'img', style:{ width:48, height:48, borderRadius:10, overflow:'hidden', flexShrink:0 } }, ImgSlot('prod-img-'+c.id, { placeholder:c.name })),
+                R('div', { key:'info', style:{ flex:1, minWidth:0 } }, [
+                  R('div', { key:'n', style:{ fontSize:13, fontWeight:600, color:N900, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' } }, c.name),
+                  R('div', { key:'p', style:{ fontSize:12, color:N500, marginTop:2 } }, rp(c.price)),
+                ]),
+                R('button', { key:'-', onClick:()=>this.setState({cart:s.cart.map(x=>x.id===c.id?{...x,qty:Math.max(1,x.qty-1)}:x)}), style:{ width:26, height:26, borderRadius:8, border:`1px solid ${N200}`, background:'#fff', cursor:'pointer' } }, '−'),
+                R('span', { key:'q', style:{ fontSize:13, fontWeight:600, width:16, textAlign:'center' } }, c.qty),
+                R('button', { key:'+', onClick:()=>this.setState({cart:s.cart.map(x=>x.id===c.id?{...x,qty:x.qty+1}:x)}), style:{ width:26, height:26, borderRadius:8, border:`1px solid ${N200}`, background:'#fff', cursor:'pointer' } }, '+'),
+              ])
+            )),
+        s.cart.length > 0 && R('div', { key:'summary', style:{ padding:16, borderTop:`1px solid ${N100}`, background:'#fff', display:'flex', flexDirection:'column', gap:8 } }, [
+          R('div', { key:'r1', style:{ display:'flex', justifyContent:'space-between', fontSize:13, color:N700 } }, [R('span',{key:'a'},'Subtotal'), R('span',{key:'b'},rp(subtotal))]),
+          R('div', { key:'r2', style:{ display:'flex', justifyContent:'space-between', fontSize:13, color:N700 } }, [R('span',{key:'a'},'Biaya Ambil di Koperasi'), R('span',{key:'b'},'Rp 0')]),
+          R('div', { key:'r3', style:{ display:'flex', justifyContent:'space-between', fontSize:17, fontWeight:700, color:N900, marginTop:4 } }, [R('span',{key:'a'},'Total'), R('span',{key:'b', style:{color:BLUE}},rp(subtotal))]),
+          R('div', { key:'btn', style:{marginTop:6} }, Btn('Checkout', ()=>this.setState({screen:'checkout', checkoutDone:false}))),
+        ]),
+      ]));
+    }
+
+    // ---------- CHECKOUT ----------
+    if (s.screen === 'checkout') {
+      const subtotal = s.cart.reduce((sum,c)=>sum+c.price*c.qty,0);
+      if (s.checkoutDone) {
+        return R(IOSDevice, { width:402, height:874 }, page([
+          R('div', { key:'c', style:{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24 } }, [
+            R('div', { key:'circle', style:{ width:72, height:72, borderRadius:'50%', background:SUCCESS_SOFT, display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, color:SUCCESS } }, '✓'),
+            R('div', { key:'t', style:{ fontSize:18, fontWeight:700, color:N900 } }, 'Pesanan Berhasil Dibuat'),
+            R('div', { key:'d', style:{ fontSize:13, color:N500, textAlign:'center' } }, `#ORD-${Math.floor(2000+Math.random()*900)} · ${rp(subtotal)} via ${s.payMethod}`),
+            R('div', { key:'btn', style:{width:'70%',marginTop:10} }, Btn('Kembali ke Beranda', ()=>this.setState({cart:[], screen:'home', tab:'home'}))),
+          ]),
+        ]));
+      }
+      return R(IOSDevice, { width:402, height:874 }, page([
+        R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+          R('button', { key:'back', onClick:()=>this.go('cart'), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+          R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Checkout'),
+        ]),
+        R('div', { key:'body', style:{ flex:1, padding:'0 16px', display:'flex', flexDirection:'column', gap:16, overflowY:'auto' } }, [
+          R('div', { key:'pickup' }, [
+            R('div', { key:'l', style:{ fontSize:12.5, fontWeight:700, color:N900, marginBottom:8 } }, 'Pengambilan'),
+            R('div', { key:'card', style:{ background:BLUE_SOFT, border:`1px solid #C7D9FF`, borderRadius:12, padding:12, fontSize:13, color:BLUE, fontWeight:600 } }, 'Ambil di Koperasi — Store Utama'),
+          ]),
+          R('div', { key:'pay' }, [
+            R('div', { key:'l', style:{ fontSize:12.5, fontWeight:700, color:N900, marginBottom:8 } }, 'Metode Pembayaran'),
+            R('div', { key:'opts', style:{ display:'flex', flexDirection:'column', gap:8 } }, ['Wallet','Payroll Deduction','QRIS','Cash di Konter'].map(m =>
+              R('button', { key:m, onClick:()=>this.setState({payMethod:m}), style:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 14px', borderRadius:12, border:`1px solid ${s.payMethod===m?BLUE:N200}`, background:s.payMethod===m?BLUE_SOFT:'#fff', cursor:'pointer' } }, [
+                R('span', { key:'l', style:{ fontSize:13.5, fontWeight:600, color:N900 } }, m),
+                R('span', { key:'r', style:{ width:18, height:18, borderRadius:'50%', border:`2px solid ${s.payMethod===m?BLUE:N300}`, background:s.payMethod===m?BLUE:'transparent' } }),
+              ])
+            )),
+          ]),
+          R('div', { key:'summary', style:{ background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:14, display:'flex', flexDirection:'column', gap:8 } }, [
+            R('div', { key:'t', style:{ fontSize:12.5, fontWeight:700, color:N900 } }, 'Ringkasan'),
+            R('div', { key:'r1', style:{ display:'flex', justifyContent:'space-between', fontSize:13, color:N700 } }, [R('span',{key:'a'},'Subtotal'), R('span',{key:'b'},rp(subtotal))]),
+            R('div', { key:'r2', style:{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:700, color:N900, paddingTop:6, borderTop:`1px dashed ${N200}` } }, [R('span',{key:'a'},'Total'), R('span',{key:'b',style:{color:BLUE}},rp(subtotal))]),
+          ]),
+          R('div', { key:'note', style:{ fontSize:11.5, color:N500 } }, s.payMethod==='Payroll Deduction' ? 'Akan dipotong dari gaji bulan berjalan. Limit tersisa Rp 750.000.' : 'Pastikan saldo/metode pembayaran mencukupi sebelum konfirmasi.'),
+        ]),
+        R('div', { key:'cta', style:{ padding:16, borderTop:`1px solid ${N100}` } }, Btn('Buat Pesanan', ()=>this.setState({checkoutDone:true}))),
+      ]));
+    }
+
+    // ---------- FOOD ORDERING ----------
+    if (s.screen === 'food') {
+      const foodSubtotal = s.foodCart.reduce((sum,c)=>sum+c.price*c.qty,0);
+      return R(IOSDevice, { width:402, height:874 }, this.wrapTabs(s, R('div', { style:{ padding:'16px 16px 24px', display:'flex', flexDirection:'column', gap:14 } }, [
+        R('div', { key:'title', style:{ fontSize:20, fontWeight:700, color:N900 } }, 'Kantin Koperasi'),
+        R('div', { key:'status', style:{ display:'flex', gap:6, flexWrap:'wrap' } }, ['Pending','Confirmed','Preparing','Ready','Completed'].map((st,i) =>
+          R('span', { key:st, style:{ fontSize:10.5, fontWeight:700, padding:'5px 10px', borderRadius:999, background: i===2?WARNING_SOFT:N100, color: i===2?'#92400E':N500 } }, st)
+        )),
+        R('div', { key:'list', style:{ display:'flex', flexDirection:'column', gap:10 } }, FOOD_ITEMS.map(f => {
+          const inCart = s.foodCart.find(c=>c.id===f.id);
+          return R('div', { key:f.id, style:{ display:'flex', gap:10, background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:12, alignItems:'center' } }, [
+            R('div', { key:'img', style:{ width:56, height:56, borderRadius:10, overflow:'hidden', flexShrink:0 } }, ImgSlot('food-img-'+f.id, { placeholder:f.name })),
+            R('div', { key:'info', style:{ flex:1, minWidth:0 } }, [
+              R('div', { key:'n', style:{ fontSize:13.5, fontWeight:700, color:N900 } }, f.name),
+              R('div', { key:'d', style:{ fontSize:11, color:N500, marginTop:2 } }, f.desc),
+              R('div', { key:'p', style:{ fontSize:13, fontWeight:700, color:BLUE, marginTop:4 } }, rp(f.price)),
+            ]),
+            inCart
+              ? R('div', { key:'stepper', style:{ display:'flex', alignItems:'center', gap:8 } }, [
+                  R('button', { key:'-', onClick:()=>this.setState({foodCart:s.foodCart.map(c=>c.id===f.id?{...c,qty:c.qty-1}:c).filter(c=>c.qty>0)}), style:{ width:26, height:26, borderRadius:8, border:`1px solid ${N200}`, background:'#fff', cursor:'pointer' } }, '−'),
+                  R('span', { key:'q', style:{ fontSize:13, fontWeight:700 } }, inCart.qty),
+                  R('button', { key:'+', onClick:()=>this.setState({foodCart:s.foodCart.map(c=>c.id===f.id?{...c,qty:c.qty+1}:c)}), style:{ width:26, height:26, borderRadius:8, border:`1px solid ${N200}`, background:'#fff', cursor:'pointer' } }, '+'),
+                ])
+              : R('button', { key:'add', onClick:()=>this.setState({foodCart:[...s.foodCart,{id:f.id,name:f.name,price:f.price,qty:1}]}), style:{ width:36, height:36, borderRadius:10, background:BLUE, color:'#fff', border:'none', fontSize:16, cursor:'pointer', flexShrink:0 } }, '+'),
+          ]);
+        })),
+        foodSubtotal > 0 && R('div', { key:'bar', style:{ position:'sticky', bottom:0, background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:12, display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8 } }, [
+          R('div', { key:'t' }, [
+            R('div', { key:'a', style:{ fontSize:11, color:N500 } }, `${s.foodCart.reduce((n,c)=>n+c.qty,0)} item`),
+            R('div', { key:'b', style:{ fontSize:15, fontWeight:700, color:N900 } }, rp(foodSubtotal)),
+          ]),
+          R('button', { key:'btn', onClick:()=>this.setState({cart:[...s.cart], checkoutDone:false, screen:'checkout'}), style:{ background:BLUE, color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', fontSize:13, fontWeight:700, cursor:'pointer' } }, 'Pesan Sekarang'),
+        ]),
+      ])));
+    }
+
+    // ---------- PPOB ----------
+    if (s.screen === 'ppob') {
+      if (s.ppobStage === 'success') {
+        return R(IOSDevice, { width:402, height:874 }, page([
+          R('div', { key:'c', style:{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24 } }, [
+            R('div', { key:'circle', style:{ width:72, height:72, borderRadius:'50%', background:SUCCESS_SOFT, display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, color:SUCCESS } }, '✓'),
+            R('div', { key:'t', style:{ fontSize:18, fontWeight:700, color:N900 } }, 'Transaksi Berhasil'),
+            R('div', { key:'d', style:{ fontSize:13, color:N500, textAlign:'center' } }, `${(s.ppobService||{}).label} · No. ${s.ppobNumber} · ${rp(s.ppobAmount||0)}`),
+            R('div', { key:'ref', style:{ fontSize:11.5, color:N300 } }, `Ref: PPOB-${Math.floor(100000+Math.random()*90000)}`),
+            R('div', { key:'btn', style:{width:'70%',marginTop:10} }, Btn('Selesai', ()=>this.setState({screen:'home', tab:'home', ppobStage:'grid', ppobNumber:'', ppobAmount:null}))),
+          ]),
+        ]));
+      }
+      if (s.ppobStage === 'confirm') {
+        return R(IOSDevice, { width:402, height:874 }, page([
+          R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+            R('button', { key:'back', onClick:()=>this.setState({ppobStage:'form'}), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+            R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Konfirmasi'),
+          ]),
+          R('div', { key:'body', style:{ flex:1, padding:16, display:'flex', flexDirection:'column', gap:14 } }, [
+            R('div', { key:'card', style:{ background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:14, display:'flex', flexDirection:'column', gap:8 } }, [
+              R('div', { key:'r1', style:{ display:'flex', justifyContent:'space-between', fontSize:13 } }, [R('span',{key:'a',style:{color:N500}},'Layanan'), R('span',{key:'b',style:{fontWeight:600}},s.ppobService.label)]),
+              R('div', { key:'r2', style:{ display:'flex', justifyContent:'space-between', fontSize:13 } }, [R('span',{key:'a',style:{color:N500}},'Nomor Pelanggan'), R('span',{key:'b',style:{fontWeight:600}},s.ppobNumber)]),
+              R('div', { key:'r3', style:{ display:'flex', justifyContent:'space-between', fontSize:16, fontWeight:700, paddingTop:8, borderTop:`1px dashed ${N200}` } }, [R('span',{key:'a'},'Total Bayar'), R('span',{key:'b',style:{color:BLUE}},rp(s.ppobAmount))]),
+            ]),
+            R('div', { key:'note', style:{ fontSize:11.5, color:N500 } }, 'Pastikan nomor pelanggan sudah benar sebelum melanjutkan pembayaran.'),
+          ]),
+          R('div', { key:'cta', style:{ padding:16, borderTop:`1px solid ${N100}` } }, Btn('Bayar Sekarang', ()=>this.setState({ppobStage:'success'}))),
+        ]));
+      }
+      if (s.ppobStage === 'form') {
+        const nominal = [20000,50000,100000,200000];
+        return R(IOSDevice, { width:402, height:874 }, page([
+          R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+            R('button', { key:'back', onClick:()=>this.setState({ppobStage:'grid'}), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+            R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, s.ppobService.label),
+          ]),
+          R('div', { key:'body', style:{ flex:1, padding:16, display:'flex', flexDirection:'column', gap:14 } }, [
+            R('div', { key:'f', style:{ display:'flex', flexDirection:'column', gap:6 } }, [
+              R('label', { key:'l', style:{ fontSize:12, fontWeight:600, color:N700 } }, 'Nomor Pelanggan'),
+              R('input', { key:'i', value:s.ppobNumber, onChange:e=>this.setState({ppobNumber:e.target.value}), placeholder:'Masukkan nomor', style:{ height:48, borderRadius:12, border:`1px solid ${N200}`, padding:'0 14px', fontSize:15, fontFamily:'Inter,sans-serif' } }),
+            ]),
+            R('div', { key:'nom' }, [
+              R('div', { key:'l', style:{ fontSize:12, fontWeight:600, color:N700, marginBottom:8 } }, 'Pilih Nominal'),
+              R('div', { key:'g', style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 } }, nominal.map(n =>
+                R('button', { key:n, onClick:()=>this.setState({ppobAmount:n}), style:{ padding:'12px', borderRadius:12, border:`1px solid ${s.ppobAmount===n?BLUE:N200}`, background:s.ppobAmount===n?BLUE_SOFT:'#fff', color:s.ppobAmount===n?BLUE:N900, fontWeight:700, fontSize:13.5, cursor:'pointer' } }, rp(n))
+              )),
+            ]),
+          ]),
+          R('div', { key:'cta', style:{ padding:16, borderTop:`1px solid ${N100}` } }, Btn('Lanjutkan', ()=>{ if(s.ppobNumber && s.ppobAmount) this.setState({ppobStage:'confirm'}); }, { style: (!s.ppobNumber||!s.ppobAmount) ? { background:N200, cursor:'not-allowed' } : {} })),
+        ]));
+      }
+      return R(IOSDevice, { width:402, height:874 }, this.wrapTabs(s, R('div', { style:{ padding:'16px 16px 24px', display:'flex', flexDirection:'column', gap:16 } }, [
+        R('div', { key:'title', style:{ fontSize:20, fontWeight:700, color:N900 } }, 'PPOB'),
+        R('div', { key:'bal', style:{ fontSize:12.5, color:N500 } }, 'Saldo Koperasi: Rp 250.000'),
+        R('div', { key:'grid', style:{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 } }, PPOB_SERVICES.map(sv =>
+          R('button', { key:sv.id, onClick:()=>this.setState({ppobStage:'form', ppobService:sv, ppobNumber:'', ppobAmount:null}), style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:'12px 4px', cursor:'pointer' } }, [
+            R('div', { key:'d', style:{ width:36, height:36, borderRadius:10, background:sv.color+'1A', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon(sv.icon, { size:17, color:sv.color })),
+            R('span', { key:'l', style:{ fontSize:10.5, fontWeight:600, color:N700, textAlign:'center' } }, sv.label),
+          ])
+        )),
+      ])));
+    }
+
+    // ---------- WALLET ----------
+    if (s.screen === 'wallet') {
+      const walletTx = HISTORY.filter(h => h.type==='Wallet' || h.type==='Belanja' || h.type==='PPOB').slice(0,4);
+      return R(IOSDevice, { width:402, height:874 }, this.wrapTabs(s, R('div', { style:{ padding:'16px 16px 24px', display:'flex', flexDirection:'column', gap:16 } }, [
+        R('div', { key:'title', style:{ fontSize:20, fontWeight:700, color:N900 } }, 'Wallet & Point'),
+        R('div', { key:'tabs', style:{ display:'flex', gap:6, background:N100, borderRadius:12, padding:4 } }, ['wallet','point'].map(t =>
+          R('button', { key:t, onClick:()=>this.setState({walletTab:t}), style:{ flex:1, padding:'8px', borderRadius:9, border:'none', background:s.walletTab===t?'#fff':'transparent', fontWeight:700, fontSize:12.5, color:s.walletTab===t?BLUE:N500, cursor:'pointer' } }, t==='wallet'?'Saldo Wallet':'Point')
+        )),
+        s.walletTab === 'wallet'
+          ? R('div', { key:'card', style:{ background:BLUE, borderRadius:16, padding:18, color:'#fff', display:'flex', flexDirection:'column', gap:12 } }, [
+              R('div', { key:'l', style:{ fontSize:12.5, color:'rgba(255,255,255,0.75)' } }, 'Saldo Koperasi'),
+              R('div', { key:'v', style:{ fontSize:28, fontWeight:700 } }, 'Rp 250.000'),
+              R('button', { key:'btn', style:{ alignSelf:'flex-start', background:'rgba(255,255,255,0.18)', border:'none', borderRadius:10, color:'#fff', fontSize:12.5, fontWeight:700, padding:'9px 16px', cursor:'pointer' } }, 'Top Up Saldo'),
+            ])
+          : R('div', { key:'card', style:{ background:WARNING, borderRadius:16, padding:18, color:'#fff', display:'flex', flexDirection:'column', gap:6 } }, [
+              R('div', { key:'l', style:{ fontSize:12.5, color:'rgba(255,255,255,0.85)' } }, 'Total Point'),
+              R('div', { key:'v', style:{ fontSize:28, fontWeight:700 } }, '1.240 pts'),
+              R('div', { key:'d', style:{ fontSize:11.5, color:'rgba(255,255,255,0.85)' } }, 'Setara ±Rp 124.000 potongan belanja'),
+            ]),
+        R('div', { key:'limit', style:{ background:'#fff', border:`1px solid ${N100}`, borderRadius:14, padding:14, fontSize:12.5, color:N700 } }, [
+          R('div', { key:'a', style:{fontWeight:700, marginBottom:4} }, 'Limit Payroll Deduction'),
+          R('div', { key:'b' }, 'Rp 750.000 tersisa dari Rp 1.500.000 bulan ini'),
+        ]),
+        R('div', { key:'hh', style:{ display:'flex', justifyContent:'space-between', alignItems:'center' } }, [
+          R('span', { key:'t', style:{ fontSize:14, fontWeight:700, color:N900 } }, 'Transaksi Terakhir'),
+          R('button', { key:'more', onClick:()=>this.go('history'), style:{ background:'none', border:'none', color:BLUE, fontSize:12.5, fontWeight:700, cursor:'pointer' } }, 'Lihat Semua'),
+        ]),
+        R('div', { key:'list', style:{ display:'flex', flexDirection:'column', gap:8 } }, walletTx.map(h =>
+          R('div', { key:h.id, style:{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', border:`1px solid ${N100}`, borderRadius:12, padding:12 } }, [
+            R('div', { key:'l' }, [
+              R('div', { key:'a', style:{ fontSize:13, fontWeight:600, color:N900 } }, h.title),
+              R('div', { key:'b', style:{ fontSize:11, color:N500, marginTop:2 } }, h.date),
+            ]),
+            R('span', { key:'amt', style:{ fontSize:13, fontWeight:700, color: h.amount>0?SUCCESS:ERROR } }, (h.amount>0?'+':'') + rp(h.amount)),
+          ])
+        )),
+      ])));
+    }
+
+    // ---------- SIMPAN PINJAM ----------
+    if (s.screen === 'simpanpinjam') {
+      if (s.pinjamanStage === 'success') {
+        return R(IOSDevice, { width:402, height:874 }, page([
+          R('div', { key:'c', style:{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24 } }, [
+            R('div', { key:'circle', style:{ width:72, height:72, borderRadius:'50%', background:SUCCESS_SOFT, display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, color:SUCCESS } }, '✓'),
+            R('div', { key:'t', style:{ fontSize:18, fontWeight:700, color:N900 } }, 'Pengajuan Pinjaman Terkirim'),
+            R('div', { key:'d', style:{ fontSize:13, color:N500, textAlign:'center' } }, `${rp(s.pinjamanNominal)} · Tenor ${s.pinjamanTenor} bulan`),
+            R('div', { key:'note', style:{ fontSize:11.5, color:N300, textAlign:'center' } }, 'Menunggu persetujuan Admin Koperasi & Supervisor'),
+            R('div', { key:'btn', style:{width:'70%',marginTop:10} }, Btn('Kembali', ()=>this.setState({screen:'simpanpinjam', pinjamanStage:'overview', simpanPinjamTab:'pinjaman'}))),
+          ]),
+        ]));
+      }
+      if (s.pinjamanStage === 'form') {
+        const nominalOpts = [1000000,2500000,5000000,10000000];
+        const tenorOpts = [3,6,12,24];
+        return R(IOSDevice, { width:402, height:874 }, page([
+          R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+            R('button', { key:'back', onClick:()=>this.setState({pinjamanStage:'overview'}), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+            R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Ajukan Pinjaman'),
+          ]),
+          R('div', { key:'body', style:{ flex:1, padding:16, display:'flex', flexDirection:'column', gap:16, overflowY:'auto' } }, [
+            R('div', { key:'nom' }, [
+              R('div', { key:'l', style:{ fontSize:12, fontWeight:600, color:N700, marginBottom:8 } }, 'Nominal Pinjaman'),
+              R('div', { key:'g', style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 } }, nominalOpts.map(n =>
+                R('button', { key:n, onClick:()=>this.setState({pinjamanNominal:n}), style:{ padding:'12px', borderRadius:12, border:`1px solid ${s.pinjamanNominal===n?BLUE:N200}`, background:s.pinjamanNominal===n?BLUE_SOFT:'#fff', color:s.pinjamanNominal===n?BLUE:N900, fontWeight:700, fontSize:13, cursor:'pointer' } }, rp(n))
+              )),
+            ]),
+            R('div', { key:'ten' }, [
+              R('div', { key:'l', style:{ fontSize:12, fontWeight:600, color:N700, marginBottom:8 } }, 'Tenor (bulan)'),
+              R('div', { key:'g', style:{ display:'flex', gap:8 } }, tenorOpts.map(t =>
+                R('button', { key:t, onClick:()=>this.setState({pinjamanTenor:t}), style:{ flex:1, padding:'10px', borderRadius:10, border:`1px solid ${s.pinjamanTenor===t?BLUE:N200}`, background:s.pinjamanTenor===t?BLUE_SOFT:'#fff', color:s.pinjamanTenor===t?BLUE:N900, fontWeight:700, fontSize:13, cursor:'pointer' } }, t)
+              )),
+            ]),
+            R('div', { key:'tuj', style:{ display:'flex', flexDirection:'column', gap:6 } }, [
+              R('label', { key:'l', style:{ fontSize:12, fontWeight:600, color:N700 } }, 'Tujuan Pinjaman'),
+              R('input', { key:'i', value:s.pinjamanTujuan, onChange:e=>this.setState({pinjamanTujuan:e.target.value}), placeholder:'Contoh: Kebutuhan pendidikan anak', style:{ height:48, borderRadius:12, border:`1px solid ${N200}`, padding:'0 14px', fontSize:14, fontFamily:'Inter,sans-serif' } }),
+            ]),
+            R('div', { key:'est', style:{ background:BLUE_SOFT, border:`1px solid #C7D9FF`, borderRadius:12, padding:12, fontSize:12.5, color:BLUE } }, `Estimasi angsuran ±${rp(Math.round(s.pinjamanNominal/s.pinjamanTenor))} /bulan`),
+          ]),
+          R('div', { key:'cta', style:{ padding:16, borderTop:`1px solid ${N100}` } }, Btn('Kirim Pengajuan', ()=>this.setState({pinjamanStage:'success'}))),
+        ]));
+      }
+      return R(IOSDevice, { width:402, height:874 }, page([
+        R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+          R('button', { key:'back', onClick:()=>this.go('home'), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+          R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Simpan Pinjam'),
+        ]),
+        R('div', { key:'tabs', style:{ display:'flex', gap:6, background:N100, borderRadius:12, padding:4, margin:'0 16px 4px' } }, ['simpanan','pinjaman'].map(t =>
+          R('button', { key:t, onClick:()=>this.setState({simpanPinjamTab:t}), style:{ flex:1, padding:'8px', borderRadius:9, border:'none', background:s.simpanPinjamTab===t?'#fff':'transparent', fontWeight:700, fontSize:12.5, color:s.simpanPinjamTab===t?BLUE:N500, cursor:'pointer' } }, t==='simpanan'?'Simpanan':'Pinjaman')
+        )),
+        R('div', { key:'body', style:{ flex:1, padding:16, display:'flex', flexDirection:'column', gap:14, overflowY:'auto' } },
+          s.simpanPinjamTab === 'simpanan' ? [
+            R('div', { key:'total', style:{ background:BLUE, borderRadius:16, padding:18, color:'#fff', display:'flex', flexDirection:'column', gap:6 } }, [
+              R('div', { key:'l', style:{ fontSize:12.5, color:'rgba(255,255,255,0.75)' } }, 'Total Simpanan'),
+              R('div', { key:'v', style:{ fontSize:26, fontWeight:700 } }, rp(SIMPANAN.pokok + SIMPANAN.wajib + SIMPANAN.sukarela)),
+            ]),
+            R('div', { key:'breakdown', style:{ display:'flex', flexDirection:'column', gap:8 } }, [
+              ['Simpanan Pokok', SIMPANAN.pokok], ['Simpanan Wajib', SIMPANAN.wajib], ['Simpanan Sukarela', SIMPANAN.sukarela],
+            ].map(([label,val]) => R('div', { key:label, style:{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', border:`1px solid ${N100}`, borderRadius:12, padding:'12px 14px' } }, [
+              R('span', { key:'l', style:{ fontSize:13, fontWeight:600, color:N900 } }, label),
+              R('span', { key:'v', style:{ fontSize:13, fontWeight:700, color:N700 } }, rp(val)),
+            ]))),
+            R('div', { key:'btn' }, Btn('Ajukan Setoran Sukarela', ()=>{})),
+            R('div', { key:'hh', style:{ fontSize:14, fontWeight:700, color:N900, marginTop:4 } }, 'Riwayat Setoran'),
+            R('div', { key:'list', style:{ display:'flex', flexDirection:'column', gap:8 } }, RIWAYAT_SIMPANAN.map((h,i) =>
+              R('div', { key:i, style:{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', border:`1px solid ${N100}`, borderRadius:12, padding:12 } }, [
+                R('div', { key:'l' }, [
+                  R('div', { key:'a', style:{ fontSize:13, fontWeight:600, color:N900 } }, h.title),
+                  R('div', { key:'b', style:{ fontSize:11, color:N500, marginTop:2 } }, h.date),
+                ]),
+                R('span', { key:'amt', style:{ fontSize:13, fontWeight:700, color:SUCCESS } }, '+' + rp(h.amount)),
+              ])
+            )),
+          ] : [
+            R('div', { key:'card', style:{ background:N900, borderRadius:16, padding:18, color:'#fff', display:'flex', flexDirection:'column', gap:10 } }, [
+              R('div', { key:'l', style:{ fontSize:12.5, color:'rgba(255,255,255,0.6)' } }, 'Sisa Pinjaman Aktif'),
+              R('div', { key:'v', style:{ fontSize:26, fontWeight:700 } }, rp(PINJAMAN_AKTIF.sisaPokok)),
+              R('div', { key:'row', style:{ display:'flex', justifyContent:'space-between', fontSize:11.5, color:'rgba(255,255,255,0.7)', marginTop:4 } }, [
+                R('span', { key:'a' }, `Angsuran ${rp(PINJAMAN_AKTIF.angsuranPerBulan)}/bulan`),
+                R('span', { key:'b' }, `${PINJAMAN_AKTIF.sisaTenor}/${PINJAMAN_AKTIF.tenorBulan} bulan tersisa`),
+              ]),
+            ]),
+            R('div', { key:'due', style:{ background:WARNING_SOFT, border:`1px solid #FDE9BC`, borderRadius:12, padding:12, fontSize:12.5, color:'#92400E' } }, `Jatuh tempo angsuran berikutnya: ${PINJAMAN_AKTIF.jatuhTempo}`),
+            R('div', { key:'btn' }, Btn('Ajukan Pinjaman Baru', ()=>this.setState({pinjamanStage:'form'}))),
+            R('div', { key:'hh', style:{ fontSize:14, fontWeight:700, color:N900, marginTop:4 } }, 'Riwayat Angsuran'),
+            R('div', { key:'list', style:{ display:'flex', flexDirection:'column', gap:8 } }, RIWAYAT_ANGSURAN.map((h,i) =>
+              R('div', { key:i, style:{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', border:`1px solid ${N100}`, borderRadius:12, padding:12 } }, [
+                R('div', { key:'l' }, [
+                  R('div', { key:'a', style:{ fontSize:13, fontWeight:600, color:N900 } }, h.title),
+                  R('div', { key:'b', style:{ fontSize:11, color:N500, marginTop:2 } }, h.date),
+                  R('span', { key:'c', style:{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:999, marginTop:4, display:'inline-block', background:SUCCESS_SOFT, color:'#166534' } }, h.status),
+                ]),
+                R('span', { key:'amt', style:{ fontSize:13, fontWeight:700, color:N900 } }, rp(h.amount)),
+              ])
+            )),
+          ]
+        ),
+      ]));
+    }
+
+    // ---------- HISTORY ----------
+    if (s.screen === 'history') {
+      const filters = ['Semua','Belanja','PPOB','Payroll Deduction'];
+      const list = HISTORY.filter(h => s.historyFilter==='Semua' || h.type===s.historyFilter);
+      return R(IOSDevice, { width:402, height:874 }, page([
+        R('div', { key:'nav', style:{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' } }, [
+          R('button', { key:'back', onClick:()=>this.go('wallet'), style:{ background:N50, border:'none', width:36, height:36, borderRadius:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' } }, Icon('chevronLeft', { size:18, color:N700 })),
+          R('div', { key:'t', style:{ fontSize:15, fontWeight:700, color:N900 } }, 'Riwayat Transaksi'),
+        ]),
+        R('div', { key:'filters', style:{ display:'flex', gap:8, padding:'0 16px 12px', overflowX:'auto' } }, filters.map(f =>
+          R('button', { key:f, onClick:()=>this.setState({historyFilter:f}), style:{ flexShrink:0, padding:'7px 13px', borderRadius:999, border:`1px solid ${s.historyFilter===f?BLUE:N200}`, background:s.historyFilter===f?BLUE_SOFT:'#fff', color:s.historyFilter===f?BLUE:N700, fontSize:12, fontWeight:600, cursor:'pointer' } }, f)
+        )),
+        R('div', { key:'list', style:{ flex:1, padding:'0 16px', display:'flex', flexDirection:'column', gap:8, overflowY:'auto' } }, list.map(h =>
+          R('div', { key:h.id, style:{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', border:`1px solid ${N100}`, borderRadius:12, padding:12 } }, [
+            R('div', { key:'l' }, [
+              R('div', { key:'a', style:{ fontSize:13, fontWeight:600, color:N900 } }, h.title),
+              R('div', { key:'b', style:{ fontSize:11, color:N500, marginTop:2 } }, h.date),
+              R('span', { key:'c', style:{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:999, marginTop:4, display:'inline-block', background: h.status==='Gagal'?ERROR_SOFT:SUCCESS_SOFT, color: h.status==='Gagal'?ERROR:'#166534' } }, h.status),
+            ]),
+            R('span', { key:'amt', style:{ fontSize:13, fontWeight:700, color: h.amount>0?SUCCESS:N900 } }, (h.amount>0?'+':'') + rp(h.amount)),
+          ])
+        )),
+      ]));
+    }
+
+    // ---------- PROFILE & NOTIFICATION ----------
+    if (s.screen === 'profile') {
+      return R(IOSDevice, { width:402, height:874 }, this.wrapTabs(s, R('div', { style:{ padding:'16px 16px 24px', display:'flex', flexDirection:'column', gap:16 } }, [
+        R('div', { key:'head', style:{ display:'flex', alignItems:'center', gap:12 } }, [
+          R('div', { key:'av', style:{ width:56, height:56, borderRadius:'50%', background:BLUE_SOFT, color:BLUE, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:18 } }, 'BS'),
+          R('div', { key:'i' }, [
+            R('div', { key:'n', style:{ fontSize:16, fontWeight:700, color:N900 } }, 'Budi Santoso'),
+            R('div', { key:'d', style:{ fontSize:12, color:N500 } }, 'EMP-12345 · Produksi, Line 3'),
+          ]),
+        ]),
+        R('div', { key:'tabs', style:{ display:'flex', gap:6, background:N100, borderRadius:12, padding:4 } }, ['profile','notif'].map(t =>
+          R('button', { key:t, onClick:()=>this.setState({profileTab:t}), style:{ flex:1, padding:'8px', borderRadius:9, border:'none', background:s.profileTab===t?'#fff':'transparent', fontWeight:700, fontSize:12.5, color:s.profileTab===t?BLUE:N500, cursor:'pointer' } }, t==='profile'?'Profil':'Notifikasi')
+        )),
+        s.profileTab === 'profile'
+          ? R('div', { key:'menu', style:{ background:'#fff', border:`1px solid ${N100}`, borderRadius:14, overflow:'hidden' } }, ['Simpanan & Pinjaman','Data Diri','Payroll Deduction','Metode Pembayaran','Keamanan','Bahasa','Bantuan'].map((m,i,arr) =>
+              R('div', { key:m, onClick: m==='Simpanan & Pinjaman' ? ()=>this.go('simpanpinjam') : undefined, style:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 14px', borderBottom: i<arr.length-1?`1px solid ${N50}`:'none', cursor:'pointer' } }, [
+                R('span', { key:'l', style:{ fontSize:13.5, color:N900, fontWeight:500 } }, m),
+                Icon('chevronRight', { size:16, color:N300 }),
+              ])
+            ))
+          : R('div', { key:'notifs', style:{ display:'flex', flexDirection:'column', gap:8 } }, NOTIFICATIONS.map((n,i) =>
+              R('div', { key:i, style:{ display:'flex', gap:10, background:'#fff', border:`1px solid ${N100}`, borderRadius:12, padding:12 } }, [
+                Icon('bell', { size:15, color:n.color }),
+                R('div', { key:'body' }, [
+                  R('div', { key:'t', style:{ fontSize:13, fontWeight:700, color:N900 } }, n.title),
+                  R('div', { key:'b', style:{ fontSize:12, color:N500, marginTop:2 } }, n.body),
+                  R('div', { key:'time', style:{ fontSize:10.5, color:N300, marginTop:4 } }, n.time),
+                ]),
+              ])
+            )),
+        s.profileTab === 'profile' && R('button', { key:'logout', onClick:()=>this.setState({screen:'login', empId:'', password:''}), style:{ padding:'14px', borderRadius:12, border:`1px solid ${ERROR}`, background:'#fff', color:ERROR, fontWeight:700, fontSize:13.5, cursor:'pointer' } }, 'Keluar'),
+      ])));
+    }
+
+    return R(IOSDevice, { width:402, height:874 }, page([R('div',{key:'x'},'—')]));
+  }
+
+  wrapTabs(s, content) {
+    const R = React.createElement;
+    const tabs = [
+      { id:'home', label:'Beranda', icon:'home' }, { id:'shop', label:'Belanja', icon:'bag' },
+      { id:'ppob', label:'PPOB', icon:'ppob' }, { id:'wallet', label:'Wallet', icon:'wallet' }, { id:'profile', label:'Akun', icon:'user' },
+    ];
+    return R('div', { style:{ minHeight:'100%', display:'flex', flexDirection:'column', background:N25 } }, [
+      R('div', { key:'content', style:{ flex:1, overflowY:'auto', paddingTop:56 } }, content),
+      R('div', { key:'nav', style:{ display:'flex', borderTop:`1px solid ${N100}`, background:'#fff', padding:'8px 4px 4px' } }, tabs.map(t => {
+        const active = s.screen === t.id;
+        return R('button', { key:t.id, onClick:()=>this.setState({screen:t.id, tab:t.id}), style:{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, background:'none', border:'none', cursor:'pointer', padding:'4px 0' } }, [
+          R('div', { key:'ic' }, Icon(t.icon, { size:21, color: active?BLUE:N500 })),
+          R('span', { key:'l', style:{ fontSize:10, fontWeight:700, color: active?BLUE:N500 } }, t.label),
+        ]);
+      })),
+    ]);
+  }
+}
+</script>
+</body>
+</html>

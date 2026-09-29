@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Lampu">
+<title>Lampu</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M57 98q-24-45 4-64 22-14 42 2 27 20 2 62l-13 14H70z" fill="#f2dca1"/><path d="M72 109h21v25H72z" fill="#9398a9"/><path d="M73 119h20M73 127h20" stroke="#697187"/><path d="M72 107l-7-33 16 13 15-13-7 33" fill="none" stroke="#c2a765"/></g>
+</svg>

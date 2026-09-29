@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Spons cuci">
+<title>Spons cuci</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="30" y="76" width="104" height="47" rx="10" fill="#e3c465"/><rect x="30" y="67" width="104" height="20" rx="6" fill="#5e9a74"/><path d="M41 70l13 12M61 70l13 12M81 70l13 12M101 70l13 12" stroke="#8ec59d"/><circle cx="48" cy="102" r="3" fill="#cfa649"/><circle cx="91" cy="108" r="3" fill="#cfa649"/><circle cx="116" cy="100" r="3" fill="#cfa649"/></g>
+</svg>

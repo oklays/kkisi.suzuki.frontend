@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Jus jeruk">
+<title>Jus jeruk</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M44 48h72l-9 92H53z" fill="#f5b844"/><ellipse cx="80" cy="48" rx="36" ry="9" fill="#fbdc95"/><path d="M87 59l17-45" stroke="#ffffff" stroke-width="7"/><path d="M60 69l5 51" stroke="#ffdda0"/><circle cx="105" cy="105" r="26" fill="#ed972d"/><circle cx="105" cy="105" r="20" fill="#ffe9ad"/><path d="M105 86v38M86 105h38M91 91l28 28M91 119l28-28" stroke="#efac44"/></g>
+</svg>

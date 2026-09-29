@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Nasi kotak">
+<title>Nasi kotak</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M26 66h108l-10 65H36z" fill="#b87b4d"/><path d="M23 44h114v34H23z" fill="#eee0bc"/><ellipse cx="67" cy="65" rx="28" ry="23" fill="#fffaf0"/><path d="M99 47q22 3 17 24-26 7-34-7z" fill="#ce7638"/><circle cx="106" cy="82" r="14" fill="#6d9d4d"/><path d="M29 105h100" stroke="#e6c39a"/></g>
+</svg>

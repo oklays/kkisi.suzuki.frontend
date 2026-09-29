@@ -1,0 +1,16 @@
+# POS / Kasir checkpoints
+
+- [x] 0. Bootstrap Next.js inside `kkisi.web/` without removing the numbered documentation; establish TypeScript, App Router, ESLint, lockfile, safe inactive `/pos` placeholder, `.env.example` and local quality commands. No DB integration or business behavior yet.
+- [ ] 1. Audit + characterization: inspect active `application/views/pos.php` JS and every invoked endpoint; gather staging DB DDL, request/response fixtures and before/after snapshots for cash/Kredit, discounts, tax, stock, return, receipt, errors. Correct inaccurate earlier `docs/migration/characterization-tests.md` assumptions against evidence. Validate approved design provenance.
+- [ ] 2. POS domain/API compatibility: establish Next.js application location and conventions; implement authenticated read-only service adapters first; define pricing, tax, member, cash/Kredit contracts from fixtures. Run tests/lint/typecheck/build.
+- [x] 3. UI foundation: reproduce approved HTML POS hierarchy without changing unrelated mockup sections; establish single icon system and deterministic illustration mapping. Fixture-only preview verified; see `ui-foundation.md` for evidence and artwork replacement limitation.
+- [ ] 4. Product search + inventory: bounded name/code/barcode queries and category mapping; zero/low stock states. Test search and keyboard scanner. Run checks.
+- [ ] 5. Cart + member: verified identifiers, add/increase/decrease/remove, stock bounds, credit lookup; keep unimplemented mockup options disabled. Run checks.
+- [ ] 6. Calculation + payment: server-authoritative totals, verified discounts/tax/rounding; cash and Kredit only if confirmed. Test cash failure/insufficient limit. Run checks.
+- [ ] 7. Checkout persistence: settle single-writer cutover/compatibility gateway, transactional locking, idempotency, stock formula and external `products` mirror; test rollback, duplicate checkout, concurrency. Run checks.
+- [ ] 8. Receipt + success: persisted sale detail/receipt and success state; cart clears only after confirmation. Run checks.
+- [ ] 9. Mockup parity: compare labels/layout/cards/category/cart/payment/icons/illustrations; update **only POS section** of mockup if an older version is demonstrably present. Run checks.
+- [ ] 10. Regression + E2E: test all 22 user-requested paths, unauthorized access, reporting impact, branch isolation, reconciliation vs legacy fixtures; update migration matrix and ownership docs with actual state, rehearse rollback.
+
+## Checkpoint record
+Next.js now includes the latest POS UI foundation at `/pos`, with isolated example products/members and an in-memory preview cart. Legacy and original mockup files remain unchanged. The user-authorized UI checkpoint runs ahead of operational characterization; checkpoints 1–2 and 4–10 remain incomplete. Search/cart/member interactions here are preview-only and do not complete operational checkpoints 4–5. No operational POS or DB connection exists; production business implementation still requires checkpoint 1 evidence and subsequent authorization/integration gates. `ui-foundation.md` records component mapping, all checks, structural mockup comparison, and replacement vector artwork necessitated by blank supplied SVGs.

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Baterai">
+<title>Baterai</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="37" y="40" width="34" height="100" rx="8" fill="#656779"/><rect x="89" y="40" width="34" height="100" rx="8" fill="#656779"/><path d="M46 32h16v10H46zM98 32h16v10H98z" fill="#a2a4b2"/><path d="M37 52h34v28H37zM89 52h34v28H89z" fill="#dbab64"/><path d="M49 64h10M54 59v10M101 63h10" stroke="#715e4f"/></g>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Roti tawar">
+<title>Roti tawar</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M48 50q-19-36 13-35h38q32-1 13 35v86H48z" fill="#c78b50"/><path d="M56 51q-14-25 10-27h27q25 2 11 27v75H56z" fill="#f3dbac"/><path d="M64 63v44M76 64v28M89 65v43" stroke="#e5bd7b"/><path d="M48 132h64" stroke="#a36536"/></g>
+</svg>

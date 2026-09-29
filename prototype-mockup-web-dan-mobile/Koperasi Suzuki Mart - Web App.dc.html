@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+    * { box-sizing:border-box; }
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-thumb { background:#D9DDE3; border-radius:8px; }
+    a { color:#003399; }
+    a:hover { color:#002A80; }
+    input:focus, select:focus { outline:2px solid #003399; outline-offset:1px; }
+  </style>
+</helmet>
+
+<div style="display:flex;height:100vh;width:100vw;background:#F7F8FA;color:#101828;overflow:hidden">
+
+  <div style="width:264px;flex-shrink:0;background:#101828;color:#fff;display:flex;flex-direction:column;padding:20px 14px;gap:20px;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;padding:0 6px">
+      <div style="width:38px;height:38px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden">
+        <div style="width:20px;height:20px;background:#E20A17;transform:rotate(45deg);border-radius:3px 8px 3px 8px"></div>
+        <div style="position:absolute;width:5px;height:5px;background:#fff;border-radius:50%"></div>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:14.5px;line-height:1.2;letter-spacing:0.01em">KOPERASI <span style="color:#E20A17">SUZUKI</span> MART</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">Integrated Cooperative Platform</div>
+      </div>
+    </div>
+
+    <button onClick="{{ cycleRole }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px 12px;cursor:pointer;color:#fff;text-align:left">
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.04em">Tampilan akses</div>
+        <div style="font-size:13px;font-weight:600;margin-top:2px">{{ roleLabel }}</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M17 1l4 4-4 4M7 23l-4-4 4-4M3 5h14M21 19H7" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+      <div style="font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;padding:8px 10px 2px">Menu Utama</div>
+
+      <button onClick="{{ setDashboard }}" style="{{ navDashboardStyle }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Dashboard Supervisor</span>
+      </button>
+
+      <button onClick="{{ setPOS }}" style="{{ navPOSStyle }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 7h12l-1.2 12.2a2 2 0 01-2 1.8H9.2a2 2 0 01-2-1.8L6 7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V5.5a3 3 0 016 0V7" stroke="currentColor" stroke-width="2"/></svg>
+        <span>POS / Kasir</span>
+      </button>
+
+      <button onClick="{{ setInventory }}" style="{{ navInventoryStyle }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 8l9-5 9 5-9 5-9-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 8v9l9 5 9-5V8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 13v9" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Produk &amp; Inventory</span>
+      </button>
+
+      <button onClick="{{ setWarehouse }}" style="{{ navWarehouseStyle }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 21V10l9-6 9 6v11" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9" y="13" width="6" height="8" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Warehouse &amp; Stock Opname</span>
+      </button>
+
+      <button onClick="{{ setFinance }}" style="{{ navFinanceStyle }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="5" y1="20" x2="5" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="20" x2="12" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="19" y1="20" x2="19" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Laporan Keuangan</span>
+      </button>
+    </div>
+
+    <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;font-size:11px;color:rgba(255,255,255,0.4)">
+      Koperasi Suzuki Mart · MVP Phase 1–2<br/>v1.0 — Internal Prototype
+    </div>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:68px;flex-shrink:0;background:#fff;border-bottom:1px solid #EEF0F3;display:flex;align-items:center;justify-content:space-between;padding:0 28px">
+      <div style="display:flex;align-items:center;gap:20px">
+        <div>
+          <div style="font-weight:700;font-size:19px">{{ moduleTitle }}</div>
+          <div style="font-size:12.5px;color:#737B87;margin-top:1px">{{ moduleSubtitle }}</div>
+        </div>
+        <sc-if value="{{ isPOS }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px;background:#F7F8FA;border:1px solid #EEF0F3;border-radius:10px;padding:7px 12px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="#3E4652" stroke-width="1.8"/><line x1="3" y1="10" x2="21" y2="10" stroke="#3E4652" stroke-width="1.8"/><line x1="8" y1="3" x2="8" y2="7" stroke="#3E4652" stroke-width="1.8" stroke-linecap="round"/><line x1="16" y1="3" x2="16" y2="7" stroke="#3E4652" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:#3E4652">Selasa, 29 Sep 2026</div>
+                <div style="font-size:10.5px;color:#94A3B8">15:42:18</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;background:#F7F8FA;border:1px solid #EEF0F3;border-radius:10px;padding:7px 12px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 9a11 11 0 0114 0" stroke="#3E4652" stroke-width="1.8" stroke-linecap="round"/><path d="M8 12.5a6.5 6.5 0 018 0" stroke="#3E4652" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1.4" fill="#3E4652"/></svg>
+              <div>
+                <div style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#16A34A;flex-shrink:0"></span><span style="font-size:11px;font-weight:700;color:#3E4652">Online</span></div>
+                <div style="font-size:10.5px;color:#94A3B8">Mart Utama</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="display:flex;align-items:center;gap:8px;background:#F7F8FA;border-radius:10px;padding:8px 12px;width:240px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#737B87" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="#737B87" stroke-width="2" stroke-linecap="round"/></svg>
+          <span style="font-size:13px;color:#737B87">Cari transaksi, produk, member...</span>
+        </div>
+        <button style="position:relative;background:none;border:none;cursor:pointer;padding:6px">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9" stroke="#3E4652" stroke-width="2" stroke-linejoin="round"/><path d="M10 21a2 2 0 004 0" stroke="#3E4652" stroke-width="2"/></svg>
+          <span style="position:absolute;top:2px;right:2px;width:8px;height:8px;background:#E20A17;border-radius:50%;border:1.5px solid #fff"></span>
+        </button>
+        <div style="width:1px;height:28px;background:#EEF0F3"></div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:34px;height:34px;border-radius:50%;background:#003399;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">RS</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:600">Rahmat Setiawan</div>
+            <div style="font-size:11px;color:#737B87">{{ roleLabel }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:26px 28px">
+
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#737B87">Penjualan Hari Ini</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px">Rp 8.420.000</div>
+              <div style="font-size:11.5px;color:#16A34A;margin-top:4px">▲ 12.4% dari kemarin</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#737B87">Penjualan Bulan Ini</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px">Rp 214.680.000</div>
+              <div style="font-size:11.5px;color:#16A34A;margin-top:4px">▲ 7.1% vs bulan lalu</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#737B87">Total Transaksi</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px">1.842</div>
+              <div style="font-size:11.5px;color:#737B87;margin-top:4px">POS + Mobile bulan ini</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#737B87">Member Aktif</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px">1.096</div>
+              <div style="font-size:11.5px;color:#737B87;margin-top:4px">dari 1.240 karyawan</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#737B87">Nilai Stok Saat Ini</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px">Rp 594.200.000</div>
+              <div style="font-size:11.5px;color:#737B87;margin-top:4px">4 lokasi gudang</div>
+            </div>
+            <div style="background:#FFF7E6;border:1px solid #FDE9BC;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#92400E">Produk Stok Menipis</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px;color:#92400E">14 SKU</div>
+              <div style="font-size:11.5px;color:#92400E;margin-top:4px">di bawah minimum stock</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#737B87">Gross Profit (MTD)</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px">Rp 61.900.000</div>
+              <div style="font-size:11.5px;color:#737B87;margin-top:4px">Margin 28.8%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+              <div style="font-size:12px;color:#737B87">Outstanding Payroll Deduction</div>
+              <div style="font-weight:700;font-size:22px;margin-top:6px">Rp 38.450.000</div>
+              <div style="font-size:11.5px;color:#737B87;margin-top:4px">belum closing bulan Agustus</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px">
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:18px">
+              <div style="font-weight:700;font-size:14.5px;margin-bottom:14px">Tren Penjualan — 7 Hari Terakhir</div>
+              <div style="display:flex;align-items:flex-end;gap:14px;height:160px">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;height:58%;background:#E8F0FF;border-radius:6px 6px 0 0"></div><span style="font-size:10.5px;color:#94A3B8">Sen</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;height:71%;background:#C7D9FF;border-radius:6px 6px 0 0"></div><span style="font-size:10.5px;color:#94A3B8">Sel</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;height:49%;background:#E8F0FF;border-radius:6px 6px 0 0"></div><span style="font-size:10.5px;color:#94A3B8">Rab</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;height:83%;background:#7FA0FF;border-radius:6px 6px 0 0"></div><span style="font-size:10.5px;color:#94A3B8">Kam</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;height:64%;background:#C7D9FF;border-radius:6px 6px 0 0"></div><span style="font-size:10.5px;color:#94A3B8">Jum</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;height:92%;background:#003399;border-radius:6px 6px 0 0"></div><span style="font-size:10.5px;color:#94A3B8">Sab</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;height:38%;background:#E8F0FF;border-radius:6px 6px 0 0"></div><span style="font-size:10.5px;color:#94A3B8">Min</span></div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:18px">
+              <div style="font-weight:700;font-size:14.5px;margin-bottom:12px">Alert &amp; Perhatian</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;gap:10px;align-items:flex-start;padding:9px;background:#FFF7E6;border-radius:10px">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#F59E0B;margin-top:6px;flex-shrink:0"></div>
+                  <div><div style="font-size:12.5px;font-weight:600;color:#92400E">14 produk stok menipis</div><div style="font-size:11px;color:#92400E">Gula Pasir, Kopi Sachet, Sabun Cuci Piring</div></div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;padding:9px;background:#FDECEC;border-radius:10px">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#DC2626;margin-top:6px;flex-shrink:0"></div>
+                  <div><div style="font-size:12.5px;font-weight:600;color:#991B1B">2 produk out of stock</div><div style="font-size:11px;color:#B91C1C">Gula Pasir 1kg, Nasi Ayam Geprek</div></div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;padding:9px;background:#FDECEC;border-radius:10px">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#DC2626;margin-top:6px;flex-shrink:0"></div>
+                  <div><div style="font-size:12.5px;font-weight:600;color:#991B1B">3 transaksi PPOB gagal</div><div style="font-size:11px;color:#B91C1C">Provider token listrik timeout</div></div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;padding:9px;background:#F7F8FA;border-radius:10px">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#737B87;margin-top:6px;flex-shrink:0"></div>
+                  <div><div style="font-size:12.5px;font-weight:600;color:#3E4652">Stock opname terjadwal 3 hari lagi</div><div style="font-size:11px;color:#737B87">Warehouse: Main Warehouse</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:18px">
+              <div style="font-weight:700;font-size:14px;margin-bottom:12px">Penjualan per Kategori</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Sembako</span><span style="color:#737B87">38%</span></div><div style="height:7px;background:#F7F8FA;border-radius:4px"><div style="width:38%;height:100%;background:#003399;border-radius:4px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Makanan &amp; Minuman</span><span style="color:#737B87">29%</span></div><div style="height:7px;background:#F7F8FA;border-radius:4px"><div style="width:29%;height:100%;background:#3D6BC7;border-radius:4px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>PPOB</span><span style="color:#737B87">18%</span></div><div style="height:7px;background:#F7F8FA;border-radius:4px"><div style="width:18%;height:100%;background:#7FA0FF;border-radius:4px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Rumah Tangga</span><span style="color:#737B87">10%</span></div><div style="height:7px;background:#F7F8FA;border-radius:4px"><div style="width:10%;height:100%;background:#C7D9FF;border-radius:4px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Lainnya</span><span style="color:#737B87">5%</span></div><div style="height:7px;background:#F7F8FA;border-radius:4px"><div style="width:5%;height:100%;background:#E8F0FF;border-radius:4px"></div></div></div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:18px">
+              <div style="font-weight:700;font-size:14px;margin-bottom:12px">Produk Terlaris</div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:8px;align-items:center"><span style="width:20px;height:20px;border-radius:6px;background:#F7F8FA;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700">1</span><span style="font-size:12.5px">Air Mineral 600ml</span></div><span style="font-size:12px;color:#737B87">318 pcs</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:8px;align-items:center"><span style="width:20px;height:20px;border-radius:6px;background:#F7F8FA;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700">2</span><span style="font-size:12.5px">Mie Goreng Instan</span></div><span style="font-size:12px;color:#737B87">276 pcs</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:8px;align-items:center"><span style="width:20px;height:20px;border-radius:6px;background:#F7F8FA;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700">3</span><span style="font-size:12.5px">Nasi Ayam Geprek</span></div><span style="font-size:12px;color:#737B87">204 porsi</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:8px;align-items:center"><span style="width:20px;height:20px;border-radius:6px;background:#F7F8FA;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700">4</span><span style="font-size:12.5px">Token Listrik 100rb</span></div><span style="font-size:12px;color:#737B87">142 trx</span></div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:18px">
+              <div style="font-weight:700;font-size:14px;margin-bottom:12px">Metode Pembayaran</div>
+              <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;margin-bottom:12px">
+                <div style="width:34%;background:#003399"></div><div style="width:26%;background:#7FA0FF"></div><div style="width:22%;background:#F59E0B"></div><div style="width:18%;background:#C2C8D0"></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
+                <div style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:#003399"></span>Cash — 34%</div>
+                <div style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:#7FA0FF"></span>Wallet / Point — 26%</div>
+                <div style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:#F59E0B"></span>Payroll Deduction — 22%</div>
+                <div style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:#C2C8D0"></span>QR Payment — 18%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPOS }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:16px;height:calc(100vh - 148px)">
+          <div style="flex:1.6;display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E2E5EA;border-radius:14px;padding:12px 14px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#737B87" stroke-width="1.8"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="#737B87" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <input value="{{ posSearch }}" onChange="{{ onPosSearch }}" placeholder="Scan barcode atau cari produk (nama/kode)..." style="border:none;outline:none;font-size:14px;flex:1;font-family:'Inter',sans-serif;color:#101828"/>
+              <div style="width:1px;height:22px;background:#EEF0F3;flex-shrink:0"></div>
+              <button style="display:flex;align-items:center;gap:6px;background:#EEF3FF;color:#003399;border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="2" height="16" fill="currentColor"/><rect x="7" y="4" width="1" height="16" fill="currentColor"/><rect x="10" y="4" width="3" height="16" fill="currentColor"/><rect x="15" y="4" width="1" height="16" fill="currentColor"/><rect x="18" y="4" width="2" height="16" fill="currentColor"/></svg>
+                Scan
+              </button>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;flex-shrink:0;padding-bottom:2px">
+              <button onClick="{{ setCatSemua }}" style="{{ catSemuaStyle }};flex-shrink:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+                <span>Semua</span>
+              </button>
+              <button onClick="{{ setCatSembako }}" style="{{ catSembakoStyle }};flex-shrink:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 8h12l-1 12H7L6 8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.8"/></svg>
+                <span>Sembako</span>
+              </button>
+              <button onClick="{{ setCatMinuman }}" style="{{ catMinumanStyle }};flex-shrink:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 3h10l-1 15a2 2 0 01-2 2h-4a2 2 0 01-2-2L7 3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><line x1="7.6" y1="9" x2="16.4" y2="9" stroke="currentColor" stroke-width="1.8"/></svg>
+                <span>Minuman</span>
+              </button>
+              <button onClick="{{ setCatMakanan }}" style="{{ catMakananStyle }};flex-shrink:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12h18a9 7 0 01-18 0z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 12V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <span>Makanan</span>
+              </button>
+              <button onClick="{{ setCatRumahTangga }}" style="{{ catRumahTanggaStyle }};flex-shrink:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 11l8-7 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                <span>Rumah Tangga</span>
+              </button>
+              <button onClick="{{ setCatLainnya }}" style="{{ catLainnyaStyle }};flex-shrink:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><circle cx="16.5" cy="16.5" r="3.5" stroke="currentColor" stroke-width="1.8"/></svg>
+                <span>Lainnya</span>
+              </button>
+            </div>
+
+            <div style="flex:1;overflow-y:auto;padding-bottom:8px">
+              <sc-if value="{{ posProductsEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:70px 0;color:#94A3B8">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M3 8l9-5 9 5-9 5-9-5z" stroke="#D9DDE3" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v9l9 5 9-5V8" stroke="#D9DDE3" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                  <span style="font-size:13px;font-weight:700;color:#737B87">Produk tidak ditemukan</span>
+                  <span style="font-size:11.5px;color:#94A3B8">Coba kata kunci lain atau pilih kategori berbeda</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ posProductsNotEmpty }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+                  <sc-for list="{{ posProducts }}" as="p" hint-placeholder-count="0">
+                    <div style="{{ p.cardStyle }}" style-hover="box-shadow:0 6px 16px rgba(16,24,40,0.08);border-color:#C7D0DC">
+                      <div style="{{ p.imgWrapStyle }}">
+                        <sc-if value="{{ p.outOfStock }}" hint-placeholder-val="{{ false }}">
+                          <span style="position:absolute;top:8px;left:8px;background:#FDECEC;color:#B91C1C;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px">Stok Habis</span>
+                        </sc-if>
+                        <img src="{{ p.img }}" alt="{{ p.name }}" loading="lazy" style="width:70%;height:70%;object-fit:contain"/>
+                      </div>
+                      <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px;flex:1">
+                        <div style="font-size:12.5px;font-weight:600;color:#101828;line-height:1.3;min-height:32px">{{ p.name }}</div>
+                        <div style="font-size:10.5px;color:#94A3B8">{{ p.sku }}</div>
+                        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:6px;gap:6px">
+                          <div>
+                            <div style="font-weight:800;font-size:16px;color:#003399;letter-spacing:-0.01em;line-height:1.2">{{ p.priceLabel }}</div>
+                            <div style="font-size:10.5px;color:#94A3B8;margin-top:3px">{{ p.stockLabel }}</div>
+                          </div>
+                          <button onClick="{{ p.onAdd }}" disabled="{{ p.outOfStock }}" style="{{ p.addBtnStyle }}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="width:440px;flex-shrink:0;background:#fff;border:1px solid #E2E5EA;border-radius:16px;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid #EEF0F3;display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 7h12l-1.2 12.2a2 2 0 01-2 1.8H9.2a2 2 0 01-2-1.8L6 7z" stroke="#101828" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V5.5a3 3 0 016 0V7" stroke="#101828" stroke-width="2"/></svg>
+                <span style="font-weight:700;font-size:14.5px;color:#101828">Keranjang Transaksi</span>
+                <span style="background:#EEF3FF;color:#003399;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px">{{ cartCountLabel }}</span>
+              </div>
+              <button onClick="{{ openClearConfirm }}" style="display:flex;align-items:center;gap:5px;background:#fff;color:#DC2626;border:1px solid #F4C7C7;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Hapus Semua
+              </button>
+            </div>
+
+            <div style="padding:14px 16px;border-bottom:1px solid #EEF0F3">
+              <div style="font-size:11px;color:#737B87;font-weight:700;margin-bottom:6px">Member <span style="color:#B3B9C2;font-weight:500">(Opsional)</span></div>
+              <div style="display:flex;gap:6px">
+                <div style="flex:1;display:flex;align-items:center;gap:6px;border:1px solid #D9DDE3;border-radius:10px;padding:7px 10px;min-width:0">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#94A3B8" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/></svg>
+                  <input value="{{ memberQuery }}" onChange="{{ onMemberQuery }}" onKeyDown="{{ onMemberKeyDown }}" placeholder="Cari ID / Nama Member / No. HP..." style="flex:1;min-width:0;border:none;outline:none;font-size:12px;font-family:'Inter',sans-serif"/>
+                </div>
+                <button onClick="{{ openMemberModal }}" style="display:flex;align-items:center;gap:5px;background:#003399;color:#fff;border:none;border-radius:10px;padding:0 11px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  Pilih
+                </button>
+              </div>
+              <sc-if value="{{ memberFound }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:9px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F3F7FF;border:1px solid #D7E4FF;border-radius:10px;padding:9px 11px">
+                  <div>
+                    <div style="font-size:12px;font-weight:700;color:#101828">{{ memberName }} · {{ memberIdLabel }}</div>
+                    <div style="font-size:10.5px;color:#3E5A99;margin-top:2px">{{ memberDept }} · Limit tersisa {{ memberLimitLabel }}</div>
+                  </div>
+                  <button onClick="{{ removeMember }}" style="background:none;border:none;color:#94A3B8;cursor:pointer;font-size:15px;line-height:1;flex-shrink:0">×</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ memberNotFound }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:9px;display:flex;align-items:center;gap:6px;background:#FDECEC;border:1px solid #F4C7C7;border-radius:10px;padding:8px 11px;font-size:11px;color:#991B1B">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                  Member tidak ditemukan, coba kata kunci lain.
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="flex:1;min-height:140px;padding:6px 16px">
+              <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;gap:8px;text-align:center;padding:0 20px">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M6 7h12l-1.2 12.2a2 2 0 01-2 1.8H9.2a2 2 0 01-2-1.8L6 7z" stroke="#D9DDE3" stroke-width="1.6"/></svg>
+                  <span style="font-size:12.5px;font-weight:700;color:#737B87">Keranjang masih kosong</span>
+                  <span style="font-size:11px;color:#94A3B8">Scan barcode atau pilih produk untuk memulai transaksi.</span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ cartItems }}" as="c" hint-placeholder-count="0">
+                <div style="padding:10px 0;border-bottom:1px solid #F4F5F7">
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <div style="width:36px;height:36px;border-radius:9px;background:#F7F8FA;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+                      <img src="{{ c.img }}" alt="{{ c.name }}" loading="lazy" style="width:80%;height:80%;object-fit:contain"/>
+                    </div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:12.5px;font-weight:600;color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</div>
+                      <div style="font-size:11px;color:#94A3B8">{{ c.priceLabel }}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+                      <button onClick="{{ c.onDec }}" style="width:25px;height:25px;border-radius:7px;border:1px solid #D9DDE3;background:#fff;cursor:pointer;font-size:14px;color:#3E4652" style-hover="background:#F7F8FA;border-color:#B3B9C2">−</button>
+                      <span style="font-size:12.5px;font-weight:700;width:16px;text-align:center">{{ c.qty }}</span>
+                      <button onClick="{{ c.onInc }}" style="width:25px;height:25px;border-radius:7px;border:1px solid #D9DDE3;background:#fff;cursor:pointer;font-size:14px;color:#3E4652" style-hover="background:#F7F8FA;border-color:#B3B9C2">+</button>
+                    </div>
+                    <div style="width:64px;text-align:right;font-size:12.5px;font-weight:700;color:#101828;flex-shrink:0">{{ c.subtotalLabel }}</div>
+                    <button onClick="{{ c.onRemove }}" style="background:none;border:none;cursor:pointer;color:#DC2626;padding:2px;flex-shrink:0">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                  </div>
+                  <sc-if value="{{ c.showWarn }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:5px;font-size:10.5px;color:#DC2626;padding-left:45px">⚠ Stok tidak mencukupi untuk menambah jumlah</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="padding:12px 16px;border-top:1px solid #EEF0F3">
+              <sc-if value="{{ promoApplied }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;justify-content:space-between;background:#F3F7FF;border:1px solid #D7E4FF;border-radius:10px;padding:9px 12px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><line x1="19" y1="5" x2="5" y2="19" stroke="#003399" stroke-width="2" stroke-linecap="round"/><circle cx="7" cy="7" r="2.2" stroke="#003399" stroke-width="2"/><circle cx="17" cy="17" r="2.2" stroke="#003399" stroke-width="2"/></svg>
+                    <div>
+                      <div style="font-size:12px;font-weight:700;color:#003399">{{ promoName }}</div>
+                      <div style="font-size:10.5px;color:#3E5A99">−{{ promoAmountLabel }}</div>
+                    </div>
+                  </div>
+                  <button onClick="{{ removePromo }}" style="background:none;border:none;color:#94A3B8;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0">×</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ promoNotApplied }}" hint-placeholder-val="{{ true }}">
+                <div>
+                  <button onClick="{{ togglePromoOpen }}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:#fff;border:1px dashed #D9DDE3;border-radius:10px;padding:9px 12px;cursor:pointer;color:#3E4652;font-size:12px;font-weight:600">
+                    <span style="display:flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><line x1="19" y1="5" x2="5" y2="19" stroke="#3E4652" stroke-width="2" stroke-linecap="round"/><circle cx="7" cy="7" r="2.2" stroke="#3E4652" stroke-width="2"/><circle cx="17" cy="17" r="2.2" stroke="#3E4652" stroke-width="2"/></svg>Diskon / Promo</span>
+                    <span style="color:#003399;font-weight:700">+ Tambah Promo</span>
+                  </button>
+                  <sc-if value="{{ promoOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+                      <sc-for list="{{ promoOptions }}" as="pr" hint-placeholder-count="2">
+                        <button onClick="{{ pr.onApply }}" style="display:flex;justify-content:space-between;gap:8px;text-align:left;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:9px;padding:8px 11px;cursor:pointer;font-size:11.5px">
+                          <span style="font-weight:600;color:#101828">{{ pr.name }}</span>
+                          <span style="color:#003399;font-weight:700;flex-shrink:0">{{ pr.desc }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="padding:14px 16px;border-top:1px solid #EEF0F3;background:#F9FAFB;position:sticky;bottom:0;z-index:2;box-shadow:0 -6px 12px rgba(16,24,40,0.05)">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;color:#3E4652"><span>Subtotal ({{ cartCountLabel }})</span><span>{{ cartSubtotalLabel }}</span></div>
+              <sc-if value="{{ promoApplied }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;color:#DC2626"><span>Diskon</span><span>−{{ cartDiscountLabel }}</span></div>
+              </sc-if>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:10px;color:#3E4652"><span>PPN 11%</span><span>{{ cartTaxLabel }}</span></div>
+              <div style="height:1px;background:#EEF0F3;margin-bottom:10px"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;background:#EEF3FF;border:1px solid #C7D9FF;border-radius:10px;padding:14px 16px;margin-bottom:14px">
+                <span style="font-size:12.5px;font-weight:700;color:#003399">Total Pembayaran</span>
+                <span style="font-weight:800;font-size:23px;color:#003399;letter-spacing:-0.01em">{{ cartTotalLabel }}</span>
+              </div>
+
+              <div style="font-size:11px;color:#737B87;font-weight:700;margin-bottom:6px">Metode Pembayaran</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
+                <button onClick="{{ setPayCash }}" style="{{ payCashStyle }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+                  <span>Cash</span>
+                </button>
+                <button onClick="{{ setPayQris }}" style="{{ payQrisStyle }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="3" height="3" fill="currentColor"/><rect x="18" y="18" width="3" height="3" fill="currentColor"/></svg>
+                  <span>QRIS</span>
+                </button>
+                <button onClick="{{ setPayDebit }}" style="{{ payDebitStyle }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" stroke-width="1.8"/></svg>
+                  <span>Debit/Kredit</span>
+                </button>
+                <button onClick="{{ setPayWallet }}" style="{{ payWalletStyle }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="1.8"/><path d="M16 12h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span>Wallet/Point</span>
+                </button>
+                <button onClick="{{ setPayPayroll }}" style="{{ payPayrollStyle }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" stroke="currentColor" stroke-width="1.8"/><line x1="8" y1="8" x2="16" y2="8" stroke="currentColor" stroke-width="1.8"/><line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.8"/></svg>
+                  <span>Payroll</span>
+                </button>
+                <button onClick="{{ setPayKombinasi }}" style="{{ payKombinasiStyle }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 7h11l-3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 17H6l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Kombinasi</span>
+                </button>
+              </div>
+              <sc-if value="{{ isKombinasi }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#FFF7E6;border:1px solid #FDE9BC;border-radius:10px;padding:9px 11px;font-size:11px;color:#92400E;margin-bottom:12px">Rincian pembagian metode kombinasi akan diatur setelah konfirmasi total pembayaran.</div>
+              </sc-if>
+
+              <button onClick="{{ processPayment }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#003399;color:#fff;border:none;border-radius:12px;padding:15px 16px;font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 10px rgba(0,51,153,0.22)" style-hover="background:#00287A">
+                <span style="display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 7h12l-1.2 12.2a2 2 0 01-2 1.8H9.2a2 2 0 01-2-1.8L6 7z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7V5.5a3 3 0 016 0V7" stroke="#fff" stroke-width="1.8"/></svg>Proses Pembayaran</span>
+                <span style="background:rgba(255,255,255,0.18);border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:700">F12</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <sc-if value="{{ clearConfirmOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;background:rgba(16,24,40,0.55);display:flex;align-items:center;justify-content:center;z-index:50">
+            <div style="background:#fff;border-radius:16px;padding:24px;width:360px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:38px;height:38px;border-radius:10px;background:#FDECEC;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="#DC2626" stroke-width="2" stroke-linecap="round"/></svg>
+                </div>
+                <div style="font-weight:700;font-size:15px;color:#101828">Hapus Semua Item?</div>
+              </div>
+              <div style="font-size:12.5px;color:#737B87;line-height:1.5">Seluruh item di keranjang transaksi akan dihapus. Tindakan ini tidak dapat dibatalkan.</div>
+              <div style="display:flex;gap:8px;margin-top:4px">
+                <button onClick="{{ cancelClear }}" style="flex:1;background:#fff;border:1px solid #D9DDE3;border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;color:#3E4652;cursor:pointer">Batal</button>
+                <button onClick="{{ confirmClear }}" style="flex:1;background:#DC2626;border:none;border-radius:10px;padding:10px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer">Ya, Hapus Semua</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ memberModalOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;background:rgba(16,24,40,0.55);display:flex;align-items:center;justify-content:center;z-index:50">
+            <div style="background:#fff;border-radius:16px;padding:20px;width:400px;max-height:70vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="font-weight:700;font-size:15px;color:#101828">Pilih Member</div>
+                <button onClick="{{ closeMemberModal }}" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:20px;line-height:1">×</button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+                <sc-for list="{{ memberOptions }}" as="m" hint-placeholder-count="3">
+                  <button onClick="{{ m.onPick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:12px;padding:11px 13px;cursor:pointer" style-hover="border-color:#C7D9FF;background:#F3F7FF">
+                    <div>
+                      <div style="font-size:13px;font-weight:700;color:#101828">{{ m.name }}</div>
+                      <div style="font-size:11px;color:#737B87;margin-top:2px">{{ m.id }} · {{ m.dept }}</div>
+                    </div>
+                    <div style="font-size:11px;color:#003399;font-weight:700;white-space:nowrap;flex-shrink:0">{{ m.limitLabel }}</div>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ paymentSuccessOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;background:rgba(16,24,40,0.55);display:flex;align-items:center;justify-content:center;z-index:50">
+            <div style="background:#fff;border-radius:18px;padding:28px;width:380px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+              <div style="width:56px;height:56px;border-radius:50%;background:#EAF8EF;display:flex;align-items:center;justify-content:center;margin-bottom:6px">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="font-weight:700;font-size:17px;color:#101828">Transaksi Berhasil</div>
+              <div style="font-weight:800;font-size:26px;color:#003399;margin:8px 0 14px">{{ lastTxTotal }}</div>
+              <div style="width:100%;background:#F9FAFB;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;font-size:12px;margin-bottom:16px">
+                <div style="display:flex;justify-content:space-between"><span style="color:#737B87">No. Transaksi</span><span style="font-weight:600">{{ lastTxNo }}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:#737B87">Tanggal</span><span style="font-weight:600">{{ lastTxDate }}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:#737B87">Kasir</span><span style="font-weight:600">Rahmat Setiawan</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:#737B87">Member</span><span style="font-weight:600">{{ lastTxMember }}</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:#737B87">Metode Pembayaran</span><span style="font-weight:600">{{ lastTxMethod }}</span></div>
+              </div>
+              <div style="display:flex;gap:8px;width:100%">
+                <button onClick="{{ printReceipt }}" style="flex:1;background:#fff;border:1px solid #D9DDE3;border-radius:10px;padding:11px;font-size:12.5px;font-weight:700;color:#3E4652;cursor:pointer">Cetak Struk</button>
+                <button onClick="{{ newTransaction }}" style="flex:1;background:#003399;border:none;border-radius:10px;padding:11px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer">Transaksi Baru</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isInventory }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <div style="display:flex;gap:10px;flex:1">
+              <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #EEF0F3;border-radius:12px;padding:8px 12px;width:280px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#737B87" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="#737B87" stroke-width="2" stroke-linecap="round"/></svg>
+                <input value="{{ invSearch }}" onChange="{{ onInvSearch }}" placeholder="Cari SKU, barcode, nama produk..." style="border:none;outline:none;font-size:12.5px;flex:1;font-family:'Inter',sans-serif"/>
+              </div>
+              <select value="{{ invCategory }}" onChange="{{ onInvCategory }}" style="border:1px solid #D9DDE3;border-radius:12px;padding:8px 10px;font-size:12.5px;background:#fff;font-family:'Inter',sans-serif">
+                <option value="Semua">Semua Kategori</option>
+                <option value="Sembako">Sembako</option>
+                <option value="Minuman">Minuman</option>
+                <option value="Makanan">Makanan</option>
+                <option value="Snack">Snack</option>
+                <option value="Rumah Tangga">Rumah Tangga</option>
+                <option value="PPOB">PPOB</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button style="display:flex;align-items:center;gap:6px;border:1px solid #D9DDE3;background:#fff;border-radius:12px;padding:8px 13px;font-size:12.5px;cursor:pointer;font-weight:600;color:#3E4652">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="2"/></svg>
+                Export
+              </button>
+              <button style="display:flex;align-items:center;gap:6px;background:#003399;color:#fff;border:none;border-radius:12px;padding:8px 14px;font-size:12.5px;cursor:pointer;font-weight:700">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+                Tambah Produk
+              </button>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:1.6fr 0.9fr 1fr 0.9fr 0.9fr 0.9fr 1fr 1.1fr;gap:8px;padding:11px 16px;background:#F7F8FA;border-bottom:1px solid #EEF0F3;font-size:11px;color:#737B87;font-weight:700;text-transform:uppercase;letter-spacing:0.02em">
+              <span>Produk</span><span>Kategori</span><span>Harga Jual</span><span>Stok</span><span>Min/Max</span><span>Status</span><span>Gudang</span><span>Aksi</span>
+            </div>
+            <sc-for list="{{ inventoryRows }}" as="r" hint-placeholder-count="10">
+              <div style="display:grid;grid-template-columns:1.6fr 0.9fr 1fr 0.9fr 0.9fr 0.9fr 1fr 1.1fr;gap:8px;padding:12px 16px;border-bottom:1px solid #F7F8FA;align-items:center;font-size:12.5px">
+                <div>
+                  <div style="font-weight:600">{{ r.name }}</div>
+                  <div style="font-size:10.5px;color:#94A3B8">{{ r.sku }}</div>
+                </div>
+                <span style="color:#737B87">{{ r.category }}</span>
+                <span style="font-weight:600">{{ r.sellPriceLabel }}</span>
+                <span style="{{ r.stockStyle }}">{{ r.stock }}</span>
+                <span style="color:#94A3B8">{{ r.minMax }}</span>
+                <span style="{{ r.statusBadgeStyle }}">{{ r.statusLabel }}</span>
+                <span style="color:#737B87">{{ r.warehouse }}</span>
+                <div style="display:flex;gap:6px">
+                  <button style="background:#F7F8FA;border:none;border-radius:8px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="#3E4652" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="#3E4652" stroke-width="2" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#737B87">
+            <span>Menampilkan {{ inventoryCountLabel }}</span>
+            <div style="display:flex;gap:6px">
+              <button style="border:1px solid #D9DDE3;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px">Sebelumnya</button>
+              <button style="border:1px solid #D9DDE3;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px">Selanjutnya</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isWarehouse }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+            <sc-for list="{{ warehouseCards }}" as="w" hint-placeholder-count="4">
+              <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:16px">
+                <div style="font-size:13px;font-weight:700">{{ w.name }}</div>
+                <div style="font-size:11px;color:#94A3B8;margin-top:2px;margin-bottom:12px">{{ w.desc }}</div>
+                <div style="display:flex;justify-content:space-between">
+                  <div><div style="font-size:16px;font-weight:700">{{ w.items }}</div><div style="font-size:10.5px;color:#737B87">SKU</div></div>
+                  <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:#003399">{{ w.value }}</div><div style="font-size:10.5px;color:#737B87">Nilai Stok</div></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;gap:8px;border-bottom:1px solid #EEF0F3;padding-bottom:0">
+            <button onClick="{{ setMovementTab }}" style="{{ movementTabStyle }}">Stock Movement</button>
+            <button onClick="{{ setOpnameTab }}" style="{{ opnameTabStyle }}">Stock Opname</button>
+          </div>
+
+          <sc-if value="{{ isMovementTab }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:1.3fr 1.4fr 1fr 0.7fr 0.7fr 0.7fr 1.2fr 1.1fr;gap:8px;padding:11px 16px;background:#F7F8FA;border-bottom:1px solid #EEF0F3;font-size:11px;color:#737B87;font-weight:700;text-transform:uppercase">
+                <span>ID Transaksi</span><span>Produk</span><span>Gudang</span><span>Before</span><span>Movement</span><span>After</span><span>User / Ref</span><span>Waktu</span>
+              </div>
+              <sc-for list="{{ movementRows }}" as="m" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:1.3fr 1.4fr 1fr 0.7fr 0.7fr 0.7fr 1.2fr 1.1fr;gap:8px;padding:12px 16px;border-bottom:1px solid #F7F8FA;font-size:12px;align-items:center">
+                  <span style="color:#737B87">{{ m.id }}</span>
+                  <span style="font-weight:600">{{ m.product }}</span>
+                  <span>{{ m.warehouse }}</span>
+                  <span>{{ m.before }}</span>
+                  <span style="{{ m.movementStyle }}">{{ m.movementLabel }}</span>
+                  <span style="font-weight:600">{{ m.after }}</span>
+                  <span style="color:#737B87">{{ m.user }} · {{ m.ref }}</span>
+                  <span style="color:#94A3B8;font-size:11px">{{ m.ts }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isOpnameTab }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:20px;overflow-x:auto">
+                <div style="display:flex;align-items:center;gap:0;min-width:820px">
+                  <sc-for list="{{ opnameSteps }}" as="s" hint-placeholder-count="9">
+                    <div style="display:flex;align-items:center;flex:1">
+                      <button onClick="{{ s.onClick }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;flex-shrink:0">
+                        <div style="{{ s.circleStyle }}">{{ s.marker }}</div>
+                        <span style="{{ s.labelStyle }}">{{ s.label }}</span>
+                      </button>
+                      <div style="{{ s.lineStyle }}"></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;overflow:hidden">
+                <div style="padding:14px 18px;border-bottom:1px solid #EEF0F3;display:flex;justify-content:space-between;align-items:center">
+                  <div>
+                    <div style="font-weight:700;font-size:14px">Stock Opname — Main Warehouse</div>
+                    <div style="font-size:11.5px;color:#737B87;margin-top:2px">Periode: Q3 2026 · Tahap aktif: {{ currentStepLabel }}</div>
+                  </div>
+                  <button onClick="{{ approveOpname }}" style="background:#003399;color:#fff;border:none;border-radius:12px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer">Setujui &amp; Selesaikan</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:8px;padding:10px 18px;background:#F7F8FA;font-size:11px;color:#737B87;font-weight:700;text-transform:uppercase">
+                  <span>Produk</span><span>Stok Sistem</span><span>Stok Aktual</span><span>Variance</span>
+                </div>
+                <sc-for list="{{ opnameRows }}" as="o" hint-placeholder-count="5">
+                  <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:8px;padding:11px 18px;border-bottom:1px solid #F7F8FA;align-items:center;font-size:12.5px">
+                    <span style="font-weight:600">{{ o.name }}</span>
+                    <span>{{ o.systemStock }}</span>
+                    <input value="{{ o.actualStock }}" onChange="{{ o.onChange }}" type="number" style="width:80px;border:1px solid #D9DDE3;border-radius:8px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif"/>
+                    <span style="{{ o.varianceStyle }}">{{ o.varianceLabel }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <sc-if value="{{ opnameCompleted }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#EAF8EF;border:1px solid #B7E8C8;border-radius:10px;padding:12px 16px;font-size:12.5px;color:#166534">✓ Stock opname disetujui — penyesuaian inventory otomatis tercatat di audit trail.</div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isFinance }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ financePeriods }}" as="fp" hint-placeholder-count="3">
+              <button onClick="{{ fp.onClick }}" style="{{ fp.style }}">{{ fp.label }}</button>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px">
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:14px"><div style="font-size:11.5px;color:#737B87">Revenue</div><div style="font-weight:700;font-size:16px;margin-top:6px">{{ financeRevenueLabel }}</div></div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:14px"><div style="font-size:11.5px;color:#737B87">COGS</div><div style="font-weight:700;font-size:16px;margin-top:6px">{{ financeCogsLabel }}</div></div>
+            <div style="background:#E8F0FF;border:1px solid #C7D9FF;border-radius:16px;padding:14px"><div style="font-size:11.5px;color:#003399">Gross Profit</div><div style="font-weight:700;font-size:16px;margin-top:6px;color:#003399">{{ financeGrossProfitLabel }}</div></div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:14px"><div style="font-size:11.5px;color:#737B87">Operating Expense</div><div style="font-weight:700;font-size:16px;margin-top:6px">{{ financeOpexLabel }}</div></div>
+            <div style="background:#101828;border:1px solid #101828;border-radius:16px;padding:14px"><div style="font-size:11.5px;color:rgba(255,255,255,0.6)">Net Profit</div><div style="font-weight:700;font-size:16px;margin-top:6px;color:#fff">{{ financeNetProfitLabel }}</div></div>
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:14px"><div style="font-size:11.5px;color:#737B87">Profit Margin</div><div style="font-weight:700;font-size:16px;margin-top:6px">{{ financeMarginLabel }}</div></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px">
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:18px">
+              <div style="font-weight:700;font-size:14px;margin-bottom:14px">Tren Profit — 6 Bulan Terakhir</div>
+              <div style="display:flex;align-items:flex-end;gap:16px;height:150px">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:70%;background:#EEF0F3;border-radius:4px 4px 0 0"></div><div style="flex:1;height:24%;background:#003399;border-radius:4px 4px 0 0"></div></div><span style="font-size:10px;color:#94A3B8">Mar</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:76%;background:#EEF0F3;border-radius:4px 4px 0 0"></div><div style="flex:1;height:28%;background:#003399;border-radius:4px 4px 0 0"></div></div><span style="font-size:10px;color:#94A3B8">Apr</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:64%;background:#EEF0F3;border-radius:4px 4px 0 0"></div><div style="flex:1;height:20%;background:#003399;border-radius:4px 4px 0 0"></div></div><span style="font-size:10px;color:#94A3B8">Mei</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:82%;background:#EEF0F3;border-radius:4px 4px 0 0"></div><div style="flex:1;height:31%;background:#003399;border-radius:4px 4px 0 0"></div></div><span style="font-size:10px;color:#94A3B8">Jun</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:88%;background:#EEF0F3;border-radius:4px 4px 0 0"></div><div style="flex:1;height:33%;background:#003399;border-radius:4px 4px 0 0"></div></div><span style="font-size:10px;color:#94A3B8">Jul</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:100%;display:flex;gap:3px;align-items:flex-end;height:100%"><div style="flex:1;height:95%;background:#EEF0F3;border-radius:4px 4px 0 0"></div><div style="flex:1;height:36%;background:#003399;border-radius:4px 4px 0 0"></div></div><span style="font-size:10px;color:#94A3B8">Ags</span></div>
+              </div>
+              <div style="display:flex;gap:16px;margin-top:14px;font-size:11.5px;color:#737B87">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:#EEF0F3;border-radius:2px"></span>Revenue</div>
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:#003399;border-radius:2px"></span>Net Profit</div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #EEF0F3;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px">
+              <div style="font-weight:700;font-size:14px">Rincian Operating Expense</div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid #F7F8FA"><span>Operasional</span><span style="font-weight:600">Rp 12.400.000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid #F7F8FA"><span>Karyawan / Honor</span><span style="font-weight:600">Rp 18.200.000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid #F7F8FA"><span>Utilitas</span><span style="font-weight:600">Rp 4.150.000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid #F7F8FA"><span>Transportasi</span><span style="font-weight:600">Rp 2.900.000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>Lainnya</span><span style="font-weight:600">Rp 1.600.000</span></div>
+
+              <div style="margin-top:6px;padding-top:12px;border-top:1px dashed #D9DDE3">
+                <div style="font-weight:700;font-size:13px;margin-bottom:8px">Monthly Closing</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#FFF7E6;border:1px solid #FDE9BC;border-radius:10px;padding:10px 12px">
+                  <span style="font-size:12px;color:#92400E;font-weight:600">Status: Belum Closing</span>
+                  <button onClick="{{ processClosing }}" style="background:#003399;color:#fff;border:none;border-radius:10px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer">Proses Closing</button>
+                </div>
+                <sc-if value="{{ closingDone }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:8px;background:#EAF8EF;border:1px solid #B7E8C8;border-radius:10px;padding:9px 11px;font-size:11.5px;color:#166534">✓ Monthly closing Agustus 2026 selesai — data terkunci, gunakan adjustment untuk koreksi.</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const ROLES = ['Admin Koperasi','Supervisor','Kasir','Finance','Warehouse Staff'];
+
+const NAV_BASE = 'display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:12px;border:none;cursor:pointer;font-size:13px;font-weight:600;text-align:left;width:100%;background:transparent;color:rgba(255,255,255,0.65)';
+const NAV_ACTIVE = 'display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:12px;border:none;cursor:pointer;font-size:13px;font-weight:700;text-align:left;width:100%;background:#003399;color:#fff';
+
+const CHIP_BASE = 'padding:7px 14px;border-radius:999px;border:1px solid #D9DDE3;background:#fff;color:#3E4652;font-size:12px;font-weight:600;cursor:pointer';
+const CHIP_ACTIVE = 'padding:7px 14px;border-radius:999px;border:1px solid #003399;background:#E8F0FF;color:#003399;font-size:12px;font-weight:700;cursor:pointer';
+
+const PAY_BASE = 'padding:9px 8px;border-radius:10px;border:1px solid #D9DDE3;background:#fff;color:#3E4652;font-size:11.5px;font-weight:600;cursor:pointer';
+const PAY_ACTIVE = 'padding:9px 8px;border-radius:10px;border:1px solid #003399;background:#003399;color:#fff;font-size:11.5px;font-weight:600;cursor:pointer';
+
+const TAB_BASE = 'padding:10px 4px;border:none;background:none;border-bottom:2px solid transparent;color:#737B87;font-size:13px;font-weight:600;cursor:pointer;margin-right:20px';
+const TAB_ACTIVE = 'padding:10px 4px;border:none;background:none;border-bottom:2px solid #003399;color:#003399;font-size:13px;font-weight:700;cursor:pointer;margin-right:20px';
+
+const PERIOD_BASE = 'padding:8px 14px;border-radius:10px;border:1px solid #D9DDE3;background:#fff;color:#3E4652;font-size:12.5px;font-weight:600;cursor:pointer';
+const PERIOD_ACTIVE = 'padding:8px 14px;border-radius:10px;border:1px solid #003399;background:#003399;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer';
+
+const ILL = 'uploads/koperasi-pos-product-illustrations-svg/';
+const CAT_SLUG = { Sembako:'sembako', Minuman:'minuman', Makanan:'makanan', 'Rumah Tangga':'rumah-tangga', Lainnya:'lainnya' };
+function hashIndex(id) {
+  let h = 0; const str = String(id);
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % 6) + 1;
+}
+// Fallback illustration used only when product.image is empty; index is deterministic per product id.
+function fallbackImg(p) {
+  const slug = CAT_SLUG[p.category] || 'lainnya';
+  const idx = p.illustrationIndex || hashIndex(p.id);
+  return ILL + slug + '-illustration-' + idx + '.svg';
+}
+const PRODUCTS = [
+  { id:1, name:'Air Mineral 600ml', sku:'MIN-001', price:4000, stock:210, category:'Minuman', image:null, illustrationIndex:1 },
+  { id:2, name:'Mie Goreng Instan', sku:'MAK-002', price:3500, stock:340, category:'Makanan', image:null, illustrationIndex:1 },
+  { id:3, name:'Kopi Sachet Renceng', sku:'MIN-003', price:12000, stock:18, category:'Minuman', image:null, illustrationIndex:2 },
+  { id:4, name:'Nasi Ayam Geprek', sku:'MAK-004', price:15000, stock:22, category:'Makanan', image:null, illustrationIndex:2 },
+  { id:5, name:'Gula Pasir 1kg', sku:'SEM-001', price:16000, stock:0, category:'Sembako', image:null, illustrationIndex:2 },
+  { id:6, name:'Minyak Goreng 2L', sku:'SEM-002', price:32000, stock:64, category:'Sembako', image:null, illustrationIndex:3 },
+  { id:7, name:'Sabun Cuci Piring', sku:'RT-001', price:9500, stock:12, category:'Rumah Tangga', image:null, illustrationIndex:1 },
+  { id:8, name:'Roti Tawar', sku:'MAK-005', price:14000, stock:40, category:'Makanan', image:null, illustrationIndex:3 },
+];
+
+const MEMBERS = [
+  { name:'Budi Santoso', id:'#EMP-12345', dept:'Produksi — Line 3', limit:750000 },
+  { name:'Siti Amalia', id:'#EMP-20881', dept:'Finance & Accounting', limit:1200000 },
+  { name:'Andi Wijaya', id:'#EMP-33210', dept:'Warehouse', limit:400000 },
+];
+
+const PROMOS = [
+  { name:'Diskon Karyawan 5%', pct:5 },
+  { name:'Promo Spesial Rp2.000', flat:2000 },
+];
+
+const CAT_DEFS = {
+  Semua: '#003399', Sembako: '#D97706', Minuman: '#0891B2',
+  Makanan: '#EA580C', 'Rumah Tangga': '#0D9488', Lainnya: '#7C3AED',
+};
+const CAT_TINT = { Sembako:'#FFF6E9', Minuman:'#E8F7FA', Makanan:'#FFF1EA', 'Rumah Tangga':'#E8F7F5', Lainnya:'#F3ECFF' };
+function catStyle(name, active) {
+  const c = CAT_DEFS[name];
+  return 'display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;font-size:12.5px;cursor:pointer;' +
+    (active ? `border:1px solid ${c};background:${c};color:#fff;font-weight:700` : `border:1px solid #E2E5EA;background:#fff;color:${c};font-weight:600`);
+}
+function payStyle(active) {
+  return 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px 6px;border-radius:10px;font-size:11.5px;cursor:pointer;' +
+    (active ? 'border:1px solid #003399;background:#003399;color:#fff;font-weight:700' : 'border:1px solid #D9DDE3;background:#fff;color:#3E4652;font-weight:600');
+}
+
+const INVENTORY = [
+  { name:'Air Mineral 600ml', sku:'SKU-0001 · 8991002101', category:'Minuman', sell:4000, stock:210, min:50, max:500, warehouse:'Store' },
+  { name:'Mie Goreng Instan', sku:'SKU-0002 · 8991002102', category:'Makanan', sell:3500, stock:340, min:100, max:800, warehouse:'Main Warehouse' },
+  { name:'Kopi Sachet Renceng', sku:'SKU-0003 · 8991002103', category:'Minuman', sell:12000, stock:18, min:30, max:200, warehouse:'Store' },
+  { name:'Nasi Ayam Geprek', sku:'SKU-0004 · FOOD-0021', category:'Makanan', sell:15000, stock:22, min:15, max:60, warehouse:'Food Counter' },
+  { name:'Gula Pasir 1kg', sku:'SKU-0005 · 8991002105', category:'Sembako', sell:16000, stock:0, min:40, max:300, warehouse:'Main Warehouse' },
+  { name:'Minyak Goreng 2L', sku:'SKU-0006 · 8991002106', category:'Sembako', sell:32000, stock:64, min:20, max:150, warehouse:'Main Warehouse' },
+  { name:'Sabun Cuci Piring', sku:'SKU-0007 · 8991002107', category:'Rumah Tangga', sell:9500, stock:12, min:20, max:100, warehouse:'Store' },
+  { name:'Token Listrik 100rb', sku:'SKU-0008 · PPOB-PLN', category:'PPOB', sell:100000, stock:9999, min:0, max:0, warehouse:'Digital' },
+  { name:'Roti Tawar', sku:'SKU-0009 · FOOD-0032', category:'Makanan', sell:14000, stock:40, min:15, max:80, warehouse:'Food Counter' },
+  { name:'Deterjen Bubuk 800g', sku:'SKU-0010 · 8991002110', category:'Rumah Tangga', sell:18500, stock:56, min:20, max:120, warehouse:'Main Warehouse' },
+];
+
+const MOVEMENTS = [
+  { id:'TRX-88291', product:'Air Mineral 600ml', warehouse:'Store', before:230, delta:-20, ref:'POS-4471', user:'kasir02', ts:'22 Ags 14:02' },
+  { id:'TRX-88290', product:'Minyak Goreng 2L', warehouse:'Main Warehouse', before:40, delta:24, ref:'GR-0091', user:'wh-staff01', ts:'22 Ags 10:15' },
+  { id:'TRX-88289', product:'Gula Pasir 1kg', warehouse:'Main Warehouse', before:5, delta:-5, ref:'POS-4468', user:'kasir01', ts:'21 Ags 19:40' },
+  { id:'TRX-88288', product:'Nasi Ayam Geprek', warehouse:'Food Counter', before:30, delta:-8, ref:'MOB-2291', user:'system', ts:'21 Ags 12:05' },
+  { id:'TRX-88287', product:'Sabun Cuci Piring', warehouse:'Store', before:18, delta:-6, ref:'POS-4460', user:'kasir02', ts:'20 Ags 16:30' },
+  { id:'TRX-88286', product:'Roti Tawar', warehouse:'Food Counter', before:0, delta:50, ref:'GR-0090', user:'wh-staff02', ts:'20 Ags 08:12' },
+];
+
+const WAREHOUSES = [
+  { name:'Main Warehouse', desc:'Gudang utama & stok cadangan', items:284, value:'Rp 412.000.000' },
+  { name:'Store', desc:'Rak penjualan koperasi', items:196, value:'Rp 128.400.000' },
+  { name:'Food Counter', desc:'Kantin & makanan siap saji', items:38, value:'Rp 9.800.000' },
+  { name:'Other Location', desc:'Lokasi tambahan / transit', items:12, value:'Rp 4.000.000' },
+];
+
+const OPNAME_STEP_LABELS = ['Create','Pilih Gudang','Freeze Snapshot','Counting Fisik','Input Aktual','Kalkulasi Variance','Review','Approval','Selesai'];
+
+const OPNAME_ITEMS = [
+  { name:'Air Mineral 600ml', system:210 },
+  { name:'Mie Goreng Instan', system:340 },
+  { name:'Kopi Sachet Renceng', system:18 },
+  { name:'Minyak Goreng 2L', system:64 },
+  { name:'Sabun Cuci Piring', system:12 },
+];
+
+function rupiah(n) { return 'Rp ' + n.toLocaleString('id-ID'); }
+
+class Component extends DCLogic {
+  state = {
+    module: 'dashboard',
+    roleIdx: 0,
+    posSearch: '', posCategory: 'Semua',
+    cart: [],
+    memberQuery: '', memberData: null, memberSearched: false, memberModalOpen: false,
+    paymentMethod: 'Cash',
+    clearConfirmOpen: false, stockWarnId: null,
+    promoOpen: false, promoApplied: null,
+    paymentSuccessOpen: false, lastTx: null,
+    invSearch: '', invCategory: 'Semua',
+    warehouseTab: 'movement',
+    opnameStepIdx: 3,
+    opnameActuals: { 'Air Mineral 600ml':'208','Mie Goreng Instan':'340','Kopi Sachet Renceng':'15','Minyak Goreng 2L':'64','Sabun Cuci Piring':'10' },
+    opnameCompleted: false,
+    financePeriod: 'Agustus 2026',
+    closingDone: false,
+  };
+
+  navStyle(mod) { return this.state.module === mod ? NAV_ACTIVE : NAV_BASE; }
+
+  doMemberSearch() {
+    const q = this.state.memberQuery.trim().toLowerCase();
+    if (!q) return;
+    const found = MEMBERS.find(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
+    this.setState({ memberData: found || null, memberSearched: true });
+  }
+
+  renderVals() {
+    const s = this.state;
+
+    const filteredProducts = PRODUCTS.filter(p =>
+      (s.posCategory === 'Semua' || p.category === s.posCategory) &&
+      p.name.toLowerCase().includes(s.posSearch.toLowerCase())
+    );
+
+    const posProducts = filteredProducts.map(p => {
+      const outOfStock = p.stock <= 0;
+      const imgSrc = p.image || fallbackImg(p);
+      return {
+        name: p.name, sku: p.sku, stock: p.stock, img: imgSrc,
+        priceLabel: rupiah(p.price), outOfStock,
+        stockLabel: outOfStock ? 'Stok Habis' : ('Stok: ' + p.stock),
+        cardStyle: 'position:relative;text-align:left;background:#fff;border:1px solid #E7E9EE;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s,border-color .15s',
+        imgWrapStyle: `position:relative;height:104px;background:${CAT_TINT[p.category] || '#F7F8FA'};display:flex;align-items:center;justify-content:center`,
+        addBtnStyle: outOfStock
+          ? 'width:32px;height:32px;border-radius:9px;border:none;background:#EEF0F3;color:#B3B9C2;cursor:not-allowed;display:flex;align-items:center;justify-content:center;flex-shrink:0'
+          : 'width:32px;height:32px;border-radius:9px;border:none;background:#003399;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0',
+        onAdd: () => {
+          if (p.stock <= 0) return;
+          const existing = s.cart.find(c => c.id === p.id);
+          const cart = existing
+            ? s.cart.map(c => c.id === p.id ? { ...c, qty: c.qty + 1 } : c)
+            : [...s.cart, { id: p.id, name: p.name, price: p.price, qty: 1, img: imgSrc, stock: p.stock }];
+          this.setState({ cart });
+        },
+      };
+    });
+
+    const cartItems = s.cart.map(c => ({
+      name: c.name, qty: c.qty, img: c.img, priceLabel: rupiah(c.price) + ' / pcs',
+      subtotalLabel: rupiah(c.price * c.qty),
+      showWarn: s.stockWarnId === c.id,
+      onInc: () => {
+        if (c.qty >= c.stock) { this.setState({ stockWarnId: c.id }); return; }
+        this.setState({ cart: s.cart.map(x => x.id === c.id ? { ...x, qty: x.qty + 1 } : x), stockWarnId: null });
+      },
+      onDec: () => this.setState({ cart: s.cart.map(x => x.id === c.id ? { ...x, qty: Math.max(1, x.qty - 1) } : x) }),
+      onRemove: () => this.setState({ cart: s.cart.filter(x => x.id !== c.id) }),
+    }));
+
+    const subtotal = s.cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+    const discount = s.promoApplied ? Math.min(subtotal, s.promoApplied.pct ? Math.round(subtotal * s.promoApplied.pct / 100) : s.promoApplied.flat) : 0;
+    const tax = Math.round((subtotal - discount) * 0.11);
+    const total = subtotal - discount + tax;
+
+    const promoOptions = PROMOS.map(pr => ({
+      name: pr.name, desc: pr.pct ? `-${pr.pct}%` : `-${rupiah(pr.flat)}`,
+      onApply: () => this.setState({ promoApplied: pr, promoOpen: false }),
+    }));
+
+    const memberOptions = MEMBERS.map(m => ({
+      name: m.name, id: m.id, dept: m.dept, limitLabel: rupiah(m.limit),
+      onPick: () => this.setState({ memberData: m, memberSearched: true, memberModalOpen: false, memberQuery: m.name }),
+    }));
+
+    const filteredInv = INVENTORY.filter(r =>
+      (s.invCategory === 'Semua' || r.category === s.invCategory) &&
+      r.name.toLowerCase().includes(s.invSearch.toLowerCase())
+    );
+    const inventoryRows = filteredInv.map(r => {
+      let statusLabel = 'Normal', badge = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:#EAF8EF;color:#166534';
+      let stockStyle = 'font-weight:600';
+      if (r.stock === 0) { statusLabel = 'Out of Stock'; badge = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:#FDECEC;color:#991B1B'; stockStyle = 'font-weight:700;color:#DC2626'; }
+      else if (r.min && r.stock < r.min) { statusLabel = 'Stok Menipis'; badge = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:#FFF7E6;color:#92400E'; stockStyle = 'font-weight:700;color:#F59E0B'; }
+      return {
+        name: r.name, sku: r.sku, category: r.category,
+        sellPriceLabel: rupiah(r.sell), stock: r.stock,
+        minMax: r.min || r.max ? r.min + ' / ' + r.max : '—',
+        warehouse: r.warehouse, statusLabel, statusBadgeStyle: badge, stockStyle,
+      };
+    });
+
+    const warehouseCards = WAREHOUSES;
+
+    const movementRows = MOVEMENTS.map(m => ({
+      id: m.id, product: m.product, warehouse: m.warehouse,
+      before: m.before, after: m.before + m.delta,
+      movementLabel: (m.delta > 0 ? '+' : '') + m.delta,
+      movementStyle: 'font-weight:700;color:' + (m.delta > 0 ? '#16A34A' : '#DC2626'),
+      user: m.user, ref: m.ref, ts: m.ts,
+    }));
+
+    const opnameSteps = OPNAME_STEP_LABELS.map((label, i) => {
+      const done = i < s.opnameStepIdx, active = i === s.opnameStepIdx;
+      const circleColor = done ? '#16A34A' : active ? '#003399' : '#EEF0F3';
+      const textColor = done ? '#16A34A' : active ? '#003399' : '#94A3B8';
+      return {
+        label, marker: done ? '✓' : (i + 1),
+        circleStyle: `width:30px;height:30px;border-radius:50%;background:${done || active ? circleColor : '#F7F8FA'};color:${done || active ? '#fff' : '#94A3B8'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:${active ? '2px solid #003399' : 'none'}`,
+        labelStyle: `font-size:10.5px;font-weight:${active ? 700 : 500};color:${textColor};white-space:nowrap`,
+        lineStyle: `flex:1;height:2px;background:${i < s.opnameStepIdx ? '#16A34A' : '#EEF0F3'};margin:0 4px;visibility:${i === OPNAME_STEP_LABELS.length - 1 ? 'hidden' : 'visible'}`,
+        onClick: () => this.setState({ opnameStepIdx: i }),
+      };
+    });
+
+    const opnameRows = OPNAME_ITEMS.map(o => {
+      const actual = parseInt(s.opnameActuals[o.name], 10) || 0;
+      const variance = actual - o.system;
+      return {
+        name: o.name, systemStock: o.system, actualStock: s.opnameActuals[o.name],
+        onChange: (e) => this.setState({ opnameActuals: { ...s.opnameActuals, [o.name]: e.target.value } }),
+        varianceLabel: variance === 0 ? 'Sesuai (0)' : (variance > 0 ? '+' + variance + ' Surplus' : variance + ' Shortage'),
+        varianceStyle: 'font-weight:700;color:' + (variance === 0 ? '#16A34A' : variance > 0 ? '#2563EB' : '#DC2626'),
+      };
+    });
+
+    const periods = ['Juni 2026','Juli 2026','Agustus 2026'];
+    const financePeriods = periods.map(p => ({
+      label: p, style: s.financePeriod === p ? PERIOD_ACTIVE : PERIOD_BASE,
+      onClick: () => this.setState({ financePeriod: p }),
+    }));
+
+    return {
+      roleLabel: ROLES[s.roleIdx],
+      cycleRole: () => this.setState({ roleIdx: (s.roleIdx + 1) % ROLES.length }),
+
+      isDashboard: s.module === 'dashboard', isPOS: s.module === 'pos',
+      isInventory: s.module === 'inventory', isWarehouse: s.module === 'warehouse',
+      isFinance: s.module === 'finance',
+
+      moduleTitle: { dashboard:'Dashboard Supervisor', pos:'POS / Kasir', inventory:'Produk & Inventory', warehouse:'Warehouse & Stock Opname', finance:'Laporan Keuangan' }[s.module],
+      moduleSubtitle: { dashboard:'Ringkasan kondisi operasional koperasi hari ini', pos:'Transaksi penjualan langsung di konter', inventory:'Master produk dan status stok real-time', warehouse:'Multi-lokasi gudang, pergerakan stok, dan stock opname', finance:'Revenue, COGS, profit, dan monthly closing' }[s.module],
+
+      setDashboard: () => this.setState({ module:'dashboard' }), navDashboardStyle: this.navStyle('dashboard'),
+      setPOS: () => this.setState({ module:'pos' }), navPOSStyle: this.navStyle('pos'),
+      setInventory: () => this.setState({ module:'inventory' }), navInventoryStyle: this.navStyle('inventory'),
+      setWarehouse: () => this.setState({ module:'warehouse' }), navWarehouseStyle: this.navStyle('warehouse'),
+      setFinance: () => this.setState({ module:'finance' }), navFinanceStyle: this.navStyle('finance'),
+
+      posSearch: s.posSearch, onPosSearch: (e) => this.setState({ posSearch: e.target.value }),
+      posProductsEmpty: posProducts.length === 0, posProductsNotEmpty: posProducts.length > 0, posProducts,
+      setCatSemua: () => this.setState({ posCategory: 'Semua' }), catSemuaStyle: catStyle('Semua', s.posCategory === 'Semua'),
+      setCatSembako: () => this.setState({ posCategory: 'Sembako' }), catSembakoStyle: catStyle('Sembako', s.posCategory === 'Sembako'),
+      setCatMinuman: () => this.setState({ posCategory: 'Minuman' }), catMinumanStyle: catStyle('Minuman', s.posCategory === 'Minuman'),
+      setCatMakanan: () => this.setState({ posCategory: 'Makanan' }), catMakananStyle: catStyle('Makanan', s.posCategory === 'Makanan'),
+      setCatRumahTangga: () => this.setState({ posCategory: 'Rumah Tangga' }), catRumahTanggaStyle: catStyle('Rumah Tangga', s.posCategory === 'Rumah Tangga'),
+      setCatLainnya: () => this.setState({ posCategory: 'Lainnya' }), catLainnyaStyle: catStyle('Lainnya', s.posCategory === 'Lainnya'),
+
+      cartCountLabel: s.cart.length + ' item',
+      openClearConfirm: () => { if (s.cart.length) this.setState({ clearConfirmOpen: true }); },
+      cancelClear: () => this.setState({ clearConfirmOpen: false }),
+      confirmClear: () => this.setState({ cart: [], clearConfirmOpen: false }),
+      clearConfirmOpen: s.clearConfirmOpen,
+
+      memberQuery: s.memberQuery, onMemberQuery: (e) => this.setState({ memberQuery: e.target.value }),
+      onMemberKeyDown: (e) => { if (e.key === 'Enter') this.doMemberSearch(); },
+      openMemberModal: () => this.setState({ memberModalOpen: true }),
+      closeMemberModal: () => this.setState({ memberModalOpen: false }),
+      memberModalOpen: s.memberModalOpen, memberOptions,
+      memberFound: !!s.memberData, memberNotFound: s.memberSearched && !s.memberData,
+      memberName: s.memberData ? s.memberData.name : '', memberIdLabel: s.memberData ? s.memberData.id : '',
+      memberDept: s.memberData ? s.memberData.dept : '', memberLimitLabel: s.memberData ? rupiah(s.memberData.limit) : '',
+      removeMember: () => this.setState({ memberData: null, memberSearched: false, memberQuery: '' }),
+
+      cartEmpty: s.cart.length === 0, cartItems,
+      promoApplied: s.promoApplied, promoNotApplied: !s.promoApplied, promoOpen: s.promoOpen, promoOptions,
+      promoName: s.promoApplied ? s.promoApplied.name : '', promoAmountLabel: rupiah(discount),
+      togglePromoOpen: () => this.setState({ promoOpen: !s.promoOpen }),
+      removePromo: () => this.setState({ promoApplied: null }),
+
+      cartSubtotalLabel: rupiah(subtotal), cartDiscountLabel: rupiah(discount), cartTaxLabel: rupiah(tax), cartTotalLabel: rupiah(total),
+
+      setPayCash: () => this.setState({ paymentMethod: 'Cash' }), payCashStyle: payStyle(s.paymentMethod === 'Cash'),
+      setPayQris: () => this.setState({ paymentMethod: 'QRIS' }), payQrisStyle: payStyle(s.paymentMethod === 'QRIS'),
+      setPayDebit: () => this.setState({ paymentMethod: 'Kartu Debit/Kredit' }), payDebitStyle: payStyle(s.paymentMethod === 'Kartu Debit/Kredit'),
+      setPayWallet: () => this.setState({ paymentMethod: 'Wallet/Point' }), payWalletStyle: payStyle(s.paymentMethod === 'Wallet/Point'),
+      setPayPayroll: () => this.setState({ paymentMethod: 'Payroll Deduction' }), payPayrollStyle: payStyle(s.paymentMethod === 'Payroll Deduction'),
+      setPayKombinasi: () => this.setState({ paymentMethod: 'Kombinasi' }), payKombinasiStyle: payStyle(s.paymentMethod === 'Kombinasi'),
+      isKombinasi: s.paymentMethod === 'Kombinasi',
+
+      processPayment: () => {
+        if (!s.cart.length) return;
+        const now = new Date();
+        this.setState({
+          paymentSuccessOpen: true,
+          lastTx: {
+            no: 'TRX-' + Math.floor(10000 + Math.random() * 89999),
+            date: now.toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' · ' + now.toLocaleTimeString('id-ID'),
+            total: rupiah(total), method: s.paymentMethod,
+            member: s.memberData ? s.memberData.name : '—',
+          },
+        });
+      },
+      paymentSuccessOpen: s.paymentSuccessOpen,
+      lastTxNo: s.lastTx ? s.lastTx.no : '', lastTxDate: s.lastTx ? s.lastTx.date : '',
+      lastTxTotal: s.lastTx ? s.lastTx.total : '', lastTxMethod: s.lastTx ? s.lastTx.method : '', lastTxMember: s.lastTx ? s.lastTx.member : '',
+      printReceipt: () => {},
+      newTransaction: () => this.setState({ paymentSuccessOpen: false, cart: [], memberData: null, memberSearched: false, memberQuery: '', promoApplied: null, paymentMethod: 'Cash', stockWarnId: null }),
+
+      invSearch: s.invSearch, onInvSearch: (e) => this.setState({ invSearch: e.target.value }),
+      invCategory: s.invCategory, onInvCategory: (e) => this.setState({ invCategory: e.target.value }),
+      inventoryRows, inventoryCountLabel: `${inventoryRows.length} dari ${INVENTORY.length} produk`,
+
+      warehouseCards, movementRows,
+      setMovementTab: () => this.setState({ warehouseTab:'movement' }),
+      setOpnameTab: () => this.setState({ warehouseTab:'opname' }),
+      isMovementTab: s.warehouseTab === 'movement', isOpnameTab: s.warehouseTab === 'opname',
+      movementTabStyle: s.warehouseTab === 'movement' ? TAB_ACTIVE : TAB_BASE,
+      opnameTabStyle: s.warehouseTab === 'opname' ? TAB_ACTIVE : TAB_BASE,
+      opnameSteps, opnameRows, currentStepLabel: OPNAME_STEP_LABELS[s.opnameStepIdx],
+      opnameCompleted: s.opnameCompleted,
+      approveOpname: () => this.setState({ opnameStepIdx: OPNAME_STEP_LABELS.length - 1, opnameCompleted: true }),
+
+      financePeriods,
+      financeRevenueLabel: 'Rp 214.680.000', financeCogsLabel: 'Rp 152.780.000',
+      financeGrossProfitLabel: 'Rp 61.900.000', financeOpexLabel: 'Rp 39.250.000',
+      financeNetProfitLabel: 'Rp 22.650.000', financeMarginLabel: '10.6%',
+      processClosing: () => this.setState({ closingDone: true }),
+      closingDone: s.closingDone,
+    };
+  }
+}
+</script>
+</body>
+</html>

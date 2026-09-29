@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Beras">
+<title>Beras</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M53 30h54l-4 21q21 47 14 88H43q-7-41 14-88z" fill="#e8d7b6"/><path d="M53 40h54M51 121h58" stroke="#b89467"/><rect x="51" y="65" width="58" height="46" rx="9" fill="#66936c"/><path d="M69 94l20-15M69 84l9 11M78 77l9 11M85 71l9 10" fill="none" stroke="#fff2ca"/></g>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="400" viewBox="0 0 160 160" role="img" aria-label="Gula">
+<title>Gula</title>
+<ellipse cx="80" cy="145" rx="48" ry="6" fill="#101828" opacity=".08"/>
+<g stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M43 29h74l-9 25 10 85H42l10-85z" fill="#fff8e5"/><path d="M46 35h68M45 132h69" stroke="#ccb893"/><rect x="48" y="61" width="64" height="44" rx="3" fill="#79a5d0"/><path d="M64 79h17v18H64zM84 73h14v16H84z" fill="white"/></g>
+</svg>
