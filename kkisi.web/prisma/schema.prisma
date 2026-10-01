@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// ─── Inventory ──────────────────────────────────────────────────
+// Read-only subset. Unmapped legacy columns are intentionally left alone.
+model Item {
+  id                Int       @id @default(autoincrement())
+  companyId         Int       @map("company_id")
+  itemCode          String    @map("item_code")  @db.VarChar(100)
+  customBarcode     String    @map("custom_barcode") @db.VarChar(100)
+  customBarcodePack String    @map("custom_barcode_pack") @db.VarChar(100)
+  itemName          String    @map("item_name")  @db.VarChar(100)
+  itemImage         String    @map("item_image") @db.VarChar(100)
+  salesPrice        Float     @map("sales_price") @db.Double
+  purchasePrice     Float     @map("purchase_price") @db.Double
+  stock             Int       @default(0)
+  taxType           String    @map("tax_type")
+  taxId             Int       @map("tax_id")
+  categoryId        Int?      @map("category_id")
+  brandId           Int?      @map("brand_id")
+  unitId            Int?      @map("unit_id")
+  unitPerpack       Int       @map("unit_perpack")
+  discount          Float     @db.Double
+  discountPersen    Float     @map("discount_persen") @db.Double
+  type              String    @db.VarChar(50)
+  konsinyasi        Int
+  status            Int
+  typeOrder         Int       @map("type_order")
+
+  category          Category? @relation(fields: [categoryId], references: [id])
+  brand             Brand?    @relation(fields: [brandId], references: [id])
+  unit              Unit?     @relation(fields: [unitId], references: [id])
+  tax               Tax       @relation(fields: [taxId], references: [id])
+
+  @@index([companyId, status])
+  @@index([customBarcode])
+  @@index([customBarcodePack])
+  @@index([itemName])
+  @@index([categoryId])
+  @@map("db_items")
+}
+
+// db_category is global: it has no company_id column (verified against staging).
+model Category {
+  id           Int     @id @default(autoincrement())
+  categoryName String  @map("category_name") @db.VarChar(100)
+  status       Int
+  items        Item[]
+
+  @@map("db_category")
+}
+
+model Brand {
+  id        Int     @id @default(autoincrement())
+  brandName String  @map("brand_name") @db.VarChar(100)
+  status    Int
+  items     Item[]
+
+  @@map("db_brands")
+}
+
+model Unit {
+  id       Int     @id @default(autoincrement())
+  unitName String  @map("unit_name") @db.VarChar(100)
+  status   Int
+  items    Item[]
+
+  @@map("db_units")
+}
+
+model Tax {
+  id       Int     @id @default(autoincrement())
+  taxName  String  @map("tax_name") @db.VarChar(100)
+  tax      Float   @db.Double
+  groupBit Int     @map("group_bit")
+  status   Int
+  items    Item[]
+
+  @@map("db_tax")
+}
+
+// ─── Company & Users ────────────────────────────────────────────
+model Company {
+  id          Int     @id @default(autoincrement())
+  companyName String  @map("company_name") @db.VarChar(100)
+  address     String  @db.VarChar(255)
+  mobile      String  @db.VarChar(20)
+  email       String  @db.VarChar(100)
+  salesInit   String  @map("sales_init") @db.VarChar(20)
+  status      Int
+
+  @@map("db_company")
+}
+
+// ─── Members (Anggota Koperasi) ─────────────────────────────────
+model Anggota {
+  id             Int     @id @default(autoincrement())
+  nikKar         String  @map("nik_kar") @db.VarChar(50)
+  idCard         String  @map("id_card") @db.VarChar(50)
+  namaKar        String  @map("nama_kar") @db.VarChar(100)
+  noTelp         String  @map("no_telp") @db.VarChar(20)
+  divisi         String  @db.VarChar(100)
+  bagian         String  @db.VarChar(100)
+  jabatan        String  @db.VarChar(100)
+  limitToko      Float   @map("limit_toko") @db.Double
+  limitPpob      Float   @map("limit_ppob") @db.Double
+  gajiMinus      Float   @map("gaji_minus") @db.Double
+  statusAnggota  String  @map("status_anggota") @db.VarChar(20)
+  statusKaryawan String  @map("status_karyawan") @db.VarChar(20)
+
+  @@index([nikKar])
+  @@index([idCard])
+  @@map("m_anggota")
+}

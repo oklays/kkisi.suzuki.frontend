@@ -5,3 +5,10 @@ build/
 *.tsbuildinfo
 .env*
 !.env.example
+
+# Production database dumps (sensitive data, large files)
+staging/*.sql.gz
+staging/*.sql
+
+# Gate A synthetic-identity fixture (passwords of SYNTHETIC users only)
+.e2e-*

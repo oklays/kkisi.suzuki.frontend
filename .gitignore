@@ -1,1 +1,11 @@
 tokonew.kkisitb2.id
+backup_docs
+
+# Local-only note with production hosting/access details (never track)
+docs/migration/kkisi-cpanel-sshkeys.md
+
+# Local baseline copies of plan documents (kept outside git history)
+docs/migration/_baseline/
+
+# Stray empty lockfile at repo root (no root package.json; real one is kkisi.web/package-lock.json)
+/package-lock.json

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { ArrowLeftRight, Banknote, CreditCard, FileText, LoaderCircle, Minus, Percent, Plus, QrCode, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, Wallet, X } from "lucide-react";
 import type { PosMember, PosProduct, PreviewCartLine, PreviewPayment } from "@/application/pos/contracts";
-import { formatRupiah, previewSubtotal } from "./preview";
+import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
 import { ProductIllustration } from "./ProductCatalog";
 
 export function MemberSearch({ members }: { members: readonly PosMember[] }) {
@@ -38,8 +38,8 @@ export function CartItem({ line, onChange, onRemove }: { line: PreviewCartLine; 
   const { product, quantity } = line;
   return (
     <li className="pos-cart-item">
-      <div className="pos-cart-line"><div className="pos-cart-image"><ProductIllustration product={product} /></div><div className="pos-cart-name"><strong>{product.name}</strong><small>{formatRupiah(product.unitPriceRp)} / pcs</small></div><button className="pos-icon-button pos-remove" aria-label={`Hapus ${product.name}`} onClick={() => onRemove(product.id)}><Trash2 size={16} /></button></div>
-      <div className="pos-cart-line pos-cart-adjust"><QuantityControl line={line} onChange={onChange} /><strong>{formatRupiah(product.unitPriceRp * quantity)}</strong></div>
+      <div className="pos-cart-line"><div className="pos-cart-image"><ProductIllustration product={product} /></div><div className="pos-cart-name"><strong>{product.name}</strong><small>{formatRupiah(netPriceSen(product))} / pcs</small></div><button className="pos-icon-button pos-remove" aria-label={`Hapus ${product.name}`} onClick={() => onRemove(product.id)}><Trash2 size={16} /></button></div>
+      <div className="pos-cart-line pos-cart-adjust"><QuantityControl line={line} onChange={onChange} /><strong>{formatRupiah(netPriceSen(product) * quantity)}</strong></div>
       {quantity >= product.stock && <p className="pos-stock-warning"><TriangleAlert size={13} />Stok tidak mencukupi untuk menambah jumlah.</p>}
     </li>
   );

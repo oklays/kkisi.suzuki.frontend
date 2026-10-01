@@ -2,20 +2,28 @@
   "name": "kkisi-web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs",
-    "test:browser": "node tests/pos-browser.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:read-products": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/read-products.ts",
+    "test:browser": "node tests/pos-browser.mjs",
+    "auth:unlock": "node --env-file=.env.local --experimental-strip-types scripts/auth-unlock.ts",
+    "auth:status": "node --env-file=.env.local --experimental-strip-types scripts/auth-status.ts"
   },
   "dependencies": {
+    "@prisma/client": "6.12.0",
+    "bcryptjs": "3.0.3",
+    "lucide-react": "0.577.0",
     "next": "^16.3.7",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "lucide-react": "0.577.0"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -23,6 +31,7 @@
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.3.7",
+    "prisma": "6.12.0",
     "typescript": "^5.0.0"
   }
 }

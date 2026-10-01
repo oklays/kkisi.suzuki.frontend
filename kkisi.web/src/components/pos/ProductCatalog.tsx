@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Barcode, Boxes, Coffee, House, LayoutGrid, LoaderCircle, PackageSearch, Plus, Search, ShoppingBag, Soup, TriangleAlert, X } from "lucide-react";
 import type { CatalogStatus, PosCategory, PosProduct } from "@/application/pos/contracts";
-import { formatRupiah, illustrationFamily, productImage, productIllustration } from "./preview";
+import { formatRupiah, hasPrice, illustrationFamily, netPriceSen, productImage, productIllustration } from "./preview";
 
 export function ProductIllustration({ product }: { product: PosProduct }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -17,7 +17,7 @@ export function ProductIllustration({ product }: { product: PosProduct }) {
 
 export function StockBadge({ product }: { product: PosProduct }) {
   const empty = product.stock <= 0;
-  return <span className={`pos-stock ${empty ? "is-empty" : product.stockStatus === "low" ? "is-low" : ""}`}>{empty ? "Stok habis" : `Stok: ${product.stock}${product.stockStatus === "low" ? " · Menipis" : ""}`}</span>;
+  return <span className={`pos-stock ${empty ? "is-empty" : ""}`}>{empty ? "Stok habis" : `Stok: ${product.stock}`}</span>;
 }
 
 export function ProductSearch({ query, onQuery, onScan }: { query: string; onQuery: (query: string) => void; onScan: () => void }) {
@@ -47,7 +47,7 @@ export function CategoryFilter({ categories, selected, onSelect }: { categories:
 }
 
 export function ProductCard({ product, quantity, onAdd }: { product: PosProduct; quantity: number; onAdd: (product: PosProduct) => void }) {
-  const disabled = product.stock <= 0 || quantity >= product.stock;
+  const disabled = product.stock <= 0 || quantity >= product.stock || !hasPrice(product);
   return (
     <article className="pos-product-card">
       <div className={`pos-product-image family-${illustrationFamily(product.categoryName)}`}>
@@ -57,7 +57,7 @@ export function ProductCard({ product, quantity, onAdd }: { product: PosProduct;
       </div>
       <div className="pos-product-detail">
         <h3>{product.name}</h3><p>{product.code}</p>
-        <div className="pos-product-bottom"><div><strong>{formatRupiah(product.unitPriceRp)}</strong><StockBadge product={product} /></div>
+        <div className="pos-product-bottom"><div>{hasPrice(product) ? <strong>{formatRupiah(netPriceSen(product))}</strong> : <strong className="pos-no-price">Harga belum diatur</strong>}{product.discountSen > 0 && hasPrice(product) && <s className="pos-list-price">{formatRupiah(product.priceSen)}</s>}<StockBadge product={product} /></div>
           <button className="pos-add" disabled={disabled} aria-label={`Tambah ${product.name}`} onClick={() => onAdd(product)}><Plus size={19} /></button>
         </div>
       </div>
@@ -65,9 +65,9 @@ export function ProductCard({ product, quantity, onAdd }: { product: PosProduct;
   );
 }
 
-export function ProductGrid({ products, quantities, onAdd, status = "ready", onReset }: { products: PosProduct[]; quantities: Record<string, number>; onAdd: (product: PosProduct) => void; status?: CatalogStatus; onReset: () => void }) {
+export function ProductGrid({ products, quantities, onAdd, status = "ready", onReset, onRetry }: { products: PosProduct[]; quantities: Record<string, number>; onAdd: (product: PosProduct) => void; status?: CatalogStatus; onReset: () => void; onRetry: () => void }) {
   if (status === "loading") return <div className="pos-catalog-state" role="status"><LoaderCircle className="pos-spinner" size={32} /><h2>Memuat produk…</h2><p>Mohon tunggu sebentar.</p></div>;
-  if (status === "error") return <div className="pos-catalog-state" role="alert"><TriangleAlert size={32} /><h2>Produk belum dapat dimuat</h2><p>Periksa koneksi dan coba muat kembali.</p></div>;
+  if (status === "error") return <div className="pos-catalog-state" role="alert"><TriangleAlert size={32} /><h2>Produk belum dapat dimuat</h2><p>Periksa koneksi dan coba muat kembali.</p><button className="pos-text-button" onClick={onRetry}>Coba lagi</button></div>;
   if (products.length === 0) return <div className="pos-catalog-state" role="status"><PackageSearch size={36} /><h2>Produk tidak ditemukan</h2><p>Coba kata kunci lain atau pilih kategori berbeda.</p><button className="pos-text-button" onClick={onReset}>Tampilkan semua produk</button></div>;
   return <div className="pos-product-grid">{products.map((product) => <ProductCard key={product.id} product={product} quantity={quantities[product.id] ?? 0} onAdd={onAdd} />)}</div>;
 }

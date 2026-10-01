@@ -1,4 +1,4 @@
-import type { PosCategory, PosProduct, PreviewCartLine } from "@/application/pos/contracts";
+import type { PosProduct, PreviewCartLine } from "@/application/pos/contracts";
 
 const families: Record<string, string> = {
   minuman: "minuman", makanan: "makanan", sembako: "sembako",
@@ -19,34 +19,30 @@ export function productImage(product: PosProduct): string {
   return product.imageUrl || productIllustration(product);
 }
 
-export function catalogCategories(products: readonly PosProduct[]): PosCategory[] {
-  return Array.from(new Map(products.map((product) => [product.categoryId, {
-    id: product.categoryId, name: product.categoryName,
-  }])).values());
-}
-
-export function filterProducts(products: readonly PosProduct[], query: string, categoryId: string | null): PosProduct[] {
-  const search = query.trim().toLowerCase();
-  return products.filter((product) =>
-    (categoryId === null || product.categoryId === categoryId) &&
-    [product.name, product.code, product.barcode ?? ""].some((value) => value.toLowerCase().includes(search)),
-  );
-}
+/** A product with no price in the DB (legacy has 38 such active items) must never be added to a cart. */
+export function hasPrice(product: PosProduct): boolean { return netPriceSen(product) > 0; }
 
 /** In-memory preview only. Server stock validation belongs to the future use case. */
 export function changeQuantity(cart: PreviewCartLine[], product: PosProduct, delta: 1 | -1): PreviewCartLine[] {
   const current = cart.find((line) => line.product.id === product.id);
   const quantity = (current?.quantity ?? 0) + delta;
-  if (quantity > product.stock || product.stock <= 0) return cart;
+  if (quantity > product.stock || product.stock <= 0 || (delta === 1 && !hasPrice(product))) return cart;
   if (quantity <= 0) return cart.filter((line) => line.product.id !== product.id);
   if (!current) return [...cart, { product, quantity }];
   return cart.map((line) => line.product.id === product.id ? { product, quantity } : line);
 }
 
-/** Untaxed fixture subtotal, never an authoritative transaction total. */
+/** Sold price per unit in sen, as the legacy POS does: list price minus the nominal item discount. */
+export function netPriceSen(product: PosProduct): number { return product.priceSen - product.discountSen; }
+
+/** Untaxed integer-sen subtotal for display, never an authoritative transaction total (server recomputes at checkout). */
 export function previewSubtotal(cart: PreviewCartLine[]): number {
-  return cart.reduce((sum, line) => sum + line.product.unitPriceRp * line.quantity, 0);
+  return cart.reduce((sum, line) => sum + netPriceSen(line.product) * line.quantity, 0);
 }
 
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
-export function formatRupiah(value: number): string { return rupiah.format(value); }
+const rupiahFraction = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Display only: takes integer sen, shows whole rupiah unless there is a fraction (e.g. 4000.10). */
+export function formatRupiah(sen: number): string {
+  return sen % 100 === 0 ? rupiah.format(sen / 100) : rupiahFraction.format(sen / 100);
+}
