@@ -1,6 +1,6 @@
 # Implementation Backlog — KKISI → Next.js
 
-> **⚠️ This backlog defines WHAT to build and in what order. It does NOT implement any business module yet.**
+> **⚠️ This backlog defines WHAT to build and in what order.** The status notes below track preparatory UI and Checkpoint 2A work separately from operational acceptance.
 > Each item must satisfy its "Dependency" and have a passing characterization test before implementation begins, per `MIGRATION_DEPENDENCY_GRAPH.md`'s readiness gate.
 >
 > **Complexity scale:** S = 1-2 days · M = 3-5 days · L = 1-2 weeks · XL = 2+ weeks
@@ -103,19 +103,22 @@ IMP-017 through IMP-024. The highest-risk, highest-value module. Not started unt
 
 ## Explicit Non-Goals for This Backlog Document
 
-- ❌ No business module implementation has occurred as part of producing this document
+- ❌ Producing this document did not itself implement business modules
 - ❌ No production database has been modified
 - ❌ No legacy code has been modified
 - This document is a **plan artifact only** — implementation work begins in a separate, subsequent engineering effort following this backlog in order
 
 ---
 
-## Backlog Status Summary
+## Backlog Status Summary (2026-09-30)
 
-| Status | Count |
-|--------|-------|
-| Not Started | 48 |
-| In Progress | 0 |
-| Complete | 0 |
+| Status | Count | Evidence / remaining gate |
+|--------|-------|---------------------------|
+| In Progress | 2 | **IMP-001:** Next.js scaffold, layers and Prisma setup exist; the read path connects to an isolated synthetic staging DB, but not a verified source-schema copy. **IMP-002:** only a read subset of `db_items` and `db_category` is mapped; exact legacy nullability/precision and full Layer 0–1 scope remain open. |
+| Preparatory UI only | 1 | **IMP-023:** `/pos` fixture presentation exists (`kkisi.web/src/components/pos/`, `src/app/pos/page.tsx`), but upstream sale/cart use cases and operational UAT are absent. It is not acceptance-complete. |
+| Not Started | 45 | All other backlog items. |
+| Complete | 0 | No item has satisfied all original acceptance criteria. |
 
-> All 48 items are currently **Not Started**. This backlog, along with `MIGRATION_MATRIX.md`, `MIGRATION_DEPENDENCY_GRAPH.md`, `docs/migration/module-boundaries.md`, and `DATA_OWNERSHIP.md`, constitutes the complete pre-implementation planning baseline for the KKISI → Next.js migration.
+Checkpoint 2A read proof: `kkisi.web/prisma/schema.prisma` → `src/infrastructure/repositories/prisma-item.repository.ts` → `src/application/inventory/use-cases/read-products.usecase.ts` → `scripts/read-products.ts`. A local `kkisi_staging` MariaDB with synthetic Product/Category rows now verifies an actual Prisma SQL read and company filter using a SELECT-only account. `kkisi.web/scripts/setup-staging.sh` and `staging/product-smoke.sql` reproduce it. The legacy PHP config points to a local MySQL server unavailable in this workspace, so **source DDL/data parity remains unverified**. No operational database writes, API route, or POS fixture replacement have been made, and `MIGRATION_MATRIX.md` implementation boxes remain unchecked.
+
+The 48-item baseline and its dependency order remain the planning reference. Preparatory UI ahead of transactional dependencies does not waive the readiness gate in `MIGRATION_DEPENDENCY_GRAPH.md`.
