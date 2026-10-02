@@ -13,7 +13,9 @@ export default function LoginPage() {
           <h2>Selamat datang di Koperasi Suzuki.</h2>
           <p>Satu ruang kerja untuk operasional koperasi yang lebih cepat dan terhubung.</p>
         </div>
-        <Image className="login-cover-art" src="/illustrations/login-illustration.png" width={1448} height={1086} priority alt="Ilustrasi kasir, stok barang, simpanan, dan pinjaman anggota Koperasi Suzuki" />
+        <div className="login-cover-visual">
+          <Image className="login-cover-art" src="/illustrations/login-illustration.png" width={1448} height={1086} priority alt="Ilustrasi kasir, stok barang, simpanan, dan pinjaman anggota Koperasi Suzuki" />
+        </div>
       </section>
       <section className="login-panel" aria-label="Form masuk">
         <div className="login-panel-content">
