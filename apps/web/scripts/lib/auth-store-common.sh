@@ -59,8 +59,8 @@ read_local_env_value() {
 }
 
 load_root_env() {
-  [ -f .env.staging ] || die ".env.staging not found (run from kkisi.web)"
-  [ -f .env.local ]   || die ".env.local not found (run from kkisi.web)"
+  [ -f .env.staging ] || die ".env.staging not found (run from apps/web)"
+  [ -f .env.local ]   || die ".env.local not found (run from apps/web)"
   set -a; . ./.env.staging; set +a
   [ -n "${MARIADB_ROOT_PASSWORD:-}" ] || die "MARIADB_ROOT_PASSWORD missing in .env.staging"
 }

@@ -1,0 +1,29 @@
+{
+  "name": "koperasi-suzuki",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "pnpm --filter @koperasi/web dev",
+    "start": "pnpm --filter @koperasi/web start",
+    "build": "pnpm --filter @koperasi/web build",
+    "lint": "node apps/web/node_modules/eslint/bin/eslint.js .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm test",
+    "db:generate": "pnpm --filter @koperasi/web db:generate",
+    "db:validate": "pnpm --filter @koperasi/web db:validate",
+    "db:read-products": "pnpm --filter @koperasi/web db:read-products",
+    "test:browser": "pnpm --filter @koperasi/web test:browser",
+    "auth:unlock": "pnpm --filter @koperasi/web auth:unlock",
+    "auth:status": "pnpm --filter @koperasi/web auth:status"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "unrs-resolver"
+    ]
+  }
+}

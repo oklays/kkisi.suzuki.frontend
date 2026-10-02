@@ -7,11 +7,11 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 set -a; . ./.env.e2e; set +a
 case "$E2E_READ_URL" in *"/kkisi_e2e_legacy"*) ;; *) echo "ERROR: E2E_READ_URL does not name kkisi_e2e_legacy: refusing" >&2; exit 1;; esac
 case "$E2E_READ_URL" in *"kkisi_e2e_read:"*) ;; *) echo "ERROR: E2E_READ_URL is not the e2e read account: refusing" >&2; exit 1;; esac
-[ -d .next ] || { echo "ERROR: build first (npm run build)" >&2; exit 1; }
+[ -d .next ] || { echo "ERROR: build first (pnpm build)" >&2; exit 1; }
 PORT=3100
 lsof -nP -tiTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1 && { echo "ERROR: port $PORT busy" >&2; exit 1; }
 LOG="${E2E_LOG:-/tmp/kkisi-e2e-app.log}"
-( DATABASE_URL="$E2E_READ_URL" APP_ORIGIN="http://127.0.0.1:$PORT" npx next start -H 127.0.0.1 -p $PORT > "$LOG" 2>&1 & )
+( DATABASE_URL="$E2E_READ_URL" APP_ORIGIN="http://127.0.0.1:$PORT" pnpm exec next start -H 127.0.0.1 -p $PORT > "$LOG" 2>&1 & )
 trap 'lsof -nP -tiTCP:'$PORT' -sTCP:LISTEN | xargs -r kill' EXIT
 for i in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$PORT/login" && break; sleep 0.5; done
 export POS_URL="http://127.0.0.1:$PORT" POS_FIXTURE="$PWD/.e2e-fixture.json" E2E_FIXTURE="$PWD/.e2e-fixture.json"

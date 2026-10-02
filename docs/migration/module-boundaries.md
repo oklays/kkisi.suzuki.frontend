@@ -2,7 +2,7 @@
 
 > **Hard rule:** React components and Next.js route handlers (`app/**/route.ts`, `app/**/page.tsx`, Server Actions) **must not contain business rules**. They are thin adapters only — parsing input, calling a use-case, rendering/returning output.
 >
-> All business logic documented in `kkisi.web/06-business-rules.md` must live in the **domain** and **application** layers, never in `app/`.
+> All business logic documented in `docs/legacy-reference/06-business-rules.md` must live in the **domain** and **application** layers, never in `app/`.
 
 ---
 

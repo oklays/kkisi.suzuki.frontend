@@ -18,7 +18,7 @@ unimplemented. See `ui-foundation.md` for the actual component mapping and evide
 | Reporting | `db_sales`, `db_salesitems` `Final` + `subtotal_hpp`, payments feed reports and kasir close | Verify report filters and accounting with sampled sales. |
 
 ## Target boundaries
-Next.js scaffold is located in `kkisi.web/`. Follow existing `docs/migration/module-boundaries.md` when implementing POS: thin `app/pos` and API handlers; feature UI components; server application use cases; pure pricing and credit domain rules; repository ports with MySQL adapters; external SMS port. No direct database access from browser. Reuse legacy DB tables; staging clone first.
+Next.js scaffold is located in `apps/web/`. Follow existing `docs/migration/module-boundaries.md` when implementing POS: thin `app/pos` and API handlers; feature UI components; server application use cases; pure pricing and credit domain rules; repository ports with MySQL adapters; external SMS port. No direct database access from browser. Reuse legacy DB tables; staging clone first.
 
 ## Safety design
 - Cut over POS, stock, purchase, return, opname **together per company**, or retain PHP as sole transaction writer via a secured compatibility gateway until all stock writers can transfer. A Next.js-only POS writer alongside PHP purchase/returns cannot guarantee ownership from `DATA_OWNERSHIP.md`.

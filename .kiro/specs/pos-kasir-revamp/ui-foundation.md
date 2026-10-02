@@ -7,7 +7,7 @@ integration remain pending. The approved design is the POS section of
 
 ## Readiness
 
-- Read all 8 `docs/migration/*.md` and all 11 `kkisi.web/docs/*.md`, plus
+- Read all 8 `docs/migration/*.md` and all 11 `docs/legacy-reference/*.md`, plus
   `requirements.md`, `design.md`, and `tasks.md` in this spec. No root-level
   migration document copies exist in the current checkout.
 - POS responsibilities: discover products, manage cart, identify members, display
@@ -63,9 +63,9 @@ Lucide React provides the sole UI icon system.
 
 ## Workspace
 
-The root repository has no initial commit; `kkisi.web/`, docs, specs and mockup
+The root repository has no initial commit; `apps/web/`, docs, specs and mockup
 are untracked existing workspace content. A Git worktree cannot contain this
-baseline. Work in the requested `kkisi.web/` directory and preserve other files.
+baseline. Work in the requested `apps/web/` directory and preserve other files.
 No commit, merge or deployment is part of this checkpoint.
 
 ## Completion evidence
@@ -87,8 +87,8 @@ Verified on 2026-09-29 against the production build served at
 
 Screenshots: `/private/tmp/ksm-pos-verification/pos-1440-empty.png`,
 `pos-1440-cart.png`, and `pos-{1600,1440,1280,1024,390}.png`.
-The optional browser runner is checked in at `kkisi.web/tests/pos-browser.mjs`;
-setup and overrides are documented in `kkisi.web/README.md`. The browser connector
+The optional browser runner is checked in at `apps/web/tests/pos-browser.mjs`;
+setup and overrides are documented in `apps/web/README.md`. The browser connector
 could not initialize, so the available local Playwright/Chromium was used.
 Lucide 0.577.0 was restored from the cached official archive because the configured
 registry was unreachable; package and lock entry match the archive integrity.
@@ -97,7 +97,7 @@ registry was unreachable; package and lock entry match the archive integrity.
 
 | Requested item | Evidence / outcome |
 |---|---|
-| 1. Documentation read | All 8 migration docs: SYSTEM_MAP, DATA_OWNERSHIP, MIGRATION_MATRIX, MIGRATION_DEPENDENCY_GRAPH, IMPLEMENTATION_BACKLOG, module-boundaries, characterization-tests, validation-checklist. All 11 numbered `kkisi.web/docs/` docs (00-index through 10-diagrams). All 3 POS specs and the supplied continuation instructions. Approved HTML POS section and its fixture/illustration definitions; illustration README/manifest; supporting POS image references. |
+| 1. Documentation read | All 8 migration docs: SYSTEM_MAP, DATA_OWNERSHIP, MIGRATION_MATRIX, MIGRATION_DEPENDENCY_GRAPH, IMPLEMENTATION_BACKLOG, module-boundaries, characterization-tests, validation-checklist. All 11 numbered `docs/legacy-reference/` docs (00-index through 10-diagrams). All 3 POS specs and the supplied continuation instructions. Approved HTML POS section and its fixture/illustration definitions; illustration README/manifest; supporting POS image references. |
 | 2. Documented assumptions | Products/categories are separate company-scoped read projections. Operational session/permission/register and member/credit rules belong on the server. Single-writer stock/sales ownership remains with legacy. Mockup tax/promotions/payment options do not establish business rules. |
 | 3. Next.js files | Thin `src/app/pos/page.tsx`; homepage preview link in `src/app/page.tsx`; `src/application/pos/contracts.ts`; seven `src/components/pos/` files; 30 `public/illustrations/*.svg`; two `tests/*.mjs`; README; package/lock with Lucide and optional browser-test command. Spec status/tracking updated without rewriting audit docs. |
 | 4. Components | `PosShell.tsx`: shell/header. `ProductCatalog.tsx`: search, category filter, grid/card, illustration, stock badge, loading/error/no-match states. `TransactionPanel.tsx`: member search, cart item/quantity, empty cart, promotion, price summary, payment selection, disabled/processing checkout, native clear dialog. `PosScreen.tsx`: preview UI state/composition. `preview.ts`: pure preview helpers; `fixtures.ts`: isolated example data; `pos.css`: scoped presentation styles. |
@@ -106,7 +106,7 @@ registry was unreachable; package and lock entry match the archive integrity.
 | 7. Interactions | Name/code/barcode filtering; scanner focus and Enter to add exact code/barcode; categories; add/merge/increase/decrease/remove; decrement at one removes line; bounded fixture stock; low/zero-stock labels; exact fixture NIK/ID-card/QR lookup; member-not-found/remove; clear confirmation/cancel; Cash/Kredit preview selection; refresh clears state. |
 | 8. Fixtures remaining | Nine example products/categories and one example member. Mockup's eight products plus a low-stock stationery example. No real person, live inventory, member limit, invoice number, online status, or register identity is claimed. Piece-count/whole-rupiah preview only; operational decimal precision remains a server contract decision. |
 | 9. Deferred integrations | Auth/RBAC/company/register, bounded real catalog/stock, members/credit, authoritative tax/discount/rounding, checkout/payment/persistence/idempotency/receipt, stock mirrors and reporting. Loading/error/processing component states are presentation foundations; no artificial network delay or processing/success outcome is triggered by fixtures. |
-| 10. Gaps | Earlier stock decrement/audit claims conflict with later recomputation/external-mirror findings. Active cart endpoints, tax/discount/rounding, member-required behavior, live DDL/engines/idempotency, external writers remain unresolved. Numbered docs are under `kkisi.web/docs/`, although older references omit `/docs/`; root migration copies do not exist. Supplied SVGs contain `<image>` with no href despite their README saying embedded PNG is present. Replacement vectors differ from intended raster art. |
+| 10. Gaps | Earlier stock decrement/audit claims conflict with later recomputation/external-mirror findings. Active cart endpoints, tax/discount/rounding, member-required behavior, live DDL/engines/idempotency, external writers remain unresolved. Numbered docs are under `docs/legacy-reference/`, although older references omit `/docs/`; root migration copies do not exist. Supplied SVGs contain `<image>` with no href despite their README saying embedded PNG is present. Replacement vectors differ from intended raster art. |
 | 11. Targeted legacy verification | None. No PHP source or runtime re-audit performed. Source checks were limited to the current Next.js app/framework guides, approved mockup and illustration assets. |
 | 12. Lint | PASS. |
 | 13. TypeScript | PASS. |

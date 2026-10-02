@@ -3,7 +3,7 @@
 > **Purpose:** Each scenario here pins a precise slice of legacy behavior.  
 > These are **characterization tests** — they describe what the system *does*, not what it *should* do.  
 > Before any Next.js module ships, the equivalent behavior must pass these scenarios.  
-> Reference: `kkisi.web/05-data-flow.md`, `kkisi.web/06-business-rules.md`.
+> Reference: `docs/legacy-reference/05-data-flow.md`, `docs/legacy-reference/06-business-rules.md`.
 
 ---
 

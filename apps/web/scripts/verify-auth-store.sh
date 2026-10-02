@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # READ-ONLY verification of the auth store. Only SELECT statements are ever sent (grants are inspected through
 # information_schema; forbidden actions are NOT attempted with write statements). Prints PASS/FAIL lines only.
-# Run from kkisi.web/.   Usage: scripts/verify-auth-store.sh
+# Run from apps/web/.   Usage: scripts/verify-auth-store.sh
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 # shellcheck source=lib/auth-store-common.sh

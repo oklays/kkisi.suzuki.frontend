@@ -11,7 +11,7 @@
 1. For each item, perform the action on the **live legacy system**
 2. Record: exact inputs, exact outputs, any DB state changes observed
 3. Capture screenshots or screen recordings for CRITICAL items
-4. Note any behavior that differs from what is documented in `kkisi.web/`
+4. Note any behavior that differs from what is documented in `docs/legacy-reference/`
 5. Discrepancies become **additional business rules** that must be implemented
 
 ---
@@ -238,7 +238,7 @@
 
 ## Discrepancy Log
 
-> Document any behavior that differs from `kkisi.web/` documentation here.
+> Document any behavior that differs from `docs/legacy-reference/` documentation here.
 
 | ID | Checklist Item | Documented Behavior | Actual Behavior | Impact | Action |
 |----|---------------|---------------------|-----------------|--------|--------|

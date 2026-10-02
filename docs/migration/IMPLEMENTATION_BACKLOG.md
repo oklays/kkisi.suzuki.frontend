@@ -12,7 +12,7 @@
 | ID | Module | Description | Dependency | Risk | Acceptance Criteria | Characterization Test | Complexity |
 |----|--------|-------------|-------------|------|---------------------|------------------------|------------|
 | **IMP-001** | Foundation | Set up Next.js project skeleton (App Router, TypeScript, Prisma, layered folder structure per `module-boundaries.md`) | None | Low | Project builds, lints, Prisma connects to staging DB copy | N/A | M |
-| **IMP-002** | Foundation | Define Prisma schema mirroring `kkisi.web/04-database.md` for Layer 0–1 tables only | IMP-001 | Low | Schema matches legacy column types/nullability exactly | N/A | M |
+| **IMP-002** | Foundation | Define Prisma schema mirroring `docs/legacy-reference/04-database.md` for Layer 0–1 tables only | IMP-001 | Low | Schema matches legacy column types/nullability exactly | N/A | M |
 | **IMP-003** | Auth | Implement `LoginUseCase` (bcrypt verify, session creation) | IMP-002 | Medium | Passes CT-AUTH-001, CT-AUTH-002 | CT-AUTH-001, CT-AUTH-002 | M |
 | **IMP-004** | Auth | Implement RBAC middleware (permission slug check per route) | IMP-003 | Medium | Passes CT-AUTH-002, CT-RBAC-001, CT-RBAC-002 | CT-AUTH-002, CT-RBAC-001/002 | M |
 | **IMP-005** | Auth | Implement OTP password reset flow (email-based) | IMP-003, integration: SMTP client | Medium | Passes CT-AUTH-003 | CT-AUTH-003 | M |
@@ -115,10 +115,10 @@ IMP-017 through IMP-024. The highest-risk, highest-value module. Not started unt
 | Status | Count | Evidence / remaining gate |
 |--------|-------|---------------------------|
 | In Progress | 2 | **IMP-001:** Next.js scaffold, layers and Prisma setup exist; the read path connects to an isolated synthetic staging DB, but not a verified source-schema copy. **IMP-002:** only a read subset of `db_items` and `db_category` is mapped; exact legacy nullability/precision and full Layer 0–1 scope remain open. |
-| Preparatory UI only | 1 | **IMP-023:** `/pos` fixture presentation exists (`kkisi.web/src/components/pos/`, `src/app/pos/page.tsx`), but upstream sale/cart use cases and operational UAT are absent. It is not acceptance-complete. |
+| Preparatory UI only | 1 | **IMP-023:** `/pos` fixture presentation exists (`apps/web/src/components/pos/`, `src/app/pos/page.tsx`), but upstream sale/cart use cases and operational UAT are absent. It is not acceptance-complete. |
 | Not Started | 45 | All other backlog items. |
 | Complete | 0 | No item has satisfied all original acceptance criteria. |
 
-Checkpoint 2A read proof: `kkisi.web/prisma/schema.prisma` → `src/infrastructure/repositories/prisma-item.repository.ts` → `src/application/inventory/use-cases/read-products.usecase.ts` → `scripts/read-products.ts`. A local `kkisi_staging` MariaDB with synthetic Product/Category rows now verifies an actual Prisma SQL read and company filter using a SELECT-only account. `kkisi.web/scripts/setup-staging.sh` and `staging/product-smoke.sql` reproduce it. The legacy PHP config points to a local MySQL server unavailable in this workspace, so **source DDL/data parity remains unverified**. No operational database writes, API route, or POS fixture replacement have been made, and `MIGRATION_MATRIX.md` implementation boxes remain unchecked.
+Checkpoint 2A read proof: `apps/web/prisma/schema.prisma` → `src/infrastructure/repositories/prisma-item.repository.ts` → `src/application/inventory/use-cases/read-products.usecase.ts` → `scripts/read-products.ts`. A local `kkisi_staging` MariaDB with synthetic Product/Category rows now verifies an actual Prisma SQL read and company filter using a SELECT-only account. `apps/web/scripts/setup-staging.sh` and `staging/product-smoke.sql` reproduce it. The legacy PHP config points to a local MySQL server unavailable in this workspace, so **source DDL/data parity remains unverified**. No operational database writes, API route, or POS fixture replacement have been made, and `MIGRATION_MATRIX.md` implementation boxes remain unchecked.
 
 The 48-item baseline and its dependency order remain the planning reference. Preparatory UI ahead of transactional dependencies does not waive the readiness gate in `MIGRATION_DEPENDENCY_GRAPH.md`.

@@ -4,7 +4,7 @@
 > - ✅ Complete  ·  🔄 In Progress  ·  ⬜ Not Started  ·  ❌ Blocked  ·  N/A Not Applicable
 >
 > **Columns:**
-> - **Legacy Behavior Documented** — reverse-engineering docs exist in `kkisi.web/`
+> - **Legacy Behavior Documented** — reverse-engineering docs exist in `docs/legacy-reference/`
 > - **Behavior Verified** — manually confirmed against live legacy (`validation-checklist.md`)
 > - **Char. Tests** — characterization test scenarios written (`characterization-tests.md`)
 > - **Target Architecture** — Next.js module boundaries designed (`module-boundaries.md`)

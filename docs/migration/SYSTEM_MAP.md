@@ -1,7 +1,7 @@
 # KKISI System Map
 
 > Canonical reference for the migration from CodeIgniter 3 PHP to Next.js.  
-> Source of truth: `kkisi.web/` reverse-engineering docs.  
+> Source of truth: `docs/legacy-reference/` reverse-engineering docs.
 > Do not modify source files in `tokonew.kkisitb2.id/`.
 
 ---
@@ -89,13 +89,13 @@
 
 | File | Contents |
 |------|----------|
-| `kkisi.web/01-discovery.md` | Stack, deps, session vars, config |
-| `kkisi.web/02-modules.md` | All controllers, models, helpers |
-| `kkisi.web/03-routes.md` | Full URL route inventory |
-| `kkisi.web/04-database.md` | All DB tables with columns |
-| `kkisi.web/05-data-flow.md` | SQL patterns & data flows |
-| `kkisi.web/06-business-rules.md` | Business logic & validations |
-| `kkisi.web/07-integrations.md` | IAK API, PHPMailer, SMS, Excel |
-| `kkisi.web/08-background-jobs.md` | No cron — all synchronous |
-| `kkisi.web/09-security.md` | Vulnerabilities & fixes |
-| `kkisi.web/10-diagrams.md` | Architecture & flow diagrams |
+| `docs/legacy-reference/01-discovery.md` | Stack, deps, session vars, config |
+| `docs/legacy-reference/02-modules.md` | All controllers, models, helpers |
+| `docs/legacy-reference/03-routes.md` | Full URL route inventory |
+| `docs/legacy-reference/04-database.md` | All DB tables with columns |
+| `docs/legacy-reference/05-data-flow.md` | SQL patterns & data flows |
+| `docs/legacy-reference/06-business-rules.md` | Business logic & validations |
+| `docs/legacy-reference/07-integrations.md` | IAK API, PHPMailer, SMS, Excel |
+| `docs/legacy-reference/08-background-jobs.md` | No cron — all synchronous |
+| `docs/legacy-reference/09-security.md` | Vulnerabilities & fixes |
+| `docs/legacy-reference/10-diagrams.md` | Architecture & flow diagrams |

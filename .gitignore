@@ -7,5 +7,12 @@ docs/migration/kkisi-cpanel-sshkeys.md
 # Local baseline copies of plan documents (kept outside git history)
 docs/migration/_baseline/
 
-# Stray empty lockfile at repo root (no root package.json; real one is kkisi.web/package-lock.json)
+# pnpm-lock.yaml is the authoritative workspace lockfile
 /package-lock.json
+
+# Workspace dependencies and pnpm's local content store
+node_modules/
+.pnpm-store/
+
+# Local compatibility symlink for an already-running pre-refactor dev server
+/kkisi.web

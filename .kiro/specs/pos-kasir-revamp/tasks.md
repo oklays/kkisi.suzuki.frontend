@@ -1,6 +1,6 @@
 # POS / Kasir checkpoints
 
-- [x] 0. Bootstrap Next.js inside `kkisi.web/` without removing the numbered documentation; establish TypeScript, App Router, ESLint, lockfile, safe inactive `/pos` placeholder, `.env.example` and local quality commands. No DB integration or business behavior yet.
+- [x] 0. Bootstrap Next.js inside `apps/web/` without removing the numbered documentation; establish TypeScript, App Router, ESLint, lockfile, safe inactive `/pos` placeholder, `.env.example` and local quality commands. No DB integration or business behavior yet.
 - [ ] 1. Audit + characterization: inspect active `application/views/pos.php` JS and every invoked endpoint; gather staging DB DDL, request/response fixtures and before/after snapshots for cash/Kredit, discounts, tax, stock, return, receipt, errors. Correct inaccurate earlier `docs/migration/characterization-tests.md` assumptions against evidence. Validate approved design provenance.
 - [ ] 2. POS domain/API compatibility: establish Next.js application location and conventions; implement authenticated read-only service adapters first; define pricing, tax, member, cash/Kredit contracts from fixtures. Run tests/lint/typecheck/build.
 - [x] 3. UI foundation: reproduce approved HTML POS hierarchy without changing unrelated mockup sections; establish single icon system and deterministic illustration mapping. Fixture-only preview verified; see `ui-foundation.md` for evidence and artwork replacement limitation.

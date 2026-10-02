@@ -1,6 +1,6 @@
 // Targeted unlock: deletes exactly the throttle rows of ONE username (and optionally one IP / the username+IP pair).
 // It never disables throttling and cannot touch other keys. Local staging only (same config guards as the app).
-//   npm run auth:unlock -- --username <name> [--ip <address>]
+//   pnpm auth:unlock --username <name> [--ip <address>]
 import { buildKeys } from '../src/infrastructure/auth/keys.ts';
 import { loadAuthConfig } from '../src/infrastructure/auth/config.ts';
 import { normalizeUsername } from '../src/application/auth/login.usecase.ts';
@@ -15,7 +15,7 @@ function arg(name: string): string | undefined {
 async function main() {
   const username = arg('username');
   const ip = arg('ip');
-  if (!username || username.length > 100) { console.error('usage: npm run auth:unlock -- --username <name> [--ip <address>]'); process.exitCode = 2; return; }
+  if (!username || username.length > 100) { console.error('usage: pnpm auth:unlock --username <name> [--ip <address>]'); process.exitCode = 2; return; }
   const config = loadAuthConfig(process.env);
   const keys = buildKeys(config.secrets);
   const name = normalizeUsername(username);

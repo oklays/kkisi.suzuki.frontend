@@ -7,7 +7,7 @@
 
 ## Dependency Rationale
 
-Dependencies are derived from actual FK relationships and runtime call chains documented in `kkisi.web/04-database.md`, `05-data-flow.md`, and `06-business-rules.md`:
+Dependencies are derived from actual FK relationships and runtime call chains documented in `docs/legacy-reference/04-database.md`, `05-data-flow.md`, and `06-business-rules.md`:
 
 | Dependency | Why |
 |---|---|

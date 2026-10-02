@@ -4,7 +4,7 @@
 #   account   kkisi_auth@<detected host>  (host = what MariaDB sees for the application's own connection path)
 # DEFAULT IS A DRY RUN: read-only checks only, prints the plan. Nothing changes unless you pass --apply.
 # Idempotent. There is deliberately NO drop/cleanup option here: teardown is scripts/teardown-auth-store.sh.
-# Run from kkisi.web/.   Usage:  scripts/setup-auth-store.sh [--apply]
+# Run from apps/web/.   Usage:  scripts/setup-auth-store.sh [--apply]
 set -euo pipefail
 umask 077
 cd "$(dirname "${BASH_SOURCE[0]}")/.."

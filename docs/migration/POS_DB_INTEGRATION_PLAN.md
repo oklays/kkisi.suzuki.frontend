@@ -7,7 +7,7 @@
 ## 0. Metode dan batasan
 
 - Yang dibaca: `controllers/Pos.php`, `models/Pos_model.php`, `helpers/custom_helper.php`, `views/pos.php` (JS di dalamnya), `controllers/Kasir.php`, `models/Sales_model.php`, `models/Sales_return_model.php`, `core/MY_Controller.php`, `views/sal-invoice-pos.php`.
-- Yang dibaca di sisi baru: seluruh `kkisi.web/src`, `prisma/schema.prisma`, `tests/`, `README.md`.
+- Yang dibaca di sisi baru: seluruh `apps/web/src`, `prisma/schema.prisma`, `tests/`, `README.md`.
 - Angka waktu = **median 15 kali** (setelah 2 kali warm-up) dari `ANALYZE FORMAT=JSON` di staging. Angka satu kali jalan tidak dipakai karena berisik (contoh: query yang sama terukur 15 ms dan 146 ms pada run pertama).
 - Staging = snapshot; angka data (jumlah baris dsb.) adalah **snapshot**, bukan angka produksi hidup.
 - **Produksi tidak punya indeks sekunder** (dari ringkasan staging). Semua benchmark di bawah memakai 28 indeks yang sudah ditambahkan di staging. Di produksi, angka "lama" bisa jauh lebih buruk.
@@ -24,6 +24,8 @@
 | `tests/prisma-item-repository.test.mjs` lulus (13/13) | **1 dari 13 gagal** (`repository scopes product search…`, field `barcode/barcodePack/discount/discountPersen` tidak ada di ekspektasi tes) | `npm test` |
 
 ---
+
+> Layout update (2026-10-02): file paths below were normalized to `apps/web/` and `docs/legacy-reference/`. Historical verification results and npm command syntax remain historical evidence.
 
 ## 1. Ringkasan alur POS lama dan tabel yang berubah
 
@@ -87,7 +89,7 @@ Tabel yang berubah per transaksi: `db_sales` (draft insert + final update), `db_
 ## 2. Matriks gap: POS lama vs POS Next.js (saat ini)
 
 Legenda: ✅ sudah berfungsi · ❌ belum ada · ⚠️ berbeda perilaku · ❔ belum terverifikasi.
-"Saat ini" = kode di `kkisi.web/src` per audit; seluruh halaman `/pos` memakai `fixtures.ts`.
+"Saat ini" = kode di `apps/web/src` per audit; seluruh halaman `/pos` memakai `fixtures.ts`.
 
 | # | Kemampuan POS lama | POS Next.js sekarang | Status | Catatan |
 |---|---|---|---|---|
@@ -240,7 +242,7 @@ Setiap butir diberi **rekomendasi** agar bisa dijawab "setuju/tidak".
 Prinsip: setiap tahap bisa diuji sendiri; **tidak ada write ke DB sebelum Tahap 2 selesai (auth) dan D1-D8 dijawab**. Semua uji di staging; data uji ditandai (mis. `created_by='e2e-test'`) dan dibersihkan lewat reset (`scripts/setup-staging.sh --reset`).
 
 ### Tahap 0 — Fondasi uji & skema aktual
-- **File**: `kkisi.web/prisma/schema.prisma` (tambah model tulis: `Sales`, `SalesItem`, `SalesPayment`, `BukaKasir`, `Kasir`, `StockEntry`, `User`, `Permission`; ubah harga/uang ke `Decimal`; tambah `statusSo`), `tests/prisma-item-repository.test.mjs` (perbaiki 1 tes gagal), `docs/migration/characterization-tests.md` (tulis ulang CT-POS).
+- **File**: `apps/web/prisma/schema.prisma` (tambah model tulis: `Sales`, `SalesItem`, `SalesPayment`, `BukaKasir`, `Kasir`, `StockEntry`, `User`, `Permission`; ubah harga/uang ke `Decimal`; tambah `statusSo`), `tests/prisma-item-repository.test.mjs` (perbaiki 1 tes gagal), `docs/migration/characterization-tests.md` (tulis ulang CT-POS).
 - **Kerja**: `prisma validate`; pastikan `Decimal` konsisten dengan DDL; pisahkan `DATABASE_URL` (baca) dan `DATABASE_URL_WRITE`.
 - **Penerimaan**: `npm test` 13/13 hijau; `prisma validate` lulus; tidak ada `db push/migrate` terhadap DB.
 - **Uji**: `npm test`, `npm run typecheck`, `npm run lint`.
@@ -672,7 +674,7 @@ GRANT UPDATE (failures, locked_until, first_failure_at, last_failure_at, purge_a
 3. **Pengembalian** (hanya objek auth; legacy tidak terpengaruh): `DROP DATABASE kkisi_auth_staging; DROP USER 'kkisi_auth'@'%';` (+ hapus `DATABASE_URL_AUTH`).
 4. Perubahan skema berikutnya = berkas SQL bernomor (`db/auth/00N_*.sql`) yang ditinjau dan dijalankan admin; aplikasi **tidak pernah** menjalankan DDL.
 
-#### 6.12.7 Daftar file yang akan diubah/dibuat (setelah persetujuan; semuanya di `kkisi.web/`)
+#### 6.12.7 Daftar file yang akan diubah/dibuat (setelah persetujuan; semuanya di `apps/web/`)
 | Kelompok | Berkas |
 |---|---|
 | DB auth | **baru:** `db/auth/001_auth_schema.sql`, `db/auth/002_auth_grants.sql.tpl`, `scripts/setup-auth-store.sh`, `prisma/auth.prisma` (klien Prisma kedua, `output` ke `src/generated/auth-client`, gitignored) |
@@ -845,7 +847,7 @@ Tanpa E1 tidak ada e2e nyata; tanpa E2 skema kosong. **Tidak ada izin yang menul
 | 11 | Implementasi 2A **belum** disetujui | — | Tidak dimulai |
 
 ### 6.13.8 DDL/GRANT final, target persis, operasi, dan verifikasi baca-saja
-**Berkas final** (ditulis, **belum dijalankan**; semuanya di `kkisi.web/`): `db/auth/001_auth_schema.sql` (DDL persis seperti yang disetujui pada 6.12.2; tidak berubah), `db/auth/002_auth_grants.sql.tpl`, `db/auth/003_verify.sql.tpl` (15 pemeriksaan SELECT), `scripts/lib/auth-store-common.sh`, `scripts/setup-auth-store.sh`, `scripts/verify-auth-store.sh`, `scripts/teardown-auth-store.sh`.
+**Berkas final** (ditulis, **belum dijalankan**; semuanya di `apps/web/`): `db/auth/001_auth_schema.sql` (DDL persis seperti yang disetujui pada 6.12.2; tidak berubah), `db/auth/002_auth_grants.sql.tpl`, `db/auth/003_verify.sql.tpl` (15 pemeriksaan SELECT), `scripts/lib/auth-store-common.sh`, `scripts/setup-auth-store.sh`, `scripts/verify-auth-store.sh`, `scripts/teardown-auth-store.sh`.
 **GRANT final** (`__AUTH_HOST__` = host terdeteksi, contoh saat ini `172.17.0.1`; `__AUTH_PW__` = 48 karakter heksa acak, tidak dicetak):
 ```sql
 CREATE USER IF NOT EXISTS 'kkisi_auth'@'__AUTH_HOST__' IDENTIFIED BY '__AUTH_PW__' WITH MAX_USER_CONNECTIONS 10;
@@ -973,7 +975,7 @@ B0 (desain perubahan kode dan konfigurasi), Gerbang B (provisioning DEV), Gerban
 
 **Status:** 2A diimplementasikan dan diuji **lokal** (loopback). 2B, checkout, stok/limit, E1/E2/E3a, dan deployment DEV **belum** dilakukan. Keputusan yang diterapkan: G3 (`READ COMMITTED` + `FOR UPDATE`, retry ≤ 2 pada 1213/1205/P2034, lalu 503), G4 (alarm log untuk operator lokal: peringatan 50.000 / alarm 100.000 baris, tanpa penolakan login; produksi belum siap), G6 (implementasi lokal).
 
-**Yang dibangun** (`kkisi.web/`): domain (`src/domain/auth/*`), use case (`src/application/auth/*`, `src/application/pos/use-cases/read-register.usecase.ts`), infrastruktur (`src/infrastructure/auth/*`: config, HKDF/CSRF, origin, cookie, IP, worker bcrypt, store sesi dan throttle, repository legacy baca-saja, guard, handler, container, page-guard), rute (`/api/auth/{login,logout,session,company}`, `/api/pos/{register,products}`), `src/proxy.ts` (gerbang awal saja), halaman `/login` dan `/pos` terlindungi, `SessionControls`, `scripts/auth-unlock.ts`, `scripts/auth-status.ts`, aturan ESLint, `dev`/`start` bind `127.0.0.1`. `POS_COMPANY_ID` dihapus. Dependency baru: `bcryptjs@3.0.3`.
+**Yang dibangun** (`apps/web/`): domain (`src/domain/auth/*`), use case (`src/application/auth/*`, `src/application/pos/use-cases/read-register.usecase.ts`), infrastruktur (`src/infrastructure/auth/*`: config, HKDF/CSRF, origin, cookie, IP, worker bcrypt, store sesi dan throttle, repository legacy baca-saja, guard, handler, container, page-guard), rute (`/api/auth/{login,logout,session,company}`, `/api/pos/{register,products}`), `src/proxy.ts` (gerbang awal saja), halaman `/login` dan `/pos` terlindungi, `SessionControls`, `scripts/auth-unlock.ts`, `scripts/auth-status.ts`, aturan ESLint, `dev`/`start` bind `127.0.0.1`. `POS_COMPANY_ID` dihapus. Dependency baru: `bcryptjs@3.0.3`.
 **Deviasi dari rancangan 6.12.7 (disengaja):** klien Prisma auth = **instance kedua kelas `PrismaClient` yang sama** dengan `DATABASE_URL_AUTH` (pool dan akun sendiri, SQL mentah terparameter), bukan `prisma/auth.prisma` dengan klien yang digenerate ke `src/generated`: auth store tidak memakai model, dan klien tergenerate di luar `node_modules` berisiko pada build Next.
 
 **Hasil uji:** `npm test` 107 lulus / 0 gagal / 16 dilewati (opt-in); dengan MariaDB sekali-pakai (DDL/GRANT final, legacy nyata-struktur + data sintetis): 118 lulus / 0 gagal, termasuk kontrak store yang sama dijalankan pada fake dan MariaDB nyata, 100 kegagalan throttle paralel = tepat 100, 8 login serentak = 8 sukses dan tepat 5 sesi valid, full-stack login/sesi/register/cabang/logout-setelah-restart/lockout. Tes kegagalan: koneksi mati, retry habis (1213/1205/P2034 → 3 percobaan → 503), pool penuh (1226), verifier penuh dan timeout, tiap dependency mati → 503 di setiap rute. Browser (Playwright, aplikasi terbangun + DB sekali-pakai, identitas sintetis): 6 skenario lulus (anonim, kasir satu cabang, IDOR cabang, cookie HttpOnly/Lax, CSRF, logout persisten dengan replay id lama, cabang role 2, lockout, layout 5 lebar). Konfigurasi tidak aman (origin publik/LAN, secret hilang/pendek, DSN legacy penulis, DSN auth non-lokal) → login 503 dan `/pos` menampilkan halaman "tidak tersedia". Konfigurasi asli boot normal (`/login` 200, `/pos` 307, API 401, POST tanpa Origin 403) dan tidak menulis apa pun ke auth store. `npx eslint`, `tsc`, `prisma validate`, `next build` bersih. Tes katalog staging baca-saja: 5/5.
@@ -1104,7 +1106,7 @@ Risiko terbuka: (1) seluruh topologi DEV belum diketahui sehingga keamanan proxy
 #### 6.17.6 Versi Node: syarat dependensi, klaim dokumen, platform teruji (koreksi atribusi 2026-10-01)
 | Kategori | Isi | Sumber / status |
 |---|---|---|
-| Syarat dependensi | Next 16.3.7 `engines.node >=20.9.0`; `prisma` dan `@prisma/client` 6.12.0 `>=18.18`; `bcryptjs` 3.0.3 tanpa `engines`; `@types/node ^22` hanya definisi tipe | `kkisi.web/package-lock.json`; **terverifikasi** 2026-10-01 |
+| Syarat dependensi | Next 16.3.7 `engines.node >=20.9.0`; `prisma` dan `@prisma/client` 6.12.0 `>=18.18`; `bcryptjs` 3.0.3 tanpa `engines`; `@types/node ^22` hanya definisi tipe | Bukti historis: `kkisi.web/package-lock.json` pada baseline `3308355`; **terverifikasi** 2026-10-01. Versi resolusi dipertahankan di `pnpm-lock.yaml` saat refactor 2026-10-02. |
 | Pin versi di repo | `package.json` tanpa `engines`; tidak ada `.nvmrc`, `.node-version`, `.tool-versions`, Dockerfile, atau konfigurasi CI | **terverifikasi** (pencarian berkas) |
 | Klaim dokumen 1 | README L7: "Requires Node.js 20.9+ (Node 22 recommended)" | Tidak berubah sejak commit awal `d97099a`; selaras dengan `engines` Next. README tidak diubah di revisi ini |
 | Klaim dokumen 2 | 6.14 L993: "aplikasi butuh Node ≥ 22" | **Tanpa sumber** di dokumen. Atribusi sebelumnya ke "bab 6.16 no. 1" keliru: 6.16 no. 1 tidak menyebut versi minimum |
