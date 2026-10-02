@@ -1,0 +1,64 @@
+// Dependency-free headless browser check against ONLY the disposable synthetic POS environment.
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {mkdtemp,rm,writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createCipheriv,createHash} from 'node:crypto';
+const base=process.env.POS_URL??'http://127.0.0.1:3126';
+assert.equal(new URL(base).hostname,'127.0.0.1');assert.equal(new URL(base).port,'3126');
+const profile=await mkdtemp(join(tmpdir(),'kkisi-pos-browser-'));
+const browser=spawn(process.env.CHROME_BIN??'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',['--headless=new','--no-sandbox','--disable-gpu','--disable-background-networking','--no-first-run','--remote-debugging-port=9254',`--user-data-dir=${profile}`,'about:blank'],{stdio:'ignore'});
+let socket;let nextId=0;const pending=new Map();let interception;const exceptions=[];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++nextId;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(`CDP timed out: ${method}`));},15000);pending.set(id,{resolve:v=>{clearTimeout(timer);resolve(v);},reject});socket.send(JSON.stringify({id,method,params}));});
+let evaluate;let waitFor;
+try{
+ let target;for(let i=0;i<100;i++){try{target=(await(await fetch('http://127.0.0.1:9254/json/list')).json()).find(t=>t.type==='page');if(target)break;}catch{}await sleep(100);}assert.ok(target,'headless browser started');
+ socket=new WebSocket(target.webSocketDebuggerUrl);await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
+ socket.addEventListener('message',async event=>{const data=JSON.parse(event.data);if(data.id){const p=pending.get(data.id);if(p){pending.delete(data.id);data.error?p.reject(new Error(data.error.message)):p.resolve(data.result);}}else if(data.method==='Runtime.exceptionThrown')exceptions.push(data.params.exceptionDetails.text);else if(data.method==='Fetch.requestPaused'){try{if(interception)await interception(data.params);else await send('Fetch.continueRequest',{requestId:data.params.requestId});}catch(e){exceptions.push(e.message);}}});
+ evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description??r.exceptionDetails.text);return r.result.value;};
+ waitFor=async expression=>{for(let i=0;i<150;i++){if(await evaluate(expression))return;await sleep(100);}throw new Error(`UI condition timed out: ${expression}`);};
+ const set=async(selector,value)=>evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('Missing input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+ const click=async selector=>evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
+ await send('Runtime.enable');await send('Page.enable');await send('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
+ await send('Page.navigate',{url:`${base}/pos`});await waitFor("!!document.querySelector('.login-card button')");
+ await sleep(800);await set('input[name="username"]','synthetic1');await set('input[name="password"]','Synthetic-Pos-1');await click('.login-card button');await waitFor("!!document.querySelector('.pos-shell') && document.querySelectorAll('.pos-product-card').length > 0");
+ assert.match(await evaluate("document.querySelector('.pos-user').innerText"),/Synthetic 1/);
+ assert.doesNotMatch(await evaluate('document.body.innerText'),/DEMO-12345|Anggota masih data contoh|Transaksi tidak tersimpan/);
+ await set('.pos-search input','ZZ-NOT-AN-ITEM');await waitFor("document.querySelector('.pos-catalog-state h2')?.textContent.includes('tidak ditemukan')");await set('.pos-search input','ITEM1');await waitFor("document.querySelectorAll('.pos-product-card').length > 0");await set('.pos-search input','ITEM1PACK');await evaluate("document.querySelector('.pos-search').requestSubmit()");await waitFor("document.querySelectorAll('.pos-cart-item').length === 1");await set('#pos-paid','10000');await waitFor("!document.querySelector('.pos-checkout').disabled");await click('.pos-checkout');await waitFor("!!document.querySelector('.pos-receipt')");
+ assert.match(await evaluate("document.querySelector('.pos-receipt').innerText"),/Cash/);assert.match(await evaluate("document.querySelector('.pos-receipt').innerText"),/500/);assert.equal(await evaluate("document.querySelectorAll('.pos-cart-item').length"),0);
+ console.log('PASS: authenticated Cash UI checkout and change');
+ await click('.pos-add');await set('#pos-member','CARD-7');await evaluate("document.querySelector('.pos-member-search').requestSubmit()");await waitFor("!!document.querySelector('.pos-member-result')");
+ assert.match(await evaluate("document.querySelector('.pos-member-result').innerText"),/Sisa limit/);await evaluate("Array.from(document.querySelectorAll('.pos-payment button')).find(b=>b.textContent.includes('Kredit')).click()");await waitFor("!document.querySelector('.pos-checkout').disabled");await click('.pos-checkout');await waitFor("document.querySelector('.pos-receipt')?.textContent.includes('Kredit')");
+ console.log('PASS: live member ID-card lookup and Credit UI checkout');
+ // Encrypted QR follows the verified PHP helper convention, using synthetic keys only.
+ const key=Buffer.from(createHash('sha256').update('synthetic-key').digest('hex').slice(0,32));const iv=Buffer.from(createHash('sha256').update('synthetic-iv').digest('hex').slice(0,16));const cipher=createCipheriv('aes-256-cbc',key,iv);const code=Buffer.concat([cipher.update('NIK-7'),cipher.final()]).toString('base64');
+ await evaluate("(()=>{const e=document.querySelector('[aria-label=\"Jenis scan anggota\"]');e.value='qr';e.dispatchEvent(new Event('change',{bubbles:true}));})()");await set('#pos-member',code);await evaluate("document.querySelector('.pos-member-search').requestSubmit()");await waitFor("!!document.querySelector('.pos-member-result')");assert.match(await evaluate("document.querySelector('.pos-member-result').innerText"),/NIK-7/);
+ console.log('PASS: encrypted synthetic member QR lookup');
+ await evaluate("document.querySelector('[aria-label=\"Lepas anggota\"]').click()");
+ // Drop a successful COMMIT response. UI must retain and reuse the same key, including after reload.
+ let firstBody;interception=async event=>{firstBody=JSON.parse(event.request.postData);await send('Fetch.failRequest',{requestId:event.requestId,errorReason:'Aborted'});};
+ await send('Fetch.enable',{patterns:[{urlPattern:'*/api/pos/checkout',requestStage:'Response'}]});await click('.pos-add');await set('#pos-paid','10000');await waitFor("!document.querySelector('.pos-checkout').disabled");await click('.pos-checkout');await waitFor("document.body.innerText.includes('Hasil pembayaran belum terkonfirmasi')");assert.ok(firstBody.idempotencyKey);
+ await send('Fetch.disable');interception=null;
+ await send('Page.reload');await waitFor("document.body.innerText.includes('Pembayaran sebelumnya belum terkonfirmasi')");
+ assert.equal(await evaluate("document.querySelector('.pos-clear').disabled"),true);
+ // An auth/CSRF rejection cannot prove that the earlier payment was never committed.
+ interception=async event=>send('Fetch.fulfillRequest',{requestId:event.requestId,responseCode:403,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify({error:'CSRF'})).toString('base64')});await send('Fetch.enable',{patterns:[{urlPattern:'*/api/pos/checkout',requestStage:'Request'}]});
+ await click('.pos-checkout');await waitFor("document.body.innerText.includes('Muat ulang halaman')");
+ assert.equal(await evaluate("document.querySelector('.pos-clear').disabled"),true,'auth rejection preserves the uncertain-payment lock');
+ assert.equal(await evaluate("JSON.parse(localStorage.getItem('kkisi-payment:1:1')).idempotencyKey"),firstBody.idempotencyKey,'auth rejection preserves the original key');
+ await send('Fetch.disable');interception=null;await send('Page.reload');await waitFor("document.body.innerText.includes('Pembayaran sebelumnya belum terkonfirmasi')");
+ interception=async event=>send('Fetch.fulfillRequest',{requestId:event.requestId,responseCode:401,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify({error:'UNAUTHENTICATED'})).toString('base64')});await send('Fetch.enable',{patterns:[{urlPattern:'*/api/pos/checkout',requestStage:'Request'}]});await click('.pos-checkout');await waitFor("!!document.querySelector('.login-card button')");
+ assert.equal(await evaluate("JSON.parse(localStorage.getItem('kkisi-payment:1:1')).idempotencyKey"),firstBody.idempotencyKey,'login redirect preserves the original payment key');
+ await send('Fetch.disable');interception=null;await send('Page.navigate',{url:`${base}/pos`});await waitFor("document.body.innerText.includes('Pembayaran sebelumnya belum terkonfirmasi')");
+ let retryBody;interception=async event=>{retryBody=JSON.parse(event.request.postData);await send('Fetch.continueRequest',{requestId:event.requestId});};await send('Fetch.enable',{patterns:[{urlPattern:'*/api/pos/checkout',requestStage:'Request'}]});
+ await click('.pos-checkout');await waitFor("!!document.querySelector('.pos-receipt')");assert.equal(retryBody.idempotencyKey,firstBody.idempotencyKey);await send('Fetch.disable');interception=null;
+ console.log('PASS: lost commit response survives reload and replays the identical payment key');
+ for(const[width,height]of[[1440,900],[1440,674],[390,844],[320,700]]){
+  await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await sleep(200);const metrics=await evaluate("(()=>{const r=document.querySelector('.pos-checkout').getBoundingClientRect();return{width:document.documentElement.scrollWidth,buttonBottom:r.bottom,buttonTop:r.top,viewport:innerHeight};})()");assert.ok(metrics.width<=width,`no horizontal overflow at ${width}`);if(width>900)assert.ok(metrics.buttonBottom<=height+1,`checkout visible at ${width}x${height}`);
+  const screenshot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(`/private/tmp/kkisi-pos-live-${width}-${height}.png`,Buffer.from(screenshot.data,'base64'));
+ }
+ assert.deepEqual(exceptions,[],'no browser runtime exceptions');console.log('PASS: desktop/mobile layout and no browser runtime exceptions');
+}catch(error){if(evaluate)console.error('Visible UI:',(await evaluate('document.body.innerText').catch(()=>'' )).slice(0,2000));throw error;}
+finally{socket?.close();browser.kill('SIGTERM');await new Promise(resolve=>browser.once('exit',resolve));await rm(profile,{recursive:true,force:true,maxRetries:10,retryDelay:100});}

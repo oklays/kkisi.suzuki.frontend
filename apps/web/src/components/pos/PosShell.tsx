@@ -22,7 +22,7 @@ export function PosShell({ children, branchName }: { children: React.ReactNode; 
           <button disabled><ChartColumn size={18} />Laporan Keuangan</button>
         </nav>
         <div className="pos-barcode-help"><Barcode size={23} /><strong>Siap untuk barcode</strong><p>Fokuskan kolom pencarian, lalu scan barcode produk lalu tekan Enter.</p></div>
-        <div className="pos-sidebar-foot">Koperasi Suzuki Mart<br /><span>POS · katalog baca-saja</span></div>
+        <div className="pos-sidebar-foot">Koperasi Suzuki Mart<br /><span>POS · Kasir</span></div>
       </aside>
       <div className="pos-main">{children}</div>
     </div>

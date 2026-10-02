@@ -40,12 +40,28 @@ export default defineConfig([
   },
   {
     basePath: root,
-    // Legacy remains SELECT-only, including future workspace packages.
+    // Only the dedicated local-staging POS write client may read a legacy write DSN.
     files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/scripts/**/*.ts", "packages/**/*.{ts,tsx}"],
+    ignores: ["apps/web/src/infrastructure/db/prisma-pos-write.ts"],
     rules: {
       "no-restricted-syntax": ["error",
-        { selector: "MemberExpression[property.name='DATABASE_URL_WRITE']", message: "There is no legacy write connection in this app." },
-        { selector: "Literal[value='DATABASE_URL_WRITE']", message: "There is no legacy write connection in this app." }],
+        { selector: "MemberExpression[property.name='DATABASE_URL_WRITE']", message: "The write DSN is private to infrastructure/db/prisma-pos-write.ts." },
+        { selector: "Literal[value='DATABASE_URL_WRITE']", message: "The write DSN is private to infrastructure/db/prisma-pos-write.ts." }],
+    },
+  },
+  {
+    basePath: root,
+    files: ["apps/web/src/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    ignores: ["apps/web/src/infrastructure/db/**", "apps/web/src/infrastructure/pos/**", "apps/web/src/infrastructure/auth/**"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [{ group: ["**/db/prisma-pos-write", "**/db/prisma-pos-write.ts"], message: "The POS write client is private to infrastructure/pos." }, { group: ["**/db/prisma-auth", "**/db/prisma-auth.ts"], message: "The auth-store client is private to infrastructure/auth." }] }],
+    },
+  },
+  {
+    basePath: root,
+    files: ["apps/web/src/infrastructure/auth/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [{ group: ["**/db/prisma-pos-write", "**/db/prisma-pos-write.ts"], message: "The POS write client is private to infrastructure/pos." }] }],
     },
   },
 ]);

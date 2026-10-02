@@ -13,18 +13,12 @@ export type PosSession = {
   canSwitchBranch: boolean;
   companies: { id: number; name: string }[];
   csrfToken: string;
+  checkoutAvailable: boolean;
+  userId: number;
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };
 };
 
 export type PreviewCartLine = DomainPreviewCartLine<PosProduct>;
 export type PreviewPayment = "Cash" | "Kredit";
 export type CatalogStatus = "ready" | "loading" | "error";
-export type PosMember = {
-  id: string;
-  nik: string;
-  idCard: string;
-  qrCode: string;
-  name: string;
-  department: string;
-  status: "AKTIVE" | "PENSIUN" | "RESIGN";
-};
+export type { MemberCredit as PosMember, CheckoutResult } from "@koperasi/domain/pos/sale";

@@ -12,7 +12,8 @@
     "./auth/ports": "./src/auth/ports.ts",
     "./auth/logout": "./src/auth/logout.usecase.ts",
     "./auth/login": "./src/auth/login.usecase.ts",
-    "./pos/register": "./src/pos/read-register.usecase.ts"
+    "./pos/register": "./src/pos/read-register.usecase.ts",
+    "./pos/checkout": "./src/pos/checkout.usecase.ts"
   },
   "scripts": {
     "lint": "eslint .",

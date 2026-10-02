@@ -137,3 +137,10 @@
 .pos-logout { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px; border:1px solid var(--pos-border); border-radius:8px; background:white; font-size:12px; font-weight:600; color:#475467; cursor:pointer; }
 .pos-logout:disabled { opacity:.6; }
 .pos-session-message { font-size:11px; color:#a61b1b; }
+
+.pos-cart-lock { border: 0; padding: 0; margin: 0; min-width: 0; }
+.pos-cash-payment { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; padding: 8px 0; font-size: 12px; }
+.pos-cash-payment input { min-width: 0; padding: 8px; border: 1px solid var(--pos-border, #dbe2ea); border-radius: 8px; }
+.pos-cash-payment > span { grid-column: 1 / -1; display: flex; justify-content: space-between; }
+.pos-receipt { display: grid; gap: 4px; padding: 10px; border-radius: 8px; color: #166534; background: #f0fdf4; font-size: 12px; overflow-wrap: anywhere; }
+.pos-member-hint select { max-width: 100%; padding: 4px; margin-left: 6px; }

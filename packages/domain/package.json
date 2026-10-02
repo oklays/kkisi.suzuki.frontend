@@ -11,7 +11,8 @@
     "./auth/redirect": "./src/auth/redirect.ts",
     "./auth/throttle-policy": "./src/auth/throttle-policy.ts",
     "./auth/password": "./src/auth/password-candidates.ts",
-    "./pos/preview": "./src/pos/preview.ts"
+    "./pos/preview": "./src/pos/preview.ts",
+    "./pos/sale": "./src/pos/sale.ts"
   },
   "scripts": {
     "lint": "eslint .",

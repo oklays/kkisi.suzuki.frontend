@@ -32,6 +32,7 @@ model Item {
   type              String    @db.VarChar(50)
   konsinyasi        Int
   status            Int
+  statusSo          Int       @map("status_so")
   typeOrder         Int       @map("type_order")
 
   category          Category? @relation(fields: [categoryId], references: [id])
@@ -101,21 +102,172 @@ model Company {
 
 // ─── Members (Anggota Koperasi) ─────────────────────────────────
 model Anggota {
-  id             Int     @id @default(autoincrement())
-  nikKar         String  @map("nik_kar") @db.VarChar(50)
-  idCard         String  @map("id_card") @db.VarChar(50)
-  namaKar        String  @map("nama_kar") @db.VarChar(100)
-  noTelp         String  @map("no_telp") @db.VarChar(20)
-  divisi         String  @db.VarChar(100)
-  bagian         String  @db.VarChar(100)
-  jabatan        String  @db.VarChar(100)
-  limitToko      Float   @map("limit_toko") @db.Double
-  limitPpob      Float   @map("limit_ppob") @db.Double
-  gajiMinus      Float   @map("gaji_minus") @db.Double
-  statusAnggota  String  @map("status_anggota") @db.VarChar(20)
-  statusKaryawan String  @map("status_karyawan") @db.VarChar(20)
+  id             Int       @id @default(autoincrement())
+  nikKar         String?   @map("nik_kar") @db.VarChar(50)
+  idCard         String?   @map("id_card") @db.VarChar(50)
+  namaKar        String?   @map("nama_kar") @db.VarChar(50)
+  limitToko      Float?    @map("limit_toko") @db.Double
+  gajiMinus      Float     @map("gaji_minus") @db.Double
+  statusAnggota  String?   @map("status_anggota") @db.VarChar(50)
+  statusKaryawan String?   @map("status_karyawan") @db.VarChar(50)
+  tglKeluar      DateTime? @map("tgl_keluar") @db.Date
 
-  @@index([nikKar])
-  @@index([idCard])
   @@map("m_anggota")
+}
+
+// POS legacy models: mapped only; no schema migration or db push.
+model Sale {
+  id                  Int       @id @default(autoincrement())
+  salesCode           String    @map("sales_code") @db.VarChar(50)
+  customerId          Int       @map("customer_id") @db.UnsignedInt
+  nikKar              String    @map("nik_kar") @db.VarChar(50)
+  customerName        String    @map("customer_name") @db.VarChar(100)
+  paidAmount          Decimal   @map("paid_amount") @db.Decimal(18, 2)
+  grandTotal          Float     @map("grand_total") @db.Double
+  salesStatus         String    @map("sales_status") @db.VarChar(50)
+  salesDate           DateTime  @map("sales_date") @db.Date
+  discountToAllInput  Decimal?  @map("discount_to_all_input") @db.Decimal(18, 2)
+  discountToAllType   String?   @map("discount_to_all_type") @db.VarChar(50)
+  totDiscountToAllAmt Float?    @map("tot_discount_to_all_amt") @db.Double
+  otherChargesInput   Decimal?  @map("other_charges_input") @db.Decimal(18, 2)
+  otherChargesAmt     Float?    @map("other_charges_amt") @db.Double
+  otherChargesTaxId   Int?      @map("other_charges_tax_id")
+  subtotalHpp         Decimal   @map("subtotal_hpp") @db.Decimal(18, 2)
+  subtotal            Decimal   @db.Decimal(18, 2)
+  roundOff            Float     @map("round_off") @db.Double
+  createdDate         DateTime  @map("created_date") @db.Date
+  createdTime         DateTime  @default(now()) @map("created_time") @db.Timestamp(0)
+  createdBy           String    @map("created_by") @db.VarChar(100)
+  systemIp            String    @map("system_ip") @db.VarChar(50)
+  systemName          String    @map("system_name") @db.VarChar(100)
+  pos                 Int
+  status              Int
+  paymentStatus       String    @map("payment_status") @db.VarChar(50)
+  returnBit           String    @map("return_bit") @db.VarChar(50)
+  referenceNo         String    @map("reference_no") @db.VarChar(50)
+  salesNote           String?   @map("sales_note") @db.Text
+  companyId           Int       @map("company_id")
+  termOfPayment       DateTime? @map("term_of_payment") @db.Date
+  paymentType         String    @map("payment_type") @db.VarChar(50)
+  idKasir             Int       @map("id_kasir")
+  idBukaKasir         Int       @map("id_buka_kasir")
+  typeOrder           Int       @map("type_order")
+  biaya               Float?    @db.Double
+  refund              Float?    @db.Double
+  ppob                Int
+  ppobType            String?   @map("ppob_type") @db.VarChar(50)
+  statusPpob          String?   @map("status_ppob") @db.VarChar(100)
+  admin               Float     @db.Double
+  postMethod          String?   @map("post_method") @db.VarChar(50)
+  jw                  Int
+  inProses            Int       @map("in_proses")
+  trId                BigInt?   @map("tr_id")
+
+  @@map("db_sales")
+}
+
+model SaleItem {
+  id                Int     @id @default(autoincrement())
+  salesId           Int     @map("sales_id")
+  customerId        Int?    @map("customer_id")
+  itemId            Int     @map("item_id")
+  barcode           String  @db.VarChar(50)
+  salesCode         String  @map("sales_code") @db.VarChar(50)
+  salesStatus       String  @map("sales_status") @db.VarChar(50)
+  salesQty          Int     @map("sales_qty")
+  description       String  @db.Text
+  purchasePrice     Decimal @map("purchase_price") @db.Decimal(18, 2)
+  purchasePricePack Decimal @map("purchase_price_pack") @db.Decimal(18, 2)
+  pricePerUnit      Float   @map("price_per_unit") @db.Double
+  pricePerPack      Float   @map("price_per_pack") @db.Double
+  taxId             Int     @map("tax_id")
+  taxAmt            Float?  @map("tax_amt") @db.Double
+  taxType           String  @map("tax_type") @db.VarChar(50)
+  discountType      String  @map("discount_type") @db.VarChar(50)
+  discountInput     Float   @map("discount_input") @db.Double
+  discountAmt       Float   @map("discount_amt") @db.Double
+  unitTotalCost     Float   @map("unit_total_cost") @db.Double
+  totalCost         Float   @map("total_cost") @db.Double
+  status            Int
+  companyId         Int     @map("company_id")
+  itemType          String  @map("item_type") @db.VarChar(50)
+  idKasir           Int?    @map("id_kasir")
+  idBukaKasir       Int?    @map("id_buka_kasir")
+  nomorTujuan       String? @map("nomor_tujuan") @db.VarChar(50)
+  namaTujuan        String? @map("nama_tujuan") @db.VarChar(50)
+  dayaMeter         String? @map("daya_meter") @db.VarChar(50)
+  ppobType          String? @map("ppob_type") @db.VarChar(50)
+  ppobOperator      String? @map("ppob_operator") @db.VarChar(50)
+  ppobSn            String? @map("ppob_sn") @db.VarChar(50)
+
+  @@map("db_salesitems")
+}
+
+model SalePayment {
+  id           Int      @id @default(autoincrement())
+  salesId      Int      @map("sales_id")
+  customerId   Int?     @map("customer_id")
+  payment      Decimal  @db.Decimal(10, 0)
+  paymentDate  DateTime @map("payment_date") @db.Date
+  paymentType  String   @map("payment_type") @db.VarChar(50)
+  paymentNote  String?  @map("payment_note") @db.Text
+  createdDate  DateTime @map("created_date") @db.Date
+  createdTime  DateTime @default(now()) @map("created_time") @db.Timestamp(0)
+  createdBy    String   @map("created_by") @db.VarChar(100)
+  systemIp     String   @map("system_ip") @db.VarChar(50)
+  systemName   String   @map("system_name") @db.VarChar(100)
+  changeReturn Float    @map("change_return") @db.Double
+  status       Int
+  companyId    Int      @map("company_id")
+
+  @@map("db_salespayments")
+}
+
+model Cart {
+  id            Int      @id @default(autoincrement())
+  salesId       Int?     @map("sales_id")
+  salesCode     String?  @map("sales_code") @db.VarChar(50)
+  customerId    Int?     @map("customer_id")
+  nikKar        String?  @map("nik_kar") @db.VarChar(50)
+  itemId        Int?     @map("item_id")
+  barcode       String?  @db.VarChar(100)
+  purchasePrice Decimal? @map("purchase_price") @db.Decimal(18, 2)
+  pricePerUnit  Decimal? @map("price_per_unit") @db.Decimal(18, 2)
+  salesQty      Int?     @map("sales_qty")
+  taxId         Int?     @map("tax_id")
+  taxAmt        Decimal? @map("tax_amt") @db.Decimal(18, 2)
+  taxType       String?  @map("tax_type") @db.VarChar(50)
+  discountType  String?  @map("discount_type") @db.VarChar(50)
+  discountAmt   Decimal? @map("discount_amt") @db.Decimal(18, 2)
+  totalCost     Decimal? @map("total_cost") @db.Decimal(18, 2)
+
+  @@map("db_cart")
+}
+
+model CashierSession {
+  id          Int       @id @default(autoincrement())
+  noref       String    @db.VarChar(50)
+  idKasir     Int       @map("id_kasir")
+  saldoAwal   Decimal   @map("saldo_awal") @db.Decimal(18, 2)
+  saldoAkhir  Decimal?  @map("saldo_akhir") @db.Decimal(18, 2)
+  tglBuka     DateTime  @map("tgl_buka") @db.DateTime(0)
+  tglTutup    DateTime? @map("tgl_tutup") @db.DateTime(0)
+  userId      Int       @map("user_id")
+  status      Int
+  saldoKredit Decimal   @map("saldo_kredit") @db.Decimal(18, 2)
+  companyId   Int?      @map("company_id")
+
+  @@map("db_buka_kasir")
+}
+
+model Cashier {
+  id          Int    @id @default(autoincrement())
+  companyId   Int    @map("company_id")
+  noKasir     String @map("no_kasir") @db.VarChar(50)
+  status      Int
+  cd          Int
+  cdUsr       String @map("cd_usr") @db.VarChar(100)
+  description String @db.Text
+
+  @@map("db_kasir")
 }

@@ -16,7 +16,9 @@
     "db:read-products": "pnpm --filter @koperasi/web db:read-products",
     "test:browser": "pnpm --filter @koperasi/web test:browser",
     "auth:unlock": "pnpm --filter @koperasi/web auth:unlock",
-    "auth:status": "pnpm --filter @koperasi/web auth:status"
+    "auth:status": "pnpm --filter @koperasi/web auth:status",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "test:pos-db": "pnpm --filter @koperasi/web exec node --experimental-strip-types --test tests/pos-checkout-db.test.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

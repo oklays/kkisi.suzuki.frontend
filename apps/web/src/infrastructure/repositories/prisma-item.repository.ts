@@ -60,7 +60,7 @@ export class PrismaItemRepository implements ItemRepository {
 
   async search({ companyId, term, limit, categoryId }: ItemSearch): Promise<ItemRead[]> {
     try {
-      const where: Prisma.ItemWhereInput = { companyId, status: 1, type: SELLABLE_TYPE };
+      const where: Prisma.ItemWhereInput = { companyId, status: 1, statusSo: 0, type: SELLABLE_TYPE, AND: [{ customBarcode: { not: 'SALDOPPOB' } }] };
       if (categoryId !== undefined) where.categoryId = categoryId;
       // Browsing (no term) lists only items that can be sold: ~70% of branch items have stock 0, which
       // would otherwise fill the first page. A text search still returns them so "Stok habis" is visible.
@@ -89,7 +89,7 @@ export class PrismaItemRepository implements ItemRepository {
   /** Exact scanner match: the unit barcode wins over the pack barcode; lowest id wins a tie (4 legacy duplicates). */
   async findByBarcode({ companyId, barcode }: { companyId: number; barcode: string }): Promise<ItemRead | null> {
     try {
-      const base = { companyId, status: 1, type: SELLABLE_TYPE };
+      const base = { companyId, status: 1, statusSo: 0, type: SELLABLE_TYPE, AND: [{ customBarcode: { not: 'SALDOPPOB' } }] };
       const row = await this.db.item.findFirst({
         where: { ...base, customBarcode: barcode }, select: itemSelect, orderBy: { id: 'asc' },
       }) ?? await this.db.item.findFirst({
@@ -111,7 +111,7 @@ export class PrismaItemRepository implements ItemRepository {
     try {
       const used = await this.db.item.groupBy({
         by: ['categoryId'],
-        where: { companyId, status: 1, type: SELLABLE_TYPE, categoryId: { not: null } },
+        where: { companyId, status: 1, statusSo: 0, type: SELLABLE_TYPE, AND: [{ customBarcode: { not: 'SALDOPPOB' } }], categoryId: { not: null } },
       });
       const ids = used.flatMap((group) => group.categoryId === null ? [] : [group.categoryId]);
       if (ids.length === 0) return [];

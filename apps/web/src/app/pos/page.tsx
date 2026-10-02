@@ -1,5 +1,5 @@
 import { PosScreen } from "@/components/pos/PosScreen";
-import { demoMembers } from "@/components/pos/fixtures";
+import { checkoutAvailable } from "@/infrastructure/pos/services";
 import { listCatalogCategories, searchCatalog } from "@koperasi/application/pos/catalog";
 import type { PosCategory, PosProduct, PosSession } from "@/features/pos/types";
 import { readRegister } from "@koperasi/application/pos/register";
@@ -28,7 +28,7 @@ export default async function PosPage() {
     ]);
     session = {
       userName: ctx.userName, branchName: company?.name ?? "Cabang", companyId: ctx.companyId, canSwitchBranch: ctx.canSwitchBranch,
-      companies, csrfToken: services.keys.csrfToken(ctx.sidHash),
+      userId: ctx.userId, checkoutAvailable: checkoutAvailable(), companies, csrfToken: services.keys.csrfToken(ctx.sidHash),
       register: { open: register.open ? { noref: register.open.noref, noKasir: register.open.noKasir, openedOn: register.open.openedOn, stale: register.open.stale } : null, multiple: register.warnings.length > 0 },
     };
   } catch {
@@ -47,5 +47,5 @@ export default async function PosPage() {
     failed = true;
     console.error(`[pos] initial catalog load failed: ${error instanceof ProductReadError ? error.code : "UNEXPECTED"}`);
   }
-  return <PosScreen products={products} categories={categories} members={demoMembers} session={session} catalogStatus={failed ? "error" : "ready"} />;
+  return <PosScreen products={products} categories={categories} session={session} catalogStatus={failed ? "error" : "ready"} />;
 }

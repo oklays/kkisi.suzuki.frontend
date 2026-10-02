@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
-import { CATALOG_PAGE_SIZE, type CatalogStatus, type PosCategory, type PosMember, type PosProduct, type PosSession, type PreviewCartLine } from "@/features/pos/types";
+import { CATALOG_PAGE_SIZE, type CatalogStatus, type PosCategory, type PosProduct, type PosSession, type PreviewCartLine } from "@/features/pos/types";
 import { PosHeader, PosShell } from "./PosShell";
 import { CategoryFilter, ProductGrid, ProductSearch } from "./ProductCatalog";
 import { TransactionPanel } from "./TransactionPanel";
@@ -19,7 +19,7 @@ async function fetchProducts(params: URLSearchParams, signal?: AbortSignal): Pro
   return (await response.json()).products as PosProduct[];
 }
 
-export function PosScreen({ products: initialProducts, categories, members = [], catalogStatus = "ready", session }: { products: PosProduct[]; categories: readonly PosCategory[]; members?: readonly PosMember[]; catalogStatus?: CatalogStatus; session: PosSession }) {
+export function PosScreen({ products: initialProducts, categories, catalogStatus = "ready", session }: { products: PosProduct[]; categories: readonly PosCategory[]; catalogStatus?: CatalogStatus; session: PosSession }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -27,6 +27,9 @@ export function PosScreen({ products: initialProducts, categories, members = [],
   const [status, setStatus] = useState<CatalogStatus>(catalogStatus);
   const [fetching, setFetching] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [locked, setLocked] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const storageKey = `kkisi-cart:${session.userId}:${session.companyId}:${session.register.open?.noref ?? "closed"}`;
   const [cart, setCart] = useState<PreviewCartLine[]>([]);
   const [message, setMessage] = useState("");
   const quantities = Object.fromEntries(cart.map((line) => [line.product.id, line.quantity]));
@@ -60,14 +63,32 @@ export function PosScreen({ products: initialProducts, categories, members = [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestKey, retry]);
 
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
+        if (Array.isArray(saved) && saved.length <= 80) setCart(saved.filter((line) => line?.product?.companyId === String(session.companyId) && Number.isSafeInteger(line.quantity) && line.quantity > 0 && Number.isSafeInteger(line.product.priceSen) && Number.isSafeInteger(line.product.discountSen)));
+      } catch { /* Storage is optional; the server still validates every checkout. */ }
+      setHydrated(true);
+    });
+    return () => { active = false; };
+  }, [storageKey, session.companyId]);
+  useEffect(() => {
+    if (!hydrated) return;
+    try { localStorage.setItem(storageKey, JSON.stringify(cart)); } catch { /* Storage may be disabled. */ }
+  }, [cart, hydrated, storageKey]);
+
   function adjust(product: PosProduct, delta: 1 | -1) {
+    if (locked) return;
     setCart((current) => changeQuantity(current, product, delta));
-    setMessage(delta === 1 ? `${product.name} ditambahkan ke keranjang contoh.` : `Jumlah ${product.name} dikurangi.`);
+    setMessage(delta === 1 ? `${product.name} ditambahkan ke keranjang.` : `Jumlah ${product.name} dikurangi.`);
   }
 
   async function scan() {
     const identifier = query.trim();
-    if (!identifier) return;
+    if (!identifier || locked) return;
     try {
       const [product] = await fetchProducts(new URLSearchParams({ barcode: identifier }));
       if (!product) { setMessage("Barcode tidak ditemukan. Pilih produk dari hasil pencarian."); return; }
@@ -84,7 +105,7 @@ export function PosScreen({ products: initialProducts, categories, members = [],
     <PosShell branchName={session.branchName}>
       <PosHeader session={session} />
       <main className="pos-content" id="pos-workspace">
-        <div className="pos-preview-notice"><Info size={16} /><span><strong>Pratinjau antarmuka</strong> · Produk, harga, dan stok cabang Anda dibaca dari database staging. Anggota masih data contoh. Tidak ada transaksi tersimpan.</span></div>
+        <div className="pos-preview-notice"><Info size={16} /><span><strong>POS / Kasir</strong> · Harga, stok, dan limit anggota diperiksa kembali saat pembayaran.</span></div>
         <div className="pos-workspace">
           <section className="pos-catalog" aria-label="Katalog produk">
             <ProductSearch query={query} onQuery={setQuery} onScan={scan} />
@@ -92,7 +113,7 @@ export function PosScreen({ products: initialProducts, categories, members = [],
             <div className="pos-catalog-meta"><span>{status === "ready" ? `${products.length} produk${products.length >= CATALOG_PAGE_SIZE ? " pertama · persempit pencarian" : ""}` : ""}</span><span>{query.trim() ? "Hasil pencarian termasuk stok habis" : "Daftar hanya menampilkan produk berstok"}</span></div>
             <div className="pos-catalog-scroll" aria-busy={fetching}><ProductGrid products={products} quantities={quantities} onAdd={(product) => adjust(product, 1)} status={status} onReset={() => { setQuery(""); setCategory(null); }} onRetry={() => setRetry((count) => count + 1)} /></div>
           </section>
-          <TransactionPanel cart={cart} members={members} onChange={adjust} onRemove={(id) => setCart((current) => current.filter((line) => line.product.id !== id))} onClear={() => setCart([])} />
+          <TransactionPanel key={storageKey} cart={cart} session={session} storageKey={storageKey} onLockChange={setLocked} onChange={adjust} onRemove={(id) => setCart((current) => current.filter((line) => line.product.id !== id))} onClear={() => { setCart([]); loadedKey.current = null; setRetry((count) => count + 1); }} />
         </div>
         <p className="pos-sr-only" role="status">{message}</p>
       </main>

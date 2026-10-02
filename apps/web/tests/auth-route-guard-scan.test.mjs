@@ -74,7 +74,8 @@ test('no code path reads a company from the client or from POS_COMPANY_ID', () =
     const src = readFileSync(file, 'utf8');
     assert.doesNotMatch(src, /POS_COMPANY_ID/, rel(file));
     assert.doesNotMatch(src, /searchParams\.get\(['"](company_?id|companyId)['"]\)/i, rel(file));
-    assert.doesNotMatch(src, /DATABASE_URL_WRITE/, rel(file));
+    if (!rel(file).endsWith('db/prisma-pos-write.ts')) assert.doesNotMatch(src, /DATABASE_URL_WRITE/, rel(file));
+    if (!rel(file).startsWith('src/infrastructure/db/') && !rel(file).startsWith('src/infrastructure/pos/')) assert.doesNotMatch(src, /prisma-pos-write/, `${rel(file)} cannot import the write client`);
   }
 });
 
