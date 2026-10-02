@@ -40,28 +40,28 @@ export default defineConfig([
   },
   {
     basePath: root,
-    // Only the dedicated local-staging POS write client may read a legacy write DSN.
+    // Only dedicated local-staging DB clients may read legacy write DSNs.
     files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/scripts/**/*.ts", "packages/**/*.{ts,tsx}"],
-    ignores: ["apps/web/src/infrastructure/db/prisma-pos-write.ts"],
+    ignores: ["apps/web/src/infrastructure/db/prisma-pos-write.ts", "apps/web/src/infrastructure/db/prisma-register-write.ts"],
     rules: {
       "no-restricted-syntax": ["error",
-        { selector: "MemberExpression[property.name='DATABASE_URL_WRITE']", message: "The write DSN is private to infrastructure/db/prisma-pos-write.ts." },
-        { selector: "Literal[value='DATABASE_URL_WRITE']", message: "The write DSN is private to infrastructure/db/prisma-pos-write.ts." }],
+        { selector: "MemberExpression[property.name=/^DATABASE_URL(_REGISTER)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." },
+        { selector: "Literal[value=/^DATABASE_URL(_REGISTER)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." }],
     },
   },
   {
     basePath: root,
     files: ["apps/web/src/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
-    ignores: ["apps/web/src/infrastructure/db/**", "apps/web/src/infrastructure/pos/**", "apps/web/src/infrastructure/auth/**"],
+    ignores: ["apps/web/src/infrastructure/db/**", "apps/web/src/infrastructure/pos/**", "apps/web/src/infrastructure/auth/**", "apps/web/src/infrastructure/repositories/prisma-register.repository.ts"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [{ group: ["**/db/prisma-pos-write", "**/db/prisma-pos-write.ts"], message: "The POS write client is private to infrastructure/pos." }, { group: ["**/db/prisma-auth", "**/db/prisma-auth.ts"], message: "The auth-store client is private to infrastructure/auth." }] }],
+      "no-restricted-imports": ["error", { patterns: [{ group: ["**/db/prisma-pos-write", "**/db/prisma-pos-write.ts", "**/db/prisma-register-write", "**/db/prisma-register-write.ts"], message: "Write clients are private to POS infrastructure." }, { group: ["**/db/prisma-auth", "**/db/prisma-auth.ts"], message: "The auth-store client is private to infrastructure/auth." }] }],
     },
   },
   {
     basePath: root,
     files: ["apps/web/src/infrastructure/auth/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [{ group: ["**/db/prisma-pos-write", "**/db/prisma-pos-write.ts"], message: "The POS write client is private to infrastructure/pos." }] }],
+      "no-restricted-imports": ["error", { patterns: [{ group: ["**/db/prisma-pos-write", "**/db/prisma-pos-write.ts", "**/db/prisma-register-write", "**/db/prisma-register-write.ts"], message: "Write clients are private to POS infrastructure." }] }],
     },
   },
 ]);

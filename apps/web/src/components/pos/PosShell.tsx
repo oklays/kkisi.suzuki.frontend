@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { PosSession } from "@/features/pos/types";
+import { RegisterControls } from "./RegisterControls";
 import { SessionControls } from "./SessionControls";
 import { Barcode, Boxes, ChartColumn, ChevronDown, LayoutDashboard, ShoppingBag, Store, Warehouse } from "lucide-react";
 
@@ -29,7 +30,7 @@ export function PosShell({ children, branchName }: { children: React.ReactNode; 
   );
 }
 
-export function PosHeader({ session }: { session: PosSession }) {
+export function PosHeader({ session, locked = false }: { session: PosSession; locked?: boolean }) {
   const register = session.register;
   const registerText = register.open
     ? `Sesi ${register.open.noref}${register.open.stale ? " · belum ditutup (hari lalu)" : ""}`
@@ -40,6 +41,7 @@ export function PosHeader({ session }: { session: PosSession }) {
       <div className="pos-header-context">
         <div className="pos-status"><span aria-hidden="true" /><div><strong>{session.branchName}</strong><small>{registerText}{register.multiple ? " · lebih dari satu sesi terbuka" : ""}</small></div></div>
         <div className="pos-user"><span aria-hidden="true">{session.userName.trim().slice(0, 1).toUpperCase() || "K"}</span><div><strong>{session.userName || "Kasir"}</strong><small>Masuk</small></div></div>
+        <RegisterControls session={session} locked={locked} />
         <SessionControls session={session} />
       </div>
     </header>

@@ -174,7 +174,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
         {!uncertain && blockers.map((reason) => <p className="pos-checkout-note" key={reason}>{reason}</p>)}
         <CheckoutButton processing={processing} disabled={!hydrated || processing || (!uncertain && !ready)} retry={uncertain} onClick={() => void submit()} />
         {message && <p className="pos-inline-error" role="alert">{message}</p>}
-        {receipt && <div className="pos-receipt" role="status"><strong>Transaksi tersimpan · {receipt.salesCode}</strong><span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span><span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span></div>}
+        {receipt && <div className="pos-receipt" role="status"><strong>Transaksi tersimpan · {receipt.salesCode}</strong><span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span><span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span><a href={`/pos/receipt/${receipt.saleId}`} target="_blank" rel="noopener noreferrer">Lihat / Cetak struk</a></div>}
       </div>
       <dialog ref={dialog} className="pos-clear-dialog" aria-labelledby="pos-clear-title" onCancel={() => clearButton.current?.focus()}>
         <h2 id="pos-clear-title"><Trash2 size={21} />Hapus Semua Item?</h2><p>Seluruh item dalam keranjang akan dihapus.</p><div><button autoFocus onClick={closeDialog}>Batal</button><button className="pos-confirm-clear" onClick={() => { if (!locked) onClear(); closeDialog(); }}>Ya, Hapus Semua</button></div>

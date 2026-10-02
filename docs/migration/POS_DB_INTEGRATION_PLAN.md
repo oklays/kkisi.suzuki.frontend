@@ -1,8 +1,8 @@
 # Rencana Integrasi POS Next.js ↔ Database Staging
 
-> Status: **rencana, belum ada kode diubah.** Tanggal audit: 2026-09-30.
+> Status terkini (2026-10-02): **alur POS Cash/Kredit, buka/tutup kasir dan struk 80 mm diimplementasikan dan diuji pada staging lokal**. Lihat Bab 6.18 dan [laporan implementasi](POS_DB_INTEGRATION_IMPLEMENTATION.md). Audit/bab keputusan sebelumnya tetap merupakan snapshot pada tanggal masing-masing.
 > Sumber aturan bisnis: kode CI3 di `tokonew.kkisitb2.id/` (bukan dokumen ringkasan).
-> Semua query/`ANALYZE` dijalankan di staging `kkisi_staging` (MariaDB 11.4, `127.0.0.1:3307`) dengan user SELECT-only. Tidak ada write, tidak menyentuh produksi. Tidak ada kredensial/data pribadi di dokumen ini.
+> Pada audit awal, semua query/`ANALYZE` dijalankan di staging `kkisi_staging` (MariaDB 11.4, `127.0.0.1:3307`) dengan user SELECT-only. Tidak ada write, tidak menyentuh produksi. Tidak ada kredensial/data pribadi di dokumen ini.
 
 ## 0. Metode dan batasan
 
@@ -1162,6 +1162,22 @@ Salinan pembanding: `docs/migration/_baseline/POS_DB_INTEGRATION_PLAN.before-202
 | F7 penunjuk dari 6.16 | Ditambahkan di 6.16 |
 | F8 kala usang | 6.17.1 butir 1 dan status 6.17 diperbaiki |
 | F9 penomoran ganda | Catatan di 6.14 L993: nomor yang berlaku = 12 butir 6.16 |
+
+### 6.18 Persetujuan dan aktivasi POS lokal (2026-10-02)
+
+Pemilik menyatakan **"APPROVED segala macam perizinan yang masih terblokir pada plan tersebut"**, dengan tujuan fungsi POS berjalan semestinya. Persetujuan ini menggantikan status izin lama, termasuk S2-7…S2-9. Target lokal telah teridentifikasi: container `kkisi-staging`, MariaDB `127.0.0.1:3307`, DB `kkisi_staging`; pengujian memakai akun kasir uji yang sudah ada. Persetujuan bukan pengganti fakta topologi DEV yang masih kosong pada Bab 6.16/6.17. Tidak ada target remote yang diasumsikan dan tidak ada rilis produksi.
+
+Keputusan tambahan dari jawaban pemilik:
+
+- **S2-14 / 2C:** aturan POS legacy: saldo akhir = saldo awal + Final Cash setelah kembalian; saldo Kredit = total Final Kredit; waktu tutup = waktu server; hanya sesi milik sendiri; **Quotation dipertahankan**. Kembalian legacy dihitung `paid_amount - grand_total`, sehingga Cash neto = `grand_total`. Perhitungan mencakup semua Final pada sesi/cabang milik kasir, bukan hanya nama pembuat penjualan.
+- **D13 / Tahap 6:** struk thermal **80 mm**, `window.print`, printer dipilih dengan ukuran kertas 80 mm. Tanggal dari `sales_date`, bukan `created_time` yang berubah saat UPDATE; field keuangan dari transaksi tersimpan.
+- **2B:** `sales_add` + CSRF, saldo awal bulat 0…999.999.999, company/user dari sesi; sesi lama/ambigu/lintas cabang ditolak; referensi berdasarkan insert ID; buka ulang idempoten. Tidak menambahkan batas satu user per mesin fisik yang tidak ada pada aturan lama.
+
+Eksekusi lokal telah dilakukan setelah backup: akun checkout dan akun register terpisah, host dibatasi gateway Docker aktual, konfigurasi privat diaktifkan dan secret QR legacy hanya di lingkungan lokal. `DATABASE_URL_WRITE` hanya untuk checkout; **`DATABASE_URL_REGISTER_WRITE`** untuk INSERT/UPDATE register, menggantikan penggunaan satu nama DSN dalam rancangan 2B lama. Reader/auth legacy tetap tanpa hak tulis. Tidak ada perubahan skema legacy, reset, penghapusan data historis, atau perubahan sesi kasir pengguna lain.
+
+Bukti browser/database: buka kasir + 20 permintaan idempoten, Cash/Kredit nyata pada staging, NIK berawalan nol/ID/QR, penurunan stok dan limit tepat, kehilangan respons lalu 10 retry tanpa transaksi ganda, tutup dan rekap tersimpan, struk/PDF 80 mm, mobile/desktop. Tiga penjualan uji staging dipertahankan; sesi uji pertama ditutup dan satu sesi baru dibiarkan terbuka. Detail ID, backup, akun, perintah dan batas bukti tercatat di laporan implementasi. Rollback dan minimum privilege juga diuji. Perbandingan 20 sesi historis menghasilkan Cash 17/20 dan Kredit 19/20 cocok; selisih historis tetap dipertahankan untuk rekonsiliasi, bukan diubah agar tes lulus.
+
+**Batas status:** yang selesai adalah implementasi dan penerimaan lokal alur inti. D10/D11, load/reconciliation/cutover Tahap 8, fakta dan pengoperasian remote DEV/produksi belum diselesaikan. Persetujuan izin tidak mengubah fungsi yang sebelumnya diputuskan di luar scope menjadi sudah tersedia. Residu skema sintetis lama tetap dipertahankan untuk uji ulang; DROP tidak diperlukan untuk operasi POS lokal ini.
 
 ## Lampiran A — Ringkasan data staging yang dipakai
 

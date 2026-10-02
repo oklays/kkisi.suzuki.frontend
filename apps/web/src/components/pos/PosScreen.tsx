@@ -103,7 +103,7 @@ export function PosScreen({ products: initialProducts, categories, catalogStatus
 
   return (
     <PosShell branchName={session.branchName}>
-      <PosHeader session={session} />
+      <PosHeader session={session} locked={locked} />
       <main className="pos-content" id="pos-workspace">
         <div className="pos-preview-notice"><Info size={16} /><span><strong>POS / Kasir</strong> · Harga, stok, dan limit anggota diperiksa kembali saat pembayaran.</span></div>
         <div className="pos-workspace">

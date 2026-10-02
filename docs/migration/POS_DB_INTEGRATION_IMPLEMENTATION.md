@@ -1,6 +1,72 @@
 # POS database integration implementation
 
-This implements the existing [POS_DB_INTEGRATION_PLAN.md](POS_DB_INTEGRATION_PLAN.md), phases 1, 3, 4 and 5. It is not a new PRD. Code implementation is authorized by the current POS integration request. Section 6.17 provisioning and release gates remain unchanged.
+This implements the existing [POS_DB_INTEGRATION_PLAN.md](POS_DB_INTEGRATION_PLAN.md), phases 1, 2B, 2C, 3, 4, 5 and 6, on local staging. It is not a new PRD. The user approved the plan's remaining permissions on 2026-10-02, then confirmed the legacy POS closing rules and 80 mm receipts. The current local activation below supersedes the earlier disabled-configuration and unapproved-proposal snapshots. Remote deployment still requires the missing target/topology facts, not another repetition of the same approval.
+
+## Current local operation — 2026-10-02
+
+The existing local `kkisi-staging` container remains bound to `127.0.0.1:3307`, database `kkisi_staging`. Checkout and native register opening/closing are enabled in the private `apps/web/.env.local`. The Next.js development server runs at `http://127.0.0.1:3000/pos`.
+
+From the repository root:
+
+```sh
+pnpm dev
+```
+
+Log in with the existing local test cashier. If there is no current session, choose an available cashier register, enter an integer opening balance and click **Buka kasir**. Add goods by name or barcode; **Scan** and scanner Enter both add the matching product. Select Cash and sufficient **Uang bayar**, or select an eligible member and Kredit. Successful checkout provides **Lihat / Cetak struk**. Select 80 mm paper in the printer settings. **Tutup** requires confirmation and shows the saved recap. The test account currently has one owned current-day session open; other users' old sessions were preserved.
+
+A mode-600 SQL gzip backup was created before activation: `apps/web/staging/pos-before-activation-2026-10-02T09-06-20-374Z.sql.gz` (90,110,783 bytes). A private pre-change environment backup also exists. Both are ignored and contain no committed secrets. The backup command completed successfully; a restore rehearsal was not performed. No schema reset, migration, production write, or remote deployment occurred.
+
+Local account boundaries (each restricted to the observed Docker gateway host, without `%`):
+
+| Client | Allowed legacy writes |
+|---|---|
+| Existing reader | None |
+| Existing auth client | None; session/throttle writes only to the existing auth store |
+| `DATABASE_URL_WRITE` / `kkisi_pos_runtime` | INSERT sales/items/payments, UPDATE item stock, DELETE owned cart rows |
+| `DATABASE_URL_REGISTER_WRITE` / `kkisi_pos_register` | INSERT/UPDATE `db_buka_kasir` only |
+
+Both writers have only the SELECT privileges their repositories need, use different non-root credentials, and target the same explicit staging database as the reader. No existing account privileges were widened. QR secrets were configured locally from the targeted legacy `mysecurity_helper.php` / `security.ini`: AES-256-CBC with the verified PHP HEX-SHA256 passphrase and IV convention. No secret values are in Git, output, or this document. A generated QR using that convention resolved the member; an existing printed legacy card was not available for physical scanning.
+
+Native opening and closing serialize with checkout using company then authenticated user row locks. Opening validates the physical cashier/company, balance and all open sessions belonging to the user; it returns the existing current-day session and uses the inserted ID for its reference. Closing checks ownership before reading totals, preserves Quotations, uses server UTC+7 time and is idempotent. As `Pos::tutup_kasir` derives change as `paid_amount - grand_total`, net Cash equals the saved Final Cash total. All Final sales of the owned session/company count, including historical sales created by another cashier; filtering by the sale creator would omit them. A return or unsupported payment method stops recap calculation rather than inventing a total. Closing is disabled while a payment outcome is uncertain.
+
+Saved receipts are company-scoped and rendered from persisted financial rows. They use `sales_date`, because `created_time` changes when a sale is updated; they show no invented immutable transaction time. Cash change follows saved paid minus total. Unsupported methods/returns are rejected. Store/item labels come from the current company/item master because legacy sale lines do not snapshot those labels; amounts remain saved sale-line amounts.
+
+### Final verification
+
+- `pnpm check`: passed — lint has zero errors and three pre-existing warnings; typecheck passed; **138 tests passed, 31 opt-in database tests skipped, zero failures**.
+- `pnpm build`: passed with dynamic register opening/closing, receipt API and saved receipt page. Generated `next-env.d.ts` output is excluded from the change; typecheck is rerun after restoring its existing dev references.
+- `POS_REGISTER_RECAP_STAGING_TEST=1 ... --test tests/pos-register-recap-staging.test.mjs`: **1 passed**, all temporary sales rolled back; active session preserved.
+- A final isolated browser check confirmed the configured local Cash button enables with a scanned product and sufficient tender, and the corrected saved Cash/Kredit receipts and 80 mm print styles work. It blocked checkout requests so no additional sales were created.
+- A separate whole-change review found the historical receipt date/payment/change and recap creator-filter problems; these were corrected and re-reviewed with no remaining Critical/Important findings. No runtime dependencies or lockfile changes were added.
+
+### Local acceptance evidence
+
+The isolated browser tests used the existing dedicated test cashier, company 1, without changing other users' sessions. Backup and explicit target checks preceded writes.
+
+- Native **Buka kasir** created session `4400`; 20 concurrent opening requests returned that same session. Forged client company/user IDs were ignored, closing another user's session returned 403, and negative opening balance returned 400.
+- Barcode `8996001350843` added live item 76 through the **Scan** button. Cash tender Rp5,000 enabled checkout: total Rp2,000, change Rp3,000, cart cleared, saved receipt accessible. A foreign-company receipt returned 404 even with a forged company parameter.
+- Cash sales `243607` and `243609`, and Kredit sale `243608`, each persisted one Final sale, one matching item and one matching payment. These **three staging test sales are retained**. Item 76 stock changed from 202 to 199. Member 62's current-month remaining limit changed from Rp2,500,000 to Rp2,498,000. Neither member data nor other users' sessions were edited.
+- The reported NIK retained its leading zero and resolved correctly; explicit member ID and generated legacy-compatible encrypted QR resolved the same member.
+- The final Cash response was deliberately lost after commit. Reload preserved the original payment key and disabled closing; ten simultaneous retries returned the original sale without another stock deduction.
+- Native close persisted session `4400` with opening Rp0, ending Cash Rp4,000 and Kredit Rp2,000. Repeated close returned that same recap. Session `4401` / `KRS-202610024401` was left active with opening Rp0 for manual use.
+- The saved receipt rendered at 80 mm, hid controls for printing and produced an 80 mm PDF. Desktop 1440×900/674 and mobile 390×844/320×700 had visible cashier controls, no horizontal overflow and no runtime exceptions. A physical printer was not exercised.
+- Actual account tests denied five unauthorized zero-row writes. A fault at the opening-reference step rolled back a real register INSERT; no duplicate session persisted.
+- The opt-in regression below runs temporary sales entirely inside a forced-rollback transaction. It proves fractional Cash totals/change, sales created by another cashier within the owned session, exclusion of Quotation/foreign-company sales, and preservation of the open empty session. Its reader uses test-only ReadUncommitted to see uncommitted fixtures; the production reader does not. Register UPDATE is captured in this regression because the checkout account cannot write registers; native browser/DB checks above verify the actual UPDATE separately.
+- Read-only comparison of 20 closed historical sessions: Cash recap matches 17/20; Kredit matches 19/20. Three stored historical recaps differ from recomputing the current Final sales. They were preserved. This proves the implemented formula and reveals historical-data differences; it does not establish full historical reconciliation or PHP/Next concurrent-writer acceptance.
+
+```sh
+# From apps/web; opt-in fixture contains IDs only and must identify an empty owned current session.
+POS_REGISTER_RECAP_STAGING_TEST=1 node --env-file=.env.local --experimental-strip-types \
+  --test tests/pos-register-recap-staging.test.mjs
+```
+
+The private `.e2e-pos-recap.json` fixture holds the approved user/company/register and the two saved source-sale IDs. The test rejects any other host/port/database, root writer, mismatched reader target, missing owned open session or nonempty session. Every temporary sale must roll back; it never resets staging.
+
+PPOB/SALDOPPOB, transfer/QRIS payments, invoice edit, header discounts/tax/order-type changes and void/returns remain outside the selected Cash/Kredit scope (D10/D11). Fractional-Rupiah Kredit is still rejected to avoid rounding in the legacy payment column. Phase 8's load/cutover acceptance and remote DEV/production deployment are not complete.
+
+## Earlier implementation and verification snapshots
+
+The sections below retain the evidence and permission state at their respective checkpoints. Their disabled-local-configuration and unexecuted-proposal statements are historical and superseded by the current local operation above.
 
 ## Decisions and execution
 

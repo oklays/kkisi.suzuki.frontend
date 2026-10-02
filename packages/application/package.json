@@ -13,7 +13,9 @@
     "./auth/logout": "./src/auth/logout.usecase.ts",
     "./auth/login": "./src/auth/login.usecase.ts",
     "./pos/register": "./src/pos/read-register.usecase.ts",
-    "./pos/checkout": "./src/pos/checkout.usecase.ts"
+    "./pos/checkout": "./src/pos/checkout.usecase.ts",
+    "./pos/receipt": "./src/pos/read-receipt.usecase.ts",
+    "./pos/register-lifecycle": "./src/pos/register-lifecycle.ts"
   },
   "scripts": {
     "lint": "eslint .",

@@ -14,6 +14,9 @@ export type PosSession = {
   companies: { id: number; name: string }[];
   csrfToken: string;
   checkoutAvailable: boolean;
+  registerOpeningAvailable?: boolean;
+  kasir?: {id:number;noKasir:string}[];
+  ownedRegisters?: {id:number;noref:string}[];
   userId: number;
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };
 };

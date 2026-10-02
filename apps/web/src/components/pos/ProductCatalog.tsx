@@ -27,7 +27,7 @@ export function ProductSearch({ query, onQuery, onScan }: { query: string; onQue
       <Search size={19} aria-hidden="true" />
       <input ref={input} aria-label="Cari produk berdasarkan nama, kode, atau barcode" value={query} onChange={(event) => onQuery(event.target.value)} placeholder="Scan barcode atau cari produk (nama/kode)..." autoComplete="off" />
       {query && <button className="pos-icon-button" type="button" aria-label="Hapus pencarian" onClick={() => { onQuery(""); input.current?.focus(); }}><X size={16} /></button>}
-      <button className="pos-scan" type="button" onClick={() => input.current?.focus()}><Barcode size={17} />Scan</button>
+      <button className="pos-scan" type="button" onClick={() => { if (query.trim()) onScan(); else input.current?.focus(); }}><Barcode size={17} />Scan</button>
     </form>
   );
 }

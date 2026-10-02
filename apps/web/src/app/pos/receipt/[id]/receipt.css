@@ -1,0 +1,24 @@
+.receipt-screen { min-height:100dvh; padding:24px; background:#eef2f7; color:#111; font-family:Arial,sans-serif; }
+.receipt-actions { max-width:320px; margin:0 auto 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:14px; }
+.receipt-actions a { color:#123b88; }
+.receipt-print-button { border:0; border-radius:8px; padding:10px 14px; background:#123b88; color:#fff; cursor:pointer; }
+.receipt-paper { box-sizing:border-box; width:80mm; max-width:100%; margin:auto; padding:6mm 5mm; background:#fff; font-family:Arial,sans-serif; font-size:11px; line-height:1.4; overflow-wrap:anywhere; box-shadow:0 8px 30px #0002; }
+.receipt-paper header,.receipt-paper footer { text-align:center; }
+.receipt-paper header h1 { margin:0 0 3px; font-size:15px; }
+.receipt-paper header p { margin:2px 0; }
+.receipt-paper header p:last-child { margin-top:10px; font-weight:700; }
+.receipt-meta,.receipt-totals { margin:10px 0; }
+.receipt-meta div,.receipt-totals div,.receipt-line div { display:flex; justify-content:space-between; gap:10px; }
+.receipt-meta dt,.receipt-totals dt { flex-shrink:0; }
+.receipt-meta dd,.receipt-totals dd { margin:0; text-align:right; }
+.receipt-lines { border-block:1px dashed #333; padding:5px 0; }
+.receipt-line { padding:4px 0; }
+.receipt-line strong { font-weight:600; }
+.receipt-line small { display:block; }
+.receipt-totals div { margin:3px 0; }
+.receipt-totals .receipt-grand { padding:5px 0; border-top:1px dashed #333; font-size:13px; font-weight:700; }
+.receipt-paper footer { margin-top:14px; border-top:1px dashed #333; padding-top:9px; }
+.receipt-message { padding:48px 16px; text-align:center; font-family:Arial,sans-serif; }
+/* The selected printer supplies the roll length; select 80 mm paper in its print settings. */
+@page { size:auto; margin:0; }
+@media print { html,body { width:80mm; margin:0; padding:0; background:#fff; } .receipt-screen { min-height:0; padding:0; background:#fff; } .receipt-actions { display:none; } .receipt-paper { width:80mm; max-width:none; margin:0; box-shadow:none; } }
