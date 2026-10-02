@@ -1,4 +1,4 @@
-import type { Logger } from '../../application/auth/ports.ts';
+import type { Logger } from '@koperasi/application/auth/ports';
 
 const SAFE = /^[A-Za-z0-9_.:-]{1,64}$/;
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import bcrypt from 'bcryptjs';
 import { WorkerPasswordVerifier } from '../src/infrastructure/auth/password-verifier.ts';
-import { DUMMY_HASH } from '../src/domain/auth/password-candidates.ts';
+import { DUMMY_HASH } from '@koperasi/domain/auth/password';
 import { legacyStyleHash } from './helpers/auth-fakes.mjs';
 
 test('worker verifier: $2y$ legacy-style hashes verify; wrong password, junk and md5-like values do not', async () => {

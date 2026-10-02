@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
-import type { PosSession } from "@/application/pos/contracts";
+import type { PosSession } from "@/features/pos/types";
 
 async function post(path: string, csrfToken: string, body: unknown): Promise<Response> {
   return fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken }, body: JSON.stringify(body), cache: "no-store" });

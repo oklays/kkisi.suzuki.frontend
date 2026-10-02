@@ -1,4 +1,4 @@
-import { StoreUnavailableError } from '../../domain/auth/errors.ts';
+import { StoreUnavailableError } from '@koperasi/domain/auth/errors';
 
 /** MariaDB error number from a Prisma raw-query error (P2010 meta.code) or from the message; null if not present. */
 export function dbErrorNumber(error: unknown): number | null {

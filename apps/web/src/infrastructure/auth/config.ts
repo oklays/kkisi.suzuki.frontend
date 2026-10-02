@@ -1,4 +1,4 @@
-import { AuthError } from '../../domain/auth/errors.ts';
+import { AuthError } from '@koperasi/domain/auth/errors';
 
 export type ParsedSecret = { kid: string; key: Buffer };
 export type AuthConfig = {

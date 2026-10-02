@@ -1,6 +1,7 @@
+import type { ThrottleKey } from '@koperasi/application/auth/ports';
 import { Prisma, type PrismaClient } from '@prisma/client';
-import { LOCK_CLOCK_SLACK_MS, LOCK_MS, type ThrottleKey, type ThrottleKind } from '../../domain/auth/throttle-policy.ts';
-import type { FailureRecord, ThrottleStore } from '../../application/auth/ports.ts';
+import { LOCK_CLOCK_SLACK_MS, LOCK_MS, type ThrottleKind } from '@koperasi/domain/auth/throttle-policy';
+import type { FailureRecord, ThrottleStore } from '@koperasi/application/auth/ports';
 import { withStoreRetry, type StoreLog } from './store-errors.ts';
 
 /** kkisi_auth_staging.auth_throttle. Keys are HMACs: neither usernames nor IPs are readable from the table. */

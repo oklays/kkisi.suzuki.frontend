@@ -4,7 +4,7 @@ This directory contains the **new** Next.js application. Original reverse-engine
 
 ## Getting started
 
-Requires Node.js 20.9+ (Node 22 recommended).
+Use the Node/pnpm versions documented in the root README. The current CLI/tests and TypeScript source packages are verified on Node 22.23.0.
 
 ```sh
 # From the repository root (pnpm 10.0.0)
@@ -30,7 +30,7 @@ Open http://127.0.0.1:3000/login (the app binds to loopback only; use exactly th
 - **Branch scope**: stock is per branch (`db_items.company_id`). The branch is the authenticated session's `cid`; `company_id` in a query string is ignored.
 - **API**: `GET /api/pos/products` — `?q=` name/code/barcode search, `?category=` category id, `?barcode=` exact scanner lookup. At most 24 rows; unit barcode wins over pack barcode; unknown barcode returns `{"products":[]}`. Errors return only a safe code (`INVALID_INPUT`, `DB_UNAVAILABLE`, `NOT_CONFIGURED`, `UNEXPECTED`).
 - **Rules verified against staging**: only `status=1` and `type='Produk Jadi'` items; sold price per unit = `sales_price − discount` (nominal, per unit, as the legacy cart does); tax is not part of the price; negative legacy stock is shown as "Stok habis"; browsing lists in-stock items only, a text search also shows out-of-stock ones; items priced 0 are shown as "Harga belum diatur" and cannot be added. `db_category` is global (no `company_id`); the category list is limited to categories the branch sells.
-- **Money**: `DOUBLE(18,2)` prices leave the repository as exact 2-decimal strings and are integer *sen* from then on (`src/domain/shared/money.ts`); no floating point is applied to amounts (e.g. Rp 4.000,10 = 400010 sen).
+- **Money**: `DOUBLE(18,2)` prices leave the repository as exact 2-decimal strings and are integer *sen* from then on (`@koperasi/domain/money`); no floating point is applied to amounts (e.g. Rp 4.000,10 = 400010 sen).
 - **Columns read**: id, company, code, barcode, name, price, discount, stock, category. Cost price, tax and pack data never leave the server.
 - **Optional checks**: `cd apps/web && POS_STAGING_DB_TEST=1 node --env-file=.env.local --experimental-strip-types --test tests/pos-staging-catalog.test.mjs` reads the local staging copy (refuses non-local/non-"staging" URLs); `pnpm test:browser` runs against a `next start` build.
 
@@ -73,7 +73,7 @@ PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs pnpm test:browser
 
 ## UI structure
 
-`src/app/pos/page.tsx` loads the first catalog page server-side and passes it (plus sample members from `src/components/pos/fixtures.ts`) to `PosScreen`, which fetches further pages from `/api/pos/products`. Reusable presentation components live in `src/components/pos/`; read projection types live in `src/application/pos/contracts.ts`. `preview.ts` contains in-memory preview helpers, not production business calculations. Future server use cases supply verified projections; do not turn the fixtures into a service or persistence layer.
+`src/app/pos/page.tsx` loads the first catalog page server-side and passes it (plus sample members from `src/components/pos/fixtures.ts`) to `PosScreen`, which fetches further pages from `/api/pos/products`. Presentation components live in `src/components/pos/`; catalog projections belong to `@koperasi/application/pos/contracts` and UI-only types to `src/features/pos/types.ts`. Image/currency display helpers remain in `preview.ts`; in-memory cart calculations belong to `@koperasi/domain/pos/preview` and remain non-authoritative. Future server use cases supply verified projections; do not turn the fixtures into a service or persistence layer.
 
 Illustration filenames preserve the supplied five category families with six variants each. Selection hashes the product ID; real images take precedence, with a fallback on image-load error. The supplied SVGs contain empty raster wrappers, so the app uses replacement native vectors; originals remain in the mockup directory. All UI icons use Lucide React.
 

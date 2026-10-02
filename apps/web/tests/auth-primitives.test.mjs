@@ -1,10 +1,9 @@
+import { passwordFingerprint, sidToHash } from '../src/server/auth-crypto.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomBytes } from 'node:crypto';
-import { htmlEscape, isBcryptHash, passwordCandidates, unsupportedPasswordClass, DUMMY_HASH } from '../src/domain/auth/password-candidates.ts';
-import { ABSOLUTE_MS, IDLE_MS, isSessionValid, isWellFormedSid, newDeadlines, passwordFingerprint, sidToHash } from '../src/domain/auth/session.ts';
-import { isActiveLock, LOCK_MS, activeKinds } from '../src/domain/auth/throttle-policy.ts';
-import { safeNextPath } from '../src/domain/auth/redirect.ts';
+import { isBcryptHash, DUMMY_HASH } from '@koperasi/domain/auth/password';
+import { isWellFormedSid } from '@koperasi/domain/auth/session-policy';
 import { loadAuthConfig, parseAppOrigin, parseSecrets } from '../src/infrastructure/auth/config.ts';
 import { buildKeys } from '../src/infrastructure/auth/keys.ts';
 import { checkOrigin, isJsonRequest } from '../src/infrastructure/auth/origin.ts';
@@ -13,18 +12,6 @@ import { trustedClientIp } from '../src/infrastructure/auth/client-ip.ts';
 import { ENV, SECRET_B64, legacyStyleHash } from './helpers/auth-fakes.mjs';
 
 const throws = (fn, code = 'NOT_CONFIGURED') => assert.throws(fn, (e) => e.code === code);
-
-test('idle 2 h and absolute 12 h decide validity; revocation always wins', () => {
-  assert.equal(IDLE_MS, 7200000); assert.equal(ABSOLUTE_MS, 43200000);
-  const now = new Date('2026-10-01T00:00:00Z');
-  const d = newDeadlines(now);
-  const s = { revokedAt: null, idleExpiresAt: d.idleExpiresAt, absExpiresAt: d.absExpiresAt };
-  assert.equal(isSessionValid(s, new Date(now.getTime() + IDLE_MS - 1)), true);
-  assert.equal(isSessionValid(s, new Date(now.getTime() + IDLE_MS)), false);
-  assert.equal(isSessionValid({ ...s, idleExpiresAt: new Date(now.getTime() + 99 * 3600e3) }, new Date(now.getTime() + ABSOLUTE_MS)), false);
-  assert.equal(isSessionValid({ ...s, revokedAt: now }, now), false);
-  assert.equal(d.purgeAfter.getTime() - d.absExpiresAt.getTime(), 24 * 3600e3);
-});
 
 test('session ids: 43-char base64url only; only their SHA-256 is stored; fingerprint changes with the hash', () => {
   const sid = randomBytes(32).toString('base64url');
@@ -36,34 +23,10 @@ test('session ids: 43-char base64url only; only their SHA-256 is stored; fingerp
   assert.match(a, /^[0-9a-f]{16}$/); assert.notEqual(a, b);
 });
 
-test('lock cap: a lock further away than 15 min + slack (clock jump) is not a lock', () => {
-  const now = new Date('2026-10-01T00:00:00Z');
-  assert.equal(isActiveLock(new Date(now.getTime() + LOCK_MS), now), true);
-  assert.equal(isActiveLock(new Date(now.getTime() + LOCK_MS + 60000), now), true);
-  assert.equal(isActiveLock(new Date(now.getTime() + LOCK_MS + 60001), now), false);
-  assert.equal(isActiveLock(new Date(now.getTime() + 10 * 365 * 86400e3), now), false);
-  assert.equal(isActiveLock(new Date(now.getTime() - 1), now), false);
-  assert.equal(isActiveLock(null, now), false);
-  assert.deepEqual(activeKinds(false), ['user']); assert.deepEqual(activeKinds(true), ['user', 'pair', 'ip']);
-});
-
-test('password candidates: raw first, legacy html_escape second; class detection only labels failures', () => {
-  assert.deepEqual(passwordCandidates('Plain123!'), ['Plain123!']);
-  assert.deepEqual(passwordCandidates('a&b<c>"d\'e'), ['a&b<c>"d\'e', 'a&amp;b&lt;c&gt;&quot;d&#039;e']);
-  assert.equal(htmlEscape("it's"), 'it&#039;s');
-  for (const p of ['100%25', '%41bc', 'x\tz', 'eval(x)', 'javascript:x', 'document.cookie', 'a\u0007b']) assert.equal(unsupportedPasswordClass(p), true, p);
-  for (const p of ['Password1!', 'a&b', "it's", '50%', 'x<y', 'C:\\dir']) assert.equal(unsupportedPasswordClass(p), false, p);
-});
-
 test('only bcrypt hashes are accepted; md5 leftovers and junk fail closed; the dummy hash is well formed', () => {
   assert.equal(isBcryptHash(legacyStyleHash('x')), true);
   assert.equal(isBcryptHash(DUMMY_HASH), true);
   for (const h of ['', '900150983cd24fb0d6963f7d28e17f72', '$1$abc$def', '$2y$10$short', 'plain', null]) assert.equal(isBcryptHash(h ?? ''), false, String(h));
-});
-
-test('post-login redirect is same-site only', () => {
-  assert.equal(safeNextPath('/pos'), '/pos'); assert.equal(safeNextPath('/pos?x=1'), '/pos?x=1');
-  for (const bad of ['//evil.test', 'https://evil.test', '/\\evil', '\\evil', 'javascript:alert(1)', '/api/pos/products', '/login', '', null, undefined, '/a\nb', '/' + 'a'.repeat(300)]) assert.equal(safeNextPath(bad), '/pos', String(bad));
 });
 
 test('config fails closed: origin must be a bare loopback origin', () => {

@@ -4,8 +4,8 @@ import { handleLogin } from '../src/infrastructure/auth/handlers/login.ts';
 import { handleSession } from '../src/infrastructure/auth/handlers/session.ts';
 import { handleRegister } from '../src/infrastructure/pos/handlers/register.ts';
 import { handleProducts } from '../src/infrastructure/pos/handlers/products.ts';
-import { ReadProductsUseCase } from '../src/application/inventory/use-cases/read-products.usecase.ts';
-import { ABSOLUTE_MS, IDLE_MS } from '../src/domain/auth/session.ts';
+import { ReadProductsUseCase } from '@koperasi/application/inventory';
+import { ABSOLUTE_MS, IDLE_MS } from '@koperasi/domain/auth/session-policy';
 import { bodyOf, cookieOf, legacyStyleHash, makeRequest, makeWorld } from './helpers/auth-fakes.mjs';
 
 const PW = 'Pw-Synthetic-1';

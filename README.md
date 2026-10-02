@@ -1,6 +1,6 @@
 # Koperasi Suzuki workspace
 
-The Next.js application lives in [`apps/web`](apps/web/README.md). Workspace and shared configuration are established; domain, application and persistence code still lives inside the app until the approved package-extraction checkpoints.
+The Next.js application lives in [`apps/web`](apps/web/README.md). Pure policies/calculations and application use cases now live in private domain/application packages. Persistence adapters remain app-owned until Checkpoint 5.
 
 ## Development
 
@@ -45,12 +45,14 @@ When adding a real source package, declare private ESM exports pointing to inten
 
 ## Repository ownership
 
-- `apps/web/`: App Router, UI, existing domain/use-case/infrastructure layers, Prisma read mappings, assets, tests and local operations.
+- `apps/web/`: App Router, UI, server crypto/composition, existing persistence/framework adapters, Prisma mappings, assets, integration tests and local operations.
+- `packages/domain/`: pure inventory values, money, auth policies/errors and non-authoritative preview calculations; no runtime dependencies or framework/database/Node imports.
+- `packages/application/`: inventory/auth/register use cases, repository ports and catalog projections; depends on domain through `workspace:*`. Buffer-backed auth storage ports remain server-facing.
 - `docs/legacy-reference/`: original reverse-engineering documents, relocated without content changes.
 - `docs/migration/`: migration rules, data ownership, implementation backlog and acceptance gates.
 - `docs/refactor/`: [approved refactor plan](docs/refactor/MONOREPO_REFACTOR_PLAN.md) and checkpoint reports.
 - `.kiro/specs/`: existing feature specifications.
 
-The workspace uses one root `pnpm-lock.yaml`. No empty packages or Turbo configuration is introduced at this checkpoint. The legacy PHP source and operational databases remain outside this refactor.
+The workspace uses one root `pnpm-lock.yaml` and deliberate package subpath exports, for example `@koperasi/domain/money` and `@koperasi/application/inventory`. Domain never imports application/web; application imports domain and its own ports. Web composes use cases with persistence and server identity adapters. No empty packages or Turbo configuration is introduced. The legacy PHP source and operational databases remain outside this refactor.
 
 During the local directory move, an ignored `kkisi.web` compatibility symlink may exist for an already-running development server. It is not part of the repository structure in a fresh clone. Start future development sessions from the root commands above; the refactor does not automatically restart an existing process.

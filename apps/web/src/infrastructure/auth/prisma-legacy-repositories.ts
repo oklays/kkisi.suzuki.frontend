@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import type { Company, CompanyRepository, OpenRegister, PermissionRepository, RegisterRepository, UserRecord, UserRepository } from '../../application/auth/ports.ts';
+import type { Company, CompanyRepository, OpenRegister, PermissionRepository, RegisterRepository, UserRecord, UserRepository } from '@koperasi/application/auth/ports';
 import { withStoreRetry, type StoreLog } from './store-errors.ts';
 
 // Legacy reads only, through the SELECT-only account (DATABASE_URL). No statement here can write: the account cannot.

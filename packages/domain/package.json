@@ -1,0 +1,25 @@
+{
+  "name": "@koperasi/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./inventory": "./src/inventory/index.ts",
+    "./money": "./src/money/money.ts",
+    "./auth/errors": "./src/auth/errors.ts",
+    "./auth/session-policy": "./src/auth/session-policy.ts",
+    "./auth/redirect": "./src/auth/redirect.ts",
+    "./auth/throttle-policy": "./src/auth/throttle-policy.ts",
+    "./auth/password": "./src/auth/password-candidates.ts",
+    "./pos/preview": "./src/pos/preview.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "typescript": "5.9.3"
+  }
+}

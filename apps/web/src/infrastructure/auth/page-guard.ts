@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { AuthError } from '../../domain/auth/errors.ts';
-import { requirePermission, validateSession, type AuthContext } from '../../application/auth/validate-session.usecase.ts';
+import { AuthError } from '@koperasi/domain/auth/errors';
+import { requirePermission, validateSession, type AuthContext } from '@koperasi/application/auth/validate-session';
 import { getContainer } from './container.ts';
 import type { AuthServices } from './http.ts';
 

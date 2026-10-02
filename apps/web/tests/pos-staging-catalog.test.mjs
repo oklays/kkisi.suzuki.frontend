@@ -10,9 +10,9 @@ async function catalog() {
   const url = new URL(process.env.DATABASE_URL ?? 'mysql://none@invalid/none');
   assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname), 'DATABASE_URL must point at a local staging database');
   assert.match(url.pathname, /staging/, 'database name must contain "staging"');
-  const { ReadProductsUseCase } = await import('../src/application/inventory/use-cases/read-products.usecase.ts');
+  const { ReadProductsUseCase } = await import('@koperasi/application/inventory');
   const { PrismaItemRepository } = await import('../src/infrastructure/repositories/prisma-item.repository.ts');
-  const { searchCatalog, findCatalogBarcode, listCatalogCategories } = await import('../src/application/pos/catalog.ts');
+  const { searchCatalog, findCatalogBarcode, listCatalogCategories } = await import('@koperasi/application/pos/catalog');
   return { reader: new ReadProductsUseCase(new PrismaItemRepository()), searchCatalog, findCatalogBarcode, listCatalogCategories };
 }
 
@@ -56,7 +56,7 @@ test('staging: name search, empty result and wildcard characters behave', option
 });
 
 test('staging: fractional prices survive exactly (Rp 4.000,10 stays 400010 sen)', options, async () => {
-  const { toPosProduct } = await import('../src/application/pos/catalog.ts');
+  const { toPosProduct } = await import('@koperasi/application/pos/catalog');
   const { PrismaItemRepository } = await import('../src/infrastructure/repositories/prisma-item.repository.ts');
   // Branch-2 item 12233 is priced 4000.10 in the staging copy (DOUBLE(18,2) column).
   const item = await new PrismaItemRepository().findById({ companyId: 2, id: 12233 });

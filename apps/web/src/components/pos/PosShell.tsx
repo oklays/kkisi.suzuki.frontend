@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { PosSession } from "@/application/pos/contracts";
+import type { PosSession } from "@/features/pos/types";
 import { SessionControls } from "./SessionControls";
 import { Barcode, Boxes, ChartColumn, ChevronDown, LayoutDashboard, ShoppingBag, Store, Warehouse } from "lucide-react";
 

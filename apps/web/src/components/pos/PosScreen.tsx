@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
-import { CATALOG_PAGE_SIZE, type CatalogStatus, type PosCategory, type PosMember, type PosProduct, type PosSession, type PreviewCartLine } from "@/application/pos/contracts";
+import { CATALOG_PAGE_SIZE, type CatalogStatus, type PosCategory, type PosMember, type PosProduct, type PosSession, type PreviewCartLine } from "@/features/pos/types";
 import { PosHeader, PosShell } from "./PosShell";
 import { CategoryFilter, ProductGrid, ProductSearch } from "./ProductCatalog";
 import { TransactionPanel } from "./TransactionPanel";

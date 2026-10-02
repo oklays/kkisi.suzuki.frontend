@@ -1,6 +1,6 @@
-import { findCatalogBarcode, searchCatalog } from '../../../application/pos/catalog.ts';
-import type { ReadProductsUseCase } from '../../../application/inventory/use-cases/read-products.usecase.ts';
-import { ProductReadError, type ProductReadErrorCode } from '../../../domain/shared/product-read-error.ts';
+import { findCatalogBarcode, searchCatalog } from '@koperasi/application/pos/catalog';
+import type { ReadProductsUseCase } from '@koperasi/application/inventory';
+import { ProductReadError, type ProductReadErrorCode } from '@koperasi/domain/inventory';
 import { errorResponse, guard, json, type AuthServices } from '../../auth/http.ts';
 
 const STATUS: Record<ProductReadErrorCode, number> = { INVALID_INPUT: 400, NOT_FOUND: 404, DB_UNAVAILABLE: 503, NOT_CONFIGURED: 503, UNEXPECTED: 500 };

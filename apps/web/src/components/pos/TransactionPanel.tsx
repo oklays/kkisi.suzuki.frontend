@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ArrowLeftRight, Banknote, CreditCard, FileText, LoaderCircle, Minus, Percent, Plus, QrCode, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, Wallet, X } from "lucide-react";
-import type { PosMember, PosProduct, PreviewCartLine, PreviewPayment } from "@/application/pos/contracts";
+import type { PosMember, PosProduct, PreviewCartLine, PreviewPayment } from "@/features/pos/types";
 import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
 import { ProductIllustration } from "./ProductCatalog";
 

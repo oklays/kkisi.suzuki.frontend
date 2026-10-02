@@ -1,5 +1,6 @@
+import { sessionIdentity } from '../../server/auth-crypto.ts';
 import { randomBytes } from 'node:crypto';
-import { ReadProductsUseCase } from '../../application/inventory/use-cases/read-products.usecase.ts';
+import { ReadProductsUseCase } from '@koperasi/application/inventory';
 import { loadAuthConfig } from './config.ts';
 import { consoleLogger } from './logger.ts';
 import { buildKeys } from './keys.ts';
@@ -31,6 +32,7 @@ export function getContainer(): Container {
     deps: {
       clock: { now: () => new Date() },
       random: { bytes: (n) => randomBytes(n) },
+      identity: sessionIdentity,
       log,
       users: new PrismaUserRepository(legacy, log),
       permissions: new PrismaPermissionRepository(legacy, log),

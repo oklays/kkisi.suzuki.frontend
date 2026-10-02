@@ -1,10 +1,11 @@
+import { sessionIdentity } from '../../src/server/auth-crypto.ts';
 // Fakes and builders for the auth tests. Synthetic users/hashes only (bcryptjs cost 4, generated at runtime).
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
-import { StoreUnavailableError, VerifierBusyError } from '../../src/domain/auth/errors.ts';
-import { DUMMY_HASH } from '../../src/domain/auth/password-candidates.ts';
-import { isSessionValid, MAX_ACTIVE_SESSIONS, MAX_ROWS_PER_USER } from '../../src/domain/auth/session.ts';
-import { LOCK_CLOCK_SLACK_MS, LOCK_MS } from '../../src/domain/auth/throttle-policy.ts';
+import { StoreUnavailableError, VerifierBusyError } from '@koperasi/domain/auth/errors';
+import { DUMMY_HASH } from '@koperasi/domain/auth/password';
+import { isSessionValid, MAX_ACTIVE_SESSIONS, MAX_ROWS_PER_USER } from '@koperasi/domain/auth/session-policy';
+import { LOCK_CLOCK_SLACK_MS, LOCK_MS } from '@koperasi/domain/auth/throttle-policy';
 import { loadAuthConfig } from '../../src/infrastructure/auth/config.ts';
 import { buildKeys } from '../../src/infrastructure/auth/keys.ts';
 
@@ -98,7 +99,7 @@ export function makeWorld(options = {}) {
   const fail = (what) => { if (data.failing.has(what)) throw new StoreUnavailableError(); };
   const view = (u) => u && ({ ...u, companyStatus: data.companies.has(u.companyId) && !data.inactiveCompanies.has(u.companyId) ? 1 : 0 });
   const deps = {
-    clock, random: { bytes: (n) => randomBytes(n) }, log: (event, fields = {}) => logs.push({ event, ...fields }),
+    clock, random: { bytes: (n) => randomBytes(n) }, identity: sessionIdentity, log: (event, fields = {}) => logs.push({ event, ...fields }),
     users: {
       async findByUsername(name) { fail('users'); return view([...data.users.values()].find((u) => u.username.toLowerCase() === name.toLowerCase())) ?? null; },
       async findById(id) { fail('users'); return view(data.users.get(id)) ?? null; },

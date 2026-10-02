@@ -1,6 +1,6 @@
 import { Worker } from 'node:worker_threads';
-import { VerifierBusyError } from '../../domain/auth/errors.ts';
-import type { PasswordVerifier } from '../../application/auth/ports.ts';
+import { VerifierBusyError } from '@koperasi/domain/auth/errors';
+import type { PasswordVerifier } from '@koperasi/application/auth/ports';
 
 // bcryptjs is pure JS: at cost 10 one verification blocks its thread for ~115 ms (measured in 2A-0: 4 concurrent
 // verifications stall the main event loop ~420 ms). It therefore runs in worker threads. The worker source is a string

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Barcode, Boxes, Coffee, House, LayoutGrid, LoaderCircle, PackageSearch, Plus, Search, ShoppingBag, Soup, TriangleAlert, X } from "lucide-react";
-import type { CatalogStatus, PosCategory, PosProduct } from "@/application/pos/contracts";
+import type { CatalogStatus, PosCategory, PosProduct } from "@/features/pos/types";
 import { formatRupiah, hasPrice, illustrationFamily, netPriceSen, productImage, productIllustration } from "./preview";
 
 export function ProductIllustration({ product }: { product: PosProduct }) {

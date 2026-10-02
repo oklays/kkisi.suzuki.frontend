@@ -1,6 +1,6 @@
-import { AuthError, StoreUnavailableError, VerifierBusyError } from '../../domain/auth/errors.ts';
-import type { AuthDeps } from '../../application/auth/ports.ts';
-import { validateSession, requirePermission, type AuthContext } from '../../application/auth/validate-session.usecase.ts';
+import { AuthError, StoreUnavailableError, VerifierBusyError } from '@koperasi/domain/auth/errors';
+import type { AuthDeps } from '@koperasi/application/auth/ports';
+import { validateSession, requirePermission, type AuthContext } from '@koperasi/application/auth/validate-session';
 import type { AuthConfig } from './config.ts';
 import { readCookie } from './cookies.ts';
 import type { AuthKeys } from './keys.ts';

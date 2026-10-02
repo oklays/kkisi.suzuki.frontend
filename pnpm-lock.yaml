@@ -3,8 +3,15 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 importers:
+  .: {}
   apps/web:
     dependencies:
+      '@koperasi/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@koperasi/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@prisma/client':
         specifier: 6.12.0
         version: 6.12.0(prisma@6.12.0(typescript@5.9.3))(typescript@5.9.3)
@@ -45,7 +52,29 @@ importers:
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
-  .: {}
+  packages/application:
+    dependencies:
+      '@koperasi/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      '@types/node':
+        specifier: 22.20.4
+        version: 22.20.4
+      eslint:
+        specifier: 9.39.5
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+  packages/domain:
+    devDependencies:
+      eslint:
+        specifier: 9.39.5
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 packages:
   '@babel/code-frame@7.29.7':
     resolution:
@@ -1961,6 +1990,11 @@ packages:
       integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==
       tarball: https://registry.npmjs.org/jiti/-/jiti-2.4.2.tgz
     hasBin: true
+  jiti@2.7.0:
+    resolution:
+      integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==
+      tarball: https://registry.npmjs.org/jiti/-/jiti-2.7.0.tgz
+    hasBin: true
   js-tokens@4.0.0:
     resolution:
       integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==
@@ -2697,11 +2731,6 @@ packages:
     resolution:
       integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==
       tarball: http://devops.quadrant-si.id/nexus/repository/npm-group/zod/-/zod-4.6.5.tgz
-  jiti@2.7.0:
-    resolution:
-      integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==
-      tarball: https://registry.npmjs.org/jiti/-/jiti-2.7.0.tgz
-    hasBin: true
 snapshots:
   '@babel/code-frame@7.29.7':
     dependencies:

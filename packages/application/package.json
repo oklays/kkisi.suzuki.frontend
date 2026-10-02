@@ -1,0 +1,30 @@
+{
+  "name": "@koperasi/application",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./inventory": "./src/inventory/index.ts",
+    "./pos/catalog": "./src/pos/catalog.ts",
+    "./pos/contracts": "./src/pos/contracts.ts",
+    "./auth/validate-session": "./src/auth/validate-session.usecase.ts",
+    "./auth/select-company": "./src/auth/select-company.usecase.ts",
+    "./auth/ports": "./src/auth/ports.ts",
+    "./auth/logout": "./src/auth/logout.usecase.ts",
+    "./auth/login": "./src/auth/login.usecase.ts",
+    "./pos/register": "./src/pos/read-register.usecase.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "typescript": "5.9.3",
+    "@types/node": "22.20.4"
+  },
+  "dependencies": {
+    "@koperasi/domain": "workspace:*"
+  }
+}

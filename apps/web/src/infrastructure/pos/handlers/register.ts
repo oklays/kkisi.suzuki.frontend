@@ -1,4 +1,4 @@
-import { readRegister } from '../../../application/pos/use-cases/read-register.usecase.ts';
+import { readRegister } from '@koperasi/application/pos/register';
 import { errorResponse, guard, json, type AuthServices } from '../../auth/http.ts';
 
 /** GET /api/pos/register (read-only in 2A): the caller's own open register in the SESSION branch. */

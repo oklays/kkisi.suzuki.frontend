@@ -87,7 +87,7 @@ test('branch choice (S2-6): refused while the user has an open cash register in 
 test('branch choice: a store failure while checking registers or writing the session is 503 and changes nothing', async () => {
   const s = await session({ roleId: 2, companyId: 1 });
   s.w.data.failing.add('registers'); assert.equal((await company(s, 3)).status, 503); s.w.data.failing.clear();
-  s.w.sessions.setCompany = async () => { throw new (await import('../src/domain/auth/errors.ts')).StoreUnavailableError(); };
+  s.w.sessions.setCompany = async () => { throw new (await import('@koperasi/domain/auth/errors')).StoreUnavailableError(); };
   assert.equal((await company(s, 3)).status, 503);
   assert.equal([...s.w.sessions.rows.values()][0].companyId, 1);
 });

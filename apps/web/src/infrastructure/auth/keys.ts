@@ -1,5 +1,6 @@
+import type { ThrottleKey } from '@koperasi/application/auth/ports';
 import { createHmac, hkdfSync, timingSafeEqual } from 'node:crypto';
-import type { ThrottleKey, ThrottleKind } from '../../domain/auth/throttle-policy.ts';
+import type { ThrottleKind } from '@koperasi/domain/auth/throttle-policy';
 import type { ParsedSecret } from './config.ts';
 
 export type AuthKeys = {

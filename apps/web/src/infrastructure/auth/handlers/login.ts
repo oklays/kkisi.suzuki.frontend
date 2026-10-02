@@ -1,5 +1,5 @@
-import { login } from '../../../application/auth/login.usecase.ts';
-import { AuthError } from '../../../domain/auth/errors.ts';
+import { login } from '@koperasi/application/auth/login';
+import { AuthError } from '@koperasi/domain/auth/errors';
 import { clearedCookie, sessionCookie } from '../cookies.ts';
 import { trustedClientIp } from '../client-ip.ts';
 import { checkOrigin, isJsonRequest } from '../origin.ts';

@@ -23,7 +23,9 @@
     "lucide-react": "0.577.0",
     "next": "^16.3.7",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "@koperasi/domain": "workspace:*",
+    "@koperasi/application": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

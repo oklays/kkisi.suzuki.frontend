@@ -1,4 +1,6 @@
+import { sessionIdentity } from '../src/server/auth-crypto.ts';
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
@@ -13,7 +15,7 @@ import { handleLogout } from '../src/infrastructure/auth/handlers/logout.ts';
 import { handleSession } from '../src/infrastructure/auth/handlers/session.ts';
 import { handleCompany } from '../src/infrastructure/auth/handlers/company.ts';
 import { handleRegister } from '../src/infrastructure/pos/handlers/register.ts';
-import { LIMITS, LOCK_MS, THROTTLE_PURGE_MS, WINDOW_MS } from '../src/domain/auth/throttle-policy.ts';
+import { LIMITS, LOCK_MS, THROTTLE_PURGE_MS, WINDOW_MS } from '@koperasi/domain/auth/throttle-policy';
 import { sessionContract } from './helpers/session-store-contract.mjs';
 import { ENV, bodyOf, cookieOf, makeRequest } from './helpers/auth-fakes.mjs';
 
@@ -116,7 +118,7 @@ async function realWorld(extraEnv = {}) {
   const logs = []; const l = (e, f) => logs.push({ e, ...f });
   const verifier = new WorkerPasswordVerifier({ workers: 2, maxQueue: 8 });
   const services = { config, keys, deps: {
-    clock: { now: () => new Date() }, random: { bytes: () => Buffer.alloc(0) }, log: l,
+    clock: { now: () => new Date() }, random: { bytes: (n) => randomBytes(n) }, identity: sessionIdentity, log: l,
     users: new PrismaUserRepository(legacyDb, l), permissions: new PrismaPermissionRepository(legacyDb, l), companies: new PrismaCompanyRepository(legacyDb, l), registers: new PrismaRegisterRepository(legacyDb, l),
     sessions: new PrismaSessionStore(authDb, l), throttle: new PrismaThrottleStore(authDb, l), verifier, throttleKeys: (u, ip) => keys.throttleKeys(u, ip) } };
   return { services, pw, logs, close: () => verifier.close(), authDb };

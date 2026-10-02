@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { StoreUnavailableError } from '../src/domain/auth/errors.ts';
+import { StoreUnavailableError } from '@koperasi/domain/auth/errors';
 import { dbErrorNumber, isRetryable, withStoreRetry } from '../src/infrastructure/auth/store-errors.ts';
 import { PrismaSessionStore } from '../src/infrastructure/auth/prisma-session-store.ts';
 import { PrismaThrottleStore } from '../src/infrastructure/auth/prisma-throttle-store.ts';

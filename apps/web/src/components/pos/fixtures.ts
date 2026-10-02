@@ -1,4 +1,4 @@
-import type { PosMember } from "@/application/pos/contracts";
+import type { PosMember } from "@/features/pos/types";
 
 // Members are still illustrative (Stage 3 connects them). Products now come from the server.
 export const demoMembers: PosMember[] = [{

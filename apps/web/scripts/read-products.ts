@@ -1,5 +1,5 @@
-import { ReadProductsUseCase } from '../src/application/inventory/use-cases/read-products.usecase.ts';
-import { ProductReadError } from '../src/domain/shared/product-read-error.ts';
+import { ReadProductsUseCase } from '@koperasi/application/inventory';
+import { ProductReadError } from '@koperasi/domain/inventory';
 import { PrismaItemRepository } from '../src/infrastructure/repositories/prisma-item.repository.ts';
 
 const [companyArg, term = ''] = process.argv.slice(2);

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
-import { safeNextPath } from "@/domain/auth/redirect";
+import { safeNextPath } from "@koperasi/domain/auth/redirect";
 
 const MESSAGES: Record<number, string> = {
   401: "Username atau password salah.",

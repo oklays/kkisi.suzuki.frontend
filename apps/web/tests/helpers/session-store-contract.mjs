@@ -1,7 +1,7 @@
 // The SAME behavioural contract is run against the in-memory fake and (opt-in, on a disposable DB) the real MariaDB store.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { newDeadlines, MAX_ACTIVE_SESSIONS, MAX_ROWS_PER_USER } from '../../src/domain/auth/session.ts';
+import { newDeadlines, MAX_ACTIVE_SESSIONS, MAX_ROWS_PER_USER } from '@koperasi/domain/auth/session-policy';
 
 const H = (s) => createHash('sha256').update(s).digest();
 const T0 = new Date('2026-10-01T05:00:00Z'); const at = (ms) => new Date(T0.getTime() + ms); const HOUR = 3600e3, MIN = 60e3;

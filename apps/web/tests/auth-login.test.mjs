@@ -3,13 +3,33 @@ import test from 'node:test';
 import { handleLogin } from '../src/infrastructure/auth/handlers/login.ts';
 import { handleLogout } from '../src/infrastructure/auth/handlers/logout.ts';
 import { handleSession } from '../src/infrastructure/auth/handlers/session.ts';
-import { StoreUnavailableError } from '../src/domain/auth/errors.ts';
+import { StoreUnavailableError } from '@koperasi/domain/auth/errors';
 import { bodyOf, cookieOf, legacyStyleHash, makeRequest, makeWorld } from './helpers/auth-fakes.mjs';
 
 const PW = 'Pw-Synthetic-1';
 const login = (w, body, o = {}) => handleLogin(w.services, makeRequest('/api/auth/login', { method: 'POST', body, ...o }));
 const world = (o) => { const w = makeWorld(o); w.addUser({ id: 1, username: 'kasir', passwordHash: legacyStyleHash(PW) }); return w; };
 const shape = async (r) => JSON.stringify({ s: r.status, b: await r.clone().text(), h: [...r.headers].filter(([k]) => !['set-cookie'].includes(k)) });
+
+test('login uses the injected random source and session identity adapter', async () => {
+  const w = world();
+  const random = Buffer.alloc(32, 61);
+  const hash = Buffer.alloc(32, 7);
+  const calls = [];
+  w.services.deps.random = { bytes: (size) => { calls.push(['bytes', size]); return random; } };
+  w.services.deps.identity = {
+    sidToHash: (sid) => { calls.push(['sid', sid]); return hash; },
+    passwordFingerprint: (passwordHash) => { calls.push(['fingerprint', passwordHash]); return '0123456789abcdef'; },
+  };
+  const response = await login(w, { username: 'kasir', password: PW });
+  assert.equal(response.status, 200);
+  const sid = random.toString('base64url');
+  assert.equal(cookieOf(response), `kkisi_sid=${sid}`);
+  assert.deepEqual(calls, [['bytes', 32], ['sid', sid], ['fingerprint', w.data.users.get(1).passwordHash]]);
+  const [stored] = w.sessions.rows.values();
+  assert.deepEqual(stored.sidHash, hash);
+  assert.equal(stored.pwf, '0123456789abcdef');
+});
 
 test('correct credentials: 200, opaque HttpOnly cookie, no hash/secret in the body, session stored hashed', async () => {
   const w = world();

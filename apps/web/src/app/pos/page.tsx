@@ -1,10 +1,10 @@
 import { PosScreen } from "@/components/pos/PosScreen";
 import { demoMembers } from "@/components/pos/fixtures";
-import { listCatalogCategories, searchCatalog } from "@/application/pos/catalog";
-import type { PosCategory, PosProduct, PosSession } from "@/application/pos/contracts";
-import { readRegister } from "@/application/pos/use-cases/read-register.usecase";
+import { listCatalogCategories, searchCatalog } from "@koperasi/application/pos/catalog";
+import type { PosCategory, PosProduct, PosSession } from "@/features/pos/types";
+import { readRegister } from "@koperasi/application/pos/register";
 import { requirePagePermission } from "@/infrastructure/auth/page-guard";
-import { ProductReadError } from "@/domain/shared/product-read-error";
+import { ProductReadError } from "@koperasi/domain/inventory";
 
 export const dynamic = "force-dynamic";
 

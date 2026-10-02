@@ -3,7 +3,7 @@
 //   pnpm auth:unlock --username <name> [--ip <address>]
 import { buildKeys } from '../src/infrastructure/auth/keys.ts';
 import { loadAuthConfig } from '../src/infrastructure/auth/config.ts';
-import { normalizeUsername } from '../src/application/auth/login.usecase.ts';
+import { normalizeUsername } from '@koperasi/application/auth/login';
 import { authPrisma } from '../src/infrastructure/db/prisma-auth.ts';
 import { Prisma } from '@prisma/client';
 

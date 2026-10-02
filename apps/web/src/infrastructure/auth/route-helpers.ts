@@ -1,6 +1,6 @@
 import { getContainer } from './container.ts';
 import { json, type AuthServices } from './http.ts';
-import type { ReadProductsUseCase } from '../../application/inventory/use-cases/read-products.usecase.ts';
+import type { ReadProductsUseCase } from '@koperasi/application/inventory';
 
 /** Builds the services for a route; a missing/unsafe configuration is a plain 503 (never a default, never a 500 with details). */
 export async function withServices(run: (services: AuthServices, catalog: ReadProductsUseCase) => Promise<Response>): Promise<Response> {

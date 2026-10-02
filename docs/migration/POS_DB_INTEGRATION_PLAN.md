@@ -27,6 +27,8 @@
 
 > Layout update (2026-10-02): file paths below were normalized to `apps/web/` and `docs/legacy-reference/`. Historical verification results and npm command syntax remain historical evidence.
 
+> CP4 refactor update (2026-10-02): current domain/application code now lives in `packages/domain/` and `packages/application/`; server session hashing is in `apps/web/src/server/auth-crypto.ts`. Historical `src/domain/` and `src/application/` entries below record the earlier implementation. See [the CP4 report](../refactor/CHECKPOINT_4_DOMAIN_APPLICATION.md) for current ownership and new structural validation; earlier DB/browser results are not new refactor acceptance evidence.
+
 ## 1. Ringkasan alur POS lama dan tabel yang berubah
 
 ### 1.1 Alur langkah demi langkah

@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import type { CategoryRead, ItemRead, ItemRepository, ItemSearch } from '../../domain/inventory/item-repository.ts';
-import { ProductReadError } from '../../domain/shared/product-read-error.ts';
+import type { CategoryRead, ItemRead } from '@koperasi/domain/inventory';
+import type { ItemRepository, ItemSearch } from '@koperasi/application/inventory';
+import { ProductReadError } from '@koperasi/domain/inventory';
 import { prisma } from '../db/prisma.ts';
 
 const itemSelect = {

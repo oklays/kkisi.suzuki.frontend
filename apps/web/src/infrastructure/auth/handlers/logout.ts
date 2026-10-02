@@ -1,6 +1,6 @@
-import { logout } from '../../../application/auth/logout.usecase.ts';
-import { AuthError } from '../../../domain/auth/errors.ts';
-import { isSessionValid, isWellFormedSid, sidToHash } from '../../../domain/auth/session.ts';
+import { logout } from '@koperasi/application/auth/logout';
+import { AuthError } from '@koperasi/domain/auth/errors';
+import { isSessionValid, isWellFormedSid } from '@koperasi/domain/auth/session-policy';
 import { clearedCookie, readCookie } from '../cookies.ts';
 import { checkOrigin, isJsonRequest } from '../origin.ts';
 import { errorResponse, json, type AuthServices } from '../http.ts';
@@ -14,7 +14,7 @@ export async function handleLogout(services: AuthServices, request: Request): Pr
     if (!checkOrigin(request, services.config) || !isJsonRequest(request)) throw new AuthError('CSRF');
     const sid = readCookie(request.headers.get('cookie'), services.config.cookieName);
     if (isWellFormedSid(sid)) {
-      const hash = sidToHash(sid);
+      const hash = services.deps.identity.sidToHash(sid);
       const session = await services.deps.sessions.find(hash);
       if (session && isSessionValid(session, services.deps.clock.now())) {
         if (!services.keys.verifyCsrf(request.headers.get('x-csrf-token'), hash)) throw new AuthError('CSRF');

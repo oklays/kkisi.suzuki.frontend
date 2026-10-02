@@ -1,6 +1,7 @@
+import type { StoredSession } from '@koperasi/application/auth/ports';
 import { Prisma, type PrismaClient } from '@prisma/client';
-import { MAX_ACTIVE_SESSIONS, MAX_ROWS_PER_USER, type RevokeReason, type StoredSession } from '../../domain/auth/session.ts';
-import type { NewSession, SessionStore } from '../../application/auth/ports.ts';
+import { MAX_ACTIVE_SESSIONS, MAX_ROWS_PER_USER, type RevokeReason } from '@koperasi/domain/auth/session-policy';
+import type { NewSession, SessionStore } from '@koperasi/application/auth/ports';
 import { withStoreRetry, type StoreLog } from './store-errors.ts';
 
 type Row = {

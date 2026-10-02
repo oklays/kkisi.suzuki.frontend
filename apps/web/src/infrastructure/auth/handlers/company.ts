@@ -1,5 +1,5 @@
-import { selectCompany } from '../../../application/auth/select-company.usecase.ts';
-import { AuthError } from '../../../domain/auth/errors.ts';
+import { selectCompany } from '@koperasi/application/auth/select-company';
+import { AuthError } from '@koperasi/domain/auth/errors';
 import { errorResponse, guard, json, readJson, type AuthServices } from '../http.ts';
 
 /** POST /api/auth/company {companyId}: role <= 2 only; the branch is chosen through the SESSION, never a query/header. */
