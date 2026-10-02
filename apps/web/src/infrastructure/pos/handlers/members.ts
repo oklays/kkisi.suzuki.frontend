@@ -11,8 +11,8 @@ export async function handleMembers(services: AuthServices, request: Request, re
   try {
     const params = new URL(request.url).searchParams;
     const kind = params.get('kind') ?? 'identifier';
-    if (kind !== 'identifier' && kind !== 'qr') throw new PosError('INVALID_INPUT');
+    if (kind !== 'identifier' && kind !== 'nik' && kind !== 'card' && kind !== 'id' && kind !== 'qr') throw new PosError('INVALID_INPUT');
     const identifier = decodeMemberIdentifier(params.get('identifier') ?? '', kind);
-    return json(200, { member: await repo.member(g.ctx, identifier, services.deps.clock.now()) });
+    return json(200, { member: await repo.member(g.ctx, identifier, services.deps.clock.now(), kind === 'qr' ? 'nik' : kind) });
   } catch (error) { return posErrorResponse(services, error); }
 }

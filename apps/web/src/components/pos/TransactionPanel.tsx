@@ -5,6 +5,7 @@ import { Banknote, LoaderCircle, Minus, Percent, Plus, Search, ShoppingBag, Tras
 import type { PosMember, PosProduct, PosSession, CheckoutResult, PreviewCartLine, PreviewPayment } from "@/features/pos/types";
 import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
 import { ProductIllustration } from "./ProductCatalog";
+import { checkoutBlockingReasons } from "@/features/pos/checkout-state";
 
 const errors: Record<string, string> = {
   MEMBER_NOT_FOUND: "Anggota tidak ditemukan. Periksa NIK atau ID card.", MEMBER_AMBIGUOUS: "Identitas anggota ganda. Hubungi pengelola.",
@@ -20,7 +21,7 @@ const errorText = (code: string) => errors[code] ?? "Permintaan belum dapat dipr
 
 export function MemberSearch({ member, onMember, disabled }: { member: PosMember | null; onMember: (value: PosMember | null) => void; disabled: boolean }) {
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState("identifier");
+  const [kind, setKind] = useState("nik");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const sequence = useRef(0);
@@ -45,10 +46,10 @@ export function MemberSearch({ member, onMember, disabled }: { member: PosMember
     <section className="pos-member-section" aria-label="Pencarian anggota">
       <label htmlFor="pos-member">Anggota</label>
       <form className="pos-member-search" onSubmit={(event) => { event.preventDefault(); void lookup(); }}>
-        <div><Search size={15} aria-hidden="true" /><input id="pos-member" disabled={disabled} value={query} onChange={(event) => changeQuery(event.target.value)} placeholder="Scan NIK / ID card / QR anggota" autoComplete="off" /></div>
+        <div><Search size={15} aria-hidden="true" /><input id="pos-member" disabled={disabled} value={query} onChange={(event) => changeQuery(event.target.value)} placeholder={kind === "id" ? "Masukkan ID anggota" : kind === "card" ? "Scan ID card anggota" : kind === "qr" ? "Scan QR anggota" : "Masukkan NIK (termasuk nol di depan)"} autoComplete="off" /></div>
         <button type="submit" disabled={disabled || busy || !query.trim()}><UserRound size={15} />{busy ? "Mencari…" : "Pilih"}</button>
       </form>
-      <label className="pos-member-hint">Jenis scan <select aria-label="Jenis scan anggota" disabled={disabled || busy} value={kind} onChange={(event) => { setKind(event.target.value); changeQuery(""); }}><option value="identifier">NIK / ID card</option><option value="qr">QR terenkripsi</option></select></label>
+      <label className="pos-member-hint">Cari dengan <select aria-label="Jenis scan anggota" disabled={disabled || busy} value={kind} onChange={(event) => { setKind(event.target.value); changeQuery(""); }}><option value="nik">NIK karyawan</option><option value="card">ID card</option><option value="id">ID anggota</option><option value="qr">QR terenkripsi</option></select></label>
       {member && <div className="pos-member-result" role="status"><div><strong>{member.name} · {member.nik}</strong><small>Sisa limit {formatRupiah(member.remainingSen)} · Limit {formatRupiah(member.limitSen)}</small></div><button disabled={disabled} className="pos-icon-button" aria-label="Lepas anggota" onClick={() => changeQuery("")}><X size={16} /></button></div>}
       {message && <div className="pos-inline-error" role="status"><TriangleAlert size={15} />{message}</div>}
     </section>
@@ -116,8 +117,8 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
   const total = previewSubtotal(cart);
   const paidSen = /^\d{1,10}$/.test(paidAmount) ? Number(paidAmount) * 100 : 0;
   const locked = processing || uncertain;
-  const registerReady = !!session.register.open && !session.register.open.stale && !session.register.multiple;
-  const ready = session.checkoutAvailable && registerReady && cart.length > 0 && (payment === "Cash" ? paidSen >= total && total > 0 : !!member && member.remainingSen >= total);
+  const blockers = checkoutBlockingReasons({ session, payment, itemCount: cart.length, totalSen: total, paidSen, remainingSen: member?.remainingSen ?? null });
+  const ready = blockers.length === 0;
   const pendingKey = `kkisi-payment:${session.userId}:${session.companyId}`;
   useEffect(() => {
     let active = true;
@@ -170,8 +171,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
         <PriceSummary cart={cart} /><PaymentMethodSelector selected={payment} onSelect={setPayment} disabled={locked} />
         {payment === "Cash" && <div className="pos-cash-payment"><label htmlFor="pos-paid">Uang bayar (Rp)</label><input id="pos-paid" inputMode="numeric" pattern="[0-9]*" value={paidAmount} disabled={locked} onChange={(event) => { if (/^\d{0,10}$/.test(event.target.value)) setPaidAmount(event.target.value); }} /><span>Kembalian <strong>{formatRupiah(Math.max(0, paidSen - total))}</strong></span></div>}
         {payment === "Kredit" && <p className="pos-checkout-note">{member ? `Sisa setelah belanja: ${formatRupiah(member.remainingSen - total)}` : "Pilih anggota aktif terlebih dahulu."}</p>}
-        {!registerReady && <p className="pos-checkout-note">{session.register.open?.stale ? "Tutup sesi kasir hari sebelumnya di aplikasi kasir yang aktif." : "Pembayaran memerlukan satu sesi kasir aktif hari ini."}</p>}
-        {!session.checkoutAvailable && <p className="pos-checkout-note">Pembayaran belum diaktifkan untuk lingkungan ini.</p>}
+        {!uncertain && blockers.map((reason) => <p className="pos-checkout-note" key={reason}>{reason}</p>)}
         <CheckoutButton processing={processing} disabled={!hydrated || processing || (!uncertain && !ready)} retry={uncertain} onClick={() => void submit()} />
         {message && <p className="pos-inline-error" role="alert">{message}</p>}
         {receipt && <div className="pos-receipt" role="status"><strong>Transaksi tersimpan · {receipt.salesCode}</strong><span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span><span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span></div>}

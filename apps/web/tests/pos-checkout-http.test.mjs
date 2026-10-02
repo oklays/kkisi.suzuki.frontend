@@ -24,3 +24,15 @@ test('members are private exact lookups in the session branch with no database w
  const response=await memberHandlers.handleMembers(w.services,makeRequest('/api/pos/members?identifier=NIK-1&companyId=99',{cookie}),repo);
  assert.equal(response.status,200);assert.equal((await bodyOf(response)).member.id,7);assert.equal(calls,1);assert.equal(response.headers.get('cache-control'),'no-store');
 });
+test('member lookup keeps NIK, card and member ID namespaces distinct and validates the selected mode',async()=>{
+ const {w,cookie}=await loggedIn();const calls=[];
+ const repo={async member(ctx,identifier,now,kind){calls.push({companyId:ctx.companyId,identifier,kind});return{id:62};}};
+ for(const [identifier,kind]of [['04296','nik'],['04296','card'],['62','id']]){
+  assert.equal((await memberHandlers.handleMembers(w.services,makeRequest(`/api/pos/members?identifier=${identifier}&kind=${kind}`,{cookie}),repo)).status,200);
+ }
+ assert.deepEqual(calls,[{companyId:1,identifier:'04296',kind:'nik'},{companyId:1,identifier:'04296',kind:'card'},{companyId:1,identifier:'62',kind:'id'}]);
+ for(const [identifier,kind]of [['04296','unknown'],['0','id'],['62 OR 1=1','id'],['0062','id'],['2147483648','id']]){
+  const params=new URLSearchParams({identifier,kind});assert.equal((await memberHandlers.handleMembers(w.services,makeRequest(`/api/pos/members?${params}`,{cookie}),repo)).status,400);
+ }
+ assert.equal(calls.length,3);
+});

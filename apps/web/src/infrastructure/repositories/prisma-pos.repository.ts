@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { toMinorUnits } from '@koperasi/domain/money';
 import { businessDates, decimalAmount, memberCredit, PosError, type CheckoutInput, type CheckoutResult, type MemberCredit, type MemberRecord } from '@koperasi/domain/pos/sale';
-import type { PosContext, PosRepository } from '@koperasi/application/pos/checkout';
+import type { MemberLookupKind, PosContext, PosRepository } from '@koperasi/application/pos/checkout';
 import { prisma } from '../db/prisma.ts';
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -26,10 +26,20 @@ export class PrismaPosRepository implements PosRepository {
   private readonly write?: PrismaClient;
   constructor(read: PrismaClient = prisma, write?: PrismaClient) { this.read = read; this.write = write; }
 
-  async member(context: PosContext, identifier: string, now: Date): Promise<MemberCredit> {
-    const rows = await this.read.$queryRaw<MemberRow[]>(Prisma.sql`SELECT ${memberFields} FROM m_anggota m
-      JOIN db_company c ON c.id = ${context.companyId} AND c.status = 1
-      WHERE m.nik_kar = ${identifier} OR m.id_card = ${identifier} ORDER BY m.id LIMIT 2`);
+  async member(context: PosContext, identifier: string, now: Date, kind: MemberLookupKind = 'identifier'): Promise<MemberCredit> {
+    if (!['identifier', 'nik', 'card', 'id'].includes(kind)) throw new PosError('INVALID_INPUT');
+    if (kind === 'id' && (!/^[1-9]\d{0,9}$/.test(identifier) || Number(identifier) > 2147483647)) throw new PosError('INVALID_INPUT');
+    const find = (field: Exclude<MemberLookupKind, 'identifier'>) => {
+      const condition = field === 'id' ? Prisma.sql`m.id = ${Number(identifier)}`
+        : field === 'nik' ? Prisma.sql`m.nik_kar = ${identifier}` : Prisma.sql`m.id_card = ${identifier}`;
+      return this.read.$queryRaw<MemberRow[]>(Prisma.sql`SELECT ${memberFields} FROM m_anggota m
+        JOIN db_company c ON c.id = ${context.companyId} AND c.status = 1
+        WHERE ${condition} ORDER BY m.id LIMIT 2`);
+    };
+    // Compatibility for old callers: exact NIK first, card fallback only if no NIK matches.
+    // Never combine identity namespaces: another member's card may equal this member's NIK.
+    let rows = await find(kind === 'identifier' ? 'nik' : kind);
+    if (kind === 'identifier' && !rows.length) rows = await find('card');
     if (!rows.length) throw new PosError('MEMBER_NOT_FOUND');
     if (rows.length > 1) throw new PosError('MEMBER_AMBIGUOUS');
     return credit(this.read, rows[0], now);
