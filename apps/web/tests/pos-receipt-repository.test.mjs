@@ -22,6 +22,40 @@ test('saved receipt maps exact minor units and scopes sale, lines, and item labe
   assert.deepEqual(receipt.lines, [{ name: 'Sabun', quantity: 3, unitPriceSen: 5000, discountSen: 818, totalSen: 12545 }]);
 });
 
+test('member receipt includes saved Kredit sale in monthly usage; cash and guest stay distinct', async () => {
+  const decimal = (n) => new Prisma.Decimal(n);
+  for (const paymentType of ['Kredit', 'Cash']) {
+    let calls = 0;
+    const db = { async $queryRaw(query) {
+      calls++;
+      if (calls === 1) return [{ id: 42, sales_code: 'INV42', sales_date: '2026-10-02', return_bit: '0', company_name: 'Toko', address: 'Jl. A', created_by: 'Kasir', customer_name: 'Ani', nik_kar: '123', member_name: 'Ani', limit_amount: decimal('500.00'), gaji_minus: decimal('0.00'), payment_type: paymentType, subtotal: decimal('50.00'), total_discount: decimal('0'), grand_total: decimal('50.00'), paid_amount: decimal('50.00'), change_return: decimal('0'), line_id: null }];
+      const sql = query.join('?');
+      assert.match(sql, /nik_kar = \?/);
+      assert.match(sql, /payment_type = 'Kredit'/);
+      assert.match(sql, /sales_status = 'Final'/);
+      assert.match(sql, /sales_date >= \?/);
+      return [{ amount: decimal('150.00') }];
+    } };
+    const receipt = await new PrismaReceiptRepository(db).find(9, 42);
+    assert.equal(receipt.memberNik, '123');
+    assert.equal(receipt.customerName, 'Ani');
+    assert.equal(receipt.limitSen, 50000);
+    assert.equal(receipt.usedLimitSen, 15000);
+    assert.equal(receipt.remainingLimitSen, 35000);
+    assert.equal(calls, 2);
+  }
+});
+
+test('guest receipt skips limit lookup', async () => {
+  let calls = 0;
+  const decimal = (n) => new Prisma.Decimal(n);
+  const db = { async $queryRaw() { calls++; return [{ id: 1, sales_code: 'INV1', sales_date: '2026-10-02', return_bit: '0', company_name: 'Toko', address: '', created_by: 'Kasir', customer_name: 'UMUM', nik_kar: '', member_name: null, payment_type: 'Cash', subtotal: decimal('10'), total_discount: decimal('0'), grand_total: decimal('10'), paid_amount: decimal('10'), change_return: decimal('0'), line_id: null }]; } };
+  const receipt = await new PrismaReceiptRepository(db).find(9, 1);
+  assert.equal(calls, 1);
+  assert.equal(receipt.memberNik, null);
+  assert.equal(receipt.limitSen, null);
+});
+
 test('unsupported historical payment or return cannot print as a regular Cash sale', async () => {
   for (const saved of [{ payment_type: 'Transfer', return_bit: '0' }, { payment_type: 'Cash', return_bit: '1' }]) {
     const db = { async $queryRaw() { return [saved]; } };

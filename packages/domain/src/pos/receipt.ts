@@ -5,7 +5,8 @@ export type ReceiptLine = {
 };
 export type Receipt = {
   saleId: number; salesCode: string; saleDate: string; storeName: string; storeAddress: string;
-  cashier: string; customerName: string; paymentType: 'Cash' | 'Kredit';
+  cashier: string; customerName: string; memberNik: string | null; paymentType: 'Cash' | 'Kredit';
+  limitSen: number | null; usedLimitSen: number | null; remainingLimitSen: number | null;
   lines: ReceiptLine[]; subtotalSen: number; discountSen: number; grandTotalSen: number;
   paidSen: number; changeSen: number;
 };
