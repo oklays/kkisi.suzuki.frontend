@@ -1,17 +1,15 @@
-# POS INTEGRATION
+# POS Behaviour Fixing & Enhancement
 
-okay buddy, jadi saya ingin membuat function serta mengintegrasikan masing-masing POS function (Search product, Scan nik anggota, Cash/kredit, Pembayaran, dll...) ke database, dan kamu bisa mengikuti existing documentation dari Aplikasi lama : 
-```markdown
-`docs/migration/POS_DB_INTEGRATION_PLAN.md`: pemetaan Cash dan Kredit **sudah ada**. PRD baru akan menduplikasi pekerjaan, jadi **tidak perlu dibuat**.
+1. IF the NIK, ID CARD or ID ANGGOTA filled and founded the anggota THEN the ```Meotde Pembayaran``` should be automaticly by default set to ```Kredit Anggota```. BUT it still can be changed to ```Cash```, so don't disabled it.
 
-Bagian relevan:
-- **1.1–1.3:** alur POS lama, jalur simpan, dan tabel terdampak.
-- **R3–R7:** limit anggota serta perbedaan Cash/Kredit.
-- **Tahap 4–5:** rancangan checkout Cash dan Kredit di Next.js.
-- **Bagian 6.17:** status gerbang dan batas izin DEV.
+2. Jadi Tampilan ```cart/keranjang``` dibagian panel sebelah kanan terlalu kecil untuk kasir melihat keseluruhan produk, jadi saya prefer untuk cart/keranjang barang yang telah di scan akan ditampilkan di bagian tengah yang saat ini muncul list product.
 
-Koreksi jawaban saya sebelumnya: saya seharusnya memeriksa dokumen rencana itu sebelum mengusulkan PRD baru. `.kiro/specs/pos-functional-mapping/prd.md` tidak saya ubah.
-```
+3. masih relate ke point ```2.``` jadi untuk list product saat ini tetap ditampilkan, NAMUN ubah kategori diatas yang ```Semua, Air Mineral, Baterai, dll...``` hanya menjadi ```Product``` dan ```Keranjang```. jadi kasir tetap bisa mencari dan melihat keseluruhan list produk di tab ```Product```, Namun tetap ditampilkan pertama hanya 25 product pertama.
 
+4. Jadi di panel sebelah kiri di takeout untuk list ```Cart``` nya, hanya fokus kepada NIK karyawan dan diskon, dll.
 
-Seluruh function pada POS/Kasir di aplikasi revamp NextJS app sudah berhasil terhubung semua.
+# INVENTORY & STOCK OPNAME.
+
+1. Please create and enabled the menu Warehouse & Stock Opname on this phase.
+
+2. Doing a research based on current existing legacy project about that warehouse & stock opname feature. AND if you have a best idea or schema to implement it, please do that.

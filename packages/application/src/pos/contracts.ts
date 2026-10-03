@@ -19,4 +19,4 @@ export type PosProduct = {
 
 export type PosCategory = { id: string; name: string };
 /** Max products returned per catalog request (search, category or initial list). */
-export const CATALOG_PAGE_SIZE = 24;
+export const CATALOG_PAGE_SIZE = 25;

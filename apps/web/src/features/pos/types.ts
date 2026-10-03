@@ -8,6 +8,8 @@ export type PosProduct = CatalogProduct & { illustrationIndex?: 1 | 2 | 3 | 4 | 
 /** What the POS page knows about the logged-in session. Contains no hash, secret or session id (the CSRF token is derived). */
 export type PosSession = {
   userName: string;
+  /** Authenticated login name, supplied only where document ownership controls need it. */
+  userLogin?: string;
   branchName: string;
   companyId: number;
   canSwitchBranch: boolean;
@@ -18,6 +20,7 @@ export type PosSession = {
   kasir?: {id:number;noKasir:string}[];
   ownedRegisters?: {id:number;noref:string}[];
   userId: number;
+  canInventory?: boolean;
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };
 };
 

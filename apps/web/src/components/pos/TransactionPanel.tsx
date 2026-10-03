@@ -58,16 +58,16 @@ export function MemberSearch({ member, onMember, disabled }: { member: PosMember
   );
 }
 
-export function QuantityControl({ line, onChange }: { line: PreviewCartLine; onChange: (product: PosProduct, delta: 1 | -1) => void }) {
-  return <div className="pos-quantity"><button aria-label={`Kurangi ${line.product.name}`} onClick={() => onChange(line.product, -1)}><Minus size={14} /></button><span aria-label="Jumlah">{line.quantity}</span><button disabled={line.quantity >= line.product.stock} aria-label={`Tambah jumlah ${line.product.name}`} onClick={() => onChange(line.product, 1)}><Plus size={14} /></button></div>;
+export function QuantityControl({ line, onChange, disabled = false }: { line: PreviewCartLine; onChange: (product: PosProduct, delta: 1 | -1) => void; disabled?: boolean }) {
+  return <div className="pos-quantity"><button disabled={disabled} aria-label={`Kurangi ${line.product.name}`} onClick={() => onChange(line.product, -1)}><Minus size={14} /></button><span aria-label="Jumlah">{line.quantity}</span><button disabled={disabled || line.quantity >= line.product.stock} aria-label={`Tambah jumlah ${line.product.name}`} onClick={() => onChange(line.product, 1)}><Plus size={14} /></button></div>;
 }
 
-export function CartItem({ line, onChange, onRemove }: { line: PreviewCartLine; onChange: (product: PosProduct, delta: 1 | -1) => void; onRemove: (id: string) => void }) {
+export function CartItem({ line, onChange, onRemove, disabled = false }: { line: PreviewCartLine; onChange: (product: PosProduct, delta: 1 | -1) => void; onRemove: (id: string) => void; disabled?: boolean }) {
   const { product, quantity } = line;
   return (
     <li className="pos-cart-item">
-      <div className="pos-cart-line"><div className="pos-cart-image"><ProductIllustration product={product} /></div><div className="pos-cart-name"><strong>{product.name}</strong><small>{formatRupiah(netPriceSen(product))} / pcs</small></div><button className="pos-icon-button pos-remove" aria-label={`Hapus ${product.name}`} onClick={() => onRemove(product.id)}><Trash2 size={16} /></button></div>
-      <div className="pos-cart-line pos-cart-adjust"><QuantityControl line={line} onChange={onChange} /><strong>{formatRupiah(netPriceSen(product) * quantity)}</strong></div>
+      <div className="pos-cart-line"><div className="pos-cart-image"><ProductIllustration product={product} /></div><div className="pos-cart-name"><strong>{product.name}</strong><small>{product.code}</small><small>{formatRupiah(netPriceSen(product))} / pcs{product.discountSen > 0 && <span className="pos-cart-discount"> · Diskon produk {formatRupiah(product.discountSen)} / pcs</span>}</small></div><button disabled={disabled} className="pos-icon-button pos-remove" aria-label={`Hapus ${product.name}`} onClick={() => onRemove(product.id)}><Trash2 size={16} /></button></div>
+      <div className="pos-cart-line pos-cart-adjust"><QuantityControl line={line} onChange={onChange} disabled={disabled} /><strong>{formatRupiah(netPriceSen(product) * quantity)}</strong></div>
       {quantity >= product.stock && <p className="pos-stock-warning"><TriangleAlert size={13} />Stok tidak mencukupi untuk menambah jumlah.</p>}
     </li>
   );
@@ -102,7 +102,7 @@ export function CheckoutButton({ processing, disabled, retry, onClick }: { proce
 
 type PendingCheckout = { items: { itemId: number; quantity: number }[]; memberId: number | null; paymentType: PreviewPayment; paidAmount: string; idempotencyKey: string };
 
-export function TransactionPanel({ cart, session, storageKey, onLockChange, onChange, onRemove, onClear }: { cart: PreviewCartLine[]; session: PosSession; storageKey: string; onLockChange: (locked: boolean) => void; onChange: (product: PosProduct, delta: 1 | -1) => void; onRemove: (id: string) => void; onClear: () => void }) {
+export function TransactionPanel({ cart, session, storageKey, onLockChange, onClear }: { cart: PreviewCartLine[]; session: PosSession; storageKey: string; onLockChange: (locked: boolean) => void; onClear: () => void }) {
   const [payment, setPayment] = useState<PreviewPayment>("Cash");
   const [member, setMember] = useState<PosMember | null>(null);
   const [paidAmount, setPaidAmount] = useState("");
@@ -113,9 +113,6 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
   const pending = useRef<PendingCheckout | null>(null);
   const sending = useRef(false);
   const [hydrated, setHydrated] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null);
-  const clearButton = useRef<HTMLButtonElement>(null);
-  const count = cart.reduce((sum, line) => sum + line.quantity, 0);
   const total = previewSubtotal(cart);
   const paidSen = /^\d{1,10}$/.test(paidAmount) ? Number(paidAmount) * 100 : 0;
   const paidDisplay = paidAmount ? rupiahInput.format(Number(paidAmount)) : "";
@@ -161,13 +158,11 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
       setUncertain(true); onLockChange(true); setMessage("Hasil pembayaran belum terkonfirmasi. Ulangi pemeriksaan dengan kunci yang sama; jangan membuat pembayaran baru.");
     } finally { sending.current = false; setProcessing(false); }
   }
-  function closeDialog() { dialog.current?.close(); clearButton.current?.focus(); }
   return (
-    <aside className="pos-transaction" aria-label="Keranjang transaksi">
-      <header><h2><ShoppingBag size={18} />Keranjang Transaksi <span>{count} item</span></h2><button ref={clearButton} className="pos-clear" disabled={locked || cart.length === 0} onClick={() => dialog.current?.showModal()}><Trash2 size={14} />Hapus Semua</button></header>
+    <aside className="pos-transaction" aria-label="Pembayaran transaksi">
+      <header><h2><Banknote size={18} />Pembayaran Transaksi</h2></header>
       <div className="pos-transaction-scroll">
-        <MemberSearch member={member} onMember={(value) => { setMember(value); if (!value) setPayment("Cash"); }} disabled={locked} />
-        <fieldset className="pos-cart-lock" disabled={locked}><div className="pos-cart-items" aria-live="polite">{cart.length === 0 ? <EmptyCartState /> : <ul>{cart.map((line) => <CartItem key={line.product.id} line={line} onChange={onChange} onRemove={onRemove} />)}</ul>}</div></fieldset>
+        <MemberSearch member={member} onMember={(value) => { setMember(value); setPayment(value ? "Kredit" : "Cash"); }} disabled={locked} />
         <PromotionSection />
       </div>
       <div className="pos-transaction-bottom">
@@ -179,9 +174,6 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
         {message && <p className="pos-inline-error" role="alert">{message}</p>}
         {receipt && <div className="pos-receipt" role="status"><strong>Transaksi tersimpan · {receipt.salesCode}</strong><span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span><span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span><a href={`/pos/receipt/${receipt.saleId}`} target="_blank" rel="noopener noreferrer">Lihat / Cetak struk</a></div>}
       </div>
-      <dialog ref={dialog} className="pos-clear-dialog" aria-labelledby="pos-clear-title" onCancel={() => clearButton.current?.focus()}>
-        <h2 id="pos-clear-title"><Trash2 size={21} />Hapus Semua Item?</h2><p>Seluruh item dalam keranjang akan dihapus.</p><div><button autoFocus onClick={closeDialog}>Batal</button><button className="pos-confirm-clear" onClick={() => { if (!locked) onClear(); closeDialog(); }}>Ya, Hapus Semua</button></div>
-      </dialog>
     </aside>
   );
 }
