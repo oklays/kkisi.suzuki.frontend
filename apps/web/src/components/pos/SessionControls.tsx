@@ -39,7 +39,7 @@ export function SessionControls({ session }: { session: PosSession }) {
           </select>
         </label>
       )}
-      <button className="pos-logout" type="button" disabled={busy} onClick={() => void logout()}><LogOut size={15} />Keluar</button>
+      <button className="pos-logout pos-sidebar-logout" type="button" disabled={busy} onClick={() => void logout()}><LogOut size={15} />Keluar</button>
       {message && <span className="pos-session-message" role="status">{message}</span>}
     </div>
   );

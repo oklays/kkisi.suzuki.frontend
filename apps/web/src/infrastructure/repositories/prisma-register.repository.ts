@@ -20,22 +20,25 @@ export class PrismaRegisterRepository {
           JOIN db_kasir k ON k.id=b.id_kasir AND k.company_id=b.company_id
           WHERE b.id=${registerId} AND b.user_id=${ctx.userId} AND b.company_id=${ctx.companyId} FOR UPDATE`;
         if (!register) throw new PosError('FORBIDDEN');
-        if (register.status === 0) return { id: register.id, noref: register.noref, saldoAwal: register.saldo_awal.toFixed(2), saldoAkhir: register.saldo_akhir?.toFixed(2) ?? '0.00', saldoKredit: register.saldo_kredit.toFixed(2) };
-        if (register.status !== 1) throw new PosError('REGISTER_CLOSED');
+        if (register.status !== 0 && register.status !== 1) throw new PosError('REGISTER_CLOSED');
         // Legacy Pos::tutup_kasir derives change as paid - grand_total, so net Cash equals grand_total.
         // Ownership is enforced on the session above; historical session sales can have other creators.
-        const [totals] = await tx.$queryRaw<{ cash: Prisma.Decimal; credit: Prisma.Decimal; unsupported: bigint }[]>`SELECT
+        const [totals] = await tx.$queryRaw<{ cash: Prisma.Decimal; credit: Prisma.Decimal; discount: Prisma.Decimal; transaction_count: bigint; unsupported: bigint }[]>`SELECT
           CAST(COALESCE(SUM(CASE WHEN payment_type='Cash' THEN CAST(grand_total AS DECIMAL(18,2)) ELSE 0 END),0) AS DECIMAL(18,2)) AS cash,
           CAST(COALESCE(SUM(CASE WHEN payment_type='Kredit' THEN CAST(grand_total AS DECIMAL(18,2)) ELSE 0 END),0) AS DECIMAL(18,2)) AS credit,
+          CAST(COALESCE(SUM(tot_discount_to_all_amt),0) AS DECIMAL(18,2)) AS discount,
+          COUNT(*) AS transaction_count,
           SUM(CASE WHEN COALESCE(return_bit,'0')<>'0' OR payment_type NOT IN ('Cash','Kredit') THEN 1 ELSE 0 END) AS unsupported
           FROM db_sales WHERE company_id=${ctx.companyId} AND id_buka_kasir=${registerId} AND sales_status='Final'`;
+        const summary = { transactionCount: Number(totals.transaction_count), discountTotal: totals.discount.toFixed(2) };
+        if (register.status === 0) return { id: register.id, noref: register.noref, saldoAwal: register.saldo_awal.toFixed(2), saldoAkhir: register.saldo_akhir?.toFixed(2) ?? '0.00', saldoKredit: register.saldo_kredit.toFixed(2), ...summary };
         if (Number(totals.unsupported ?? 0)) throw new PosError('REGISTER_RECAP_UNSUPPORTED');
         const saldoAkhir = register.saldo_awal.plus(totals.cash).toFixed(2), saldoKredit = totals.credit.toFixed(2);
         const localTime = new Date(now.getTime()+7*3600000).toISOString().slice(0,19).replace('T',' ');
         const changed = await tx.$executeRaw`UPDATE db_buka_kasir SET saldo_akhir=${saldoAkhir},saldo_kredit=${saldoKredit},tgl_tutup=${localTime},status=0
           WHERE id=${registerId} AND user_id=${ctx.userId} AND company_id=${ctx.companyId} AND status=1`;
         if (changed !== 1) throw new PosError('POS_UNAVAILABLE');
-        return { id: register.id, noref: register.noref, saldoAwal: register.saldo_awal.toFixed(2), saldoAkhir, saldoKredit };
+        return { id: register.id, noref: register.noref, saldoAwal: register.saldo_awal.toFixed(2), saldoAkhir, saldoKredit, ...summary };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,maxWait:15000,timeout:15000 }); }
       catch(error) {
         const e=error as { code?: string; meta?: { code?: string } };

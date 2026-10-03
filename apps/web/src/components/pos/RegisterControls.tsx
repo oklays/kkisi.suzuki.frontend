@@ -1,6 +1,8 @@
 "use client";
 import { useRef, useState } from "react";
+import { Store } from "lucide-react";
 import type { PosSession } from "@/features/pos/types";
+import { RegisterRecap, type RegisterRecapData } from "./RegisterRecap";
 const messages: Record<string,string> = {
   REGISTER_STALE:"Tutup sesi lama di aplikasi kasir yang aktif.", REGISTER_AMBIGUOUS:"Tutup sesi kasir yang berlebih terlebih dahulu.",
   REGISTER_OPEN_OUTSIDE:"Tutup sesi kasir di cabang lain terlebih dahulu.", FORBIDDEN:"Kasir tidak tersedia atau akses ditolak.",
@@ -8,7 +10,7 @@ const messages: Record<string,string> = {
 };
 export function RegisterControls({session,locked=false}: {session:PosSession;locked?:boolean}) {
   const [selected,setSelected]=useState(session.kasir?.[0]?.id ?? 0),[saldo,setSaldo]=useState("0"),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
-  const [closing,setClosing]=useState<number|null>(null),[recap,setRecap]=useState<{saldoAwal:string;saldoAkhir:string;saldoKredit:string}|null>(null);
+  const [closing,setClosing]=useState<number|null>(null),[recap,setRecap]=useState<RegisterRecapData|null>(null);
   const dialog=useRef<HTMLDialogElement>(null);
   async function post(action:"open"|"close",body:unknown) {
     if(locked||busy)return;
@@ -28,10 +30,9 @@ export function RegisterControls({session,locked=false}: {session:PosSession;loc
       <label className="pos-branch-select">Saldo awal<input className="pos-register-balance" aria-label="Saldo awal" type="number" min="0" max="999999999" step="1" value={saldo} disabled={busy||locked} onChange={e=>setSaldo(e.target.value)}/></label>
       <button className="pos-logout pos-register-open" disabled={busy||locked||!selected||!/^\d+$/.test(saldo)||Number(saldo)>999999999} onClick={()=>void post("open",{idKasir:selected,saldoAwal:Number(saldo)})}>Buka kasir</button>
     </>}
-    {session.ownedRegisters?.map(r=><button key={r.id} className="pos-logout pos-register-close" disabled={busy||locked} onClick={()=>{setClosing(r.id);setMessage("");dialog.current?.showModal();}}>Tutup {r.noref}</button>)}
-    <dialog ref={dialog} className="pos-clear-dialog" aria-labelledby="pos-register-title" onCancel={()=>setClosing(null)}>
-      <h2 id="pos-register-title">{recap?"Rekap tutup kasir":"Konfirmasi tutup kasir"}</h2>
-      {recap?<><p>Saldo awal Rp{recap.saldoAwal} · Saldo akhir Rp{recap.saldoAkhir} · Kredit Rp{recap.saldoKredit}</p><div><button onClick={()=>window.location.reload()}>Selesai</button></div></>:<><p>Tutup sesi kasir ini? Saldo akhir dan kredit dihitung dari transaksi tersimpan.</p><div><button disabled={busy} onClick={()=>{dialog.current?.close();setClosing(null);}}>Batal</button><button className="pos-confirm-clear pos-register-confirm" disabled={busy||locked||closing===null} onClick={()=>void post("close",{registerId:closing})}>Konfirmasi tutup kasir</button></div></>}
+    {session.ownedRegisters?.map(r=><button key={r.id} className="pos-logout pos-register-close" disabled={busy||locked} onClick={()=>{setClosing(r.id);setMessage("");dialog.current?.showModal();}}><Store size={15}/>Tutup Toko</button>)}
+    <dialog ref={dialog} className={recap?"pos-recap-dialog":"pos-clear-dialog"} aria-labelledby="pos-register-title" onCancel={event=>{if(recap){event.preventDefault();window.location.reload();}else setClosing(null);}}>
+      {recap?<RegisterRecap recap={recap} onFinish={()=>window.location.reload()} />:<><h2 id="pos-register-title">Konfirmasi tutup kasir</h2><p>Tutup sesi kasir ini? Saldo akhir dan kredit dihitung dari transaksi tersimpan.</p><div><button disabled={busy} onClick={()=>{dialog.current?.close();setClosing(null);}}>Batal</button><button className="pos-confirm-clear pos-register-confirm" disabled={busy||locked||closing===null} onClick={()=>void post("close",{registerId:closing})}>Konfirmasi tutup kasir</button></div></>}
       {message&&<p role="status">{message}</p>}
     </dialog>
     {message && <span role="status" className="pos-session-message">{message}</span>}

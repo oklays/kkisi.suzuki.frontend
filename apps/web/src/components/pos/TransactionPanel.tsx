@@ -6,6 +6,7 @@ import type { PosMember, PosProduct, PosSession, CheckoutResult, PreviewCartLine
 import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
 import { ProductIllustration } from "./ProductCatalog";
 import { checkoutBlockingReasons } from "@/features/pos/checkout-state";
+import { MemberKindPicker } from "./MemberKindPicker";
 
 const errors: Record<string, string> = {
   MEMBER_NOT_FOUND: "Anggota tidak ditemukan. Periksa NIK atau ID card.", MEMBER_AMBIGUOUS: "Identitas anggota ganda. Hubungi pengelola.",
@@ -18,6 +19,7 @@ const errors: Record<string, string> = {
   IDEMPOTENCY_CONFLICT: "Kunci pembayaran telah digunakan untuk transaksi berbeda.", CSRF: "Muat ulang halaman untuk memperbarui sesi pembayaran.", FORBIDDEN: "Akses POS ditolak.",
 };
 const errorText = (code: string) => errors[code] ?? "Permintaan belum dapat diproses. Coba lagi.";
+const rupiahInput = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
 
 export function MemberSearch({ member, onMember, disabled }: { member: PosMember | null; onMember: (value: PosMember | null) => void; disabled: boolean }) {
   const [query, setQuery] = useState("");
@@ -49,7 +51,7 @@ export function MemberSearch({ member, onMember, disabled }: { member: PosMember
         <div><Search size={15} aria-hidden="true" /><input id="pos-member" disabled={disabled} value={query} onChange={(event) => changeQuery(event.target.value)} placeholder={kind === "id" ? "Masukkan ID anggota" : kind === "card" ? "Scan ID card anggota" : kind === "qr" ? "Scan QR anggota" : "Masukkan NIK (termasuk nol di depan)"} autoComplete="off" /></div>
         <button type="submit" disabled={disabled || busy || !query.trim()}><UserRound size={15} />{busy ? "Mencari…" : "Pilih"}</button>
       </form>
-      <label className="pos-member-hint">Cari dengan <select aria-label="Jenis scan anggota" disabled={disabled || busy} value={kind} onChange={(event) => { setKind(event.target.value); changeQuery(""); }}><option value="nik">NIK karyawan</option><option value="card">ID card</option><option value="id">ID anggota</option><option value="qr">QR terenkripsi</option></select></label>
+      <div className="pos-member-hint"><span>Cari dengan</span><MemberKindPicker value={kind} disabled={disabled || busy} onChange={value => { setKind(value); changeQuery(""); }} /></div>
       {member && <div className="pos-member-result" role="status"><div><strong>{member.name} · {member.nik}</strong><small>Sisa limit {formatRupiah(member.remainingSen)} · Limit {formatRupiah(member.limitSen)}</small></div><button disabled={disabled} className="pos-icon-button" aria-label="Lepas anggota" onClick={() => changeQuery("")}><X size={16} /></button></div>}
       {message && <div className="pos-inline-error" role="status"><TriangleAlert size={15} />{message}</div>}
     </section>
@@ -116,6 +118,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
   const count = cart.reduce((sum, line) => sum + line.quantity, 0);
   const total = previewSubtotal(cart);
   const paidSen = /^\d{1,10}$/.test(paidAmount) ? Number(paidAmount) * 100 : 0;
+  const paidDisplay = paidAmount ? rupiahInput.format(Number(paidAmount)) : "";
   const locked = processing || uncertain;
   const blockers = checkoutBlockingReasons({ session, payment, itemCount: cart.length, totalSen: total, paidSen, remainingSen: member?.remainingSen ?? null });
   const ready = blockers.length === 0;
@@ -169,7 +172,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCh
       </div>
       <div className="pos-transaction-bottom">
         <PriceSummary cart={cart} /><PaymentMethodSelector selected={payment} onSelect={setPayment} disabled={locked} />
-        {payment === "Cash" && <div className="pos-cash-payment"><label htmlFor="pos-paid">Uang bayar (Rp)</label><input id="pos-paid" inputMode="numeric" pattern="[0-9]*" value={paidAmount} disabled={locked} onChange={(event) => { if (/^\d{0,10}$/.test(event.target.value)) setPaidAmount(event.target.value); }} /><span>Kembalian <strong>{formatRupiah(Math.max(0, paidSen - total))}</strong></span></div>}
+        {payment === "Cash" && <div className="pos-cash-payment"><label htmlFor="pos-paid">Uang bayar (Rp)</label><input id="pos-paid" inputMode="numeric" pattern="[0-9]*" value={paidDisplay} disabled={locked} onChange={(event) => { const digits = event.target.value.replace(/\D/g, ""); if (/^\d{0,10}$/.test(digits)) setPaidAmount(digits); }} /><span>Kembalian <strong>{formatRupiah(Math.max(0, paidSen - total))}</strong></span></div>}
         {payment === "Kredit" && <p className="pos-checkout-note">{member ? `Sisa setelah belanja: ${formatRupiah(member.remainingSen - total)}` : "Pilih anggota aktif terlebih dahulu."}</p>}
         {!uncertain && blockers.map((reason) => <p className="pos-checkout-note" key={reason}>{reason}</p>)}
         <CheckoutButton processing={processing} disabled={!hydrated || processing || (!uncertain && !ready)} retry={uncertain} onClick={() => void submit()} />

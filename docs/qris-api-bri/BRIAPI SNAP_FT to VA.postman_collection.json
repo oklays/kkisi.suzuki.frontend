@@ -1,0 +1,1021 @@
+{
+	"info": {
+		"_postman_id": "ce550c97-a8d8-4830-aee7-82f181a0c857",
+		"name": "BRIAPI SNAP_FT to VA",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17591922"
+	},
+	"item": [
+		{
+			"name": "FT to VA",
+			"item": [
+				{
+					"name": "Inquiry Intrabank",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({\r",
+									"   key: \"X-EXTERNAL-ID\",\r",
+									"   value: \"\" + _.random(100000000, 999999999)\r",
+									"});\r",
+									"\r",
+									"function getPath(url) {\r",
+									"    var pathRegex = /.+?\\:\\/\\/.+?(\\/.+?)(?:#|\\?|$)/;\r",
+									"    var result = url.match(pathRegex);\r",
+									"    return result && result.length > 1 ? result[1] : ''; \r",
+									"}\r",
+									" \r",
+									"function getQueryString(url) {\r",
+									"    var arrSplit = url.split('?');\r",
+									"    return arrSplit.length > 1 ? url.substring(url.indexOf('?')+1) : ''; \r",
+									"}\r",
+									" \r",
+									"function getAuthHeader(httpMethod, requestUrl, requestBody) {\r",
+									"    var requestPath = getPath(requestUrl);\r",
+									"    var queryString = getQueryString(requestUrl);\r",
+									"    \r",
+									"    if (httpMethod == 'GET' || !requestBody) {\r",
+									"        requestBody = ''; \r",
+									"    } else {\r",
+									"        requestBody = requestBody;\r",
+									"    }\r",
+									"    \r",
+									"    Date.prototype.toIsoString = function() {\r",
+									"        var tzo = -this.getTimezoneOffset(),\r",
+									"            dif = tzo >= 0 ? '+' : '-',\r",
+									"            pad = function(num) {\r",
+									"                var norm = Math.floor(Math.abs(num));\r",
+									"                return (norm < 10 ? '0' : '') + norm;\r",
+									"            };\r",
+									"        return this.getFullYear() +\r",
+									"            '-' + pad(this.getMonth() + 1) +\r",
+									"            '-' + pad(this.getDate()) +\r",
+									"            'T' + pad(this.getHours()) +\r",
+									"            ':' + pad(this.getMinutes()) +\r",
+									"            ':' + pad(this.getSeconds()) +\r",
+									"            '.' + this.getMilliseconds() + \r",
+									"            dif + pad(tzo / 60) +\r",
+									"            ':' + pad(tzo % 60);\r",
+									"    }\r",
+									"\r",
+									"    var dt = new Date();\r",
+									"    var timestamp = dt.toIsoString();\r",
+									"    postman.setEnvironmentVariable('timestamp', timestamp);\r",
+									"\r",
+									"    console.log(JSON.stringify(JSON.parse(requestBody), null, 0));\r",
+									"\r",
+									"    var hash = CryptoJS.SHA256(JSON.stringify(JSON.parse(requestBody), null, 0));\r",
+									"\r",
+									"    payload = httpMethod + \":\" + requestPath + \":\" + pm.environment.get('token') + \":\" \r",
+									"        + hash.toString(CryptoJS.enc.Hex) + \":\" + timestamp;\r",
+									"\r",
+									"    postman.setEnvironmentVariable('signature_payload', payload);\r",
+									"    \r",
+									"    var hmacSignature = CryptoJS.HmacSHA512(payload, pm.environment.get('client_secret'));\r",
+									"    return hmacSignature;\r",
+									"}\r",
+									"\r",
+									"postman.setEnvironmentVariable('signature', getAuthHeader(request['method'], request['url'], request['data']));\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {}
+					},
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "accessToken",
+									"value": "{{token}}",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								},
+								{
+									"key": "tokenType",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-SIGNATURE",
+								"value": "{{signature}}",
+								"type": "text"
+							},
+							{
+								"key": "X-TIMESTAMP",
+								"value": "{{timestamp}}",
+								"type": "text"
+							},
+							{
+								"key": "X-EXTERNAL-ID",
+								"value": "6678559",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "X-ESB-SERVICE_ID",
+								"value": "555555",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "X-PARTNER-ID",
+								"value": "BRIAPItest",
+								"type": "text"
+							},
+							{
+								"key": "CHANNEL-ID",
+								"value": "0009",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"partnerServiceId\": \"   77777\",\r\n    \"customerNo\": \"20098114\",\r\n    \"virtualAccountNo\": \"   7777720098114\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/inquiry-intrabank",
+							"protocol": "https",
+							"host": [
+								"sandbox",
+								"partner",
+								"api",
+								"bri",
+								"co",
+								"id"
+							],
+							"path": [
+								"snap",
+								"v1.0",
+								"transfer-va",
+								"inquiry-intrabank"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Invalid Field Format partnerServiceId",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"partnerServiceId\": \"77777\",\r\n    \"customerNo\": \"12345600\",\r\n    \"virtualAccountNo\": \"7777712345600\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/inquiry-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"v1.0",
+										"transfer-va",
+										"inquiry-intrabank"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Fri, 17 Dec 2021 07:07:50 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "84"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "X-Bri-Reqid",
+									"value": "fbaabe75-fa12-4054-bcf0-3a9f2a6db6ee"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"4003201\",\n    \"responseMessage\": \"Invalid Field Format partnerServiceId\"\n}"
+						},
+						{
+							"name": "Parsing Error - Inquiry Intrabank",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									},
+									{
+										"key": "X-EXTERNAL-ID",
+										"value": "6678",
+										"type": "text",
+										"disabled": true
+									},
+									{
+										"key": "X-ESB-SERVICE_ID",
+										"value": "555555",
+										"type": "text",
+										"disabled": true
+									},
+									{
+										"key": "X-PARTNER-ID",
+										"value": "8880",
+										"type": "text"
+									},
+									{
+										"key": "CHANNEL-ID",
+										"value": "0009",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\"partnerServiceId\": \"   77777\",\r\n\"customerNo\": \"18138200\",\r\n\"virtualAccountNo\": \"   7777718138200\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/inquiry-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"v1.0",
+										"transfer-va",
+										"inquiry-intrabank"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 24 Jan 2022 08:04:34 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "58"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "X-Bri-Reqid",
+									"value": "6735ecd8-e457-499e-a705-71104dfb85b9"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"4003200\",\n    \"responseMessage\": \"Bad Request\"\n}"
+						},
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"partnerServiceId\": \"   77777\",\r\n    \"customerNo\": \"12345600\",\r\n    \"virtualAccountNo\": \"   7777712345600\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/inquiry-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"v1.0",
+										"transfer-va",
+										"inquiry-intrabank"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Fri, 17 Dec 2021 07:22:11 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "312"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "X-Bri-Reqid",
+									"value": "4147cb6a-fdcc-4ca6-99c7-b1ed05a7fea5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"2003200\",\n    \"responseMessage\": \"Successful\",\n    \"virtualAccountData\": {\n        \"partnerServiceId\": \"   77777\",\n        \"customerNo\": \"12345600\",\n        \"virtualAccountNo\": \"   7777712345600\",\n        \"virtualAccountName\": \"Jokul Doe\",\n        \"paidAmount\": {\n            \"value\": \"100000000000000.00\",\n            \"currency\": \"IDR\"\n        },\n        \"additionalInfo\": {\n            \"description\": \"keterangan\"\n        }\n    }\n}"
+						},
+						{
+							"name": "db mati/service mati inquiry ",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									},
+									{
+										"key": "X-EXTERNAL-ID",
+										"value": "6678",
+										"type": "text",
+										"disabled": true
+									},
+									{
+										"key": "X-ESB-SERVICE_ID",
+										"value": "555555",
+										"type": "text",
+										"disabled": true
+									},
+									{
+										"key": "X-PARTNER-ID",
+										"value": "8880",
+										"type": "text"
+									},
+									{
+										"key": "CHANNEL-ID",
+										"value": "0009",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\"partnerServiceId\": \"   77777\",\r\n\"customerNo\": \"18138200\",\r\n\"virtualAccountNo\": \"   7777718138200\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/inquiry-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"v1.0",
+										"transfer-va",
+										"inquiry-intrabank"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 24 Jan 2022 06:48:09 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "151"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"5003200\",\n    \"responseMessage\": \"General Error\"\n}"
+						},
+						{
+							"name": "FT TO VA-Inquiry Intrabank-baru sukses",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									},
+									{
+										"key": "X-EXTERNAL-ID",
+										"value": "6678558",
+										"type": "text"
+									},
+									{
+										"key": "X-ESB-SERVICE_ID",
+										"value": "555555",
+										"type": "text",
+										"disabled": true
+									},
+									{
+										"key": "X-PARTNER-ID",
+										"value": "TKPD",
+										"type": "text"
+									},
+									{
+										"key": "CHANNEL-ID",
+										"value": "0009",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"partnerServiceId\": \"   77777\",\r\n    \"customerNo\": \"20098105\",\r\n    \"virtualAccountNo\": \"   7777720098105\"\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/prod/v1.0/transfer-va/inquiry-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"prod",
+										"v1.0",
+										"transfer-va",
+										"inquiry-intrabank"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Thu, 21 Jul 2022 07:33:48 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "303"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "X-Bri-Reqid",
+									"value": "284b30ac-3a2d-4d9a-adde-b005c6acd226"
+								},
+								{
+									"key": "X-TIMESTAMP",
+									"value": "2022-07-21T07:33:48+07:00"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"2003200\",\n    \"responseMessage\": \"Successful\",\n    \"virtualAccountData\": {\n        \"partnerServiceId\": \"   77777\",\n        \"customerNo\": \"20098105\",\n        \"virtualAccountNo\": \"   7777720098105\",\n        \"virtualAccountName\": \"tes surya\",\n        \"totalAmount\": {\n            \"value\": \"10000.00\",\n            \"currency\": \"IDR\"\n        },\n        \"additionalInfo\": {\n            \"description\": \"keterangan\"\n        }\n    }\n}"
+						},
+						{
+							"name": "Invalid Bill",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"partnerServiceId\": \"   77727\",\r\n    \"customerNo\": \"12345601\",\r\n    \"virtualAccountNo\": \"   7772712345601\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/inquiry-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"v1.0",
+										"transfer-va",
+										"inquiry-intrabank"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Fri, 17 Dec 2021 07:26:21 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "75"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "X-Bri-Reqid",
+									"value": "4f5dc5e7-ab6c-4c48-8ad1-24a2281bb432"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"4043212\",\n    \"responseMessage\": \"Invalid Bill/Virtual Account\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Payment Intrabank",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.add({\r",
+									"   key: \"X-EXTERNAL-ID\",\r",
+									"   value: \"\" + _.random(100000000, 999999999)\r",
+									"});\r",
+									"\r",
+									"function getPath(url) {\r",
+									"    var pathRegex = /.+?\\:\\/\\/.+?(\\/.+?)(?:#|\\?|$)/;\r",
+									"    var result = url.match(pathRegex);\r",
+									"    return result && result.length > 1 ? result[1] : ''; \r",
+									"}\r",
+									" \r",
+									"function getQueryString(url) {\r",
+									"    var arrSplit = url.split('?');\r",
+									"    return arrSplit.length > 1 ? url.substring(url.indexOf('?')+1) : ''; \r",
+									"}\r",
+									" \r",
+									"function getAuthHeader(httpMethod, requestUrl, requestBody) {\r",
+									"    var requestPath = getPath(requestUrl);\r",
+									"    var queryString = getQueryString(requestUrl);\r",
+									"    \r",
+									"    if (httpMethod == 'GET' || !requestBody) {\r",
+									"        requestBody = ''; \r",
+									"    } else {\r",
+									"        requestBody = requestBody;\r",
+									"    }\r",
+									"    \r",
+									"    Date.prototype.toIsoString = function() {\r",
+									"        var tzo = -this.getTimezoneOffset(),\r",
+									"            dif = tzo >= 0 ? '+' : '-',\r",
+									"            pad = function(num) {\r",
+									"                var norm = Math.floor(Math.abs(num));\r",
+									"                return (norm < 10 ? '0' : '') + norm;\r",
+									"            };\r",
+									"        return this.getFullYear() +\r",
+									"            '-' + pad(this.getMonth() + 1) +\r",
+									"            '-' + pad(this.getDate()) +\r",
+									"            'T' + pad(this.getHours()) +\r",
+									"            ':' + pad(this.getMinutes()) +\r",
+									"            ':' + pad(this.getSeconds()) +\r",
+									"            '.' + this.getMilliseconds() + \r",
+									"            dif + pad(tzo / 60) +\r",
+									"            ':' + pad(tzo % 60);\r",
+									"    }\r",
+									"\r",
+									"    var dt = new Date();\r",
+									"    var timestamp = dt.toIsoString();\r",
+									"    postman.setEnvironmentVariable('timestamp', timestamp);\r",
+									"\r",
+									"    console.log(JSON.stringify(JSON.parse(requestBody), null, 0));\r",
+									"\r",
+									"    var hash = CryptoJS.SHA256(JSON.stringify(JSON.parse(requestBody), null, 0));\r",
+									"\r",
+									"    payload = httpMethod + \":\" + requestPath + \":\" + pm.environment.get('token') + \":\" \r",
+									"        + hash.toString(CryptoJS.enc.Hex) + \":\" + timestamp;\r",
+									"\r",
+									"    postman.setEnvironmentVariable('signature_payload', payload);\r",
+									"    \r",
+									"    var hmacSignature = CryptoJS.HmacSHA512(payload, pm.environment.get('client_secret'));\r",
+									"    return hmacSignature;\r",
+									"}\r",
+									"\r",
+									"postman.setEnvironmentVariable('signature', getAuthHeader(request['method'], request['url'], request['data']));\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "accessToken",
+									"value": "{{token}}",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								},
+								{
+									"key": "tokenType",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-SIGNATURE",
+								"value": "{{signature}}",
+								"type": "text"
+							},
+							{
+								"key": "X-TIMESTAMP",
+								"value": "{{timestamp}}",
+								"type": "text"
+							},
+							{
+								"key": "X-PARTNER-ID",
+								"value": "BRIAPItest",
+								"type": "text"
+							},
+							{
+								"key": "CHANNEL-ID",
+								"value": "888",
+								"type": "text"
+							},
+							{
+								"key": "X-EXTERNAL-ID",
+								"value": "999967",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "X-ESB-SERVICE_ID",
+								"value": "777777",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"partnerServiceId\": \"   77777\",\r\n    \"customerNo\": \"20098114\",\r\n    \"virtualAccountNo\": \"   7777720098114\",\r\n    \"virtualAccountName\": \"test\",\r\n    \"sourceAccountNo\": \"001901000032531\",\r\n    \"partnerReferenceNo\": \"2261110855\",\r\n    \"trxDateTime\": \"2023-05-26T15:31:00+07:00\",\r\n    \"paidAmount\": {\r\n        \"value\": \"+10000.00\",\r\n        \"currency\": \"IDR\"\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/payment-intrabank",
+							"protocol": "https",
+							"host": [
+								"sandbox",
+								"partner",
+								"api",
+								"bri",
+								"co",
+								"id"
+							],
+							"path": [
+								"snap",
+								"v1.0",
+								"transfer-va",
+								"payment-intrabank"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "db mati / service mati Payment",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									},
+									{
+										"key": "X-PARTNER-ID",
+										"value": "99900",
+										"type": "text"
+									},
+									{
+										"key": "CHANNEL-ID",
+										"value": "888",
+										"type": "text"
+									},
+									{
+										"key": "X-EXTERNAL-ID",
+										"value": "9998",
+										"type": "text"
+									},
+									{
+										"key": "X-ESB-SERVICE_ID",
+										"value": "777777",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"partnerServiceId\":\"   77778\",\r\n    \"customerNo\":\"081234567892\",\r\n    \"virtualAccountNo\":\"   77778081234567892\",\r\n    \"virtualAccountName\":\"Latifah Hanum\",\r\n    \"sourceAccountNo\":\"039101000154999\",\r\n    \"partnerReferenceNumber\":\"202111025\",\r\n     \"trxDateTime\" : \"2022-01-21T17:34:00+07:00\",\r\n    \"paidAmount\":{\r\n        \"value\":\"10007.00\",\r\n        \"currency\":\"IDR\"\r\n    }\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/payment-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"v1.0",
+										"transfer-va",
+										"payment-intrabank"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 24 Jan 2022 06:49:01 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "151"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"5003300\",\n    \"responseMessage\": \"General Error\"\n}"
+						},
+						{
+							"name": "Parsing Error - Payment Intrabank",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-SIGNATURE",
+										"value": "{{signature}}",
+										"type": "text"
+									},
+									{
+										"key": "X-TIMESTAMP",
+										"value": "{{timestamp}}",
+										"type": "text"
+									},
+									{
+										"key": "X-PARTNER-ID",
+										"value": "99900",
+										"type": "text"
+									},
+									{
+										"key": "CHANNEL-ID",
+										"value": "888",
+										"type": "text"
+									},
+									{
+										"key": "X-EXTERNAL-ID",
+										"value": "9998",
+										"type": "text"
+									},
+									{
+										"key": "X-ESB-SERVICE_ID",
+										"value": "777777",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"partnerServiceId\":\"   77778\",\r\n    \"customerNo\":\"081234567892\",\r\n    \"virtualAccountNo\":\"   77778081234567892\",\r\n    \"virtualAccountName\":\"Latifah Hanum\",\r\n    \"sourceAccountNo\":\"039101000154999\",\r\n    \"partnerReferenceNumber\":\"202111025\",\r\n     \"trxDateTime\" : \"2022-01-21T17:34:00+07:00\",\r\n    \"paidAmount\":{\r\n        \"value\":\"10007.00\",\r\n        \"currency\":\"IDR\"\r\n    }\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://sandbox.partner.api.bri.co.id/snap/v1.0/transfer-va/payment-intrabank",
+									"protocol": "https",
+									"host": [
+										"sandbox",
+										"partner",
+										"api",
+										"bri",
+										"co",
+										"id"
+									],
+									"path": [
+										"snap",
+										"v1.0",
+										"transfer-va",
+										"payment-intrabank"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 24 Jan 2022 08:04:16 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "58"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "X-Bri-Reqid",
+									"value": "9779c047-4da8-4c67-aad5-c5e0341531b2"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"responseCode\": \"4003300\",\n    \"responseMessage\": \"Bad Request\"\n}"
+						}
+					]
+				}
+			]
+		}
+	]
+}

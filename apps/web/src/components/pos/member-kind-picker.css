@@ -1,0 +1,49 @@
+.pos-member-hint { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pos-kind-picker { display: inline-flex; min-width: 0; }
+.pos-kind-picker .pos-kind-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #d6e1f5;
+  border-radius: 9px;
+  background: #f5f8ff;
+  color: #164292;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.pos-kind-trigger:hover, .pos-kind-trigger[aria-expanded=true] { border-color: #9bb6ea; background: #edf3ff; }
+.pos-kind-trigger:disabled { opacity: .55; cursor: not-allowed; }
+.pos-kind-chevron { margin-left: 5px; color: #617493; transition: transform .15s; }
+.pos-kind-trigger[aria-expanded=true] .pos-kind-chevron { transform: rotate(180deg); }
+.pos-kind-menu {
+  /* Keep top-layer coordinates in viewport pixels, outside the POS shell's 80% zoom. */
+  zoom: calc(1 / var(--pos-scale, 1));
+  position: fixed;
+  inset: auto;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid #e0e6f0;
+  border-radius: 14px;
+  background: #fff;
+  color: #24334b;
+  box-shadow: 0 12px 36px #172b4d24, 0 2px 6px #172b4d0a;
+  font-family: inherit;
+  font-size: 12px;
+}
+.pos-kind-menu .pos-kind-menu-heading { margin: 0; padding: 9px 10px 10px; border-bottom: 1px solid #edf0f5; color: #8590a3; font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
+.pos-kind-menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 53px; margin-top: 3px; padding: 8px 10px; border: 0; border-radius: 9px; background: #fff; color: #344054; font: inherit; text-align: left; cursor: pointer; }
+.pos-kind-menu button:hover, .pos-kind-menu button:focus-visible { background: #f5f7fb; }
+.pos-kind-menu[popover] button:focus-visible { outline: 2px solid #7099e8; outline-offset: -2px; }
+.pos-kind-menu button[aria-selected=true] { background: #edf3ff; color: #1649ac; }
+.pos-kind-option-icon { display: grid; place-items: center; flex-shrink: 0; width: 33px; height: 33px; border: 1px solid #e6ebf2; border-radius: 8px; background: #f8fafc; color: #7888a0; }
+.pos-kind-menu button[aria-selected=true] .pos-kind-option-icon { border-color: #cfddfa; background: #dfeaff; color: #2356b8; }
+.pos-kind-option-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.pos-kind-option-copy strong { font-size: 12px; font-weight: 650; line-height: 1.3; }
+.pos-kind-option-copy small { color: #8490a3; font-size: 10px; line-height: 1.4; }
+.pos-kind-check { flex-shrink: 0; color: #2356b8; }
+@media (prefers-reduced-motion: reduce) { .pos-kind-chevron { transition: none; } }

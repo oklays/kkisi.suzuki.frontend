@@ -20,10 +20,10 @@ test('register close remains disabled while a payment is awaiting confirmation',
   const require=createRequire(import.meta.url);
   const code=ts.transpileModule(readFileSync(new URL('../src/components/pos/RegisterControls.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   const fixtureModule={exports:{}};
-  runInNewContext(code,{module:fixtureModule,exports:fixtureModule.exports,require:id=>id==='react'?{useState:value=>[value,()=>{}],useRef:()=>({current:null})}:require(id)});
+  runInNewContext(code,{module:fixtureModule,exports:fixtureModule.exports,require:id=>id==='react'?{useState:value=>[value,()=>{}],useRef:()=>({current:null})}:id==='./RegisterRecap'?{RegisterRecap:()=>null}:require(id)});
   const session={registerOpeningAvailable:true,register:{open:{noref:'SYNTHETIC'},multiple:false},ownedRegisters:[{id:1,noref:'SYNTHETIC'}]};
   const tree=fixtureModule.exports.RegisterControls({session,locked:true});
   const children=tree.props.children.flat().filter(Boolean);
-  const close=children.find(child=>child.type==='button'&&child.props.children[0]==='Tutup ');
+  const close=children.find(child=>child.type==='button'&&child.props.children?.[1]==='Tutup Toko');
   assert.ok(close);assert.equal(close.props.disabled,true);
 });
