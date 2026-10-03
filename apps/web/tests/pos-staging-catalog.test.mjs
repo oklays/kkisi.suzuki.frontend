@@ -20,7 +20,7 @@ test('staging: every branch only sees its own sellable products within one page'
   const { reader, searchCatalog } = await catalog();
   for (const companyId of [1, 2, 3]) {
     const products = await searchCatalog(reader, { companyId });
-    assert.ok(products.length > 0 && products.length <= 24, `branch ${companyId}`);
+    assert.ok(products.length > 0 && products.length <= 25, `branch ${companyId}`);
     for (const product of products) {
       assert.equal(product.companyId, String(companyId));
       assert.ok(Number.isInteger(product.priceSen) && product.priceSen >= 0);

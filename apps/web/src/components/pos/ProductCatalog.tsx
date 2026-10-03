@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Barcode, Boxes, Coffee, House, LayoutGrid, LoaderCircle, PackageSearch, Plus, Search, ShoppingBag, Soup, TriangleAlert, X } from "lucide-react";
-import type { CatalogStatus, PosCategory, PosProduct } from "@/features/pos/types";
+import { Barcode, LoaderCircle, PackageSearch, Plus, Search, TriangleAlert, X } from "lucide-react";
+import type { CatalogStatus, PosProduct } from "@/features/pos/types";
 import { formatRupiah, hasPrice, illustrationFamily, netPriceSen, productImage, productIllustration } from "./preview";
 
 export function ProductIllustration({ product }: { product: PosProduct }) {
@@ -20,34 +20,20 @@ export function StockBadge({ product }: { product: PosProduct }) {
   return <span className={`pos-stock ${empty ? "is-empty" : ""}`}>{empty ? "Stok habis" : `Stok: ${product.stock}`}</span>;
 }
 
-export function ProductSearch({ query, onQuery, onScan }: { query: string; onQuery: (query: string) => void; onScan: () => void }) {
+export function ProductSearch({ query, onQuery, onScan, disabled = false }: { query: string; onQuery: (query: string) => void; onScan: () => void; disabled?: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   return (
-    <form className="pos-search" onSubmit={(event) => { event.preventDefault(); onScan(); }} role="search">
+    <form className="pos-search" onSubmit={(event) => { event.preventDefault(); if (!disabled) onScan(); }} role="search">
       <Search size={19} aria-hidden="true" />
       <input ref={input} aria-label="Cari produk berdasarkan nama, kode, atau barcode" value={query} onChange={(event) => onQuery(event.target.value)} placeholder="Scan barcode atau cari produk (nama/kode)..." autoComplete="off" />
       {query && <button className="pos-icon-button" type="button" aria-label="Hapus pencarian" onClick={() => { onQuery(""); input.current?.focus(); }}><X size={16} /></button>}
-      <button className="pos-scan" type="button" onClick={() => { if (query.trim()) onScan(); else input.current?.focus(); }}><Barcode size={17} />Scan</button>
+      <button className="pos-scan" type="button" disabled={disabled} onClick={() => { if (query.trim()) onScan(); else input.current?.focus(); }}><Barcode size={17} />Scan</button>
     </form>
   );
 }
 
-const categoryIcons = { sembako: ShoppingBag, minuman: Coffee, makanan: Soup, "rumah-tangga": House, lainnya: Boxes };
-
-export function CategoryFilter({ categories, selected, onSelect }: { categories: readonly PosCategory[]; selected: string | null; onSelect: (id: string | null) => void }) {
-  return (
-    <div className="pos-categories" role="group" aria-label="Kategori produk">
-      <button aria-pressed={selected === null} className={selected === null ? "is-selected" : ""} onClick={() => onSelect(null)}><LayoutGrid size={16} />Semua</button>
-      {categories.map((category) => {
-        const Icon = categoryIcons[illustrationFamily(category.name) as keyof typeof categoryIcons];
-        return <button key={category.id} aria-pressed={selected === category.id} className={selected === category.id ? "is-selected" : ""} onClick={() => onSelect(category.id)}><Icon size={16} />{category.name}</button>;
-      })}
-    </div>
-  );
-}
-
-export function ProductCard({ product, quantity, onAdd }: { product: PosProduct; quantity: number; onAdd: (product: PosProduct) => void }) {
-  const disabled = product.stock <= 0 || quantity >= product.stock || !hasPrice(product);
+export function ProductCard({ product, quantity, onAdd, locked = false }: { product: PosProduct; quantity: number; onAdd: (product: PosProduct) => void; locked?: boolean }) {
+  const disabled = locked || product.stock <= 0 || quantity >= product.stock || !hasPrice(product);
   return (
     <article className="pos-product-card">
       <div className={`pos-product-image family-${illustrationFamily(product.categoryName)}`}>
@@ -65,9 +51,9 @@ export function ProductCard({ product, quantity, onAdd }: { product: PosProduct;
   );
 }
 
-export function ProductGrid({ products, quantities, onAdd, status = "ready", onReset, onRetry }: { products: PosProduct[]; quantities: Record<string, number>; onAdd: (product: PosProduct) => void; status?: CatalogStatus; onReset: () => void; onRetry: () => void }) {
+export function ProductGrid({ products, quantities, onAdd, status = "ready", onReset, onRetry, locked = false }: { products: PosProduct[]; quantities: Record<string, number>; onAdd: (product: PosProduct) => void; status?: CatalogStatus; onReset: () => void; onRetry: () => void; locked?: boolean }) {
   if (status === "loading") return <div className="pos-catalog-state" role="status"><LoaderCircle className="pos-spinner" size={32} /><h2>Memuat produk…</h2><p>Mohon tunggu sebentar.</p></div>;
   if (status === "error") return <div className="pos-catalog-state" role="alert"><TriangleAlert size={32} /><h2>Produk belum dapat dimuat</h2><p>Periksa koneksi dan coba muat kembali.</p><button className="pos-text-button" onClick={onRetry}>Coba lagi</button></div>;
-  if (products.length === 0) return <div className="pos-catalog-state" role="status"><PackageSearch size={36} /><h2>Produk tidak ditemukan</h2><p>Coba kata kunci lain atau pilih kategori berbeda.</p><button className="pos-text-button" onClick={onReset}>Tampilkan semua produk</button></div>;
-  return <div className="pos-product-grid">{products.map((product) => <ProductCard key={product.id} product={product} quantity={quantities[product.id] ?? 0} onAdd={onAdd} />)}</div>;
+  if (products.length === 0) return <div className="pos-catalog-state" role="status"><PackageSearch size={36} /><h2>Produk tidak ditemukan</h2><p>Coba kata kunci nama, kode, atau barcode lain.</p><button className="pos-text-button" onClick={onReset}>Tampilkan semua produk</button></div>;
+  return <div className="pos-product-grid">{products.map((product) => <ProductCard key={product.id} product={product} quantity={quantities[product.id] ?? 0} onAdd={onAdd} locked={locked} />)}</div>;
 }

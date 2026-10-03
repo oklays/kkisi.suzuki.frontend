@@ -16,3 +16,13 @@ export function checkoutBlockingReasons({ session, payment, itemCount, totalSen,
   else if (payment === 'Kredit' && remainingSen! < totalSen) reasons.push('Sisa limit anggota tidak mencukupi.');
   return reasons;
 }
+
+/** A cart reset invalidates all its pending scans, without discarding consecutive scans in the same cart. */
+export function createCartScanGuard() {
+  let generation = 0;
+  return {
+    capture: () => generation,
+    invalidate: () => { generation++; },
+    isCurrent: (scanGeneration: number) => scanGeneration === generation,
+  };
+}

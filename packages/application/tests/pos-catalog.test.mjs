@@ -33,7 +33,7 @@ test('projection handles products without a category and without a barcode', () 
 test('catalog search asks for one bounded page for the trusted branch', async () => {
   const calls = [];
   const products = await searchCatalog(reader({ search: async (q) => { calls.push(q); return [item()]; } }), { companyId: 1, term: ' mie ', categoryId: 1 });
-  assert.deepEqual(calls, [{ companyId: 1, term: 'mie', limit: 24, categoryId: 1 }]);
+  assert.deepEqual(calls, [{ companyId: 1, term: 'mie', limit: 25, categoryId: 1 }]);
   assert.equal(products.length, 1);
   assert.equal(products[0].name, 'SEDAAP MIE');
 });
