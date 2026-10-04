@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { toMinorUnits } from '@koperasi/domain/money';
-import { businessDates, decimalAmount, memberCredit, PosError, type CheckoutInput, type CheckoutResult, type MemberCredit, type MemberRecord } from '@koperasi/domain/pos/sale';
+import { businessDates, decimalAmount, memberCredit, PosError, type CheckoutInput, type CheckoutResult, type MemberCredit, type MemberRecord, type PaymentMethod } from '@koperasi/domain/pos/sale';
 import type { MemberLookupKind, PosContext, PosRepository } from '@koperasi/application/pos/checkout';
 import { prisma } from '../db/prisma.ts';
 
@@ -18,7 +18,7 @@ async function credit(db: Db, row: MemberRow, now: Date): Promise<MemberCredit> 
   return memberCredit(memberRecord(row), toMinorUnits(spent.amount.toFixed(2)), now);
 }
 
-type SavedRow = { id: number; sales_code: string; grand_total: Prisma.Decimal; paid_amount: Prisma.Decimal; change_return: Prisma.Decimal; payment_type: 'Cash' | 'Kredit'; sales_note: string | null };
+type SavedRow = { id: number; sales_code: string; grand_total: Prisma.Decimal; paid_amount: Prisma.Decimal; change_return: Prisma.Decimal; payment_type: PaymentMethod; sales_note: string | null };
 const result = (row: SavedRow): CheckoutResult => ({ saleId: row.id, salesCode: row.sales_code, grandTotalSen: toMinorUnits(row.grand_total.toFixed(2)), paidSen: toMinorUnits(row.paid_amount.toFixed(2)), changeSen: toMinorUnits(row.change_return.toFixed(2)), paymentType: row.payment_type });
 
 export class PrismaPosRepository implements PosRepository {

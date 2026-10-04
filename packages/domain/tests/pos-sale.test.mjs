@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 const sale=await import('../src/pos/sale.ts').catch(()=>null);
-test('checkout accepts only Cash/Kredit, bounded positive unique quantities and exact whole-rupiah tender',()=>{
+test('checkout accepts Cash, QRIS, Kredit, bounded positive unique quantities and exact whole-rupiah tender',()=>{
   assert.ok(sale?.parseCheckout,'checkout domain policy is implemented');
   const input={items:[{itemId:7,quantity:2}],paymentType:'Cash',paidAmount:'25000',idempotencyKey:'12345678-1234-4123-8123-123456789012'};
   assert.equal(sale.parseCheckout(input).paidSen,2500000);
-  for(const over of [{paymentType:'QRIS'},{paidAmount:'1e5'},{paidAmount:'1.5'},{paidAmount:'10000000000'},{items:[]},{items:[{itemId:7,quantity:-1}]},{items:[{itemId:7,quantity:1},{itemId:7,quantity:2}]},{paymentType:'Kredit',memberId:null}])assert.throws(()=>sale.parseCheckout({...input,...over}));
+  const qris = sale.parseCheckout({...input, paymentType:'QRIS'});
+  assert.equal(qris.paymentType, 'QRIS');
+  assert.equal(qris.paidSen, 0);
+  assert.equal(qris.memberId, null);
+  const qrisWithMember = sale.parseCheckout({...input, paymentType:'QRIS', memberId: 42});
+  assert.equal(qrisWithMember.paymentType, 'QRIS');
+  assert.equal(qrisWithMember.memberId, 42);
+  for(const over of [{paymentType:'Transfer'},{paymentType:'Debit'},{paymentType:'UNKNOWN'},{paidAmount:'1e5'},{paidAmount:'1.5'},{paidAmount:'10000000000'},{items:[]},{items:[{itemId:7,quantity:-1}]},{items:[{itemId:7,quantity:1},{itemId:7,quantity:2}]},{paymentType:'Kredit',memberId:null}])assert.throws(()=>sale.parseCheckout({...input,...over}));
 });
 test('member credit uses salary override, month boundaries in UTC+7 and active unexpired contracts',()=>{
   assert.ok(sale?.memberCredit,'member credit policy is implemented');

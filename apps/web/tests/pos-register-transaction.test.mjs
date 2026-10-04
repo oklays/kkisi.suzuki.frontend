@@ -17,4 +17,31 @@ test('close locks ownership, totals only Final owned sales, preserves quotation 
   if(status===1){assert.match(calls[3],/company_id=\? AND id_buka_kasir=\? AND sales_status='Final'/);assert.doesNotMatch(calls[3],/created_by=|id_kasir=/,'historical sessions can contain sales created by another cashier');assert.match(calls[3],/payment_type='Cash' THEN CAST\(grand_total AS DECIMAL\(18,2\)\)/);assert.match(writes[0].sql,/UPDATE db_buka_kasir/);assert.equal(writes[0].values[2],'2026-10-02 08:00:00');}
  }
 });
+test('close includes QRIS sales in summary without adding to saldoAkhir cash or saldoKredit', async () => {
+  const calls = [];
+  const tx = {
+    $queryRaw: async (s) => {
+      const sql = s.join('?');
+      calls.push(sql);
+      if (sql.includes('FROM db_company')) return [{ id: 1 }];
+      if (sql.includes('FROM db_users')) return [{ username: 'synthetic' }];
+      if (sql.includes('FROM db_buka_kasir')) return [{ id: 15, id_kasir: 1, noref: 'KRS-qris', status: 1, saldo_awal: new Prisma.Decimal('100.00'), saldo_akhir: null, saldo_kredit: new Prisma.Decimal('0.00') }];
+      if (sql.includes('FROM db_sales')) {
+        return [{ cash: new Prisma.Decimal('50.00'), qris: new Prisma.Decimal('30.00'), credit: new Prisma.Decimal('20.00'), discount: new Prisma.Decimal('0.00'), transaction_count: 3n, unsupported: 0n }];
+      }
+      throw Error(sql);
+    },
+    $executeRaw: async (s, ...values) => 1,
+  };
+  const result = await new PrismaRegisterRepository({ $transaction: (fn) => fn(tx) }).close(ctx, 15, now);
+  assert.equal(result.saldoAwal, '100.00');
+  // Physical cash drawer is only saldo_awal + cash: 100.00 + 50.00 = 150.00 (QRIS 30.00 must NOT be in cash drawer)
+  assert.equal(result.saldoAkhir, '150.00');
+  assert.equal(result.saldoKredit, '20.00');
+  assert.equal(result.saldoQris, '30.00');
+  assert.equal(result.transactionCount, 3);
+  assert.match(calls[3], /payment_type='QRIS'/);
+  assert.match(calls[3], /payment_type NOT IN \('Cash','QRIS','Kredit'\)/);
+});
+
 test('whole opening transaction retries deadlocks rather than individual statements',async()=>{const f=fake();let attempts=0;const real=f.db.$transaction;f.db.$transaction=async(fn)=>{if(++attempts<3)throw{code:'P2010',meta:{code:'1213'}};return real(fn);};await new PrismaRegisterRepository(f.db).open(ctx,{idKasir:1,saldoAwal:0},now);assert.equal(attempts,3);assert.equal(f.writes.length,2);});

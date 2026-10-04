@@ -23,14 +23,15 @@ export class PrismaRegisterRepository {
         if (register.status !== 0 && register.status !== 1) throw new PosError('REGISTER_CLOSED');
         // Legacy Pos::tutup_kasir derives change as paid - grand_total, so net Cash equals grand_total.
         // Ownership is enforced on the session above; historical session sales can have other creators.
-        const [totals] = await tx.$queryRaw<{ cash: Prisma.Decimal; credit: Prisma.Decimal; discount: Prisma.Decimal; transaction_count: bigint; unsupported: bigint }[]>`SELECT
+        const [totals] = await tx.$queryRaw<{ cash: Prisma.Decimal; qris?: Prisma.Decimal; credit: Prisma.Decimal; discount: Prisma.Decimal; transaction_count: bigint; unsupported: bigint }[]>`SELECT
           CAST(COALESCE(SUM(CASE WHEN payment_type='Cash' THEN CAST(grand_total AS DECIMAL(18,2)) ELSE 0 END),0) AS DECIMAL(18,2)) AS cash,
+          CAST(COALESCE(SUM(CASE WHEN payment_type='QRIS' THEN CAST(grand_total AS DECIMAL(18,2)) ELSE 0 END),0) AS DECIMAL(18,2)) AS qris,
           CAST(COALESCE(SUM(CASE WHEN payment_type='Kredit' THEN CAST(grand_total AS DECIMAL(18,2)) ELSE 0 END),0) AS DECIMAL(18,2)) AS credit,
           CAST(COALESCE(SUM(tot_discount_to_all_amt),0) AS DECIMAL(18,2)) AS discount,
           COUNT(*) AS transaction_count,
-          SUM(CASE WHEN COALESCE(return_bit,'0')<>'0' OR payment_type NOT IN ('Cash','Kredit') THEN 1 ELSE 0 END) AS unsupported
+          SUM(CASE WHEN COALESCE(return_bit,'0')<>'0' OR payment_type NOT IN ('Cash','QRIS','Kredit') THEN 1 ELSE 0 END) AS unsupported
           FROM db_sales WHERE company_id=${ctx.companyId} AND id_buka_kasir=${registerId} AND sales_status='Final'`;
-        const summary = { transactionCount: Number(totals.transaction_count), discountTotal: totals.discount.toFixed(2) };
+        const summary = { transactionCount: Number(totals.transaction_count), discountTotal: totals.discount.toFixed(2), saldoQris: (totals.qris ?? new Prisma.Decimal(0)).toFixed(2) };
         if (register.status === 0) return { id: register.id, noref: register.noref, saldoAwal: register.saldo_awal.toFixed(2), saldoAkhir: register.saldo_akhir?.toFixed(2) ?? '0.00', saldoKredit: register.saldo_kredit.toFixed(2), ...summary };
         if (Number(totals.unsupported ?? 0)) throw new PosError('REGISTER_RECAP_UNSUPPORTED');
         const saldoAkhir = register.saldo_awal.plus(totals.cash).toFixed(2), saldoKredit = totals.credit.toFixed(2);

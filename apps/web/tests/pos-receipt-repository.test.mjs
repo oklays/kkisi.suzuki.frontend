@@ -64,6 +64,18 @@ test('guest and non-member receipts omit member fields and skip limit lookup', a
   }
 });
 
+test('QRIS receipt maps paymentType accurately without change return', async () => {
+  const decimal = (value) => new Prisma.Decimal(value);
+  const db = { async $queryRaw() {
+    return [{ id: 43, sales_code: 'TST43', sales_date: '2026-10-02', company_name: 'Cabang 9', address: 'Jl. A', created_by: 'Kasir', customer_name: 'UMUM', payment_type: 'QRIS', return_bit: '0', subtotal: decimal('75.00'), total_discount: decimal('0.00'), grand_total: decimal('75.00'), paid_amount: decimal('75.00'), change_return: decimal('0.00'), line_id: 1, item_name: 'Snack', description: '', sales_qty: 1, price_per_unit: decimal('75.00'), discount_amt: decimal('0.00'), total_cost: decimal('75.00') }];
+  } };
+  const receipt = await new PrismaReceiptRepository(db).find(9, 43);
+  assert.equal(receipt.paymentType, 'QRIS');
+  assert.equal(receipt.grandTotalSen, 7500);
+  assert.equal(receipt.paidSen, 7500);
+  assert.equal(receipt.changeSen, 0);
+});
+
 test('unsupported historical payment or return cannot print as a regular Cash sale', async () => {
   for (const saved of [{ payment_type: 'Transfer', return_bit: '0' }, { payment_type: 'Cash', return_bit: '1' }]) {
     const db = { async $queryRaw() { return [saved]; } };

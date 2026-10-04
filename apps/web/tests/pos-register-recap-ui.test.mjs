@@ -17,3 +17,13 @@ test('Total Sales includes net cash and credit, without subtracting discount twi
   assert.match(html, /Total Penjualan<\/span><strong>Rp 125<\/strong>/);
   assert.match(html, /Diskon \/ Penyesuaian<\/dt><dd>Rp 5,25<\/dd>/);
 });
+
+test('Total Sales includes QRIS and renders Penjualan QRIS in breakdown', () => {
+  const html = renderToStaticMarkup(fixture.exports.RegisterRecap({ recap: { saldoAwal: '100.00', saldoAkhir: '175.00', saldoKredit: '50.00', saldoQris: '35.00', discountTotal: '0.00', transactionCount: 3 }, onFinish: () => {} }));
+  // cash = 175 - 100 = 75, credit = 50, qris = 35 => totalSales = 160
+  assert.match(html, /Total Sales<\/dt><dd>Rp 160<\/dd>/);
+  assert.match(html, /Total Penjualan<\/span><strong>Rp 160<\/strong>/);
+  assert.match(html, /Penjualan QRIS<\/dt><dd>Rp 35<\/dd>/);
+  assert.match(html, /Non-Tunai \(QRIS\)<\/span><strong>Rp 35<\/strong>/);
+});
+

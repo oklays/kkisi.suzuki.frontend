@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { toMinorUnits } from '@koperasi/domain/money';
-import { PosError } from '@koperasi/domain/pos/sale';
+import { PosError, isPaymentMethod, type PaymentMethod } from '@koperasi/domain/pos/sale';
 import type { Receipt } from '@koperasi/domain/pos/receipt';
 import type { ReceiptRepository } from '@koperasi/application/pos/receipt';
 import { prisma } from '../db/prisma.ts';
@@ -43,7 +43,7 @@ export class PrismaReceiptRepository implements ReceiptRepository {
       ORDER BY si.id`);
     if (!rows.length) return null;
     const first = rows[0];
-    if (!['Cash', 'Kredit'].includes(first.payment_type) || first.return_bit !== '0') throw new PosError('RECEIPT_UNSUPPORTED');
+    if (!isPaymentMethod(first.payment_type) || first.return_bit !== '0') throw new PosError('RECEIPT_UNSUPPORTED');
     const nik = first.nik_kar?.trim();
     const memberNik = nik && nik !== '0' && first.member_name ? nik : null;
     let limitSen: number | null = null, usedLimitSen: number | null = null, remainingLimitSen: number | null = null;
@@ -60,7 +60,7 @@ export class PrismaReceiptRepository implements ReceiptRepository {
     return {
       saleId: first.id, salesCode: first.sales_code, saleDate: first.sales_date,
       storeName: first.company_name, storeAddress: first.address, cashier: first.created_by,
-      customerName: memberNik ? first.member_name! : 'UMUM', memberNik, paymentType: first.payment_type === 'Kredit' ? 'Kredit' : 'Cash',
+      customerName: memberNik ? first.member_name! : 'UMUM', memberNik, paymentType: first.payment_type,
       limitSen, usedLimitSen, remainingLimitSen,
       lines: rows.filter((row) => row.line_id !== null).map((row) => ({
         name: row.item_name || row.description || 'Item', quantity: row.sales_qty!,

@@ -19,7 +19,7 @@
 .pos-recap-dialog .pos-recap-header p { margin-top: 6px; font-size: 18px; line-height: 1.5; color: #7c889d; }
 .pos-recap-close { display: grid; place-items: center; align-self: flex-start; flex-shrink: 0; width: 40px; height: 40px; margin-left: auto; padding: 0; border: 0; border-radius: 16px; background: #eef1f6; color: #344054; }
 .pos-recap-close:hover { background: #e1e7f0; }
-.pos-recap-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 17px; }
+.pos-recap-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 17px; }
 .pos-recap-card { display: flex; align-items: center; gap: 10px; min-height: 100px; padding: 14px; border: 1px solid #edf2ff; border-radius: 13px; background: #f0f5ff; }
 .pos-recap-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 46px; height: 50px; border-radius: 13px; background: #e0ebff; color: #154ac4; }
 .pos-recap-card > div { min-width: 0; }

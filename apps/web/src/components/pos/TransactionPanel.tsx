@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Banknote, LoaderCircle, Minus, Percent, Plus, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, X } from "lucide-react";
+import { Banknote, Check, LoaderCircle, Minus, Percent, Plus, QrCode, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, X } from "lucide-react";
 import type { PosMember, PosProduct, PosSession, CheckoutResult, PreviewCartLine, PreviewPayment } from "@/features/pos/types";
 import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
 import { ProductIllustration } from "./ProductCatalog";
@@ -93,6 +93,7 @@ export function PriceSummary({ cart }: { cart: PreviewCartLine[] }) {
 
 const payments = [
   { value: "Cash", label: "Cash", Icon: Banknote },
+  { value: "QRIS", label: "QRIS", Icon: QrCode },
   { value: "Kredit", label: "Kredit Anggota", Icon: UserRound },
 ] as const;
 
@@ -112,6 +113,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
   const [paidAmount, setPaidAmount] = useState("");
   const [processing, setProcessing] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [confirmQris, setConfirmQris] = useState(false);
   const [message, setMessage] = useState("");
   const [receipt, setReceipt] = useState<CheckoutResult | null>(null);
   const pending = useRef<PendingCheckout | null>(null);
@@ -172,12 +174,41 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
       <div className="pos-transaction-bottom">
         <PriceSummary cart={cart} /><PaymentMethodSelector selected={payment} onSelect={setPayment} disabled={locked} />
         {payment === "Cash" && <div className="pos-cash-payment"><label htmlFor="pos-paid">Uang bayar (Rp)</label><input id="pos-paid" inputMode="numeric" pattern="[0-9]*" value={paidDisplay} disabled={locked} onChange={(event) => { const digits = event.target.value.replace(/\D/g, ""); if (/^\d{0,10}$/.test(digits)) setPaidAmount(digits); }} /><span>Kembalian <strong>{formatRupiah(Math.max(0, paidSen - total))}</strong></span></div>}
+        {payment === "QRIS" && <div className="pos-qris-banner"><div className="pos-qris-banner-head"><QrCode size={16} /><span>Instruksi QRIS Statis</span></div><p>Pelanggan scan kode QRIS toko. Pastikan notifikasi dana masuk telah terverifikasi sebelum memproses transaksi.</p></div>}
         {payment === "Kredit" && <p className="pos-checkout-note">{member ? `Sisa setelah belanja: ${formatRupiah(member.remainingSen - total)}` : "Pilih anggota aktif terlebih dahulu."}</p>}
         {!uncertain && blockers.map((reason) => <p className="pos-checkout-note" key={reason}>{reason}</p>)}
-        <CheckoutButton processing={processing} disabled={!hydrated || processing || (!uncertain && !ready)} retry={uncertain} onClick={() => void submit()} />
+        <CheckoutButton processing={processing} disabled={!hydrated || processing || (!uncertain && !ready)} retry={uncertain} onClick={() => { if (payment === "QRIS" && !uncertain) setConfirmQris(true); else void submit(); }} />
         {message && <p className="pos-inline-error" role="alert">{message}</p>}
-        {receipt && <div className="pos-receipt" role="status"><strong>Transaksi tersimpan · {receipt.salesCode}</strong><span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span><span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span><a href={`/pos/receipt/${receipt.saleId}`} target="_blank" rel="noopener noreferrer">Lihat / Cetak struk</a></div>}
+        {receipt && <div className="pos-receipt" role="status"><strong>Transaksi tersimpan · {receipt.salesCode}</strong><span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span>{receipt.paymentType === "Cash" && <span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span>}{receipt.paymentType === "QRIS" && <span>Status: Lunas (QRIS Non-Tunai)</span>}<a href={`/pos/receipt/${receipt.saleId}`} target="_blank" rel="noopener noreferrer">Lihat / Cetak struk</a></div>}
       </div>
+      {confirmQris && (
+        <div className="pos-qris-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="qris-confirm-title">
+          <div className="pos-qris-dialog">
+            <header className="pos-qris-dialog-header">
+              <span className="pos-qris-dialog-icon"><QrCode size={28} /></span>
+              <div>
+                <h3 id="qris-confirm-title">Konfirmasi Pembayaran QRIS</h3>
+                <p>Pastikan pembayaran non-tunai telah diverifikasi.</p>
+              </div>
+            </header>
+            <div>
+              <div className="pos-qris-dialog-total">
+                <span>Total Tagihan</span>
+                <strong>{formatRupiah(total)}</strong>
+              </div>
+              <ul className="pos-qris-checklist">
+                <li><Check size={16} /> Nama merchant pada bukti sesuai toko</li>
+                <li><Check size={16} /> Nominal sesuai total tagihan ({formatRupiah(total)})</li>
+                <li><Check size={16} /> Notifikasi dana masuk berhasil di perangkat toko</li>
+              </ul>
+            </div>
+            <footer className="pos-qris-dialog-actions">
+              <button type="button" className="pos-qris-dialog-cancel" onClick={() => setConfirmQris(false)} disabled={processing}>Kembali</button>
+              <button type="button" className="pos-qris-dialog-confirm" onClick={() => { setConfirmQris(false); void submit(); }} disabled={processing} autoFocus>Sudah Terverifikasi — Proses</button>
+            </footer>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

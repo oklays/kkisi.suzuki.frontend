@@ -1,4 +1,4 @@
-import { ChartColumnIncreasing, Check, Eye, FileText, Info, Printer, Users, Wallet, X } from "lucide-react";
+import { ChartColumnIncreasing, Check, Eye, FileText, Info, Printer, QrCode, Users, Wallet, X } from "lucide-react";
 import { formatRupiah } from "./preview";
 import "./register-recap.css";
 
@@ -6,6 +6,7 @@ export type RegisterRecapData = {
   saldoAwal: string;
   saldoAkhir: string;
   saldoKredit: string;
+  saldoQris?: string;
   transactionCount: number;
   discountTotal: string;
 };
@@ -15,16 +16,19 @@ export function RegisterRecap({ recap, onFinish }: { recap: RegisterRecapData; o
   const closing = Math.round(Number(recap.saldoAkhir) * 100);
   const cash = closing - opening;
   const credit = Math.round(Number(recap.saldoKredit) * 100);
-  // Cash and credit already sum grand_total (after discount); never subtract discount twice.
-  const totalSales = cash + credit;
+  const qris = Math.round(Number(recap.saldoQris ?? "0") * 100);
+  // Cash, credit, and QRIS already sum grand_total (after discount); never subtract discount twice.
+  const totalSales = cash + credit + qris;
   const cards = [
     { label: "Saldo Awal", value: formatRupiah(opening), icon: Wallet, tone: "blue" },
     { label: "Total Penjualan", value: formatRupiah(totalSales), icon: ChartColumnIncreasing, tone: "green" },
+    { label: "Non-Tunai (QRIS)", value: formatRupiah(qris), icon: QrCode, tone: "purple" },
     { label: "Kredit Anggota", value: formatRupiah(credit), icon: Users, tone: "orange" },
     { label: "Jumlah Transaksi", value: `${recap.transactionCount} transaksi`, icon: FileText, tone: "purple" },
   ];
   const rows = [
     ["Penjualan Tunai", formatRupiah(cash)],
+    ["Penjualan QRIS", formatRupiah(qris)],
     ["Penjualan Kredit", formatRupiah(credit)],
     ["Diskon / Penyesuaian", formatRupiah(Math.round(Number(recap.discountTotal) * 100))],
     ["Total Sales", formatRupiah(totalSales)],

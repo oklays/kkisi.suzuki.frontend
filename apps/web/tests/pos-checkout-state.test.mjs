@@ -16,6 +16,37 @@ test('Cash tender only enables checkout with a configured writer and one current
   assert.match(reasons({ ...input, payment: 'Kredit' }).join(' '), /anggota aktif/);
   assert.match(reasons({ ...input, payment: 'Kredit', remainingSen: 100 }).join(' '), /limit/);
   assert.deepEqual(reasons({ ...input, payment: 'Kredit', remainingSen: input.totalSen }), []);
+  // QRIS does not require paid amount or member credit
+  assert.deepEqual(reasons({ ...input, payment: 'QRIS', paidSen: 0, remainingSen: null }), []);
+  assert.match(reasons({ ...input, payment: 'QRIS', paidSen: 0, itemCount: 0, totalSen: 0 }).join(' '), /Tambahkan produk/);
+  assert.match(reasons({ ...input, payment: 'QRIS', paidSen: 0, session: { ...session, register: { open: null, multiple: false } } }).join(' '), /Buka sesi kasir/);
+});
+
+test('domain payment behavior accurately reflects Static QRIS rules', async () => {
+  const { PAYMENT_METHODS, PAYMENT_BEHAVIORS, isQrisPayment } = await import('@koperasi/domain/pos/payment-method');
+  assert.deepEqual(PAYMENT_METHODS, ['Cash', 'QRIS', 'Kredit']);
+  assert.equal(isQrisPayment('QRIS'), true);
+  assert.equal(isQrisPayment('Cash'), false);
+  assert.equal(isQrisPayment('Kredit'), false);
+
+  assert.deepEqual(PAYMENT_BEHAVIORS.QRIS, {
+    requiresTenderAmount: false,
+    affectsCashDrawer: false,
+    requiresMember: false,
+    isReceivable: false,
+  });
+  assert.deepEqual(PAYMENT_BEHAVIORS.Cash, {
+    requiresTenderAmount: true,
+    affectsCashDrawer: true,
+    requiresMember: false,
+    isReceivable: false,
+  });
+  assert.deepEqual(PAYMENT_BEHAVIORS.Kredit, {
+    requiresTenderAmount: false,
+    affectsCashDrawer: false,
+    requiresMember: true,
+    isReceivable: true,
+  });
 });
 
 test('barcode scans from a completed or cleared cart stay invalid after checkout unlocks', () => {

@@ -179,8 +179,30 @@
   .pos-remove { grid-column:4; grid-row:1; }
   .pos-stock-warning { grid-column:1 / -1; }
 }
-.pos-payment > div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.pos-payment > div { grid-template-columns:repeat(3,minmax(0,1fr)); }
 .pos-payment button:last-child { grid-column:auto; flex-direction:column; min-height:52px; }
+.pos-qris-banner { margin:10px 0; padding:10px 12px; background:#f5f1ff; border:1px solid #e8e1ff; border-radius:9px; color:#4b46df; font-size:11px; }
+.pos-qris-banner-head { display:flex; align-items:center; gap:6px; font-weight:700; margin-bottom:4px; }
+.pos-qris-banner p { margin:0; color:#555299; line-height:1.4; font-size:11px; }
+.pos-qris-dialog-overlay { position:fixed; inset:0; z-index:1000; background:rgba(16,24,40,0.6); display:grid; place-items:center; padding:16px; backdrop-filter:blur(2px); }
+.pos-qris-dialog { width:440px; max-width:calc(100vw - 32px); background:white; border-radius:16px; padding:24px; box-shadow:0 20px 60px rgba(16,24,40,0.25); border:1px solid #e2e8f0; animation:pos-dialog-appear 0.15s ease-out; }
+@keyframes pos-dialog-appear { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }
+.pos-qris-dialog-header { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+.pos-qris-dialog-icon { display:grid; place-items:center; width:48px; height:48px; border-radius:12px; background:#f5f1ff; color:#4b46df; flex-shrink:0; }
+.pos-qris-dialog-header h3 { margin:0; font-size:16px; font-weight:700; color:#172033; }
+.pos-qris-dialog-header p { margin:3px 0 0; font-size:12px; color:#64748b; }
+.pos-qris-dialog-total { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:14px; }
+.pos-qris-dialog-total span { font-size:12px; font-weight:600; color:#64748b; }
+.pos-qris-dialog-total strong { font-size:18px; color:#1546b5; font-weight:800; }
+.pos-qris-checklist { list-style:none; padding:0; margin:0 0 20px; display:flex; flex-direction:column; gap:8px; }
+.pos-qris-checklist li { display:flex; align-items:center; gap:8px; font-size:12px; color:#334155; line-height:1.4; }
+.pos-qris-checklist li svg { color:#16a34a; flex-shrink:0; }
+.pos-qris-dialog-actions { display:flex; gap:10px; }
+.pos-qris-dialog-actions button { flex:1; min-height:42px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.pos-qris-dialog-cancel { border:1px solid #d9dde3; background:white; color:#475467; }
+.pos-qris-dialog-cancel:hover { background:#f8fafc; }
+.pos-qris-dialog-confirm { border:0; background:#4b46df; color:white; }
+.pos-qris-dialog-confirm:hover { background:#3b36cc; }
 .pos-transaction-scroll { flex:0 1 auto; }
 .pos-transaction-bottom { flex:1; overflow-y:auto; }
 @media (max-width:900px) {

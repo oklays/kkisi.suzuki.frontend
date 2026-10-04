@@ -25,6 +25,6 @@ export type PosSession = {
 };
 
 export type PreviewCartLine = DomainPreviewCartLine<PosProduct>;
-export type PreviewPayment = "Cash" | "Kredit";
+export type { PaymentMethod as PreviewPayment } from "@koperasi/domain/pos/sale";
 export type CatalogStatus = "ready" | "loading" | "error";
 export type { MemberCredit as PosMember, CheckoutResult } from "@koperasi/domain/pos/sale";

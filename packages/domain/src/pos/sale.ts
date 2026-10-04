@@ -1,4 +1,6 @@
 import { toMinorUnits } from '../money/money.ts';
+import { isPaymentMethod, type PaymentMethod } from './payment-method.ts';
+export { PAYMENT_METHODS, type PaymentMethod, isPaymentMethod, isCashPayment, isQrisPayment, isCreditPayment } from './payment-method.ts';
 
 export class PosError extends Error {
   readonly code: string;
@@ -7,7 +9,7 @@ export class PosError extends Error {
 
 export type CheckoutInput = {
   items: { itemId: number; quantity: number }[];
-  paymentType: 'Cash' | 'Kredit';
+  paymentType: PaymentMethod;
   paidSen: number;
   memberId: number | null;
   idempotencyKey: string;
@@ -17,7 +19,7 @@ export type MemberRecord = {
   exitOn: string | null; limitSen: number; gajiMinusSen: number;
 };
 export type MemberCredit = { id: number; nik: string; name: string; limitSen: number; spentSen: number; remainingSen: number };
-export type CheckoutResult = { saleId: number; salesCode: string; grandTotalSen: number; paidSen: number; changeSen: number; paymentType: 'Cash' | 'Kredit' };
+export type CheckoutResult = { saleId: number; salesCode: string; grandTotalSen: number; paidSen: number; changeSen: number; paymentType: PaymentMethod };
 
 export function businessDates(now: Date) {
   const day = new Date(now.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
@@ -47,7 +49,7 @@ export function parseCheckout(value: unknown): CheckoutInput {
     return { itemId, quantity };
   }).sort((a, b) => a.itemId - b.itemId);
   if (new Set(items.map((line) => line.itemId)).size !== items.length) throw new PosError('INVALID_INPUT');
-  if (body.paymentType !== 'Cash' && body.paymentType !== 'Kredit') throw new PosError('INVALID_INPUT');
+  if (!isPaymentMethod(body.paymentType)) throw new PosError('INVALID_INPUT');
   const memberId = body.memberId == null ? null : body.memberId;
   if (memberId !== null && !positiveId(memberId)) throw new PosError('INVALID_INPUT');
   if (body.paymentType === 'Kredit' && memberId === null) throw new PosError('MEMBER_REQUIRED');
