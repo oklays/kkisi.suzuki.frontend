@@ -30,6 +30,7 @@ registerHooks({
 const { PosScreen } = await import('../src/components/pos/PosScreen.tsx');
 const { ProductCard } = await import('../src/components/pos/ProductCatalog.tsx');
 const { TransactionPanel, QuantityControl } = await import('../src/components/pos/TransactionPanel.tsx');
+const { ReceiptPrintButton } = await import('../src/components/pos/ReceiptPrintButton.tsx');
 const center = await import('../src/components/pos/CenterCart.tsx').catch(() => null);
 const product = { id: '1', companyId: '1', name: 'Full product name with a long packaging description', code: 'ITEM-1', barcode: '8991', categoryName: 'Makanan', priceSen: 1000000, discountSen: 50000, stock: 10 };
 const cart = [{ product, quantity: 2 }];
@@ -82,4 +83,10 @@ test('locked central cart disables removal and its shared clear confirmation', (
   const clear = render(center.ClearCartButton, { disabled: true, onClear: noop });
   assert.match(clear, /class="pos-clear" disabled=""/);
   assert.match(clear, /class="pos-confirm-clear" disabled=""/);
+});
+
+test('receipt print button renders manual print control', () => {
+  const html = render(ReceiptPrintButton, { autoPrint: false });
+  assert.match(html, /class="receipt-print-button"/);
+  assert.match(html, /Cetak struk/);
 });

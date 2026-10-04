@@ -9,11 +9,19 @@ import './receipt.css';
 export const dynamic = 'force-dynamic';
 const rupiah = (sen: number) => `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: sen % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(sen / 100)}`;
 
-export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReceiptPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ autoprint?: string; print?: string }>;
+}) {
   const auth = await requirePagePermission('sales_add');
   if (auth.kind === 'forbidden') return <main className="receipt-message">Akses struk tidak diizinkan.</main>;
   if (auth.kind === 'unavailable') return <main className="receipt-message">Struk sementara tidak tersedia.</main>;
   const { id } = await params;
+  const sp = searchParams ? await searchParams : undefined;
+  const autoPrint = sp?.autoprint === '1' || sp?.autoprint === 'true' || sp?.print === '1';
   let receipt;
   try { receipt = await readReceipt(new PrismaReceiptRepository(), auth.ctx, id); }
   catch (error) {
@@ -22,7 +30,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   }
   const date = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeZone: 'Asia/Jakarta' }).format(new Date(`${receipt.saleDate}T00:00:00+07:00`));
   return <main className="receipt-screen">
-    <nav className="receipt-actions"><a href="/pos">← Kembali ke Kasir</a><ReceiptPrintButton /></nav>
+    <nav className="receipt-actions"><a href="/pos">← Kembali ke Kasir</a><ReceiptPrintButton autoPrint={autoPrint} /></nav>
     <article className="receipt-paper" aria-label={`Struk ${receipt.salesCode}`}>
       <header><h1>{receipt.storeName}</h1><p>{receipt.storeAddress}</p><p>Telp: +62 822-2333-1148</p></header>
       <dl className="receipt-meta"><div><dt>No. Struk</dt><dd>{receipt.salesCode}</dd></div><div><dt>Tanggal</dt><dd>{date}</dd></div><div><dt>Kasir</dt><dd>{receipt.cashier}</dd></div>{receipt.memberNik && <><div><dt>Pelanggan</dt><dd>{receipt.customerName}</dd></div><div><dt>Nik</dt><dd>{receipt.memberNik}</dd></div></>}<div><dt>Metode</dt><dd>{receipt.paymentType}</dd></div>{receipt.memberNik && <><div><dt>Limit</dt><dd>{rupiah(receipt.limitSen!)}</dd></div><div><dt>Limit Terpakai</dt><dd>{rupiah(receipt.usedLimitSen!)}</dd></div><div><dt>Sisa Limit</dt><dd>{rupiah(receipt.remainingLimitSen!)}</dd></div></>}</dl>

@@ -99,9 +99,18 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
     if (!identifier || checkoutLocked.current) return;
     const scanGeneration = scanGuard.capture();
     try {
-      const [product] = await fetchProducts(new URLSearchParams({ barcode: identifier }));
+      let [product] = await fetchProducts(new URLSearchParams({ barcode: identifier }));
+      if (!product) {
+        const results = await fetchProducts(new URLSearchParams({ q: identifier }));
+        const exact = results.find(
+          (p) =>
+            p.barcode.toLowerCase() === identifier.toLowerCase() ||
+            p.code.toLowerCase() === identifier.toLowerCase()
+        );
+        product = exact ?? (results.length === 1 ? results[0] : undefined);
+      }
       if (checkoutLocked.current || !scanGuard.isCurrent(scanGeneration)) return;
-      if (!product) { setMessage("Barcode tidak ditemukan. Pilih produk dari hasil pencarian."); return; }
+      if (!product) { setMessage("Produk tidak ditemukan. Pilih produk dari hasil pencarian."); return; }
       if (!hasPrice(product)) { setMessage(`Harga ${product.name} belum diatur.`); return; }
       if (product.stock <= 0 || (quantities[product.id] ?? 0) >= product.stock) { setMessage(`Stok ${product.name} tidak mencukupi.`); return; }
       adjust(product, 1); setQuery(""); setTab("cart");
@@ -134,7 +143,7 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
             </div>
             <div className="pos-tabpanel" id="pos-product-panel" role="tabpanel" aria-labelledby="pos-product-tab" tabIndex={0} hidden={tab !== "product"}>
               <div className="pos-catalog-meta"><span>{status === "ready" ? `${products.length} produk${products.length >= CATALOG_PAGE_SIZE ? " pertama · persempit pencarian" : ""}` : ""}</span><span>{query.trim() ? "Hasil pencarian termasuk stok habis" : "Daftar hanya menampilkan produk berstok"}</span></div>
-              <div className="pos-catalog-scroll" aria-busy={fetching}><ProductGrid products={products} quantities={quantities} locked={locked} onAdd={(product) => adjust(product, 1)} status={status} onReset={() => setQuery("")} onRetry={() => setRetry((count) => count + 1)} /></div>
+              <div className="pos-catalog-scroll" aria-busy={fetching}><ProductGrid products={products} quantities={quantities} locked={locked} onAdd={(product) => { adjust(product, 1); setTab("cart"); }} status={status} onReset={() => setQuery("")} onRetry={() => setRetry((count) => count + 1)} /></div>
             </div>
             <div className="pos-tabpanel" id="pos-cart-panel" role="tabpanel" aria-labelledby="pos-cart-tab" tabIndex={0} hidden={tab !== "cart"}>
               <CenterCart cart={cart} locked={locked} onChange={adjust} onRemove={(id) => { if (!checkoutLocked.current) setCart((current) => current.filter((line) => line.product.id !== id)); }} />

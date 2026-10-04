@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Banknote, Check, LoaderCircle, Minus, Percent, Plus, QrCode, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, X } from "lucide-react";
+import { Banknote, Check, LoaderCircle, Minus, Percent, Plus, Printer, QrCode, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, X } from "lucide-react";
 import type { PosMember, PosProduct, PosSession, CheckoutResult, PreviewCartLine, PreviewPayment } from "@/features/pos/types";
 import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
 import { ProductIllustration } from "./ProductCatalog";
@@ -20,6 +20,28 @@ const errors: Record<string, string> = {
 };
 const errorText = (code: string) => errors[code] ?? "Permintaan belum dapat diproses. Coba lagi.";
 const rupiahInput = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
+
+function printReceipt(saleId: number | string) {
+  if (typeof window === "undefined") return;
+  const frameId = "pos-receipt-print-frame";
+  let frame = document.getElementById(frameId) as HTMLIFrameElement | null;
+  if (!frame) {
+    frame = document.createElement("iframe");
+    frame.id = frameId;
+    frame.setAttribute("aria-hidden", "true");
+    frame.setAttribute("tabindex", "-1");
+    frame.style.position = "fixed";
+    frame.style.top = "-9999px";
+    frame.style.left = "-9999px";
+    frame.style.width = "75mm";
+    frame.style.height = "100px";
+    frame.style.border = "none";
+    frame.style.opacity = "0";
+    frame.style.pointerEvents = "none";
+    document.body.appendChild(frame);
+  }
+  frame.src = `/pos/receipt/${saleId}?autoprint=1&t=${Date.now()}`;
+}
 
 export function MemberSearch({ member, onMember, disabled }: { member: PosMember | null; onMember: (value: PosMember | null) => void; disabled: boolean }) {
   const [query, setQuery] = useState("");
@@ -160,6 +182,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
       }
       localStorage.removeItem(pendingKey); localStorage.removeItem(storageKey); pending.current = null;
       setUncertain(false); onLockChange(false); onClear(); setMember(null); setPaidAmount(""); setPayment("Cash"); setReceipt(data.receipt);
+      printReceipt(data.receipt.saleId);
     } catch {
       setUncertain(true); onLockChange(true); setMessage("Hasil pembayaran belum terkonfirmasi. Ulangi pemeriksaan dengan kunci yang sama; jangan membuat pembayaran baru.");
     } finally { sending.current = false; setProcessing(false); }
@@ -179,7 +202,23 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
         {!uncertain && blockers.map((reason) => <p className="pos-checkout-note" key={reason}>{reason}</p>)}
         <CheckoutButton processing={processing} disabled={!hydrated || processing || (!uncertain && !ready)} retry={uncertain} onClick={() => { if (payment === "QRIS" && !uncertain) setConfirmQris(true); else void submit(); }} />
         {message && <p className="pos-inline-error" role="alert">{message}</p>}
-        {receipt && <div className="pos-receipt" role="status"><strong>Transaksi tersimpan · {receipt.salesCode}</strong><span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span>{receipt.paymentType === "Cash" && <span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span>}{receipt.paymentType === "QRIS" && <span>Status: Lunas (QRIS Non-Tunai)</span>}<a href={`/pos/receipt/${receipt.saleId}`} target="_blank" rel="noopener noreferrer">Lihat / Cetak struk</a></div>}
+        {receipt && (
+          <div className="pos-receipt" role="status">
+            <strong>Transaksi tersimpan · {receipt.salesCode}</strong>
+            <span>Total {formatRupiah(receipt.grandTotalSen)} · {receipt.paymentType}</span>
+            {receipt.paymentType === "Cash" && <span>Bayar {formatRupiah(receipt.paidSen)} · Kembalian {formatRupiah(receipt.changeSen)}</span>}
+            {receipt.paymentType === "QRIS" && <span>Status: Lunas (QRIS Non-Tunai)</span>}
+            <div className="pos-receipt-actions">
+              <button type="button" className="pos-reprint-btn" onClick={() => printReceipt(receipt.saleId)}>
+                <Printer size={13} aria-hidden="true" />
+                <span>Cetak Ulang Struk</span>
+              </button>
+              <a href={`/pos/receipt/${receipt.saleId}`} target="_blank" rel="noopener noreferrer">
+                Lihat / Cetak struk
+              </a>
+            </div>
+          </div>
+        )}
       </div>
       {confirmQris && (
         <div className="pos-qris-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="qris-confirm-title">
