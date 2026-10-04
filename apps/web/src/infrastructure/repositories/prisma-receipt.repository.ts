@@ -44,7 +44,8 @@ export class PrismaReceiptRepository implements ReceiptRepository {
     if (!rows.length) return null;
     const first = rows[0];
     if (!['Cash', 'Kredit'].includes(first.payment_type) || first.return_bit !== '0') throw new PosError('RECEIPT_UNSUPPORTED');
-    const memberNik = first.nik_kar?.trim() && first.member_name ? first.nik_kar : null;
+    const nik = first.nik_kar?.trim();
+    const memberNik = nik && nik !== '0' && first.member_name ? nik : null;
     let limitSen: number | null = null, usedLimitSen: number | null = null, remainingLimitSen: number | null = null;
     if (memberNik) {
       const monthStart = `${first.sales_date.slice(0, 7)}-01`;

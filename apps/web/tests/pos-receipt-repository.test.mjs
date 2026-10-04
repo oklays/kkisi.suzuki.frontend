@@ -46,14 +46,22 @@ test('member receipt includes saved Kredit sale in monthly usage; cash and guest
   }
 });
 
-test('guest receipt skips limit lookup', async () => {
-  let calls = 0;
+test('guest and non-member receipts omit member fields and skip limit lookup', async () => {
   const decimal = (n) => new Prisma.Decimal(n);
-  const db = { async $queryRaw() { calls++; return [{ id: 1, sales_code: 'INV1', sales_date: '2026-10-02', return_bit: '0', company_name: 'Toko', address: '', created_by: 'Kasir', customer_name: 'UMUM', nik_kar: '', member_name: null, payment_type: 'Cash', subtotal: decimal('10'), total_discount: decimal('0'), grand_total: decimal('10'), paid_amount: decimal('10'), change_return: decimal('0'), line_id: null }]; } };
-  const receipt = await new PrismaReceiptRepository(db).find(9, 1);
-  assert.equal(calls, 1);
-  assert.equal(receipt.memberNik, null);
-  assert.equal(receipt.limitSen, null);
+  for (const [nik, memberName] of [[null, null], ['', null], ['   ', null], ['0', null], ['0', 'UMUM'], [' 0 ', 'UMUM'], ['123', null]]) {
+    let calls = 0;
+    const db = { async $queryRaw() {
+      calls++;
+      assert.equal(calls, 1, `no credit-limit query for guest NIK ${JSON.stringify(nik)}`);
+      return [{ id: 1, sales_code: 'INV1', sales_date: '2026-10-02', return_bit: '0', company_name: 'Toko', address: '', created_by: 'Kasir', customer_name: 'UMUM', nik_kar: nik, member_name: memberName, payment_type: 'Cash', subtotal: decimal('10'), total_discount: decimal('0'), grand_total: decimal('10'), paid_amount: decimal('10'), change_return: decimal('0'), line_id: null }];
+    } };
+    const receipt = await new PrismaReceiptRepository(db).find(9, 1);
+    assert.equal(receipt.customerName, 'UMUM');
+    assert.equal(receipt.memberNik, null);
+    assert.equal(receipt.limitSen, null);
+    assert.equal(receipt.usedLimitSen, null);
+    assert.equal(receipt.remainingLimitSen, null);
+  }
 });
 
 test('unsupported historical payment or return cannot print as a regular Cash sale', async () => {

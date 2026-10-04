@@ -66,8 +66,12 @@ export function CartItem({ line, onChange, onRemove, disabled = false }: { line:
   const { product, quantity } = line;
   return (
     <li className="pos-cart-item">
-      <div className="pos-cart-line"><div className="pos-cart-image"><ProductIllustration product={product} /></div><div className="pos-cart-name"><strong>{product.name}</strong><small>{product.code}</small><small>{formatRupiah(netPriceSen(product))} / pcs{product.discountSen > 0 && <span className="pos-cart-discount"> · Diskon produk {formatRupiah(product.discountSen)} / pcs</span>}</small></div><button disabled={disabled} className="pos-icon-button pos-remove" aria-label={`Hapus ${product.name}`} onClick={() => onRemove(product.id)}><Trash2 size={16} /></button></div>
-      <div className="pos-cart-line pos-cart-adjust"><QuantityControl line={line} onChange={onChange} disabled={disabled} /><strong>{formatRupiah(netPriceSen(product) * quantity)}</strong></div>
+      <div className="pos-cart-image"><ProductIllustration product={product} /></div>
+      <div className="pos-cart-name"><strong>{product.name}</strong><small>{product.code}</small></div>
+      <div className="pos-cart-price"><span>{formatRupiah(netPriceSen(product))} / pcs</span>{product.discountSen > 0 && <small className="pos-cart-discount">Diskon produk {formatRupiah(product.discountSen)} / pcs</small>}</div>
+      <QuantityControl line={line} onChange={onChange} disabled={disabled} />
+      <strong className="pos-cart-subtotal">{formatRupiah(netPriceSen(product) * quantity)}</strong>
+      <button disabled={disabled} className="pos-icon-button pos-remove" aria-label={`Hapus ${product.name}`} onClick={() => onRemove(product.id)}><Trash2 size={16} /></button>
       {quantity >= product.stock && <p className="pos-stock-warning"><TriangleAlert size={13} />Stok tidak mencukupi untuk menambah jumlah.</p>}
     </li>
   );
