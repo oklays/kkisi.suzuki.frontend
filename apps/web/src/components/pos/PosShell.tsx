@@ -4,7 +4,7 @@ import { RegisterControls } from "./RegisterControls";
 import { SessionControls } from "./SessionControls";
 import { Barcode, Boxes, ChartColumn, ChevronDown, LayoutDashboard, ShoppingBag, Store, Warehouse } from "lucide-react";
 
-export function PosShell({ children, branchName, session, active = "pos" }: { children: React.ReactNode; branchName: string; session: PosSession; active?: "pos" | "inventory" }) {
+export function PosShell({ children, branchName, session, active = "pos" }: { children: React.ReactNode; branchName: string; session: PosSession; active?: "pos" | "inventory" | "products" }) {
   return (
     <div className="pos-shell">
       <a className="pos-skip" href="#pos-workspace">Langsung ke area kerja</a>
@@ -18,7 +18,7 @@ export function PosShell({ children, branchName, session, active = "pos" }: { ch
           <p className="pos-nav-label">Menu Utama</p>
           <button disabled><LayoutDashboard size={18} />Dashboard Supervisor</button>
           <Link href="/pos" aria-current={active === "pos" ? "page" : undefined}><ShoppingBag size={18} />POS / Kasir</Link>
-          <button disabled><Boxes size={18} />Produk &amp; Inventory</button>
+          {session.canProducts ? <Link href="/products" aria-current={active === "products" ? "page" : undefined}><Boxes size={18} />Produk &amp; Inventory</Link> : <button disabled title="Akun ini belum memiliki izin melihat produk"><Boxes size={18} />Produk &amp; Inventory</button>}
           {session.canInventory ? <Link href="/inventory" aria-current={active === "inventory" ? "page" : undefined}><Warehouse size={18} />Warehouse &amp; Stock Opname</Link> : <button disabled title="Akun ini belum memiliki izin inventory"><Warehouse size={18} />Warehouse &amp; Stock Opname</button>}
           <button disabled><ChartColumn size={18} />Laporan Keuangan</button>
         </nav>

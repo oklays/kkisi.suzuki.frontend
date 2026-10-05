@@ -21,6 +21,7 @@ export type PosSession = {
   ownedRegisters?: {id:number;noref:string}[];
   userId: number;
   canInventory?: boolean;
+  canProducts?: boolean;
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };
 };
 

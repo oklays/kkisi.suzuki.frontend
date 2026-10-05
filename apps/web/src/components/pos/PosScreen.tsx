@@ -99,12 +99,12 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
     if (!identifier || checkoutLocked.current) return;
     const scanGeneration = scanGuard.capture();
     try {
-      let [product] = await fetchProducts(new URLSearchParams({ barcode: identifier }));
+      let product: PosProduct | undefined = (await fetchProducts(new URLSearchParams({ barcode: identifier })))[0];
       if (!product) {
         const results = await fetchProducts(new URLSearchParams({ q: identifier }));
         const exact = results.find(
           (p) =>
-            p.barcode.toLowerCase() === identifier.toLowerCase() ||
+            p.barcode?.toLowerCase() === identifier.toLowerCase() ||
             p.code.toLowerCase() === identifier.toLowerCase()
         );
         product = exact ?? (results.length === 1 ? results[0] : undefined);
