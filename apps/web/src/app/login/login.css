@@ -51,7 +51,10 @@
 .login-card button:disabled { opacity: .65; cursor: progress; }
 
 @media (max-width: 1023px) {
-  .login-shell { grid-template-columns: 1fr; }
+  .login-shell {
+    grid-template-columns: 1fr;
+    background: #d7ebff url("/illustrations/suzuki-background-mobile.png") center / cover no-repeat;
+  }
   .login-cover { display: none; }
   .login-panel { padding: 32px 16px; }
 }
