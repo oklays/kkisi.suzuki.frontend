@@ -30,3 +30,15 @@ test('receipt API uses the same 404 for absent and other-branch sales', async ()
   assert.equal(response.status, 404);
   assert.deepEqual(await bodyOf(response), { error: 'NOT_FOUND' });
 });
+
+test('sales_view can reprint a receipt, and checkout mode cannot expose credit aggregates to a viewer', async () => {
+  const w = makeWorld(); w.data.permissions = new Set(['4:sales_view']); w.addUser({ id: 4, username: 'history-viewer' });
+  const login = await handleLogin(w.services, makeRequest('/api/auth/login', { method: 'POST', body: { username: 'history-viewer', password: 'Pw-Synthetic-1' } }));
+  const modes = [];
+  const repo = { async find(companyId, id, mode) { modes.push([companyId, id, mode]); return { saleId: id, mode }; } };
+  const response = await handleReceipt(w.services,
+    makeRequest('/api/pos/receipts/42?mode=checkout&autoprint=1', { cookie: cookieOf(login) }), '42', () => repo);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await bodyOf(response)).receipt, { saleId: 42, mode: 'reprint' });
+  assert.deepEqual(modes, [[1, 42, 'reprint']]);
+});

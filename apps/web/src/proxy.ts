@@ -14,4 +14,4 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(url);
 }
 
-export const config = { matcher: ["/pos/:path*", "/api/pos/:path*", "/inventory/:path*", "/api/inventory/:path*"] };
+export const config = { matcher: ["/pos/:path*", "/api/pos/:path*", "/inventory/:path*", "/api/inventory/:path*", "/sales/:path*", "/api/sales/:path*"] };

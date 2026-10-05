@@ -16,3 +16,10 @@ test('receipt rejects unsafe IDs before reading and keeps the session company', 
 test('missing or other-branch receipt is indistinguishable', async () => {
   await assert.rejects(readReceipt({ find: async () => null }, { companyId: 7 }, '42'), { code: 'NOT_FOUND' });
 });
+
+test('receipt read carries a trusted explicit mode into its repository', async () => {
+  const modes = [];
+  const repo = { async find(_companyId, id, mode) { modes.push(mode); return { saleId: id, mode }; } };
+  assert.deepEqual(await readReceipt(repo, { companyId: 7 }, '42', 'reprint'), { saleId: 42, mode: 'reprint' });
+  assert.deepEqual(modes, ['reprint']);
+});

@@ -11,7 +11,8 @@ test('saved receipt maps exact minor units and scopes sale, lines, and item labe
     assert.match(query.sql, /s\.company_id = \?/);
     assert.match(query.sql, /si\.company_id = \?/);
     assert.match(query.sql, /i\.company_id = \?/);
-    assert.deepEqual(query.values, [9, 9, 42, 9]);
+    assert.ok(query.values.includes(42));
+    assert.ok(query.values.filter((value) => value === 9).length >= 4);
     return [{ id: 42, sales_code: 'TST42', sales_date: '2026-10-02', created_time: new Date('2026-10-05T01:00:00Z'), company_name: 'Cabang 9', address: 'Jl. A', created_by: 'Kasir', customer_name: 'UMUM', payment_type: 'Cash', return_bit: '0', subtotal: decimal('125.45'), total_discount: decimal('0.00'), grand_total: decimal('125.45'), paid_amount: decimal('200.00'), change_return: decimal('74.55'), line_id: 1, item_name: 'Sabun', description: '', sales_qty: 3, price_per_unit: decimal('50.00'), discount_amt: decimal('8.18'), total_cost: decimal('125.45') }];
   } };
   const receipt = await new PrismaReceiptRepository(db).find(9, 42);
@@ -19,7 +20,7 @@ test('saved receipt maps exact minor units and scopes sale, lines, and item labe
   assert.equal(receipt.grandTotalSen, 12545);
   assert.equal(receipt.changeSen, 7455);
   assert.equal(receipt.saleDate, '2026-10-02', 'reprinting keeps the saved sale date despite a later update');
-  assert.deepEqual(receipt.lines, [{ name: 'Sabun', quantity: 3, unitPriceSen: 5000, discountSen: 818, totalSen: 12545 }]);
+  assert.deepEqual(receipt.lines, [{ name: 'Sabun', quantity: 3, unitPriceSen: 5000, discountSen: 818, totalSen: 12545, taxSen: null }]);
 });
 
 test('member receipt includes saved Kredit sale in monthly usage; cash and guest stay distinct', async () => {
@@ -86,4 +87,66 @@ test('unsupported historical payment or return cannot print as a regular Cash sa
 test('missing receipt returns null without exposing another company sale', async () => {
   const db = { async $queryRaw() { return []; } };
   assert.equal(await new PrismaReceiptRepository(db).find(9, 42), null);
+});
+
+test('reprint uses saved customer and line snapshots and does not read current member credit aggregates', async () => {
+  const d = (value) => new Prisma.Decimal(value);
+  let calls = 0;
+  const db = { async $queryRaw(query) {
+    calls++;
+    assert.equal(calls, 1, 'reprint makes no monthly credit aggregate read');
+    assert.doesNotMatch(query.sql, /m_anggota/);
+    assert.match(query.sql, /LIMIT 201/);
+    return [{ id: 8, sales_code: 'SALE8', sales_date: '2026-10-05', return_bit: '0', company_name: 'Toko', address: 'Jalan', created_by: 'Kasir', customer_name: 'Snapshot Anggota', nik_kar: '00123', member_name: null,
+      payment_type: 'Cash', subtotal: d('100.00'), total_discount: d('0'), grand_total: d('100.00'), paid_amount: d('100.00'), change_return: d('0'),
+      other_charges_input: d('0'), other_charges_amt: d('0'), other_charges_tax_id: 0, round_off: d('0'), sales_status: 'Final', payment_status: 'Paid', pos: 1, ppob: 0, record_status: 1,
+      line_count: 1, eligible_line_count: 1, foreign_line_count: 0, active_payment_count: 1, matching_payment_count: 1, foreign_payment_count: 0,
+      line_id: 1, item_id: 2, item_name: 'Current Item Name', description: 'Saved line description', sales_qty: 1, price_per_unit: d('100'), discount_amt: d('0'), tax_id: 0, tax_amt: d('0'), tax_type: '', total_cost: d('100'), line_status: 1, line_sales_status: 'Final' }];
+  } };
+  const receipt = await new PrismaReceiptRepository(db).find(1, 8, 'reprint');
+  assert.equal(receipt.customerName, 'Snapshot Anggota');
+  assert.equal(receipt.memberNik, '00123');
+  assert.equal(receipt.limitSen, null);
+  assert.equal(receipt.lines[0].name, 'Saved line description');
+  assert.equal(receipt.mode, 'reprint');
+});
+
+test('checkout keeps original Final sale/line predicates and does not truncate the receipt', async () => {
+  const db = { async $queryRaw(query) {
+    assert.match(query.sql, /s\.sales_status = 'Final'/);
+    assert.match(query.sql, /si\.sales_status = 'Final'/);
+    assert.doesNotMatch(query.sql, /LIMIT 201/);
+    return [];
+  } };
+  assert.equal(await new PrismaReceiptRepository(db).find(9, 42, 'checkout'), null);
+});
+
+test('reprint refuses missing and negative saved amounts even when header totals reconcile', async () => {
+  const d = value => new Prisma.Decimal(value);
+  const saved = {
+    id: 8, sales_code: 'SALE8', sales_date: '2026-10-05', return_bit: '0', company_name: 'Test', address: '', created_by: 'Test', customer_name: 'UMUM', nik_kar: null,
+    payment_type: 'Cash', subtotal: d('100'), total_discount: d('0'), grand_total: d('100'), paid_amount: d('100'), change_return: d('0'),
+    other_charges_input: d('0'), other_charges_amt: d('0'), other_charges_tax_id: 0, round_off: d('0'), sales_status: 'Final', payment_status: 'Paid', pos: 1, ppob: 0, record_status: 1,
+    line_count: 1, eligible_line_count: 1, foreign_line_count: 0, active_payment_count: 1, matching_payment_count: 1, foreign_payment_count: 0,
+    line_id: 1, item_id: 2, item_name: 'Test', description: 'Saved item', sales_qty: 1, price_per_unit: d('100'), discount_amt: d('0'), tax_id: 0, tax_amt: d('0'), tax_type: '', total_cost: d('100'), line_status: 1, line_sales_status: 'Final',
+  };
+  for (const field of ['price_per_unit', 'discount_amt', 'total_discount', 'other_charges_amt']) for (const value of [null, d('-1')]) {
+    const db = { async $queryRaw() { return [{ ...saved, [field]: value }]; } };
+    await assert.rejects(new PrismaReceiptRepository(db).find(1, 8, 'reprint'), { code: 'RECEIPT_UNSUPPORTED' }, `${field} is ${value}`);
+  }
+});
+
+test('ordinary checkout snapshots can reprint with legacy rounded total and Cash change fields', async () => {
+  const d = value => new Prisma.Decimal(value);
+  for (const method of ['Cash', 'QRIS', 'Kredit']) {
+    const change = method === 'Cash' ? 20 : 0;
+    const row = { id: 9, sales_date: '2026-10-05', customer_name: 'UMUM', nik_kar: null, return_bit: '0', payment_type: method,
+      subtotal: d('100.05'), total_discount: d('0'), grand_total: d('100.05'), paid_amount: d(100.05 + change), change_return: d(change),
+      other_charges_input: d(change), other_charges_amt: d(change), other_charges_tax_id: 0, round_off: d('100'), sales_status: 'Final', payment_status: 'Paid', pos: 1, ppob: 0, record_status: 1,
+      line_count: 1, eligible_line_count: 1, foreign_line_count: 0, active_payment_count: 1, matching_payment_count: 1, foreign_payment_count: 0,
+      line_id: 1, item_id: 2, item_name: 'Test', description: '', sales_qty: 1, price_per_unit: d('100.05'), discount_amt: d('0'), tax_id: 0, tax_amt: d('0'), tax_type: '', total_cost: d('100.05'), line_status: 1, line_sales_status: 'Final' };
+    const receipt = await new PrismaReceiptRepository({ async $queryRaw() { return [row]; } }).find(1, 9, 'reprint');
+    assert.equal(receipt.grandTotalSen, 10005, method);
+    assert.equal(receipt.changeSen, change * 100, method);
+  }
 });

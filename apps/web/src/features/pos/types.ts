@@ -20,6 +20,9 @@ export type PosSession = {
   kasir?: {id:number;noKasir:string}[];
   ownedRegisters?: {id:number;noref:string}[];
   userId: number;
+  canCheckout?: boolean;
+  canSales?: boolean;
+  canViewPayments?: boolean;
   canInventory?: boolean;
   canProducts?: boolean;
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };

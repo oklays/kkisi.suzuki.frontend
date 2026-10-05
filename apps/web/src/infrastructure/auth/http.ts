@@ -1,6 +1,6 @@
 import { AuthError, StoreUnavailableError, VerifierBusyError } from '@koperasi/domain/auth/errors';
 import type { AuthDeps } from '@koperasi/application/auth/ports';
-import { validateSession, requirePermission, type AuthContext } from '@koperasi/application/auth/validate-session';
+import { validateSession, type AuthContext } from '@koperasi/application/auth/validate-session';
 import type { AuthConfig } from './config.ts';
 import { readCookie } from './cookies.ts';
 import type { AuthKeys } from './keys.ts';
@@ -38,7 +38,7 @@ export type Guarded = { ok: true; ctx: AuthContext; sid: string } | { ok: false;
  * Every protected API route goes through this. Order: origin/content-type (state-changing only, before any DB work),
  * session validation from both databases, CSRF token, then permission. Any error is fail-closed.
  */
-export async function guard(services: AuthServices, request: Request, options: { permission?: string; csrf?: boolean } = {}): Promise<Guarded> {
+export async function guard(services: AuthServices, request: Request, options: { permission?: string | readonly string[]; csrf?: boolean } = {}): Promise<Guarded> {
   try {
     if (options.csrf) {
       if (!checkOrigin(request, services.config) || !isJsonRequest(request)) throw new AuthError('CSRF');
@@ -46,7 +46,12 @@ export async function guard(services: AuthServices, request: Request, options: {
     const sid = readCookie(request.headers.get('cookie'), services.config.cookieName);
     const ctx = await validateSession(services.deps, sid);
     if (options.csrf && !services.keys.verifyCsrf(request.headers.get('x-csrf-token'), ctx.sidHash)) throw new AuthError('CSRF');
-    if (options.permission) await requirePermission(ctx, options.permission);
+    if (options.permission) {
+      const permissions = Array.isArray(options.permission) ? options.permission : [options.permission];
+      let allowed = false;
+      for (const permission of permissions) if (await ctx.hasPermission(permission)) { allowed = true; break; }
+      if (!allowed) throw new AuthError('FORBIDDEN');
+    }
     return { ok: true, ctx, sid: sid as string };
   } catch (error) {
     return { ok: false, response: errorResponse(services, error) };

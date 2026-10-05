@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-export function ReceiptPrintButton({ autoPrint = false }: { autoPrint?: boolean }) {
+export function ReceiptPrintButton({ autoPrint = false, label = 'Cetak struk' }: { autoPrint?: boolean; label?: string }) {
   useEffect(() => {
     if (!autoPrint) return;
     const timer = setTimeout(() => {
@@ -29,7 +29,7 @@ export function ReceiptPrintButton({ autoPrint = false }: { autoPrint?: boolean 
         }
       }}
     >
-      Cetak struk
+      {label}
     </button>
   );
 }

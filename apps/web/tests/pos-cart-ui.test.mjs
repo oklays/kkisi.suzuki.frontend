@@ -12,6 +12,7 @@ registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === 'next/navigation') return { url: 'data:text/javascript,export const useRouter=()=>({replace(){},refresh(){}})', shortCircuit: true };
     if (specifier === 'next/link') return nextResolve('next/link.js', context);
+    if (specifier === 'next/image') return { url: 'data:text/javascript,export default function Image(){return null}', shortCircuit: true };
     if (specifier.endsWith('.css')) return { url: 'data:text/javascript,export default {}', shortCircuit: true };
     if (specifier.startsWith('@/')) specifier = new URL(`../src/${specifier.slice(2)}`, import.meta.url).href;
     if (specifier.startsWith('file:') || specifier.startsWith('.')) {

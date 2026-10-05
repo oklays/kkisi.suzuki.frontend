@@ -21,7 +21,7 @@ export default async function PosPage() {
   const { ctx, services, catalog } = auth;
   let session: PosSession;
   try {
-    const [register, company, companies, ownedRegisters, canStockOpname, canProducts, canWarehouse] = await Promise.all([
+    const [register, company, companies, ownedRegisters, canStockOpname, canProducts, canWarehouse, canSales] = await Promise.all([
       readRegister(services.deps, ctx),
       services.deps.companies.findActive(ctx.companyId),
       ctx.canSwitchBranch ? services.deps.companies.listActive() : Promise.resolve([]),
@@ -29,12 +29,13 @@ export default async function PosPage() {
       services.deps.permissions.has(ctx.roleId, "inventory_so"),
       services.deps.permissions.has(ctx.roleId, "items_view"),
       ctx.canSwitchBranch ? services.deps.permissions.has(ctx.roleId, "inventory_view") : Promise.resolve(false),
+      services.deps.permissions.has(ctx.roleId, "sales_view"),
     ]);
     session = {
       userName: ctx.userName, branchName: company?.name ?? "Cabang", companyId: ctx.companyId, canSwitchBranch: ctx.canSwitchBranch,
       kasir: register.kasir, ownedRegisters, registerOpeningAvailable: registerOpeningAvailable(),
       userId: ctx.userId, checkoutAvailable: checkoutAvailable(), companies, csrfToken: services.keys.csrfToken(ctx.sidHash),
-      canInventory: canStockOpname || canWarehouse, canProducts,
+      canInventory: canStockOpname || canWarehouse, canProducts, canSales, canCheckout: true,
       register: { open: register.open ? { noref: register.open.noref, noKasir: register.open.noKasir, openedOn: register.open.openedOn, stale: register.open.stale } : null, multiple: register.warnings.length > 0 },
     };
   } catch {
