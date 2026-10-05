@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowDownWideNarrow, ArrowUpRight, Barcode, Boxes, Check, ChevronLeft, ChevronRight, Download, Eye, Package, PackageOpen, Plus, Pencil, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowDownWideNarrow, Barcode, Boxes, Check, ChevronLeft, ChevronRight, Download, Eye, Package, PackageOpen, Plus, Pencil, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react';
 import type { MasterProduct, MasterProductPage, MasterProductQuery } from '@koperasi/domain/inventory';
 import type { PosSession } from '@/features/pos/types';
 import { PosShell } from '../pos/PosShell';
 import { ProductEditor } from './ProductEditor';
-import { productsCsv, legacyProductUrl, stockState } from './product-view';
+import { ProductCreator } from './ProductCreator';
+import { productsCsv, stockState } from './product-view';
 import '../pos/pos.css';
 import './products.css';
 
@@ -31,6 +32,8 @@ export function ProductsScreen({ session, capabilities }: { session: PosSession;
   const [refresh, setRefresh] = useState(0);
   const [updated, setUpdated] = useState('');
   const [editorId, setEditorId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
+  const addTrigger = useRef<HTMLButtonElement>(null);
   const [notice, setNotice] = useState('');
   const [selected, setSelected] = useState<MasterProduct | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -72,6 +75,7 @@ export function ProductsScreen({ session, capabilities }: { session: PosSession;
     dialog.current?.close(); setEditorId(id);
   }
   function closeEditor() { setEditorId(null); detailTrigger.current?.focus(); }
+  function closeCreator() { setCreating(false); addTrigger.current?.focus(); }
   function exportPage() {
     if (!data || loading || error) return;
     const url = URL.createObjectURL(new Blob([productsCsv(data.items)], { type: 'text/csv;charset=utf-8' }));
@@ -88,7 +92,7 @@ export function ProductsScreen({ session, capabilities }: { session: PosSession;
       <div className="products-header-right"><span className="products-branch"><span aria-hidden="true" />{session.branchName}</span><div className="pos-user"><span aria-hidden="true">{session.userName.slice(0, 1).toUpperCase()}</span><div><strong>{session.userName}</strong><small>Pengelola produk</small></div></div></div>
     </header>
     <main id="pos-workspace" className="products-content">
-      <div className="products-intro"><div><h2>Daftar produk</h2><p>Seluruh produk cabang, termasuk produk nonaktif dan sedang SO.</p></div><div className="products-actions"><button type="button" className="products-button" onClick={reload} disabled={loading} aria-label="Perbarui daftar produk"><RefreshCw size={16} className={loading ? 'products-spinning' : ''} />Perbarui</button><button type="button" className="products-button" onClick={exportPage} disabled={!ready || !data?.items.length}><Download size={16} />Export halaman</button>{capabilities.add && <a className="products-button products-primary" href={legacyProductUrl()} target="_blank" rel="noopener noreferrer"><Plus size={16} />Tambah di web lama<ArrowUpRight size={14} /></a>}</div></div>
+      <div className="products-intro"><div><h2>Daftar produk</h2><p>Seluruh produk cabang, termasuk produk nonaktif dan sedang SO.</p></div><div className="products-actions"><button type="button" className="products-button" onClick={reload} disabled={loading} aria-label="Perbarui daftar produk"><RefreshCw size={16} className={loading ? 'products-spinning' : ''} />Perbarui</button><button type="button" className="products-button" onClick={exportPage} disabled={!ready || !data?.items.length}><Download size={16} />Export halaman</button>{capabilities.add && <button ref={addTrigger} type="button" className="products-button products-primary" onClick={() => { setNotice(''); setCreating(true); }}><Plus size={16} />Tambah produk</button>}</div></div>
       {notice && <p className="product-editor-success" role="status">{notice}</p>}
       <section className="products-summary" aria-label="Ringkasan hasil filter">
         {[{ label: 'Produk ditemukan', value: data?.summary.total, icon: Boxes, color: 'blue' }, { label: 'Produk aktif', value: data?.summary.active, icon: Check, color: 'green' }, { label: 'Stok menipis', value: data?.summary.low, icon: Package, color: 'amber' }, { label: 'Stok habis', value: data?.summary.empty, icon: PackageOpen, color: 'red' }, { label: 'Sedang stock opname', value: data?.summary.locked, icon: Barcode, color: 'gray' }].map(({ label, value, icon: Icon, color }) => <div className={`products-stat products-stat-${color}`} key={label}><span className="products-stat-icon"><Icon size={19} /></span><div><span>{label}</span><strong>{ready ? number(value ?? 0) : '—'}</strong></div></div>)}
@@ -113,7 +117,7 @@ export function ProductsScreen({ session, capabilities }: { session: PosSession;
         </div>
         <div className="products-pagination"><span>{ready && data.total ? `${number((page - 1) * filters.pageSize + 1)}–${number(Math.min(page * filters.pageSize, data.total))} dari ${number(data.total)} produk` : '—'}</span><div><label>Tampilkan <select value={filters.pageSize} onChange={event => change({ pageSize: Number(event.target.value) })}>{[10, 25, 50, 100].map(size => <option value={size} key={size}>{size}</option>)}</select></label><button type="button" aria-label="Halaman sebelumnya" disabled={!ready || page <= 1} onClick={() => change({ page: page - 1 })}><ChevronLeft size={18} /></button><span>Halaman {page} / {pages}</span><button type="button" aria-label="Halaman berikutnya" disabled={!ready || page >= pages} onClick={() => change({ page: page + 1 })}><ChevronRight size={18} /></button></div></div>
       </section>
-      <div className="products-footnote"><span>Export berisi produk pada halaman yang sedang ditampilkan.</span>{capabilities.add && <span>Tambah produk dibuka di web lama. Periksa cabang setelah login.</span>}</div>
+      <div className="products-footnote"><span>Export berisi produk pada halaman yang sedang ditampilkan.</span>{capabilities.add && <span>Produk baru ditambahkan ke {session.branchName}.</span>}</div>
     </main>
     <dialog ref={dialog} className="products-dialog" aria-labelledby="product-detail-title" onClose={() => { setSelected(null); detailTrigger.current?.focus(); }} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) event.currentTarget.close(); } }}>
       {selected && <><div className="products-dialog-heading"><span className="products-item-icon"><Package size={25} /></span><div><span className="products-eyebrow">DETAIL PRODUK</span><h2 id="product-detail-title">{selected.name}</h2><span className="products-code">{selected.code}</span></div><button autoFocus type="button" className="products-detail-button" aria-label="Tutup detail produk" onClick={() => dialog.current?.close()}><X size={20} /></button></div>
@@ -121,6 +125,7 @@ export function ProductsScreen({ session, capabilities }: { session: PosSession;
         <dl className="products-detail-grid">{[['Barcode satuan', selected.barcode], ['Barcode kemasan', selected.packBarcode], ['Kategori', selected.category], ['Merek', selected.brand], ['Satuan', selected.unit], ['Isi per kemasan', number(selected.packQuantity)], ['Harga jual', rupiah(selected.sellingPrice)], ['Harga beli', rupiah(selected.purchasePrice)], ['Diskon per satuan', rupiah(selected.discount)], ['Pajak', selected.tax ? `${selected.tax} · ${selected.taxType}` : null], ['Jenis produk', selected.type], ['Tanggal kedaluwarsa', selected.expiryDate && selected.expiryDate !== '0000-00-00' ? selected.expiryDate.split('-').reverse().join('/') : null]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>
         <div className="products-dialog-footer"><p>Stok mengikuti pembacaan terakhir daftar produk.</p>{capabilities.edit && <button type="button" className="products-button products-primary" onClick={() => openEditor(selected.id)}><Pencil size={15} />Edit produk</button>}</div></>}
     </dialog>
+    {creating && <ProductCreator csrfToken={session.csrfToken} writes={capabilities.writes} branchName={session.branchName} onClose={closeCreator} onFind={term => { closeCreator(); setNotice(''); change({ ...initialFilters, q: term }); }} onSaved={result => { closeCreator(); setNotice(`Produk “${result.name}” ditambahkan dengan kode ${result.code}${result.stock ? ` dan stok awal ${number(result.stock)}` : ''}.`); reset(); }} />}
     {editorId !== null && <ProductEditor key={editorId} id={editorId} csrfToken={session.csrfToken} writes={capabilities.writes} onClose={closeEditor} onSaved={message => { closeEditor(); setNotice(message); reload(); }} />}
   </PosShell>;
 }

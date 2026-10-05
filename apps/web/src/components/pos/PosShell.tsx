@@ -23,7 +23,7 @@ export function PosShell({ children, branchName, session, active = "pos" }: { ch
           <button disabled><ChartColumn size={18} />Laporan Keuangan</button>
         </nav>
         <div className="pos-barcode-help"><Barcode size={23} /><strong>Siap untuk barcode</strong><p>Fokuskan kolom pencarian, lalu scan barcode produk lalu tekan Enter.</p></div>
-        <div className="pos-sidebar-bottom"><div className="pos-sidebar-foot">Koperasi Suzuki Mart<br /><span>POS · Kasir</span></div><SessionControls session={session} /></div>
+        <div className="pos-sidebar-bottom"><div className="pos-sidebar-foot">Koperasi Suzuki Mart<br /><span>POS · Kasir</span>{process.env.APP_VERSION && <span className="pos-version">Versi {process.env.APP_VERSION}</span>}</div><SessionControls session={session} /></div>
       </aside>
       <div className="pos-main">{children}</div>
     </div>

@@ -52,7 +52,7 @@ export default defineConfig([
   {
     basePath: root,
     files: ["apps/web/src/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
-    ignores: ["apps/web/src/infrastructure/db/**", "apps/web/src/infrastructure/pos/**", "apps/web/src/infrastructure/inventory/**", "apps/web/src/infrastructure/auth/**", "apps/web/src/infrastructure/repositories/prisma-register.repository.ts", "apps/web/src/infrastructure/repositories/prisma-product-edit.repository.ts", "apps/web/src/infrastructure/products/**"],
+    ignores: ["apps/web/src/infrastructure/db/**", "apps/web/src/infrastructure/pos/**", "apps/web/src/infrastructure/inventory/**", "apps/web/src/infrastructure/auth/**", "apps/web/src/infrastructure/repositories/prisma-register.repository.ts", "apps/web/src/infrastructure/repositories/prisma-product-edit.repository.ts", "apps/web/src/infrastructure/repositories/prisma-product-add.repository.ts", "apps/web/src/infrastructure/products/**"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [{ group: ["**/db/prisma-pos-write", "**/db/prisma-pos-write.ts", "**/db/prisma-register-write", "**/db/prisma-register-write.ts", "**/db/prisma-inventory-write", "**/db/prisma-inventory-write.ts", "**/db/prisma-product-write", "**/db/prisma-product-write.ts"], message: "Write clients are private to their owning infrastructure." }, { group: ["**/db/prisma-auth", "**/db/prisma-auth.ts"], message: "The auth-store client is private to infrastructure/auth." }] }],
     },

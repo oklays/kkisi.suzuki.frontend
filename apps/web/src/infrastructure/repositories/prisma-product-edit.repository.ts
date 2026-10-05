@@ -25,7 +25,20 @@ async function locked(db: Db, ctx: ProductActor, r: Row): Promise<boolean> {
   const drafts = await db.$queryRaw<{id:number}[]>`SELECT s.id FROM db_inventory_so s JOIN db_inventory_so_dtl d ON d.so_id=s.id WHERE s.company_id=${ctx.companyId} AND s.doc_status=0 AND d.item_id=${r.id} LIMIT 1`;
   return drafts.length>0;
 }
-const times = (now: Date) => { const time=new Date(now.getTime()+7*3600000).toISOString().slice(0,19).replace('T',' ');return{time,day:time.slice(0,10)}; };
+export const times = (now: Date) => { const time=new Date(now.getTime()+7*3600000).toISOString().slice(0,19).replace('T',' ');return{time,day:time.slice(0,10)}; };
+/** Locks the active company row, then rechecks the actor's user/role/branch and permission before running a product write. */
+export function productWriteTransaction<T>(write:PrismaClient|undefined,ctx:ProductActor,permission:'items_edit'|'items_add',operation:(tx:Prisma.TransactionClient,username:string)=>Promise<T>):Promise<T> {
+  if(!write)throw new ProductEditError('WRITE_NOT_CONFIGURED');
+  return write.$transaction(async tx=>{
+    const [company]=await tx.$queryRaw<{id:number}[]>`SELECT id FROM db_company WHERE id=${ctx.companyId} AND status=1 FOR UPDATE`;
+    if(!company)throw new ProductEditError('FORBIDDEN');
+    const [user]=await tx.$queryRaw<{username:string}[]>`SELECT u.username FROM db_users u JOIN db_roles r ON r.id=u.role_id AND r.status=1
+      WHERE u.id=${ctx.userId} AND u.status=1 AND (u.role_id<=2 OR u.company_id=${ctx.companyId})
+      AND EXISTS(SELECT 1 FROM db_permissions p WHERE p.role_id=u.role_id AND p.permissions=${permission}) FOR UPDATE`;
+    if(!user)throw new ProductEditError('FORBIDDEN');
+    return operation(tx,user.username);
+  },{isolationLevel:Prisma.TransactionIsolationLevel.ReadCommitted,maxWait:15000,timeout:15000});
+}
 
 export class PrismaProductEditRepository implements ProductEditRepository {
   private readonly read: PrismaClient;
@@ -41,17 +54,8 @@ export class PrismaProductEditRepository implements ProductEditRepository {
     const normalize=(values:ProductEditOption[])=>values.map(v=>({...v,active:!!v.active}));
     return{product:editable(r),stock:r.stock,locked:isLocked,stockEditable:r.type!=='PPOB'&&r.barcode!=='SALDOPPOB',options:{categories:normalize(categories),brands:normalize(brands),units:normalize(units)}};
   }
-  private async transaction<T>(ctx:ProductActor,operation:(tx:Prisma.TransactionClient,username:string)=>Promise<T>):Promise<T> {
-    if(!this.write)throw new ProductEditError('WRITE_NOT_CONFIGURED');
-    return this.write.$transaction(async tx=>{
-      const [company]=await tx.$queryRaw<{id:number}[]>`SELECT id FROM db_company WHERE id=${ctx.companyId} AND status=1 FOR UPDATE`;
-      if(!company)throw new ProductEditError('FORBIDDEN');
-      const [user]=await tx.$queryRaw<{username:string}[]>`SELECT u.username FROM db_users u JOIN db_roles r ON r.id=u.role_id AND r.status=1
-        WHERE u.id=${ctx.userId} AND u.status=1 AND (u.role_id<=2 OR u.company_id=${ctx.companyId})
-        AND EXISTS(SELECT 1 FROM db_permissions p WHERE p.role_id=u.role_id AND p.permissions='items_edit') FOR UPDATE`;
-      if(!user)throw new ProductEditError('FORBIDDEN');
-      return operation(tx,user.username);
-    },{isolationLevel:Prisma.TransactionIsolationLevel.ReadCommitted,maxWait:15000,timeout:15000});
+  private transaction<T>(ctx:ProductActor,operation:(tx:Prisma.TransactionClient,username:string)=>Promise<T>):Promise<T> {
+    return productWriteTransaction(this.write,ctx,'items_edit',operation);
   }
   async save(ctx:ProductActor,input:ProductEditInput,now:Date):Promise<{id:number}> {
     return this.transaction(ctx,async(tx,username)=>{

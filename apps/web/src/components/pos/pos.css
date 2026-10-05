@@ -31,7 +31,7 @@
 .pos-barcode-help p { font-size:11px; line-height:1.6; margin:6px 0!important; color:#b3bccb; }
 .pos-barcode-help small { color:#c9d7ef; font-size:10px; }
 .pos-sidebar-bottom { margin-top:auto; }.pos-sidebar-foot { border-top:1px solid #344054; padding:16px 6px 0; color:#c0c8d6; font-size:11px; line-height:1.7; }
-.pos-sidebar-foot span { color:#9eaabd; }
+.pos-sidebar-foot span { color:#9eaabd; }.pos-sidebar-foot .pos-version { display:block; margin-top:6px; color:#7d8aa0; font-size:10px; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
 .pos-main { flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; }
 .pos-header { height:68px; flex-shrink:0; padding:0 26px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid #eef0f3; background:white; }
 .pos-header h1 { font-size:19px; font-weight:750; line-height:1.3; }

@@ -50,7 +50,7 @@ try{
  // Capture the actual generated download without navigating away or opening the remote forms.
  await evaluate("window.__productCsv=null;window.__productDownload=null;const native=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(this.download){window.__productDownload=this.download;fetch(this.href).then(r=>r.text()).then(t=>window.__productCsv=t);}else{native.call(this);}};");
  await click('.products-actions button:nth-child(2)');await waitFor("!!window.__productCsv");assert.equal(await evaluate("window.__productCsv.split('\\r\\n').length"),26);assert.match(await evaluate("window.__productDownload"),/halaman-1\.csv$/);
- assert.equal(await evaluate("document.querySelector('.products-actions a')?.getAttribute('href')"),'https://tokonew.kkisitb2.id/items/add');
+ assert.equal(await evaluate("!!document.querySelector('.products-actions a') || document.querySelector('.products-actions .products-primary')?.textContent"),'Tambah produk','add is native, no legacy link');
  // Error state and retry use real rendered UI with one deliberately failed read.
  interception=async e=>send('Fetch.fulfillRequest',{requestId:e.requestId,responseCode:503,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from('{"error":"PRODUCTS_UNAVAILABLE"}').toString('base64')});
  await send('Fetch.enable',{patterns:[{urlPattern:'*/api/products*',requestStage:'Request'}]});await click('.products-actions button:first-child');await waitFor("document.querySelector('.products-empty strong')?.textContent==='Produk belum dapat ditampilkan'");

@@ -95,7 +95,7 @@ test('no code path reads a company from the client or from POS_COMPANY_ID', () =
     if (!['src/infrastructure/db/prisma-pos-write.ts','src/infrastructure/db/prisma-register-write.ts','src/infrastructure/db/prisma-inventory-write.ts','src/infrastructure/db/prisma-product-write.ts'].includes(rel(file))) assert.doesNotMatch(src, /DATABASE_URL(?:_REGISTER|_INVENTORY|_PRODUCT)?_WRITE/, rel(file));
     if (!rel(file).startsWith('src/infrastructure/db/') && !rel(file).startsWith('src/infrastructure/pos/')) assert.doesNotMatch(src, /prisma-pos-write/, `${rel(file)} cannot import the write client`);
     if (!rel(file).startsWith('src/infrastructure/db/') && !rel(file).startsWith('src/infrastructure/inventory/')) assert.doesNotMatch(src, /prisma-inventory-write/, `${rel(file)} cannot import the inventory write client`);
-    if (!rel(file).startsWith('src/infrastructure/db/') && !rel(file).startsWith('src/infrastructure/products/') && rel(file) !== 'src/infrastructure/repositories/prisma-product-edit.repository.ts') assert.doesNotMatch(src, /prisma-product-write/, `${rel(file)} cannot import the product write client`);
+    if (!rel(file).startsWith('src/infrastructure/db/') && !rel(file).startsWith('src/infrastructure/products/') && !['src/infrastructure/repositories/prisma-product-edit.repository.ts','src/infrastructure/repositories/prisma-product-add.repository.ts'].includes(rel(file))) assert.doesNotMatch(src, /prisma-product-write/, `${rel(file)} cannot import the product write client`);
   }
 });
 

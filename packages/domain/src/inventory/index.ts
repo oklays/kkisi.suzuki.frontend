@@ -3,3 +3,4 @@ export { ProductReadError, type ProductReadErrorCode } from './product-read-erro
 export * from './stock-opname.ts';
 export type { MasterProduct, MasterProductQuery, MasterProductPage } from './master-product.ts';
 export * from './product-edit.ts';
+export * from './product-create.ts';

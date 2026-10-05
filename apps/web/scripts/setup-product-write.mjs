@@ -20,11 +20,14 @@ const target=new URL(read);target.username=user;target.password=password;
 const env={...process.env,PRODUCTS_WRITES_ENABLED:'1',POS_WRITE_DATABASE:'kkisi_staging',DATABASE_URL_PRODUCT_WRITE:target.href};validateProductWriteConfig(env);
 if(!process.argv.includes('--apply')){console.log('Ready: local kkisi-staging only, dedicated product writer; use --apply to grant access and update ignored .env.local');process.exit(0);}
 const columns='item_code,sku,item_name,custom_barcode,custom_barcode_pack,description,category_id,brand_id,unit_id,unit_perpack,sales_price,purchase_price,discount,alert_qty,status,created_by,created_date,created_time,stock';
+// Product add inserts a complete legacy row (Items_model::verify_and_save); id stays AUTO_INCREMENT and no other column is writable.
+const insertColumns='item_code,custom_barcode_pack,custom_barcode,item_name,category_id,expire,item_image,unit_id,brand_id,description,sku,hsn,system_ip,system_name,created_date,created_time,created_by,type,unit_perpack,price,price_pack,purchase_price,purchase_price_pack,sales_price,sales_price_pack,profit_margin,profit_margin_pack,alert_qty,stock,stock_in,stock_out,expire_date,tax_type,tax_id,company_id,konsinyasi,discount,discount_persen,status,lot_number,tax_amt,tax_persen,type_order,status_so';
 const sql=`CREATE USER IF NOT EXISTS '${user}'@'%' IDENTIFIED BY '${password}';
 GRANT SELECT ON kkisi_staging.db_items TO '${user}'@'%';
 GRANT UPDATE (${columns}) ON kkisi_staging.db_items TO '${user}'@'%';
+GRANT INSERT (${insertColumns}) ON kkisi_staging.db_items TO '${user}'@'%';
 GRANT SELECT,INSERT ON kkisi_staging.db_stockentry TO '${user}'@'%';
-${['db_company','db_users','db_roles','db_permissions','db_category','db_brands','db_units','db_inventory_so','db_inventory_so_dtl'].map(table=>`GRANT SELECT ON kkisi_staging.${table} TO '${user}'@'%';`).join('\n')}`;
+${['db_company','db_users','db_roles','db_permissions','db_category','db_brands','db_units','db_tax','db_inventory_so','db_inventory_so_dtl'].map(table=>`GRANT SELECT ON kkisi_staging.${table} TO '${user}'@'%';`).join('\n')}`;
 docker(['exec','-i','-e','MYSQL_PWD','kkisi-staging','mariadb','-uroot'],sql);
 const path=`${dir}.env.local`,original=await readFile(path,'utf8');
 let content=original;
@@ -33,4 +36,4 @@ for(const [key,value]of Object.entries({PRODUCTS_WRITES_ENABLED:'1',POS_WRITE_DA
 }
 await writeFile(`${path}.product-backup`,original,{mode:0o600});await chmod(`${path}.product-backup`,0o600);
 const temp=`${path}.product-tmp`;await writeFile(temp,content,{mode:0o600});await rename(temp,path);await chmod(path,0o600);
-console.log('Activated local product writer with SELECT, column-level product UPDATE and ledger INSERT only; no product/table changes. Config backup retained locally.');
+console.log('Activated local product writer with SELECT, column-level product UPDATE/INSERT and ledger INSERT only; no product/table changes. Config backup retained locally.');
