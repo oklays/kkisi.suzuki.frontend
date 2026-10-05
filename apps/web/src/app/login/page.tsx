@@ -19,7 +19,7 @@ export default function LoginPage() {
       </section>
       <section className="login-panel" aria-label="Form masuk">
         <div className="login-panel-content">
-          <div className="login-brand" role="img" aria-label="Koperasi Suzuki" />
+          <Image className="login-brand" src="/illustrations/kopkar-landscape-logo.png" width={1671} height={299} sizes="350px" preload alt="Koperasi Smart Suzuki" />
           <LoginForm />
         </div>
       </section>

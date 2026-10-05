@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { PosSession } from "@/features/pos/types";
 import { RegisterControls } from "./RegisterControls";
 import { SessionControls } from "./SessionControls";
@@ -10,8 +11,7 @@ export function PosShell({ children, branchName, session, active = "pos" }: { ch
       <a className="pos-skip" href="#pos-workspace">Langsung ke area kerja</a>
       <aside className="pos-sidebar" aria-label="Navigasi aplikasi">
         <Link href="/" className="pos-brand">
-          <span className="pos-brand-mark" aria-hidden="true"><span /></span>
-          <span><strong>KOPERASI <em>SUZUKI</em> MART</strong><small>Integrated Cooperative Platform</small></span>
+          <Image className="pos-brand-image" src="/illustrations/kopkar-landscape-logo.png" width={1671} height={299} sizes="240px" loading="eager" alt="Koperasi Smart Suzuki" />
         </Link>
         <div className="pos-store"><Store size={18} /><div><small>CABANG</small><strong>{branchName}</strong></div><ChevronDown size={15} aria-hidden="true" /></div>
         <nav>
