@@ -1,0 +1,27 @@
+# Allowlist: only what the KKISI web image needs enters the build context. Everything else stays out, in particular
+# the legacy PHP source (it contains database credentials), staging dumps, .env*/.e2e-* files, docs and node_modules.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!packages/domain/package.json
+!packages/domain/tsconfig.json
+!packages/domain/src
+!packages/application/package.json
+!packages/application/tsconfig.json
+!packages/application/src
+!apps/web/package.json
+!apps/web/next.config.ts
+!apps/web/tsconfig.json
+!apps/web/next-env.d.ts
+!apps/web/prisma/schema.prisma
+!apps/web/public
+!apps/web/src
+
+# Defence in depth, even inside re-included directories.
+**/.env*
+**/.e2e-*
+**/node_modules
+**/*.sql
+**/*.sql.gz

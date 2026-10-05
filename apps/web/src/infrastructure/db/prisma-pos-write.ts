@@ -1,9 +1,24 @@
 import { PrismaClient } from '@prisma/client';
 import { PosError } from '@koperasi/domain/pos/sale';
+import { assertProductionDsn, isProduction, productionWritesAllowed } from './deployment-guard.ts';
 
-/** Local staging only. This does not open section 6.17's non-local DEV/production gates. */
+/**
+ * Local: staging only (unchanged). Production (APP_ENV=production): the explicit allowlist in deployment-guard.ts, the
+ * ALLOW_PRODUCTION_DB_WRITE acknowledgement, and POS_WRITE_DATABASE equal to LEGACY_DB_NAME.
+ */
 export function validatePosWriteConfig(env: Record<string, string | undefined> = process.env): string {
   const fail = (): never => { throw new PosError('WRITE_NOT_CONFIGURED'); };
+  let production: boolean;
+  try { production = isProduction(env); } catch { return fail(); }
+  if (production) {
+    if (env.POS_WRITES_ENABLED !== '1' || !productionWritesAllowed(env) || !env.POS_WRITE_DATABASE || env.POS_WRITE_DATABASE !== env.LEGACY_DB_NAME) return fail();
+    try {
+      const read = assertProductionDsn('legacy', env.DATABASE_URL, env);
+      const write = assertProductionDsn('legacy', env.DATABASE_URL_WRITE, env);
+      if (write.user === read.user) return fail();
+      return write.url;
+    } catch { return fail(); }
+  }
   if (env.POS_WRITES_ENABLED !== '1' || !env.POS_WRITE_DATABASE || !/^kkisi_[a-z0-9_]*staging[a-z0-9_]*$/.test(env.POS_WRITE_DATABASE)) return fail();
   let read: URL; let write: URL;
   try { read = new URL(env.DATABASE_URL ?? ''); write = new URL(env.DATABASE_URL_WRITE ?? ''); } catch { return fail(); }

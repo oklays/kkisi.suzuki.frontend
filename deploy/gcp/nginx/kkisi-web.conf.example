@@ -1,0 +1,43 @@
+# Host nginx site for KKISI web ONLY. Install as its own file (e.g. /etc/nginx/sites-available/kkisi-web.conf) and
+# symlink it into sites-enabled; do not edit nginx.conf or any other application's site. Replace REPLACE_WITH_DOMAIN.
+# Certificate: issue for this server_name only (e.g. certbot certonly --nginx -d REPLACE_WITH_DOMAIN).
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name REPLACE_WITH_DOMAIN;
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name REPLACE_WITH_DOMAIN;
+
+    ssl_certificate     /etc/letsencrypt/live/REPLACE_WITH_DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/REPLACE_WITH_DOMAIN/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    client_max_body_size 2m;
+
+    # Readiness touches both databases: reachable from the VM itself only, not from the internet.
+    location = /health/ready {
+        allow 127.0.0.1;
+        deny all;
+        proxy_pass http://127.0.0.1:3140;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3140;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # OVERWRITE (never append) X-Forwarded-For: the app trusts exactly one hop (TRUSTED_PROXY_HOPS=1).
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 60s;
+    }
+}

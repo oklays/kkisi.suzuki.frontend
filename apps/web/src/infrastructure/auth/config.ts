@@ -1,4 +1,5 @@
 import { AuthError } from '@koperasi/domain/auth/errors';
+import { assertProductionReadAndAuth, isProduction } from '../db/deployment-guard.ts';
 
 export type ParsedSecret = { kid: string; key: Buffer };
 export type AuthConfig = {
@@ -30,13 +31,17 @@ export function parseSecrets(raw: string | undefined): ParsedSecret[] {
   return out.length > 0 ? out : notConfigured();
 }
 
-/** APP_ORIGIN must be a bare loopback origin (S2-10: local staging only; no public exposure). */
-export function parseAppOrigin(raw: string | undefined): { origin: string; secure: boolean } {
+/**
+ * APP_ORIGIN must be a bare origin. Local: loopback only (S2-10; no public exposure). Production: HTTPS on a
+ * non-loopback host only, so the session cookie is always `__Host-` + `Secure`.
+ */
+export function parseAppOrigin(raw: string | undefined, production = false): { origin: string; secure: boolean } {
   if (!raw) return notConfigured();
   let url: URL;
   try { url = new URL(raw); } catch { return notConfigured(); }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return notConfigured();
-  if (!LOOPBACK_HOSTS.has(url.hostname === '::1' ? '[::1]' : url.hostname)) return notConfigured();
+  const loopback = LOOPBACK_HOSTS.has(url.hostname === '::1' ? '[::1]' : url.hostname);
+  if (production ? url.protocol !== 'https:' || loopback || url.hostname === '0.0.0.0' : !loopback) return notConfigured();
   if (url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) return notConfigured();
   return { origin: url.origin, secure: url.protocol === 'https:' };
 }
@@ -61,11 +66,22 @@ export function assertLocalDatabases(env: Record<string, string | undefined>): v
   if (legacy.user === auth.user || legacy.database === auth.database) notConfigured();
 }
 
+/**
+ * Production (APP_ENV=production): explicit allowlist of host/port/database per connection instead of loopback.
+ * That the legacy account is SELECT-only is verified from its actual grants by the startup check.
+ */
+export function assertDatabaseTargets(env: Record<string, string | undefined>, production: boolean): void {
+  if (!production) { assertLocalDatabases(env); return; }
+  try { assertProductionReadAndAuth(env); } catch { notConfigured(); }
+}
+
 export function loadAuthConfig(env: Record<string, string | undefined> = process.env): AuthConfig {
-  const { origin, secure } = parseAppOrigin(env.APP_ORIGIN);
+  let production: boolean;
+  try { production = isProduction(env); } catch { return notConfigured(); }
+  const { origin, secure } = parseAppOrigin(env.APP_ORIGIN, production);
   const hops = env.TRUSTED_PROXY_HOPS === undefined || env.TRUSTED_PROXY_HOPS === '' ? 0 : Number(env.TRUSTED_PROXY_HOPS);
   if (!Number.isInteger(hops) || hops < 0 || hops > 5) return notConfigured();
-  assertLocalDatabases(env);
+  assertDatabaseTargets(env, production);
   return {
     appOrigin: origin,
     secure,
