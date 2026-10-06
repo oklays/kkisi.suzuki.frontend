@@ -4,18 +4,21 @@ import { toMinorUnits } from '@koperasi/domain/money';
 import { businessDates, decimalAmount, memberCredit, PosError, type CheckoutInput, type CheckoutResult, type MemberCredit, type MemberRecord, type PaymentMethod } from '@koperasi/domain/pos/sale';
 import type { MemberLookupKind, PosContext, PosRepository } from '@koperasi/application/pos/checkout';
 import { prisma } from '../db/prisma.ts';
+import { kreditReturnedSen } from './sales-return-ledger.ts';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 type MemberRow = { id: number; nik: string | null; name: string | null; status: string | null; employment: string | null; exit_on: Date | null; limit_amount: Prisma.Decimal; gaji_minus: Prisma.Decimal };
 const memberRecord = (r: MemberRow): MemberRecord => ({ id: r.id, nik: r.nik ?? '', name: r.name ?? '', status: r.status ?? '', employment: r.employment ?? '', exitOn: r.exit_on?.toISOString().slice(0, 10) ?? null, limitSen: toMinorUnits(r.limit_amount.toFixed(2)), gajiMinusSen: toMinorUnits(r.gaji_minus.toFixed(2)) });
 const memberFields = Prisma.sql`m.id, m.nik_kar AS nik, m.nama_kar AS name, m.status_anggota AS status, m.status_karyawan AS employment, m.tgl_keluar AS exit_on, CAST(COALESCE(m.limit_toko,0) AS DECIMAL(18,2)) AS limit_amount, CAST(m.gaji_minus AS DECIMAL(18,2)) AS gaji_minus`;
 
-async function credit(db: Db, row: MemberRow, now: Date): Promise<MemberCredit> {
+async function credit(db: Db, read: Db, row: MemberRow, now: Date): Promise<MemberCredit> {
   const dates = businessDates(now);
   // R3: deliberately all branches. Scoping this aggregate to session.companyId would permit excess credit.
   const [spent] = await db.$queryRaw<{ amount: Prisma.Decimal }[]>`SELECT CAST(COALESCE(SUM(CAST(grand_total AS DECIMAL(18,2))),0) AS DECIMAL(18,2)) AS amount FROM db_sales
     WHERE nik_kar = ${row.nik} AND payment_type = 'Kredit' AND sales_status = 'Final' AND sales_date >= ${dates.monthStart} AND sales_date < ${dates.monthEnd}`;
-  return memberCredit(memberRecord(row), toMinorUnits(spent.amount.toFixed(2)), now);
+  // Kredit sales returned this month give their amount back (read-only client: a missed return only lowers the limit).
+  const returned = row.nik ? await kreditReturnedSen(read, row.nik, dates.monthStart, dates.monthEnd) : 0;
+  return memberCredit(memberRecord(row), Math.max(0, toMinorUnits(spent.amount.toFixed(2)) - returned), now);
 }
 
 type SavedRow = { id: number; sales_code: string; grand_total: Prisma.Decimal; paid_amount: Prisma.Decimal; change_return: Prisma.Decimal; payment_type: PaymentMethod; sales_note: string | null };
@@ -42,7 +45,7 @@ export class PrismaPosRepository implements PosRepository {
     if (kind === 'identifier' && !rows.length) rows = await find('card');
     if (!rows.length) throw new PosError('MEMBER_NOT_FOUND');
     if (rows.length > 1) throw new PosError('MEMBER_AMBIGUOUS');
-    return credit(this.read, rows[0], now);
+    return credit(this.read, this.read, rows[0], now);
   }
 
   async checkout(context: PosContext, input: CheckoutInput, now: Date): Promise<CheckoutResult> {
@@ -89,7 +92,7 @@ export class PrismaPosRepository implements PosRepository {
       // Global row lock: concurrent Kredit checkouts from DIFFERENT companies must serialize on the same member.
       const rows = await tx.$queryRaw<MemberRow[]>(Prisma.sql`SELECT ${memberFields} FROM m_anggota m WHERE m.id = ${input.memberId} FOR UPDATE`);
       if (!rows[0]) throw new PosError('MEMBER_NOT_FOUND');
-      member = await credit(tx, rows[0], now);
+      member = await credit(tx, this.read, rows[0], now);
       const [{ n }] = await tx.$queryRaw<{ n: bigint }[]>`SELECT COUNT(*) AS n FROM m_anggota WHERE nik_kar = ${member.nik}`;
       if (Number(n) !== 1) throw new PosError('MEMBER_AMBIGUOUS');
     }

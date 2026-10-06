@@ -10,7 +10,7 @@ import ts from 'typescript';
 const reactPath = new URL('../node_modules/react/index.js', import.meta.url).href;
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    if (specifier === 'next/navigation') return { url: 'data:text/javascript,export const useRouter=()=>({replace(){},refresh(){},push(){}})', shortCircuit: true };
+    if (specifier === 'next/navigation') return { url: 'data:text/javascript,export const useRouter=()=>({replace(){},refresh(){},push(){}});export const usePathname=()=>globalThis.__testPath??"/sales"', shortCircuit: true };
     if (specifier === 'next/link') return { url: `data:text/javascript,import React from '${reactPath}';export const useLinkStatus=()=>({pending:false});export default function Link({href,children,...rest}){return React.createElement('a',{href,...rest},children)}`, shortCircuit: true };
     if (specifier === 'next/image') return { url: 'data:text/javascript,export default function Image(){return null}', shortCircuit: true };
     if (specifier.endsWith('.css')) return { url: 'data:text/javascript,export default {}', shortCircuit: true };
@@ -108,4 +108,47 @@ test('collapsed payment disclosure points to an existing hidden accessible regio
   assert.ok(html.includes(`id="${id}"`));
   assert.match(html, /hidden=""/);
   assert.doesNotMatch(html, /sales-payments-table/);
+});
+
+const returnContext = (eligibility = { allowed: true, reasons: [], refundMethod: 'Cash', deadline: '2026-10-12' }) => ({
+  sale: { saleId: 99, salesCode: 'R-99', saleDate: '2026-10-05', customerName: 'Anggota', memberNik: null, paymentType: 'Cash', grandTotalSen: 30000 },
+  lines: [{ itemId: 11, soldQty: 3, returnedQty: 1, totalSen: 30000, returnedSen: 10000, label: 'Sabun', barcode: 'B11', unitPriceSen: 10000, unitDiscountSen: 0 },
+    { itemId: 12, soldQty: 1, returnedQty: 1, totalSen: 5000, returnedSen: 5000, label: 'Teh', barcode: 'B12', unitPriceSen: 5000, unitDiscountSen: 0 }],
+  returns: [{ returnId: 5, returnCode: 'RTN-TB26100500001', returnedAt: '2026-10-05 10:00:00', saleId: 99, salesCode: 'R-99', refundMethod: 'Cash', totalSen: 15000, reason: 'Barang rusak', createdBy: 'kasir1', customerName: 'Anggota' }],
+  eligibility,
+});
+
+test('sidebar shows the return list to sales_return_view and marks it instead of the history', () => {
+  globalThis.__testPath = '/sales/returns/5';
+  try {
+    const html = render(PosShell, { branchName: 'Cabang 1', session: { ...session, canReturns: true }, active: 'sales', children: null });
+    assert.match(html, /<a href="\/sales\/returns" aria-current="page">[\s\S]*?Retur Penjualan<\/a>/);
+    assert.match(html, /<a href="\/sales">[\s\S]*?Riwayat Transaksi<\/a>/);
+    assert.doesNotMatch(render(PosShell, { branchName: 'Cabang 1', session, active: 'sales', children: null }), /Retur Penjualan/);
+  } finally { delete globalThis.__testPath; }
+});
+
+test('detail offers a return only to sales_return_add on an eligible sale and always lists earlier returns', () => {
+  const detail = { sale: { saleId: 99, salesCode: 'R-99', saleDate: '2026-10-05', source: 'pos', customerName: 'Anggota', memberNik: null, createdBy: 'Kasir', salesStatus: 'Final', paymentStatus: 'Paid', paymentType: 'Cash', recordStatus: 1, returnBit: '1',
+    grandTotalSen: 30000, paidSen: 30000, subtotalSen: 30000, discountSen: 0, otherChargesInputSen: 0, otherChargesSen: 0, roundOffLegacySen: 0, registerId: 4, registerReference: 'REG-4', cashierLabel: 'K-4', warnings: [] },
+    lines: [], linePagination: { page: 1, pageSize: 50, total: 0, hasNext: false }, warnings: [], printEligibility: { allowed: true, reasons: [] } };
+  const html = render(SalesDetail, { detail, returnTo: '/sales', linePage: 1, returns: { context: returnContext(), canCreate: true } });
+  assert.ok(html.includes('href="/sales/invoice/99/return"'));
+  assert.ok(html.includes('href="/sales/returns/5"'));
+  assert.match(html, /Refund tunai dari laci kasir/);
+  const viewer = render(SalesDetail, { detail, returnTo: '/sales', linePage: 1, returns: { context: returnContext(), canCreate: false } });
+  assert.doesNotMatch(viewer, /\/sales\/invoice\/99\/return/);
+  const expired = render(SalesDetail, { detail, returnTo: '/sales', linePage: 1, returns: { context: returnContext({ allowed: false, reasons: ['RETURN_WINDOW_EXPIRED'], refundMethod: 'Cash', deadline: '2026-10-12' }), canCreate: true } });
+  assert.doesNotMatch(expired, /\/sales\/invoice\/99\/return/);
+  assert.match(expired, /7 hari kalender/);
+});
+
+test('return form caps each line at its remaining quantity and needs review before submitting', async () => {
+  const { SalesReturnForm } = await import('../src/components/sales/SalesReturnForm.tsx');
+  const html = render(SalesReturnForm, { context: returnContext(), csrfToken: 'token' });
+  assert.match(html, /maks\. 2/);
+  assert.match(html, /Sudah diretur semua/);
+  assert.match(html, /Tinjau retur<\/button>/);
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""/);
+  assert.doesNotMatch(html, /Konfirmasi &amp; proses retur/);
 });

@@ -10,6 +10,8 @@ export type Receipt = {
   limitSen: number | null; usedLimitSen: number | null; remainingLimitSen: number | null;
   lines: ReceiptLine[]; subtotalSen: number; discountSen: number; taxTotalSen: number | null; grandTotalSen: number;
   paidSen: number; changeSen: number;
+  /** A sales return was raised against this sale (reprints show the original sale plus a pointer to the return). */
+  hasReturns?: boolean;
   mode: 'checkout' | 'reprint';
 };
 export type ReceiptReadMode = 'checkout' | 'reprint';

@@ -10,7 +10,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 // Exercise actual React output using the installed compiler; Node cannot parse TSX.
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    if (specifier === 'next/navigation') return { url: 'data:text/javascript,export const useRouter=()=>({replace(){},refresh(){}})', shortCircuit: true };
+    if (specifier === 'next/navigation') return { url: 'data:text/javascript,export const useRouter=()=>({replace(){},refresh(){}});export const usePathname=()=>globalThis.__testPath??"/"', shortCircuit: true };
     if (specifier === 'next/link') return nextResolve('next/link.js', context);
     if (specifier === 'next/image') return { url: 'data:text/javascript,export default function Image(){return null}', shortCircuit: true };
     if (specifier.endsWith('.css')) return { url: 'data:text/javascript,export default {}', shortCircuit: true };

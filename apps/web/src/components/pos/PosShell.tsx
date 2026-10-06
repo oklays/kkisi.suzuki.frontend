@@ -2,8 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import type { PosSession } from "@/features/pos/types";
 import { RegisterControls } from "./RegisterControls";
+import { ShellNavLink } from "./ShellNavLink";
 import { SessionControls } from "./SessionControls";
-import { Barcode, Boxes, ChartColumn, ChevronDown, ClipboardList, LayoutDashboard, ShoppingBag, Store, Warehouse } from "lucide-react";
+import { Barcode, Boxes, ChartColumn, ChevronDown, ClipboardList, LayoutDashboard, ShoppingBag, Store, Undo2, Warehouse } from "lucide-react";
 
 export function PosShell({ children, branchName, session, active = "pos" }: { children: React.ReactNode; branchName: string; session: PosSession; active?: "pos" | "inventory" | "products" | "sales" }) {
   return (
@@ -18,7 +19,8 @@ export function PosShell({ children, branchName, session, active = "pos" }: { ch
           <p className="pos-nav-label">Menu Utama</p>
           <button disabled><LayoutDashboard size={18} />Dashboard Supervisor</button>
           {session.canCheckout !== false && <Link href="/pos" aria-current={active === "pos" ? "page" : undefined}><ShoppingBag size={18} />POS / Kasir</Link>}
-          {session.canSales && <Link href="/sales" aria-current={active === "sales" ? "page" : undefined}><ClipboardList size={18} />Riwayat Transaksi</Link>}
+          {session.canSales && <ShellNavLink href="/sales" activePrefix={active === "sales" ? "/sales" : null} excludePrefix="/sales/returns"><ClipboardList size={18} />Riwayat Transaksi</ShellNavLink>}
+          {session.canSales && session.canReturns && <ShellNavLink href="/sales/returns" activePrefix={active === "sales" ? "/sales/returns" : null}><Undo2 size={18} />Retur Penjualan</ShellNavLink>}
           {session.canProducts ? <Link href="/products" aria-current={active === "products" ? "page" : undefined}><Boxes size={18} />Produk &amp; Inventory</Link> : <button disabled title="Akun ini belum memiliki izin melihat produk"><Boxes size={18} />Produk &amp; Inventory</button>}
           {session.canInventory ? <Link href="/inventory" aria-current={active === "inventory" ? "page" : undefined}><Warehouse size={18} />Warehouse &amp; Stock Opname</Link> : <button disabled title="Akun ini belum memiliki izin inventory"><Warehouse size={18} />Warehouse &amp; Stock Opname</button>}
           <button disabled><ChartColumn size={18} />Laporan Keuangan</button>

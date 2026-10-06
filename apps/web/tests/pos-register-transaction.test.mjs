@@ -6,10 +6,11 @@ function fake(rows=[]){let queries=[],writes=[];const tx={$queryRaw:async(s)=>{l
 test('open uses branch then user lock, global own-session check and insert ID reference with local timestamp',async()=>{const f=fake();assert.deepEqual(await new PrismaRegisterRepository(f.db).open(ctx,{idKasir:1,saldoAwal:0},now),{id:23,noref:'KRS-202610020023'});assert.match(f.queries[0],/db_company.*FOR UPDATE/);assert.match(f.queries[1],/db_users/);assert.match(f.queries[3],/b.user_id = \? AND b.status = 1/);assert.equal(f.writes[0].values[2],'2026-10-02 08:00:00');assert.equal(f.writes[1].values[0],'KRS-202610020023');});
 test('open is idempotent and rejects stale, multiple, outside sessions without writes',async()=>{for(const [rows,code]of [[[{id:1,noref:'existing',company_id:1,opened_on:'2026-10-02',kasir_status:1}],null],[[{company_id:2}],'REGISTER_OPEN_OUTSIDE'],[[{company_id:1},{company_id:1}],'REGISTER_AMBIGUOUS'],[[{company_id:1,opened_on:'2026-10-01'}],'REGISTER_STALE']]){const f=fake(rows);const call=new PrismaRegisterRepository(f.db).open(ctx,{idKasir:1,saldoAwal:0},now);if(code)await assert.rejects(call,{code});else assert.deepEqual(await call,{id:1,noref:'existing'});assert.equal(f.writes.length,0);}});
 import {Prisma} from '@prisma/client';
+const noReturns={$queryRaw:async(s)=>{assert.match(s.join('?'),/FROM db_salesreturn/);return[];}};
 test('close locks ownership, totals only Final owned sales, preserves quotation and returns saved recap idempotently',async()=>{
  for(const status of [1,0]){
   const calls=[],writes=[];const tx={$queryRaw:async(s)=>{const sql=s.join('?');calls.push(sql);if(sql.includes('FROM db_company'))return[{id:1}];if(sql.includes('FROM db_users'))return[{username:'synthetic'}];if(sql.includes('FROM db_buka_kasir'))return[{id:12,id_kasir:1,noref:'KRS-test',status,saldo_awal:new Prisma.Decimal('100'),saldo_akhir:new Prisma.Decimal('175'),saldo_kredit:new Prisma.Decimal('50')}];if(sql.includes('FROM db_sales'))return[{cash:new Prisma.Decimal('75'),credit:new Prisma.Decimal('50'),discount:new Prisma.Decimal('5.25'),transaction_count:2n,unsupported:0n}];throw Error(sql);},$executeRaw:async(s,...values)=>{writes.push({sql:s.join('?'),values});return 1;}};
-  const result=await new PrismaRegisterRepository({$transaction:fn=>fn(tx)}).close(ctx,12,now);
+  const result=await new PrismaRegisterRepository({$transaction:fn=>fn(tx)},noReturns).close(ctx,12,now);
   assert.equal(result.saldoAkhir,'175.00');assert.equal(result.saldoKredit,'50.00');assert.equal(writes.length,status===1?1:0);
   assert.equal(result.transactionCount,2);assert.equal(result.discountTotal,'5.25');
   assert.match(calls[3],/COUNT\(\*\) AS transaction_count/);assert.match(calls[3],/SUM\(tot_discount_to_all_amt\)/);
@@ -33,7 +34,7 @@ test('close includes QRIS sales in summary without adding to saldoAkhir cash or 
     },
     $executeRaw: async (s, ...values) => 1,
   };
-  const result = await new PrismaRegisterRepository({ $transaction: (fn) => fn(tx) }).close(ctx, 15, now);
+  const result = await new PrismaRegisterRepository({ $transaction: (fn) => fn(tx) }, noReturns).close(ctx, 15, now);
   assert.equal(result.saldoAwal, '100.00');
   // Physical cash drawer is only saldo_awal + cash: 100.00 + 50.00 = 150.00 (QRIS 30.00 must NOT be in cash drawer)
   assert.equal(result.saldoAkhir, '150.00');
@@ -45,3 +46,29 @@ test('close includes QRIS sales in summary without adding to saldoAkhir cash or 
 });
 
 test('whole opening transaction retries deadlocks rather than individual statements',async()=>{const f=fake();let attempts=0;const real=f.db.$transaction;f.db.$transaction=async(fn)=>{if(++attempts<3)throw{code:'P2010',meta:{code:'1213'}};return real(fn);};await new PrismaRegisterRepository(f.db).open(ctx,{idKasir:1,saldoAwal:0},now);assert.equal(attempts,3);assert.equal(f.writes.length,2);});
+
+test('close subtracts the session cash refunds from the drawer, reports Kredit refunds and no longer blocks returned sales', async () => {
+  const reads = [];
+  const read = { $queryRaw: async (s, ...values) => { reads.push({ sql: s.join('?'), values }); return [
+    { payment_type: 'Cash', amount: new Prisma.Decimal('12.50'), n: 2n }, { payment_type: 'Kredit', amount: new Prisma.Decimal('30.00'), n: 1n }]; } };
+  const calls = []; const writes = [];
+  const tx = {
+    $queryRaw: async (s) => { const sql = s.join('?'); calls.push(sql);
+      if (sql.includes('FROM db_company')) return [{ id: 1 }];
+      if (sql.includes('FROM db_users')) return [{ id: 4, username: 'kasir1' }];
+      if (sql.includes('FROM db_buka_kasir')) return [{ id: 20, id_kasir: 3, noref: 'KRS-r', status: 1, saldo_awal: new Prisma.Decimal('100.00'), saldo_akhir: null, saldo_kredit: new Prisma.Decimal('0'), opened_at: '2026-10-02 07:00:00', closed_at: null }];
+      if (sql.includes('FROM db_sales')) return [{ cash: new Prisma.Decimal('50.00'), qris: new Prisma.Decimal('0'), credit: new Prisma.Decimal('40.00'), discount: new Prisma.Decimal('0'), transaction_count: 3n, unsupported: 0n }];
+      throw Error(sql); },
+    $executeRaw: async (s, ...values) => { writes.push(values); return 1; },
+  };
+  const result = await new PrismaRegisterRepository({ $transaction: (fn) => fn(tx) }, read).close(ctx, 20, now);
+  assert.doesNotMatch(calls[3], /return_bit/, 'a returned sale stays a Final sale of the session');
+  assert.equal(result.saldoAkhir, '137.50');
+  assert.equal(result.saldoKredit, '40.00');
+  assert.deepEqual([result.refundCash, result.refundKredit, result.returnCount], ['12.50', '30.00', 3]);
+  assert.match(reads[0].sql, /company_id = \? AND id_kasir = \? AND created_by = \?/);
+  assert.match(reads[0].sql, /return_date >= \?/);
+  assert.doesNotMatch(reads[0].sql, /return_date <= \?/, 'an open session has no upper bound yet');
+  assert.deepEqual(reads[0].values.slice(0, 4), [1, 3, 'kasir1', '2026-10-02 07:00:00']);
+  assert.equal(writes[0][0], '137.50');
+});

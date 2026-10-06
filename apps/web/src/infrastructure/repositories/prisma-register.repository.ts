@@ -1,22 +1,27 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { AuthContext } from '@koperasi/application/auth/validate-session';
 import { registerWritePrisma } from '../db/prisma-register-write.ts';
+import { prisma } from '../db/prisma.ts';
+import { sessionRefunds } from './sales-return-ledger.ts';
 import { businessDates, PosError } from '@koperasi/domain/pos/sale';
 import type { RegisterOpeningInput, RegisterOpeningResult } from '@koperasi/application/pos/register-lifecycle';
 
 export class PrismaRegisterRepository {
   private readonly write: PrismaClient;
-  constructor(write: PrismaClient) { this.write = write; }
+  private readonly read: Pick<PrismaClient, '$queryRaw'>;
+  /** `read` only sums the session's sales returns, after the branch lock is held (see close). */
+  constructor(write: PrismaClient, read: Pick<PrismaClient, '$queryRaw'> = prisma) { this.write = write; this.read = read; }
   async close(ctx: AuthContext, registerId: number, now: Date) {
     for (let attempt = 0; ; attempt++) {
       try { return await this.write.$transaction(async (tx) => {
         const [company] = await tx.$queryRaw<{ id: number }[]>`SELECT id FROM db_company WHERE id = ${ctx.companyId} AND status = 1 FOR UPDATE`;
         if (!company) throw new PosError('FORBIDDEN');
-        const [user] = await tx.$queryRaw<{ id: number }[]>`SELECT u.id FROM db_users u JOIN db_roles r ON r.id = u.role_id AND r.status = 1
+        const [user] = await tx.$queryRaw<{ id: number; username: string }[]>`SELECT u.id, u.username FROM db_users u JOIN db_roles r ON r.id = u.role_id AND r.status = 1
           WHERE u.id = ${ctx.userId} AND u.status = 1 AND (u.role_id <= 2 OR u.company_id = ${ctx.companyId})
           AND EXISTS(SELECT 1 FROM db_permissions p WHERE p.role_id = u.role_id AND p.permissions = 'sales_add') FOR UPDATE`;
         if (!user) throw new PosError('FORBIDDEN');
-        const [register] = await tx.$queryRaw<{ id: number; id_kasir: number; noref: string; status: number; saldo_awal: Prisma.Decimal; saldo_akhir: Prisma.Decimal | null; saldo_kredit: Prisma.Decimal }[]>`SELECT b.id,b.id_kasir,b.noref,b.status,b.saldo_awal,b.saldo_akhir,b.saldo_kredit FROM db_buka_kasir b
+        const [register] = await tx.$queryRaw<{ id: number; id_kasir: number; noref: string; status: number; saldo_awal: Prisma.Decimal; saldo_akhir: Prisma.Decimal | null; saldo_kredit: Prisma.Decimal; opened_at: string; closed_at: string | null }[]>`SELECT b.id,b.id_kasir,b.noref,b.status,b.saldo_awal,b.saldo_akhir,b.saldo_kredit,
+          DATE_FORMAT(b.tgl_buka,'%Y-%m-%d %H:%i:%s') AS opened_at, DATE_FORMAT(b.tgl_tutup,'%Y-%m-%d %H:%i:%s') AS closed_at FROM db_buka_kasir b
           JOIN db_kasir k ON k.id=b.id_kasir AND k.company_id=b.company_id
           WHERE b.id=${registerId} AND b.user_id=${ctx.userId} AND b.company_id=${ctx.companyId} FOR UPDATE`;
         if (!register) throw new PosError('FORBIDDEN');
@@ -29,12 +34,20 @@ export class PrismaRegisterRepository {
           CAST(COALESCE(SUM(CASE WHEN payment_type='Kredit' THEN CAST(grand_total AS DECIMAL(18,2)) ELSE 0 END),0) AS DECIMAL(18,2)) AS credit,
           CAST(COALESCE(SUM(tot_discount_to_all_amt),0) AS DECIMAL(18,2)) AS discount,
           COUNT(*) AS transaction_count,
-          SUM(CASE WHEN COALESCE(return_bit,'0')<>'0' OR payment_type NOT IN ('Cash','QRIS','Kredit') THEN 1 ELSE 0 END) AS unsupported
+          SUM(CASE WHEN payment_type NOT IN ('Cash','QRIS','Kredit') THEN 1 ELSE 0 END) AS unsupported
           FROM db_sales WHERE company_id=${ctx.companyId} AND id_buka_kasir=${registerId} AND sales_status='Final'`;
-        const summary = { transactionCount: Number(totals.transaction_count), discountTotal: totals.discount.toFixed(2), saldoQris: (totals.qris ?? new Prisma.Decimal(0)).toFixed(2) };
+        // Sales returns refunded at this counter during the session. Every return writer holds the same branch lock
+        // until it commits, so once this transaction owns it a plain read sees all of them and no new one can start.
+        const refunds = await sessionRefunds(this.read, { companyId: ctx.companyId, idKasir: register.id_kasir, username: user.username,
+          openedAt: register.opened_at, closedAt: register.status === 0 ? register.closed_at : null });
+        const sen = (value: number) => new Prisma.Decimal(value).dividedBy(100).toFixed(2);
+        const summary = { transactionCount: Number(totals.transaction_count), discountTotal: totals.discount.toFixed(2), saldoQris: (totals.qris ?? new Prisma.Decimal(0)).toFixed(2),
+          refundCash: sen(refunds.cashSen), refundKredit: sen(refunds.kreditSen), returnCount: refunds.count };
         if (register.status === 0) return { id: register.id, noref: register.noref, saldoAwal: register.saldo_awal.toFixed(2), saldoAkhir: register.saldo_akhir?.toFixed(2) ?? '0.00', saldoKredit: register.saldo_kredit.toFixed(2), ...summary };
         if (Number(totals.unsupported ?? 0)) throw new PosError('REGISTER_RECAP_UNSUPPORTED');
-        const saldoAkhir = register.saldo_awal.plus(totals.cash).toFixed(2), saldoKredit = totals.credit.toFixed(2);
+        // Expected drawer cash = opening + Cash sales - Cash refunds (legacy "Total Uang Tunai"). saldo_kredit keeps the
+        // legacy tutup_kasir meaning (Kredit sales of the session); Kredit refunds are reported separately.
+        const saldoAkhir = register.saldo_awal.plus(totals.cash).minus(sen(refunds.cashSen)).toFixed(2), saldoKredit = totals.credit.toFixed(2);
         const localTime = new Date(now.getTime()+7*3600000).toISOString().slice(0,19).replace('T',' ');
         const changed = await tx.$executeRaw`UPDATE db_buka_kasir SET saldo_akhir=${saldoAkhir},saldo_kredit=${saldoKredit},tgl_tutup=${localTime},status=0
           WHERE id=${registerId} AND user_id=${ctx.userId} AND company_id=${ctx.companyId} AND status=1`;

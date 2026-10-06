@@ -51,7 +51,7 @@ export default async function ReceiptPage({
         {mode === 'reprint' && line.taxSen !== null && line.taxSen > 0 && <small>Pajak tercatat {rupiah(line.taxSen)}</small>}
       </div>)}</div>
       <dl className="receipt-totals"><div><dt>Subtotal</dt><dd>{rupiah(receipt.subtotalSen)}</dd></div>{mode === 'checkout' && <div><dt>PPN</dt><dd>0</dd></div>}{mode === 'reprint' && receipt.taxTotalSen !== null && receipt.taxTotalSen > 0 && <div><dt>Pajak tercatat</dt><dd>{rupiah(receipt.taxTotalSen)}</dd></div>}{receipt.discountSen > 0 && <div><dt>{mode === 'reprint' ? 'Diskon transaksi tercatat' : 'Diskon transaksi'}</dt><dd>−{rupiah(receipt.discountSen)}</dd></div>}<div className="receipt-grand"><dt>Total</dt><dd>{rupiah(receipt.grandTotalSen)}</dd></div>{receipt.paymentType === 'Cash' && <><div><dt>Uang Bayar</dt><dd>{rupiah(receipt.paidSen)}</dd></div><div><dt>Kembalian</dt><dd>{rupiah(receipt.changeSen)}</dd></div></>}</dl>
-      <footer>{mode === 'reprint' ? 'Cetak ulang bukti transaksi' : <>Terima kasih atas kunjungan Anda<br />Harga Sudah Termasuk PPN</>}</footer>
+      <footer>{mode === 'reprint' ? <>Cetak ulang bukti transaksi{receipt.hasReturns && <><br />Sebagian/seluruh barang telah diretur. Lihat nota retur.</>}</> : <>Terima kasih atas kunjungan Anda<br />Harga Sudah Termasuk PPN</>}</footer>
     </article>
   </main>;
 }

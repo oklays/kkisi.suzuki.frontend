@@ -47,7 +47,7 @@ Legacy PHP (tokonew.kkisitb2.id) ── localhost ── n1608204_kkisi (unchang
 | SSH host / port | srv149.niagahoster.com (217.21.72.51) / 65002 |
 | Host key pin | ED25519 `SHA256:E0tMsixUc1wnR2lM9aI7R4IoeSmJeyaud73foFnEVnA`, matching the key already trusted by the operator. `HostKeyAlgorithms=ssh-ed25519`, `StrictHostKeyChecking=yes` |
 | Tunnel | 127.0.0.1:3307 inside the pod → 127.0.0.1:3306 on the server. Not reachable from the host (on the operator Mac, host port 3307 was the local staging MariaDB 11.4; the identity pin told them apart) |
-| Firewall | **GCP still blocked.** MySQL 3306 is not opened and Remote MySQL is not used |
+| Firewall | **GCP still blocked** (re-tested after the operator added `34.101.195.90` to Remote MySQL: 3306 and 65002 still time out; Remote MySQL changes MySQL account hosts, not the server firewall). The app does not use Remote MySQL |
 | Auto-recovery | Killing `ssh`: readiness 503 at +1 s, 200 at +3 s (Docker restart). Restarting the tunnel container: 200 within seconds. The app and netns containers were never restarted |
 
 ## 4. Database users (passwords never printed; stored only in GCP `/opt/kkisi-web/.env.production`, mode 600)
@@ -62,6 +62,8 @@ Legacy PHP (tokonew.kkisitb2.id) ── localhost ── n1608204_kkisi (unchang
 | `n1608204_kkisi` (legacy) | Unchanged (all database privileges); remains PHP-only |
 
 Residual: cPanel grants are database-wide, so the writers can DML every business table, not only the POS tables staging restricted them to. The startup check refuses any writer holding DDL.
+
+**Correction (2026-10-06):** cPanel Remote MySQL contains the pre-existing wildcard `%.%.%.%` (plus `34.101.195.90`, added by the operator). cPanel therefore also created a `<user>@%.%.%.%` account for every database user, the new `nx*` users included. A direct login as `n1608204_nxread` from an arbitrary internet IP to 217.21.72.51:3306 **succeeded** (`CURRENT_USER()` = `n1608204_nxread@%.%.%.%`, no TLS). The earlier statement that these accounts work only `@localhost` through the tunnel was wrong. The application still connects only through the tunnel; the exposure is that the accounts (and the legacy `n1608204_kkisi`, which has all privileges) accept password logins from any IPv4 over plaintext. See risk R-WILDCARD in section 13.
 
 ## 5. Auth store
 
@@ -187,6 +189,7 @@ No repository, use-case, query, Prisma schema, business-logic or legacy file cha
 | Medium | Shared-hosting SSH session limits or LVE may drop long-lived tunnels | Mitigated by keepalive and auto-restart; monitor tunnel restarts |
 | Medium | Writers have database-wide DML (cPanel) | Accepted; DDL refused at startup; writers inactive |
 | Medium | WAN latency on auth and checkout paths (round 1 deferred findings) | Future optimization |
+| High | **R-WILDCARD:** Remote MySQL `%.%.%.%` lets every cPanel DB account (legacy `n1608204_kkisi` with all privileges, and the new `nx*` accounts) log in from any IPv4 to the internet-facing port 3306, plaintext. Pre-existing for the legacy account | Not blocking for read-only; decide before writes. Identify remote consumers, then replace the wildcard with explicit IPs (or remove it). `34.101.195.90` in Remote MySQL is not needed for the tunnel design and does not open the network block |
 | Low | `nxbak` credential on the cPanel host (600) | Backup-only privileges |
 | Deferred | HTTPS / domain (`APP_ORIGIN` placeholder) | Next phase |
 

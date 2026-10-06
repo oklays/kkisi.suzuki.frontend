@@ -9,16 +9,23 @@ export type RegisterRecapData = {
   saldoQris?: string;
   transactionCount: number;
   discountTotal: string;
+  /** Sales returns refunded during the session (Next.js returns): Cash left the drawer, Kredit lowered member bills. */
+  refundCash?: string;
+  refundKredit?: string;
+  returnCount?: number;
 };
 
 export function RegisterRecap({ recap, onFinish }: { recap: RegisterRecapData; onFinish: () => void }) {
   const opening = Math.round(Number(recap.saldoAwal) * 100);
   const closing = Math.round(Number(recap.saldoAkhir) * 100);
-  const cash = closing - opening;
+  const refundCash = Math.round(Number(recap.refundCash ?? "0") * 100);
+  const refundKredit = Math.round(Number(recap.refundKredit ?? "0") * 100);
+  // saldo_akhir already has the cash refunds taken out: add them back to show the gross Cash sales.
+  const cash = closing - opening + refundCash;
   const credit = Math.round(Number(recap.saldoKredit) * 100);
   const qris = Math.round(Number(recap.saldoQris ?? "0") * 100);
   // Cash, credit, and QRIS already sum grand_total (after discount); never subtract discount twice.
-  const totalSales = cash + credit + qris;
+  const totalSales = cash + credit + qris - refundCash - refundKredit;
   const cards = [
     { label: "Saldo Awal", value: formatRupiah(opening), icon: Wallet, tone: "blue" },
     { label: "Total Penjualan", value: formatRupiah(totalSales), icon: ChartColumnIncreasing, tone: "green" },
@@ -31,7 +38,11 @@ export function RegisterRecap({ recap, onFinish }: { recap: RegisterRecapData; o
     ["Penjualan QRIS", formatRupiah(qris)],
     ["Penjualan Kredit", formatRupiah(credit)],
     ["Diskon / Penyesuaian", formatRupiah(Math.round(Number(recap.discountTotal) * 100))],
-    ["Total Sales", formatRupiah(totalSales)],
+    ...(recap.returnCount ? [
+      [`Retur Tunai (refund laci)`, `−${formatRupiah(refundCash)}`],
+      [`Retur Kredit (potong tagihan)`, `−${formatRupiah(refundKredit)}`],
+    ] : []),
+    [recap.returnCount ? "Total Sales (bersih retur)" : "Total Sales", formatRupiah(totalSales)],
     ["Setoran Kas", formatRupiah(closing)],
     ["Saldo Akhir Sistem", formatRupiah(closing)],
   ];

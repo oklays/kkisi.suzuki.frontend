@@ -42,11 +42,11 @@ export default defineConfig([
     basePath: root,
     // Only dedicated local-staging DB clients may read legacy write DSNs.
     files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/scripts/**/*.ts", "packages/**/*.{ts,tsx}"],
-    ignores: ["apps/web/src/infrastructure/db/prisma-pos-write.ts", "apps/web/src/infrastructure/db/prisma-register-write.ts", "apps/web/src/infrastructure/db/prisma-inventory-write.ts", "apps/web/src/infrastructure/db/prisma-product-write.ts"],
+    ignores: ["apps/web/src/infrastructure/db/prisma-pos-write.ts", "apps/web/src/infrastructure/db/prisma-register-write.ts", "apps/web/src/infrastructure/db/prisma-inventory-write.ts", "apps/web/src/infrastructure/db/prisma-product-write.ts", "apps/web/src/infrastructure/db/prisma-return-write.ts"],
     rules: {
       "no-restricted-syntax": ["error",
-        { selector: "MemberExpression[property.name=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." },
-        { selector: "Literal[value=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." }],
+        { selector: "MemberExpression[property.name=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT|_RETURN)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." },
+        { selector: "Literal[value=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT|_RETURN)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." }],
     },
   },
   {

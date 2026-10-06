@@ -22,6 +22,8 @@ export type PosSession = {
   userId: number;
   canCheckout?: boolean;
   canSales?: boolean;
+  /** sales_return_view: the branch return list (inside the Sales area, so sales_view is required too). */
+  canReturns?: boolean;
   canViewPayments?: boolean;
   canInventory?: boolean;
   canProducts?: boolean;

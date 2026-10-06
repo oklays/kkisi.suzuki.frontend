@@ -15,7 +15,8 @@
     "./pos/sale": "./src/pos/sale.ts",
     "./pos/receipt": "./src/pos/receipt.ts",
     "./pos/payment-method": "./src/pos/payment-method.ts",
-    "./sales/history": "./src/sales/history.ts"
+    "./sales/history": "./src/sales/history.ts",
+    "./sales/return": "./src/sales/return.ts"
   },
   "scripts": {
     "lint": "eslint .",

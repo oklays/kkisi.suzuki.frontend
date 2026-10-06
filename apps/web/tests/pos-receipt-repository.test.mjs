@@ -35,15 +35,21 @@ test('member receipt includes saved Kredit sale in monthly usage; cash and guest
       assert.match(sql, /payment_type = 'Kredit'/);
       assert.match(sql, /sales_status = 'Final'/);
       assert.match(sql, /sales_date >= \?/);
+      if (calls === 3) {
+        // Kredit returns of this month's Kredit sales give the limit back.
+        assert.match(sql, /FROM db_salesreturn r JOIN db_sales s/);
+        assert.match(sql, /r\.payment_type = 'Kredit' AND r\.return_status = 'Return'/);
+        return [{ amount: decimal('20.00') }];
+      }
       return [{ amount: decimal('150.00') }];
     } };
     const receipt = await new PrismaReceiptRepository(db).find(9, 42);
     assert.equal(receipt.memberNik, '123');
     assert.equal(receipt.customerName, 'Ani');
     assert.equal(receipt.limitSen, 50000);
-    assert.equal(receipt.usedLimitSen, 15000);
-    assert.equal(receipt.remainingLimitSen, 35000);
-    assert.equal(calls, 2);
+    assert.equal(receipt.usedLimitSen, 13000);
+    assert.equal(receipt.remainingLimitSen, 37000);
+    assert.equal(calls, 3);
   }
 });
 

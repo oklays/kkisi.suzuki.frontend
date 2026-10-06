@@ -16,7 +16,8 @@
     "./pos/checkout": "./src/pos/checkout.usecase.ts",
     "./pos/receipt": "./src/pos/read-receipt.usecase.ts",
     "./pos/register-lifecycle": "./src/pos/register-lifecycle.ts",
-    "./sales/history": "./src/sales/read-history.ts"
+    "./sales/history": "./src/sales/read-history.ts",
+    "./sales/returns": "./src/sales/returns.ts"
   },
   "scripts": {
     "lint": "eslint .",

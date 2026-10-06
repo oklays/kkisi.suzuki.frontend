@@ -5,6 +5,7 @@ import { evaluateReprintEligibility, hasAmbiguousLegacyTotals, type ReprintFacts
 import type { Receipt, ReceiptReadMode } from '@koperasi/domain/pos/receipt';
 import type { ReceiptRepository } from '@koperasi/application/pos/receipt';
 import { prisma } from '../db/prisma.ts';
+import { kreditReturnedSen } from './sales-return-ledger.ts';
 
 type Row = {
   id: number; sales_code: string; sales_date: string; return_bit: string | null; company_name: string; address: string;
@@ -113,7 +114,7 @@ export class PrismaReceiptRepository implements ReceiptRepository {
       const [spent] = await this.db.$queryRaw<{ amount: Prisma.Decimal }[]>`SELECT CAST(COALESCE(SUM(CAST(grand_total AS DECIMAL(18,2))),0) AS DECIMAL(18,2)) AS amount FROM db_sales
         WHERE nik_kar = ${memberNik} AND payment_type = 'Kredit' AND sales_status = 'Final' AND sales_date >= ${monthStart} AND sales_date < ${monthEnd}`;
       limitSen = money(first.gaji_minus && first.gaji_minus.gt(0) ? first.gaji_minus : first.limit_amount!);
-      usedLimitSen = money(spent.amount);
+      usedLimitSen = Math.max(0, money(spent.amount) - await kreditReturnedSen(this.db, memberNik, monthStart, monthEnd));
       remainingLimitSen = limitSen - usedLimitSen;
     }
     return {
@@ -121,6 +122,7 @@ export class PrismaReceiptRepository implements ReceiptRepository {
       storeName: first.company_name, storeAddress: first.address, cashier: first.created_by,
       customerName: mode === 'reprint' ? first.customer_name?.trim() || 'Nama pelanggan tidak tersimpan' : memberNik ? first.member_name! : 'UMUM', memberNik, paymentType: first.payment_type,
       limitSen, usedLimitSen, remainingLimitSen,
+      hasReturns: first.return_bit === '1',
       mode,
       lines: rows.filter((row) => row.line_id !== null).map((row) => ({
         name: row.description?.trim() || row.item_name || `Item #${row.item_id}`, quantity: row.sales_qty!,

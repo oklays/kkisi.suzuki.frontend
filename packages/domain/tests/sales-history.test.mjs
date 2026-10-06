@@ -56,8 +56,9 @@ test('only complete settled POS sales with simple stored totals can print a repr
     otherChargesSen: 200, hasAmbiguousTax: false, activePaymentCount: 1, paymentTypeMatches: true,
   };
   assert.deepEqual(evaluateReprintEligibility(eligible), { allowed: true, reasons: [] });
+  assert.deepEqual(evaluateReprintEligibility({ ...eligible, returnBit: '1' }), { allowed: true, reasons: [] }, 'returns never change the saved sale');
   for (const [change, code] of [
-    [{ returnBit: '1' }, 'RETURN_UNSUPPORTED'], [{ salesStatus: 'Quotation' }, 'NON_FINAL'],
+    [{ returnBit: '' }, 'RETURN_UNSUPPORTED'], [{ returnBit: null }, 'RETURN_UNSUPPORTED'], [{ salesStatus: 'Quotation' }, 'NON_FINAL'],
     [{ paymentType: 'Unknown' }, 'PAYMENT_METHOD_UNSUPPORTED'], [{ paymentStatus: 'Partial' }, 'PAYMENT_NOT_SETTLED'],
     [{ itemCount: 0 }, 'ITEMS_MISSING'], [{ activePaymentCount: 2 }, 'PAYMENT_DATA_UNSUPPORTED'],
     [{ hasAmbiguousTax: true }, 'LEGACY_TOTALS_UNSUPPORTED'], [{ paidSen: 900 }, 'INVALID_SAVED_AMOUNT'],

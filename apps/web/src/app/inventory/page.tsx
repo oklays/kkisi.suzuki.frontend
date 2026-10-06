@@ -16,7 +16,7 @@ export default async function InventoryPage() {
   let session: PosSession;
   let capabilities: { stockOpname: boolean; warehouse: boolean; writes: boolean };
   try {
-    const [company, companies, stockOpname, warehouse, user, canProducts, canCheckout, canSales] = await Promise.all([
+    const [company, companies, stockOpname, warehouse, user, canProducts, canCheckout, canSales, canReturns] = await Promise.all([
       services.deps.companies.findActive(ctx.companyId),
       ctx.canSwitchBranch ? services.deps.companies.listActive() : Promise.resolve([]),
       services.deps.permissions.has(ctx.roleId, "inventory_so"),
@@ -25,12 +25,13 @@ export default async function InventoryPage() {
       services.deps.permissions.has(ctx.roleId, "items_view"),
       services.deps.permissions.has(ctx.roleId, "sales_add"),
       services.deps.permissions.has(ctx.roleId, "sales_view"),
+      services.deps.permissions.has(ctx.roleId, "sales_return_view"),
     ]);
     session = {
       userName: ctx.userName, userLogin: user?.username, branchName: company?.name ?? "Cabang", companyId: ctx.companyId,
       userId: ctx.userId, canSwitchBranch: ctx.canSwitchBranch, companies,
       csrfToken: services.keys.csrfToken(ctx.sidHash), checkoutAvailable: false,
-      canInventory: stockOpname || warehouse, canProducts, canCheckout, canSales, register: { open: null, multiple: false },
+      canInventory: stockOpname || warehouse, canProducts, canCheckout, canSales, canReturns, register: { open: null, multiple: false },
     };
     capabilities = { stockOpname, warehouse, writes: inventoryWritesAvailable() };
   } catch {

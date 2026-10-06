@@ -27,3 +27,12 @@ test('Total Sales includes QRIS and renders Penjualan QRIS in breakdown', () => 
   assert.match(html, /Non-Tunai \(QRIS\)<\/span><strong>Rp 35<\/strong>/);
 });
 
+
+test('recap shows session refunds: gross Cash sales, refunds as deductions and net Total Sales', () => {
+  const html = renderToStaticMarkup(fixture.exports.RegisterRecap({ recap: { saldoAwal: '100.00', saldoAkhir: '137.50', saldoKredit: '40.00', saldoQris: '0.00', discountTotal: '0.00', transactionCount: 3, refundCash: '12.50', refundKredit: '30.00', returnCount: 3 }, onFinish: () => {} }));
+  assert.match(html, /Penjualan Tunai<\/dt><dd>Rp 50<\/dd>/);
+  assert.match(html, /Retur Tunai \(refund laci\)<\/dt><dd>−Rp 12,5<\/dd>/);
+  assert.match(html, /Retur Kredit \(potong tagihan\)<\/dt><dd>−Rp 30<\/dd>/);
+  assert.match(html, /Total Sales \(bersih retur\)<\/dt><dd>Rp 47,5<\/dd>/);
+  assert.match(html, /Saldo Akhir Sistem<\/dt><dd>Rp 137,5<\/dd>/);
+});

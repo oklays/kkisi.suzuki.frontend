@@ -7,6 +7,7 @@ import { posWritePrisma, validatePosWriteConfig } from './prisma-pos-write.ts';
 import { registerWritePrisma, validateRegisterWriteConfig } from './prisma-register-write.ts';
 import { inventoryWritePrisma, validateInventoryWriteConfig } from './prisma-inventory-write.ts';
 import { productWritePrisma, validateProductWriteConfig } from './prisma-product-write.ts';
+import { returnWritePrisma, validateReturnWriteConfig } from './prisma-return-write.ts';
 
 type Env = Record<string, string | undefined>;
 type Writer = { name: string; dsn: ProductionDsn; client: () => PrismaClient };
@@ -53,6 +54,7 @@ function enabledWriters(env: Env): Writer[] {
   }
   if (env.INVENTORY_WRITES_ENABLED === '1') add('inventory', validateInventoryWriteConfig(env), inventoryWritePrisma);
   if (env.PRODUCTS_WRITES_ENABLED === '1') add('products', validateProductWriteConfig(env), productWritePrisma);
+  if (env.SALES_RETURN_WRITES_ENABLED === '1') add('returns', validateReturnWriteConfig(env), returnWritePrisma);
   if (productionWritesAllowed(env) && writers.length === 0) throw new DeploymentConfigError('WRITE_ACK_WITHOUT_WRITER');
   return writers;
 }
