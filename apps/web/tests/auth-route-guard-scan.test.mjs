@@ -11,7 +11,10 @@ const rel = (p) => relative(ROOT, p);
 // Deliberately public: the login endpoint and page, and logout (it validates the session itself and only clears the cookie
 // when there is none), plus the static landing page. Anything NOT listed here must be guarded.
 const PUBLIC_ROUTES = new Set(['src/app/api/auth/login/route.ts', 'src/app/api/auth/logout/route.ts']);
-const PUBLIC_PAGES = new Set(['src/app/login/page.tsx', 'src/app/page.tsx']);
+// Public pages: the login form, the landing page and the member "Segera Hadir" page. The last two are static and
+// must never read data or sessions (enforced below).
+const PUBLIC_PAGES = new Set(['src/app/login/page.tsx', 'src/app/page.tsx', 'src/app/anggota/page.tsx']);
+const STATIC_PUBLIC = ['src/app/page.tsx', 'src/app/anggota/page.tsx'];
 
 function handlerSource(routeSource, method) {
   const out = [];
@@ -73,6 +76,12 @@ test('every page other than the login and landing pages calls requirePagePermiss
     if (guardAt < 0 || (dataAt >= 0 && dataAt < guardAt)) bad.push(rel(file));
   }
   assert.deepEqual(bad, []);
+});
+
+test('the landing and member coming-soon pages stay static: no session, cookie, database or infrastructure code', () => {
+  const files = [...STATIC_PUBLIC.map((f) => join(ROOT, f)), ...walk(join(ROOT, 'src/components/landing')).filter((p) => /\.(tsx?|ts)$/.test(p))];
+  const leaks = files.filter((file) => /@\/infrastructure|\/infrastructure\/|next\/headers|cookies\(|@prisma\/client|requirePagePermission|fetch\(/.test(readFileSync(file, 'utf8')));
+  assert.deepEqual(leaks.map(rel), []);
 });
 
 test('the proxy is only a first gate and covers /pos and /api/pos; handlers do not rely on it', () => {
