@@ -146,7 +146,7 @@ test('ssh-tunnel accepts exactly 127.0.0.1, pins the remote server identity, and
   assert.deepEqual(expectedServer('legacy', TUNNEL), { hostname: 'db.prod.invalid', port: '3306', transport: 'ssh-tunnel' });
   assert.equal(loadAuthConfig(TUNNEL).cookieName, '__Host-kkisi_sid');
   const bad = (patch, reason) => assert.throws(() => assertProductionReadAndAuth({ ...TUNNEL, ...patch }), (e) => e.reason === reason);
-  for (const host of ['localhost', '::1', '0.0.0.0', 'db.prod.invalid', 'kkisi-db-tunnel']) bad({ LEGACY_DB_HOST: host }, 'LEGACY_DB_HOST');
+  for (const host of ['localhost', '::1', '0.0.0.0', 'db.prod.invalid', 'genesis-db-tunnel']) bad({ LEGACY_DB_HOST: host }, 'LEGACY_DB_HOST');
   bad({ LEGACY_DB_SERVER_HOSTNAME: undefined }, 'LEGACY_DB_SERVER_HOSTNAME');
   bad({ LEGACY_DB_SERVER_HOSTNAME: 'localhost' }, 'LEGACY_DB_SERVER_HOSTNAME');
   bad({ LEGACY_DB_SERVER_HOSTNAME: '127.0.0.1' }, 'LEGACY_DB_SERVER_HOSTNAME');

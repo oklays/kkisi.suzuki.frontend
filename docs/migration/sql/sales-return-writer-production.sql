@@ -5,7 +5,7 @@
 -- Replace before running:
 --   <RETURN_USER>      dedicated cPanel account, e.g. n1608204_nxret (the startup guard refuses kkisi_*, root, admin
 --                      and the legacy PHP account n1608204_kkisi; it must differ from nxread/nxauth/nxpos/nxreg)
---   <STRONG_PASSWORD>  generated, stored only in /opt/kkisi-web/.env.production (mode 600)
+--   <STRONG_PASSWORD>  generated, stored only in /opt/apps/genesis.web/.env.production (mode 600)
 -- Database: n1608204_smart_kopkar. Host: 'localhost' (the app reaches MariaDB through the SSH tunnel).
 --
 -- Exact read/write set of PrismaSalesReturnRepository (apps/web/src/infrastructure/repositories/prisma-sales-return.repository.ts):

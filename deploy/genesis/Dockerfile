@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
-# KKISI web (Next.js) production image. Build context = repository root, filtered by the allowlist in /.dockerignore:
-#   docker build -f deploy/gcp/Dockerfile -t kkisi-web:<tag> .
+# genesis.web (Next.js) production image. Build context = repository root, filtered by the allowlist in /.dockerignore:
+#   docker build -f deploy/genesis/Dockerfile -t genesis-web:<tag> .
 # No configuration or credential is baked in. DATABASE_URL*, AUTH_SECRETS, APP_ORIGIN, APP_ENV and the production
-# allowlist are injected at runtime (deploy/gcp/env.production.example lists the names).
+# allowlist are injected at runtime (deploy/genesis/env.production.example lists the names).
 #
 # `next start` is used instead of `output: 'standalone'`: the bcrypt worker is an eval worker that resolves
 # `bcryptjs` from node_modules at runtime, which standalone file tracing does not see (POS plan 6.17.4 (c)).

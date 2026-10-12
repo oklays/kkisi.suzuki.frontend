@@ -1,23 +1,23 @@
-# KKISI web only. Its own compose project, containers, network and loopback port: it does not reference, reuse or
-# restart any other application on the shared GCP VM, and installs nothing on the host.
-#   KKISI_WEB_TAG=<tag> KKISI_TUNNEL_TAG=<tag> docker compose -f deploy/gcp/docker-compose.yml up -d
+# genesis.web: its own compose project, containers, network and loopback port. It does not reference, reuse or
+# restart any other application on the shared server, and installs nothing on the host.
+#   docker compose --env-file /opt/apps/genesis.web/compose.env -f deploy/genesis/docker-compose.yml up -d
 # Secrets live on the server only (never in Git or images):
-#   ${KKISI_WEB_ENV_FILE}             app environment (mode 600)
-#   ${KKISI_TUNNEL_DIR}/id_ed25519    tunnel private key (mode 600), restricted on the server side to port-forwarding
-#   ${KKISI_TUNNEL_DIR}/known_hosts   pinned host key of the SSH server (StrictHostKeyChecking=yes)
+#   ${GENESIS_WEB_ENV_FILE}             app environment (mode 600)
+#   ${GENESIS_TUNNEL_DIR}/id_ed25519    tunnel private key (mode 600), restricted on the SSH server to port-forwarding
+#   ${GENESIS_TUNNEL_DIR}/known_hosts   pinned host key of the SSH server (StrictHostKeyChecking=yes)
 #
 # Network layout ("pod" pattern): `netns` owns one private network namespace and never restarts on its own; the
 # tunnel and the app join it. The tunnel listens on 127.0.0.1:${TUNNEL_LOCAL_PORT} INSIDE that namespace only: it is
 # not published on the host or on any Docker network. Either member can restart without breaking the other.
-name: kkisi-web
+name: genesis-web
 
 services:
   netns:
     image: registry.k8s.io/pause:3.10
-    container_name: kkisi-web-netns
+    container_name: genesis-web-netns
     # The app's only published port: loopback on the host; the host nginx proxies to it. Never 0.0.0.0.
     ports:
-      - "127.0.0.1:${KKISI_WEB_HOST_PORT:-3140}:3000"
+      - "127.0.0.1:${GENESIS_WEB_HOST_PORT:-3140}:3000"
     restart: unless-stopped
     read_only: true
     security_opt:
@@ -26,13 +26,13 @@ services:
       - ALL
     mem_limit: 16m
     networks:
-      - kkisi-web
+      - genesis-web
 
   db-tunnel:
-    image: kkisi-db-tunnel:${KKISI_TUNNEL_TAG:?set KKISI_TUNNEL_TAG to the tunnel image tag}
+    image: genesis-db-tunnel:${GENESIS_TUNNEL_TAG:?set GENESIS_TUNNEL_TAG to the tunnel image tag}
     build:
       context: tunnel
-    container_name: kkisi-db-tunnel
+    container_name: genesis-db-tunnel
     network_mode: "service:netns"
     environment:
       TUNNEL_SSH_HOST: ${TUNNEL_SSH_HOST:?set TUNNEL_SSH_HOST}
@@ -41,8 +41,8 @@ services:
       TUNNEL_LOCAL_PORT: ${TUNNEL_LOCAL_PORT:-3307}
       TUNNEL_REMOTE_PORT: ${TUNNEL_REMOTE_PORT:-3306}
     volumes:
-      - ${KKISI_TUNNEL_DIR:-/opt/kkisi-web/tunnel}/id_ed25519:/run/tunnel/id_ed25519:ro
-      - ${KKISI_TUNNEL_DIR:-/opt/kkisi-web/tunnel}/known_hosts:/run/tunnel/known_hosts:ro
+      - ${GENESIS_TUNNEL_DIR:-/opt/apps/genesis.web/tunnel}/id_ed25519:/run/tunnel/id_ed25519:ro
+      - ${GENESIS_TUNNEL_DIR:-/opt/apps/genesis.web/tunnel}/known_hosts:/run/tunnel/known_hosts:ro
     # ssh exits on any failure (ExitOnForwardFailure, 3 missed keepalives = ~45 s); Docker restarts it with backoff.
     restart: always
     init: true
@@ -75,11 +75,11 @@ services:
         max-file: "3"
 
   web:
-    image: kkisi-web:${KKISI_WEB_TAG:?set KKISI_WEB_TAG to the image tag to run}
-    container_name: kkisi-web
+    image: genesis-web:${GENESIS_WEB_TAG:?set GENESIS_WEB_TAG to the image tag to run}
+    container_name: genesis-web
     network_mode: "service:netns"
     env_file:
-      - ${KKISI_WEB_ENV_FILE:-/opt/kkisi-web/.env.production}
+      - ${GENESIS_WEB_ENV_FILE:-/opt/apps/genesis.web/.env.production}
     depends_on:
       db-tunnel:
         condition: service_healthy
@@ -96,7 +96,7 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    # Bounded so this app cannot starve the other workloads on the shared VM.
+    # Bounded so this app cannot starve the other workloads on the shared server.
     mem_limit: 1g
     cpus: 1.5
     pids_limit: 256
@@ -107,5 +107,5 @@ services:
         max-file: "5"
 
 networks:
-  kkisi-web:
-    name: kkisi-web
+  genesis-web:
+    name: genesis-web

@@ -18,9 +18,14 @@ async function documentRow(db: Db, ctx: InventoryContext, id: number, lock = fal
   const rows = await db.$queryRaw<DocumentRow[]>(Prisma.sql`SELECT ${documentFields} FROM db_inventory_so WHERE company_id = ${ctx.companyId} AND id = ${id} ${lock ? Prisma.sql`FOR UPDATE` : Prisma.empty}`);
   return rows[0];
 }
+// Writes (locked) stay capped at 500 lines. The read-only detail view also shows legacy whole-store documents
+// (production: up to 1,681 lines), so it allows 5,000.
+const MAX_LOCKED_LINES = 500;
+const MAX_READ_LINES = 5000;
 async function documentLines(db: Db, id: number, lock = false): Promise<LineRow[]> {
-  const rows = await db.$queryRaw<LineRow[]>(Prisma.sql`SELECT ${lineFields} FROM db_inventory_so_dtl WHERE so_id = ${id} ORDER BY item_id,id LIMIT 501 ${lock ? Prisma.sql`FOR UPDATE` : Prisma.empty}`);
-  if (rows.length > 500) throw new InventoryError('INVALID_INPUT');
+  const max = lock ? MAX_LOCKED_LINES : MAX_READ_LINES;
+  const rows = await db.$queryRaw<LineRow[]>(Prisma.sql`SELECT ${lineFields} FROM db_inventory_so_dtl WHERE so_id = ${id} ORDER BY item_id,id LIMIT ${max + 1} ${lock ? Prisma.sql`FOR UPDATE` : Prisma.empty}`);
+  if (rows.length > max) throw new InventoryError('INVALID_INPUT');
   return rows;
 }
 function owned(document: DocumentRow, username: string, draft = true): void {

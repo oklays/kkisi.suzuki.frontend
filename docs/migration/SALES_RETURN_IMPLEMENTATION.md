@@ -88,7 +88,7 @@ Local (`scripts/setup-return-write.mjs --apply`, applied to `kkisi-staging` only
 
 Probed refusals: UPDATE of another column (1143), DELETE (1142), INSERT into `db_sales` (1142), `m_anggota` (1142), ALTER (1142). `kkisi_pos_runtime`, `kkisi_pos_register` and every other account are unchanged. The writer refuses to share an identity with checkout, register, inventory, product or auth accounts, and the startup check enrolls it (no DDL, connection budget).
 
-Production: review-only SQL in [sql/sales-return-writer-production.sql](sql/sales-return-writer-production.sql); placeholders in `deploy/gcp/env.production.example`. Nothing was executed against production.
+Production: review-only SQL in [sql/sales-return-writer-production.sql](sql/sales-return-writer-production.sql); placeholders in `deploy/genesis/env.production.example`. Nothing was executed against production.
 
 ## 6. Verification
 

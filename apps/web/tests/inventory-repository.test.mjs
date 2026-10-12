@@ -62,3 +62,10 @@ test('count rejects physical valuations that DOUBLE would round before persistin
  await assert.rejects(()=>new mod.PrismaInventoryRepository(f.db,f.db).count(ctx,{id:1,itemId:7,actualQty:2147483604,note:''},now),{code:'INVALID_INPUT'});
  assert.equal(f.writes.length,0);
 });
+test('read-only detail shows large legacy whole-store documents; writes keep the 500-line cap',async()=>{
+ assert.ok(mod?.PrismaInventoryRepository);
+ const legacy={...doc,doc_no:'SO-LEGACY-1'},many=(n)=>Array.from({length:n},(_,i)=>({...line,id:i+1,item_id:i+1}));
+ const f=fake({document:legacy,lines:many(1681)});const d=await new mod.PrismaInventoryRepository(f.db,f.db).detail(ctx,1);
+ assert.equal(d.lines.length,1681);assert.equal(d.document.managed,false);assert.equal(f.writes.length,0);assert.ok(f.queries.some((q)=>/db_inventory_so_dtl/.test(q)&&!/FOR UPDATE/.test(q)));
+ const huge=fake({document:legacy,lines:many(5001)});await assert.rejects(()=>new mod.PrismaInventoryRepository(huge.db,huge.db).detail(ctx,1),{code:'INVALID_INPUT'});
+});

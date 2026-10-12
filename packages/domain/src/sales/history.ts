@@ -116,9 +116,11 @@ export function evaluateReprintEligibility(facts: ReprintFacts): { allowed: bool
   if (facts.source !== 'pos') reasons.add('NON_POS');
   if (facts.salesStatus !== 'Final') reasons.add('NON_FINAL');
   if (facts.recordStatus !== 1) reasons.add('INACTIVE_RECORD');
-  // '1' = sales return raised. Returns never change the saved sale (they live in db_salesreturn), so the original
-  // receipt stays exact; any other legacy marker is unknown and stays blocked.
-  if (facts.returnBit !== '0' && facts.returnBit !== '1') reasons.add('RETURN_UNSUPPORTED');
+  // Legacy semantics (Sales.php: `!empty($sales->return_bit)`): '' / NULL / '0' = no return, '1' = sales return raised
+  // (Sales_return_model sets 1, its reset sets NULL, stored as '' in the NOT NULL column; 93% of production POS sales are
+  // ''). Returns never change the saved sale (they live in db_salesreturn), so the original receipt stays exact; any
+  // other marker is unknown and stays blocked.
+  if (facts.returnBit !== null && !['', '0', '1'].includes(facts.returnBit)) reasons.add('RETURN_UNSUPPORTED');
   if (!methods.has(facts.paymentType)) reasons.add('PAYMENT_METHOD_UNSUPPORTED');
   if (!['Paid', 'Dibayar'].includes(facts.paymentStatus)) reasons.add('PAYMENT_NOT_SETTLED');
   if (!facts.hasItems || facts.lineCount === 0 || facts.itemCount !== facts.lineCount) reasons.add('ITEMS_MISSING');

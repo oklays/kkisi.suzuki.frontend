@@ -1,5 +1,7 @@
 # GCP partial cutover: Next.js on GCP → production MariaDB on Niagahoster
 
+> **Superseded 2026-10-12:** the app now runs on the DEV server as `genesis.web`. See [GENESIS_DEV_DEPLOYMENT.md](GENESIS_DEV_DEPLOYMENT.md). This report stays as the history of the GCP attempt; its audit findings (single writer, backup, R-WILDCARD) still apply.
+
 Status (2026-10-06, round 2): **NOT READY FOR CONTROLLED PARTIAL CUTOVER.** Two blockers remain, and the agent cannot clear either one:
 
 1. **Network.** Niagahoster's server firewall drops all traffic from the GCP IP 34.101.195.90. Only Niagahoster support can change this.
@@ -14,7 +16,7 @@ Constraints kept: no business query, business logic, business schema or legacy P
 | Blocker | Before | Action | After | Status |
 |---|---|---|---|---|
 | GCP network | 34.101.195.90 → 217.21.72.51 times out on every port | Re-tested 2026-10-06 (3306, 22, 65002, 443, 2083 all time out). The reverse probe is inconclusive because GCP ingress may itself be filtered | Unchanged. Needs a Niagahoster firewall allow for **TCP 65002 only** (A1) | **OPEN (operator)** |
-| Secure DB transport | Server offers no TLS | SSH tunnel sidecar (`deploy/gcp/tunnel`) in a private pod network namespace. Restricted key on cPanel. Guard extended with an explicit `*_TRANSPORT=ssh-tunnel` and server-identity pin. Remote MySQL is **not** needed | Validated end to end against production (from the operator Mac, same images and compose) | **DONE** (on GCP once A1 is done) |
+| Secure DB transport | Server offers no TLS | SSH tunnel sidecar (`deploy/genesis/tunnel`) in a private pod network namespace. Restricted key on cPanel. Guard extended with an explicit `*_TRANSPORT=ssh-tunnel` and server-identity pin. Remote MySQL is **not** needed | Validated end to end against production (from the operator Mac, same images and compose) | **DONE** (on GCP once A1 is done) |
 | Dedicated reader | None | `n1608204_nxread`: SELECT on `n1608204_smart_kopkar` only, `@localhost` | Startup `SHOW GRANTS` check passes; a write attempt is refused by the server (1142) | **DONE** |
 | Dedicated writer | None | `n1608204_nxpos` (checkout) and `n1608204_nxreg` (register): SELECT/INSERT/UPDATE/DELETE, no DDL, `@localhost` | Created and verified; **not enabled** | **DONE** (inactive) |
 | Auth DB | None | Database `n1608204_kkisi_auth` with only `auth_session` and `auth_throttle` (approved DDL). `n1608204_nxauth` has DML on that database only | Startup check passes (tables present, no business-DB grant, no DDL) | **DONE** |
@@ -151,9 +153,9 @@ Then the operating procedure for the pilot: close all GIIC registers in PHP at d
 | `apps/web/src/infrastructure/db/startup-check.ts` | Verifies `@@hostname`/`@@port` on every connection; auth account has no business-DB grant and no DDL | Proves what is behind 127.0.0.1 |
 | `apps/web/src/infrastructure/auth/store-health.ts` | Returns server identity and the auth account's grants | Used by the startup check |
 | `apps/web/tests/deployment-guard.test.mjs` | 4 tunnel tests (13 total) | Loopback refused without ssh-tunnel; identity, DSN and write gates kept |
-| `deploy/gcp/tunnel/Dockerfile`, `deploy/gcp/tunnel/entrypoint.sh` | New | Pinned, keepalive, fail-and-restart SSH tunnel, unprivileged after setup |
-| `deploy/gcp/docker-compose.yml` | Pod pattern (`netns` + `db-tunnel` + `web`) | Tunnel private to the app; independent restarts |
-| `deploy/gcp/env.production.example` | ssh-tunnel variables | Template |
+| `deploy/genesis/tunnel/Dockerfile`, `deploy/genesis/tunnel/entrypoint.sh` | New | Pinned, keepalive, fail-and-restart SSH tunnel, unprivileged after setup |
+| `deploy/genesis/docker-compose.yml` | Pod pattern (`netns` + `db-tunnel` + `web`) | Tunnel private to the app; independent restarts |
+| `deploy/genesis/env.production.example` | ssh-tunnel variables | Template |
 | `docs/migration/GCP_PARTIAL_CUTOVER.md` | This report | |
 
 No repository, use-case, query, Prisma schema, business-logic or legacy file changed.
@@ -171,13 +173,13 @@ No repository, use-case, query, Prisma schema, business-logic or legacy file cha
 
 - **A1. Niagahoster support ticket** (only they can change the server firewall). Ask them to allow inbound **TCP 65002 (SSH)** from **34.101.195.90** on srv149.niagahoster.com, account n1608204, and to remove that IP from any block or deny list (CSF/Imunify360/LFD). Mention that from 34.101.195.90 every port to 217.21.72.51 and 217.21.72.90 times out, while other networks connect. Do **not** request MySQL 3306 and do **not** add Remote MySQL hosts. Then verify from the VM: `timeout 5 bash -c '</dev/tcp/217.21.72.51/65002' && echo open`.
 - **A2. Deploy** (after A1):
-  1. Build off-VM: `docker buildx build --platform linux/amd64 -f deploy/gcp/Dockerfile -t kkisi-web:<sha> --load .` and `docker buildx build --platform linux/amd64 -t kkisi-db-tunnel:<sha> --load deploy/gcp/tunnel`.
+  1. Build off-VM: `docker buildx build --platform linux/amd64 -f deploy/genesis/Dockerfile -t kkisi-web:<sha> --load .` and `docker buildx build --platform linux/amd64 -t kkisi-db-tunnel:<sha> --load deploy/genesis/tunnel`.
   2. Transfer: `docker save kkisi-web:<sha> kkisi-db-tunnel:<sha> | ssh <vm> docker load`.
-  3. On the VM, set both tags in `/opt/kkisi-web/compose.env`, then run `docker compose --env-file /opt/kkisi-web/compose.env -f deploy/gcp/docker-compose.yml up -d`.
+  3. On the VM, set both tags in `/opt/kkisi-web/compose.env`, then run `docker compose --env-file /opt/kkisi-web/compose.env -f deploy/genesis/docker-compose.yml up -d`.
   4. Check that `docker logs kkisi-web | grep startup` shows `verified ... transport=ssh-tunnel` and that `curl 127.0.0.1:3140/health/ready` returns `ready`.
 - **A3. Backup policy:** ask Niagahoster for the server-level backup schedule and retention for this account. Keep an offsite copy of `~/kkisi-backups/*` (for example on GCP `/opt/kkisi-web/backups`, mode 600, once A1 is done), and refresh the dump right before write UAT.
 - **A4. Owner decision:** approve option A for branch 3 (GIIC), or choose B, plus the pilot date and the UAT product.
-- **A5. HTTPS/domain** (next phase): replace `APP_ORIGIN` and install the nginx site from `deploy/gcp/nginx/`.
+- **A5. HTTPS/domain** (next phase): replace `APP_ORIGIN` and install the nginx site from `deploy/genesis/nginx/`.
 
 ## 13. Remaining risks
 
