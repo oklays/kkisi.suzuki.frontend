@@ -746,3 +746,28 @@ The two main entry points, **Console Management** and **Aplikasi Anggota**, must
 Make the result visually polished, production-ready, maintainable, and consistent with the existing Next.js application architecture.
 
 Proceed with the implementation after reviewing the necessary existing project context.
+
+```Text
+Assalamu'alaikum pak, mau update terkait progress maintenance website koperasi, 
+saat ini sudah UP ke google hasil dari maintenance nya bisa dilihat di link berikut ini ``https://smart.kkisitb2.id``.
+
+Dan juga disitu saya sedikit touch up untuk desain User Interface nya, dan dari sisi performance TOKO sudah bertambah lebih dari 5x dari website sebelumnya.
+
+Rencana besok saya mau lanjut implementasi ke satu TOKO koperasi dulu utk suzuki tambun, sebelum di implementasikan ke seluruh TOKO koperasi.
+```
+
+# NEW ACCOUNT PERMISSION FOR RETUR, INV, PRODUCT
+
+## AKUN
+nxret
+nxinv
+nxprd
+
+## PASSWORD
+kopkar-nxret123
+kopkar-nxinv123
+kopkar-nxprd123
+
+ssh -t -p 1980 root@117.54.42.178 /opt/apps/genesis.web/set-writer.sh return n1608204_nxret
+ssh -t -p 1980 root@117.54.42.178 /opt/apps/genesis.web/set-writer.sh inventory n1608204_nxinv
+ssh -t -p 1980 root@117.54.42.178 /opt/apps/genesis.web/set-writer.sh products n1608204_nxprd
