@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import { InventoryError, calculateStockCount, type StockOpname, type StockOpnameDetail, type StockOpnameLine, type Warehouse, type WarehouseInput, type StockOpnameCreate, type StockOpnameCount } from '@koperasi/domain/inventory';
 import type { InventoryContext, InventoryRepository } from '@koperasi/application/inventory';
 import { prisma } from '../db/prisma.ts';
+import { capLockWait } from '../db/lock-wait.ts';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 type DocumentRow = { id: number; doc_no: string; periode: string; start_date: string | null; end_date: string | null; doc_status: number; doc_remarks: string | null; created_by: string };
@@ -80,6 +81,7 @@ export class PrismaInventoryRepository implements InventoryRepository {
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.write.$transaction(async (tx) => {
+          await capLockWait(tx);
           // ponytail: serialize global name checks on the first active company; dedicated mutex only if contention warrants it.
           if (global) {
             const [mutex] = await tx.$queryRaw<{ id: number }[]>`SELECT id FROM db_company WHERE status = 1 ORDER BY id LIMIT 1 FOR UPDATE`;

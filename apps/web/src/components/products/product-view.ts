@@ -9,4 +9,3 @@ export function productsCsv(items: MasterProduct[]): string {
     ...items.map(p => [p.code, p.sku, p.barcode, p.packBarcode, p.name, p.category ?? '', p.brand ?? '', p.unit ?? '', p.sellingPrice, p.purchasePrice, p.discount, p.stock, p.alertQty, p.active ? 'Aktif' : 'Nonaktif', p.locked ? 'Sedang SO' : ''])];
   return '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
 }
-export const legacyProductUrl = (id?: number) => `https://tokonew.kkisitb2.id/items/${id ? `update/${id}` : 'add'}`;

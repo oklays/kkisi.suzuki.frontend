@@ -4,6 +4,7 @@ import { ProductEditError, type ProductEditInput, type ProductAdjustmentInput, t
 import type { ProductActor, ProductEditRepository } from '@koperasi/application/inventory';
 import { prisma } from '../db/prisma.ts';
 import { productWritePrisma } from '../db/prisma-product-write.ts';
+import { capLockWait } from '../db/lock-wait.ts';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 type Row = Omit<ProductEditInput,'revision'|'active'|'sellingPrice'|'purchasePrice'|'discount'> & { sellingPrice: Prisma.Decimal; purchasePrice: Prisma.Decimal; discount: Prisma.Decimal; status: number; statusSo: number; stock: number; type: string; expiryDate: string | null; stamp: string };
@@ -30,6 +31,7 @@ export const times = (now: Date) => { const time=new Date(now.getTime()+7*360000
 export function productWriteTransaction<T>(write:PrismaClient|undefined,ctx:ProductActor,permission:'items_edit'|'items_add',operation:(tx:Prisma.TransactionClient,username:string)=>Promise<T>):Promise<T> {
   if(!write)throw new ProductEditError('WRITE_NOT_CONFIGURED');
   return write.$transaction(async tx=>{
+    await capLockWait(tx);
     const [company]=await tx.$queryRaw<{id:number}[]>`SELECT id FROM db_company WHERE id=${ctx.companyId} AND status=1 FOR UPDATE`;
     if(!company)throw new ProductEditError('FORBIDDEN');
     const [user]=await tx.$queryRaw<{username:string}[]>`SELECT u.username FROM db_users u JOIN db_roles r ON r.id=u.role_id AND r.status=1

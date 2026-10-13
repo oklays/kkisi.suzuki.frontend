@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
+import { capLockWait } from '../db/lock-wait.ts';
 import { toMinorUnits } from '@koperasi/domain/money';
 import { businessDates, decimalAmount, isPaymentMethod, PosError } from '@koperasi/domain/pos/sale';
 import { evaluateReturnEligibility, priceReturn, type ReturnFacts, type ReturnListQuery, type ReturnRequest, type ReturnableLine } from '@koperasi/domain/sales/return';
@@ -161,6 +162,7 @@ export class PrismaSalesReturnRepository implements SalesReturnRepository {
   }
 
   private async persist(tx: Prisma.TransactionClient, actor: ReturnActor, saleId: number, request: ReturnRequest, now: Date): Promise<CreatedReturn> {
+    await capLockWait(tx);
     const { companyId, userId } = actor;
     const dates = businessDates(now);
     // Branch mutex, same order as checkout and register close: company -> user -> documents.

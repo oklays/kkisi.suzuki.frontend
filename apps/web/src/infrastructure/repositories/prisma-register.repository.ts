@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { AuthContext } from '@koperasi/application/auth/validate-session';
 import { registerWritePrisma } from '../db/prisma-register-write.ts';
+import { capLockWait } from '../db/lock-wait.ts';
 import { prisma } from '../db/prisma.ts';
 import { sessionRefunds } from './sales-return-ledger.ts';
 import { businessDates, PosError } from '@koperasi/domain/pos/sale';
@@ -14,6 +15,7 @@ export class PrismaRegisterRepository {
   async close(ctx: AuthContext, registerId: number, now: Date) {
     for (let attempt = 0; ; attempt++) {
       try { return await this.write.$transaction(async (tx) => {
+        await capLockWait(tx);
         const [company] = await tx.$queryRaw<{ id: number }[]>`SELECT id FROM db_company WHERE id = ${ctx.companyId} AND status = 1 FOR UPDATE`;
         if (!company) throw new PosError('FORBIDDEN');
         const [user] = await tx.$queryRaw<{ id: number; username: string }[]>`SELECT u.id, u.username FROM db_users u JOIN db_roles r ON r.id = u.role_id AND r.status = 1
@@ -63,6 +65,7 @@ export class PrismaRegisterRepository {
   async open(ctx: AuthContext, input: RegisterOpeningInput, now: Date): Promise<RegisterOpeningResult> {
     for (let attempt = 0; ; attempt++) {
       try { return await this.write.$transaction(async (tx) => {
+        await capLockWait(tx);
         const [company] = await tx.$queryRaw<{ id: number }[]>`SELECT id FROM db_company WHERE id = ${ctx.companyId} AND status = 1 FOR UPDATE`;
         if (!company) throw new PosError('FORBIDDEN');
         const [user] = await tx.$queryRaw<{ id: number }[]>`SELECT u.id FROM db_users u JOIN db_roles r ON r.id = u.role_id AND r.status = 1

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
+import { capLockWait } from '../db/lock-wait.ts';
 import { toMinorUnits } from '@koperasi/domain/money';
 import { businessDates, decimalAmount, memberCredit, PosError, type CheckoutInput, type CheckoutResult, type MemberCredit, type MemberRecord, type PaymentMethod } from '@koperasi/domain/pos/sale';
 import type { MemberLookupKind, PosContext, PosRepository } from '@koperasi/application/pos/checkout';
@@ -7,9 +8,11 @@ import { prisma } from '../db/prisma.ts';
 import { kreditReturnedSen } from './sales-return-ledger.ts';
 
 type Db = PrismaClient | Prisma.TransactionClient;
-type MemberRow = { id: number; nik: string | null; name: string | null; status: string | null; employment: string | null; exit_on: Date | null; limit_amount: Prisma.Decimal; gaji_minus: Prisma.Decimal };
-const memberRecord = (r: MemberRow): MemberRecord => ({ id: r.id, nik: r.nik ?? '', name: r.name ?? '', status: r.status ?? '', employment: r.employment ?? '', exitOn: r.exit_on?.toISOString().slice(0, 10) ?? null, limitSen: toMinorUnits(r.limit_amount.toFixed(2)), gajiMinusSen: toMinorUnits(r.gaji_minus.toFixed(2)) });
-const memberFields = Prisma.sql`m.id, m.nik_kar AS nik, m.nama_kar AS name, m.status_anggota AS status, m.status_karyawan AS employment, m.tgl_keluar AS exit_on, CAST(COALESCE(m.limit_toko,0) AS DECIMAL(18,2)) AS limit_amount, CAST(m.gaji_minus AS DECIMAL(18,2)) AS gaji_minus`;
+type MemberRow = { id: number; nik: string | null; name: string | null; status: string | null; employment: string | null; exit_on: string | null; limit_amount: Prisma.Decimal; gaji_minus: Prisma.Decimal };
+const memberRecord = (r: MemberRow): MemberRecord => ({ id: r.id, nik: r.nik ?? '', name: r.name ?? '', status: r.status ?? '', employment: r.employment ?? '', exitOn: r.exit_on ?? null, limitSen: toMinorUnits(r.limit_amount.toFixed(2)), gajiMinusSen: toMinorUnits(r.gaji_minus.toFixed(2)) });
+// tgl_keluar is read as text: production (non-strict sql_mode) stores '0000-00-00', which the driver cannot decode as a
+// date. A zero date means "no exit date" (null), exactly like NULL.
+const memberFields = Prisma.sql`m.id, m.nik_kar AS nik, m.nama_kar AS name, m.status_anggota AS status, m.status_karyawan AS employment, CASE WHEN m.tgl_keluar IS NULL OR CAST(m.tgl_keluar AS CHAR) LIKE '0000-00-00%' THEN NULL ELSE DATE_FORMAT(m.tgl_keluar,'%Y-%m-%d') END AS exit_on, CAST(COALESCE(m.limit_toko,0) AS DECIMAL(18,2)) AS limit_amount, CAST(m.gaji_minus AS DECIMAL(18,2)) AS gaji_minus`;
 
 async function credit(db: Db, read: Db, row: MemberRow, now: Date): Promise<MemberCredit> {
   const dates = businessDates(now);
@@ -61,6 +64,7 @@ export class PrismaPosRepository implements PosRepository {
   }
 
   private async finalize(tx: Prisma.TransactionClient, context: PosContext, input: CheckoutInput, now: Date): Promise<CheckoutResult> {
+    await capLockWait(tx);
     const { companyId, userId } = context;
     const dates = businessDates(now);
     // ponytail: branch mutex serializes Next checkouts; use a dedicated counter if measured throughput requires it.
@@ -156,10 +160,19 @@ export class PrismaPosRepository implements PosRepository {
     }
     // db_cart has NO company/user columns. Ownership comes from its draft sale and current cashier register.
     // Ambiguous code-only legacy cart rows are preserved instead of deleting another branch's cart.
-    await tx.$executeRaw`DELETE cart FROM db_cart cart JOIN db_sales draft ON
-      (cart.sales_id = draft.id OR (cart.sales_id IS NULL AND cart.sales_code = draft.sales_code AND NOT EXISTS (SELECT 1 FROM db_sales duplicate WHERE duplicate.sales_code = draft.sales_code AND duplicate.id <> draft.id)))
-      WHERE draft.company_id = ${companyId} AND draft.id_buka_kasir = ${register.id} AND draft.id_kasir = ${register.id_kasir}
-      AND draft.created_by = ${user.username} AND draft.sales_status = 'Quotation'`;
+    // Drafts and code uniqueness are read first: a DELETE joined to db_sales rescans the whole unindexed table per cart
+    // row on production (325 x 200k rows, over 60 s), which timed out every checkout.
+    const drafts = await tx.$queryRaw<{ id: number; sales_code: string }[]>`SELECT id, sales_code FROM db_sales
+      WHERE company_id = ${companyId} AND id_buka_kasir = ${register.id} AND id_kasir = ${register.id_kasir}
+      AND created_by = ${user.username} AND sales_status = 'Quotation'`;
+    if (drafts.length) {
+      const codes = [...new Set(drafts.map((d) => d.sales_code))];
+      const counts = await tx.$queryRaw<{ sales_code: string; n: bigint }[]>(Prisma.sql`SELECT sales_code, COUNT(*) AS n FROM db_sales
+        WHERE sales_code IN (${Prisma.join(codes)}) GROUP BY sales_code`);
+      const unique = counts.filter((c) => Number(c.n) === 1).map((c) => c.sales_code);
+      await tx.$executeRaw(Prisma.sql`DELETE cart FROM db_cart cart WHERE cart.sales_id IN (${Prisma.join(drafts.map((d) => d.id))})
+        ${unique.length ? Prisma.sql`OR (cart.sales_id IS NULL AND cart.sales_code IN (${Prisma.join(unique)}))` : Prisma.empty}`);
+    }
     return { saleId, salesCode, grandTotalSen: total, paidSen: paid, changeSen: change, paymentType: input.paymentType };
   }
 }

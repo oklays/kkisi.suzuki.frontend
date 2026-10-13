@@ -36,6 +36,7 @@ function fake({ saved = [], saleRow = sale(), lines = [line()], returned = [], r
       if (sql.includes('SELECT return_bit')) return [{ flag: '1' }];
       throw new Error(`unexpected ${sql}`);
     },
+    $executeRawUnsafe: async () => 0,
     $executeRaw: async (first, ...rest) => {
       const sql = Array.isArray(first) ? first.join('?') : first.sql; const values = Array.isArray(first) ? rest : first.values;
       writes.push({ sql, values }); return sql.includes('return_bit') ? affected : 1;

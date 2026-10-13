@@ -51,6 +51,7 @@ test('rollback-only staging recap includes other cashier sales, excludes drafts/
       let recapWrites = 0;
       const scoped = {
         $queryRaw: tx.$queryRaw.bind(tx),
+        async $executeRawUnsafe() { return 0; },
         async $executeRaw(strings, ...values) {
           assert.match(strings.join('?'), /UPDATE db_buka_kasir/);
           assert.equal(values[0], register.saldo_awal.plus('125.45').toFixed(2));
