@@ -18,7 +18,7 @@ export function MemberPwaPreview() {
         <div className="lp-pw-head">
           <div className="lp-pw-status"><span>11.06</span><span className="lp-pw-island" /><span><Signal /><Wifi /><BatteryFull /></span></div>
           <div className="lp-pw-nav"><ChevronLeft strokeWidth={2.4} /><Bell strokeWidth={2.2} /></div>
-          <p className="lp-pw-hello">Halo,<br /><strong>Anggota Koperasi</strong></p>
+          <p className="lp-pw-hello">Halo,<br /><strong>Anggota KKISI TB2</strong></p>
         </div>
         <div className="lp-pw-balance">
           <span>Saldo Simpanan</span>

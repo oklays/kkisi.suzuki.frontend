@@ -12,7 +12,7 @@ export function PosShell({ children, branchName, session, active = "pos" }: { ch
       <a className="pos-skip" href="#pos-workspace">Langsung ke area kerja</a>
       <aside className="pos-sidebar" aria-label="Navigasi aplikasi">
         <Link href="/" className="pos-brand">
-          <Image className="pos-brand-image" src="/illustrations/kopkar-landscape-logo.png" width={1671} height={299} sizes="240px" loading="eager" alt="Koperasi Smart Suzuki" />
+          <Image className="pos-brand-image" src="/illustrations/new-landscape-logo.jpeg" width={443} height={185} unoptimized loading="eager" alt="SMART KKISI Tambun 2" />
         </Link>
         <div className="pos-store"><Store size={18} /><div><small>CABANG</small><strong>{branchName}</strong></div><ChevronDown size={15} aria-hidden="true" /></div>
         <nav>

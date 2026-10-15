@@ -10,7 +10,7 @@
 .pos-skip:focus { position:fixed; top:8px; left:8px; z-index:100; background:white; color:var(--pos-blue); padding:14px; border-radius:8px; }
 .pos-sidebar { width:264px; flex-shrink:0; padding:22px 14px 18px; display:flex; flex-direction:column; gap:22px; background:#101828; color:white; overflow-y:auto; }
 .pos-brand { display:flex; align-items:center; max-width:240px; min-width:0; text-decoration:none; padding:8px; border-radius:8px; background:white; }
-.pos-brand-image { display:block; width:100%; height:auto; }
+.pos-brand-image { display:block; width:min(100%, 160px); height:auto; margin-inline:auto; }
 .pos-store { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #3b4453; border-radius:12px; background:#1e293b; }
 .pos-store div { flex:1; }
 .pos-store small { display:block; color:#b3bccb; font-size:10px; letter-spacing:.06em; margin-bottom:4px; }
