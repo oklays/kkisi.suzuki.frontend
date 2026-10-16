@@ -75,14 +75,17 @@ try {
     await search.fill('EMPTY'); await card('C EMPTY').waitFor(); assert.match(await card('C EMPTY').innerText(), /Stok habis/); assert.equal(await card('C EMPTY').getByRole('button', { name: /Tambah/ }).isDisabled(), true, 'a search shows out-of-stock items, but they cannot be added');
     await search.fill('BRANCH2'); await page.getByRole('heading', { name: 'Produk tidak ditemukan' }).waitFor();
     await page.getByRole('button', { name: 'Tampilkan semua produk' }).click(); await card('BRANCH1 A').waitFor();
-    await page.getByRole('button', { name: 'SYNTH MAKANAN' }).click(); await page.waitForFunction(() => document.querySelectorAll('.pos-product-card').length === 1);
-    assert.deepEqual(await page.locator('.pos-product-card h3').allInnerTexts(), ['SYNTH ITEM BRANCH1 A'], 'category filter is applied by the server, still in-stock only');
-    await page.getByRole('button', { name: 'Semua', exact: true }).click(); await page.waitForFunction(() => document.querySelectorAll('.pos-product-card').length === 3);
+    // The category chips were removed from the POS UI (f3b8bad6); the server-side category filter remains and is still checked here.
+    const byCategory = await (await context.request.get(`${base}/api/pos/products?category=9001`)).json();
+    assert.deepEqual(byCategory.products.map((p) => p.name), ['SYNTH ITEM BRANCH1 A'], 'category filter is applied by the server, still in-stock only');
+    // Adding (or scanning) an item switches the POS to the Keranjang tab; go back to Product to keep using the catalog.
+    const productTab = page.getByRole('tab', { name: /Product/ });
     await search.fill('SYNTH1A'); await search.press('Enter'); await page.locator('.pos-cart-item').first().waitFor();
+    await productTab.click(); await search.fill(''); await card('BRANCH1 B').waitFor();
     await card('BRANCH1 B').getByRole('button', { name: /Tambah/ }).click();
     assert.match(await page.locator('.pos-total').innerText(), /Rp\s?10\.000,10/, '4.000,10 + 6.000 is exactly 10.000,10 (integer sen, no float drift)');
-    await search.fill('SYNTH2A'); await search.press('Enter');                                  // a barcode of ANOTHER branch
-    await page.getByText('Barcode tidak ditemukan. Pilih produk dari hasil pencarian.', { exact: true }).waitFor({ state: 'attached' });
+    await productTab.click(); await search.fill('SYNTH2A'); await search.press('Enter');          // a barcode of ANOTHER branch
+    await page.getByText('Produk tidak ditemukan. Pilih produk dari hasil pencarian.', { exact: true }).waitFor({ state: 'attached' });
     assert.equal(await page.getByRole('button', { name: 'Proses Pembayaran', exact: true }).isDisabled(), true, 'checkout stays disabled');
     await page.screenshot({ path: `${output}/e2e-catalog.png` });
     const mine = allRequests.slice(before).filter((r) => !r.url.includes('/_next/'));
