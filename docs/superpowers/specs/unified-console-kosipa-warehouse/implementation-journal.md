@@ -14,7 +14,8 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-005 | NOT STARTED | Doc reconciliation; partly covered by this journal |
 | TASK-010 … TASK-014 | **VERIFIED (local)** | Checkpoint 1 below |
 | TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
-| TASK-020 … TASK-022, TASK-024, TASK-025, TASK-027 … | NOT STARTED | Next checkpoints |
+| TASK-020 | **BLOCKED** (decision) | Where console-owned tables live — see Checkpoint 3 |
+| TASK-021, TASK-022, TASK-024 … | NOT STARTED | Depend on TASK-020 (no KOSIPA capability without an identity link) |
 
 ---
 
@@ -139,3 +140,18 @@ Checkpoint 2 — KOSIPA pure domain core (no database writes, no flags needed): 
 ### Next eligible checkpoint
 
 Checkpoint 3 — KOSIPA read-first access on **local staging only**: `TASK-020` (console tables in the auth store: identity link, action policy, audit), `TASK-021` (dedicated read-only reader + deployment-guard target), `TASK-022` (identity-link admin + KOSIPA capabilities derived from `ref_menu_akses`), then `TASK-024` (Anggota 360) using the Checkpoint 2 domain. Production DDL/grants only as review-only SQL.
+
+---
+
+## Checkpoint 3 — KOSIPA read-first access (TASK-020 …)
+
+**Status:** BLOCKED on one design decision (no code written).
+
+**Contradiction found:** the spec (design §2, MIG-003) places `console_identity_link`, `console_action_policy`, `console_audit_event` (and later idempotency / warehouse mapping) in the Next.js auth store. The existing, verified auth-store contract (`apps/web/db/auth/003_verify.sql.tpl`, run by `scripts/verify-auth-store.sh`) requires **exactly two tables** (`auth_session`, `auth_throttle`) and an exact privilege set for `kkisi_auth`; `002_auth_grants.sql.tpl` also `REVOKE ALL`s on every run. Either choice changes production provisioning (operator-only, review-only SQL):
+
+| Option | Effect |
+|---|---|
+| A. Extend the auth store | Same DB/account/pool; amend 001/002/003 and the verify contract; production: review-only DDL + grants on the auth DB |
+| B. Separate console store DB (`kkisi_console`, own least-privilege account) | Auth store contract untouched; new DSN + deployment-guard target + pool (inside the 12-connection budget); production: operator creates DB + account |
+
+Recommendation: **B** — keeps the security-critical session store minimal and lets audit/link data have its own retention and grants; cost is one small pool (limit 2). Until decided, TASK-020/021/022/024 do not start; Checkpoint 2 domain code is unaffected.
