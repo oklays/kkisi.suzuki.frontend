@@ -43,6 +43,7 @@ Status 16 Okt 2026: **spesifikasi saja**. Belum ada task implementasi yang dijal
 | `REQ-052` | Penerimaan toko dari Gudang | §2 konsistensi lintas DB, §6 | `TASK-063` | 409 ganda. Kompensasi fault-injection |
 | `REQ-053` | Ekspor invoice terautentikasi | §6 ekspor | `TASK-061` | Tidak ada file di disk |
 | `REQ-054` | Model stok Warehouse terpisah | §1.1 | `TASK-060` | Review kode: tidak ada write ke `smart_kopkar` dari modul warehouse stok |
+| `REQ-051`/`REQ-052` (domain+application part) | Pemetaan & penerimaan: aturan murni dan use case | §10b | `TASK-062`, `TASK-063` | **VERIFIED (unit + in-memory)**: `warehouse.test.mjs` 22, `warehouse-use-cases.test.mjs` 15, mutation checks. Adapter/penyimpanan/UI belum |
 | `REQ-055` | Writer Gudang bertahap | §4 totals | `TASK-064` | Total domain vs dokumen. Scope dari sesi |
 | `REQ-060` | Pembelian TOKO | §1.1 | `TASK-065` | Received tak dapat dihapus. Uji lock order |
 | `REQ-061` | Supplier/customer + pembayaran | — | `TASK-066` | Ledger due, overpayment ditolak |

@@ -283,6 +283,20 @@ DROP TABLE IF EXISTS console_identity_link;
 | `REQ-069` | `endpoint-inventory.md` status RETIRE |
 | `REQ-070`, `REQ-071` | Di luar desain ini; spesifikasi terpisah |
 
+## 10b. Kontrak domain Warehouse (Checkpoint 4, 16 Okt 2026)
+
+Hanya domain murni + kontrak aplikasi; **tidak ada koneksi DB Gudang, writer, atau mutasi stok**. Kode: `packages/domain/src/warehouse/`, `packages/application/src/warehouse/`.
+
+- **Pemetaan barang** (`item-mapping.ts`): saran hanya dari barcode persis lalu kode barang persis (tidak pernah nama; id tidak dianggap sama lintas DB). Mapping `PROPOSED → CONFIRMED → RETIRED` oleh aktor bernama; unik per (item Gudang, cabang) **dan** per (cabang, item TOKO) di antara mapping non-retired; ref stabil `map:g<gudang>:c<cabang>:s<toko>`. Mapping yang masih dipakai shipment terbuka tidak dapat di-retire.
+- **Satuan** (`unit-conversion.ts`): spesifikasi tidak mendefinisikan faktor konversi, jadi tidak ada. Satuan sama → 1:1. Satuan beda → wajib rasio eksplisit `{numerator, denominator, approvedBy, approvedAt, evidence}`, hasil harus bilangan bulat (tidak pernah dibulatkan). Kuantitas = bilangan bulat ≤ 2.147.483.647 (pecahan ditolak sampai pemilik mendefinisikan cara hitung).
+- **Shipment** (`shipment.ts`): `DRAFT → SUBMITTED → APPROVED (checker ≠ maker) → DISPATCHED → CLOSED | CANCELLED`. Kuantitas setelah dispatch dalam **satuan TOKO** (konversi sekali, saat baris dibangun dari mapping CONFIRMED). Identitas stabil `sourceRef` unik per tujuan; `idempotencyKey` + `fingerprint` isi baris membedakan replay dari dokumen bentrok.
+- **Penerimaan**: event per cabang tujuan, `eventKey` idempoten (isi sama = replay tanpa perubahan, isi beda = `IDEMPOTENCY_CONFLICT`); diterima + ditolak per baris tidak boleh melebihi sisa (tanpa proses pengecualian); kuantitas ditolak wajib alasan `DAMAGED|REJECTED` dan **tidak pernah menjadi stok**.
+- **Kebijakan penerimaan** (menjawab benturan BR-013 "sekali" vs. kebutuhan parsial): `receivingPolicy.allowMultipleReceipts` **wajib eksplisit, tanpa default**. `false` → event kedua = `DUPLICATE_RECEIPT` (sisa menjadi selisih yang harus ditangani); `true` → beberapa event parsial sampai sisa habis.
+- **Selisih tidak pernah diam-diam**: `outstanding = expected − accepted − rejected − shortClosed`. Hasil `FULLY_RECEIVED` hanya bila semua unit diterima. Sisa kurang → `SHORT_CLOSED` eksplisit (alasan + aktor); unit ditolak → `RETURNED_TO_SOURCE|WRITTEN_OFF`. `CLOSED` ditolak selama masih ada sisa/penolakan belum ditangani. State terminal tidak dapat dibuka kembali.
+- **Rekonsiliasi** (`reconciliation.ts`): fungsi murni, deterministik, seimbang per baris (pelanggaran = `INVARIANT_VIOLATION`), dapat ditelusuri ke `sourceRef` + kunci event/resolusi. `stockIntents()` menghasilkan *intent kuantitas* dengan kunci stabil `sourceRef|eventKey|lineNo` (hanya kuantitas diterima) agar writer hilir yang menerapkan tiap kunci sekali tidak dapat double-post.
+- **Batas akuntansi**: tidak ada valuasi, faktur antar-entitas, atau jurnal. Perlakuan (transfer internal vs. jual-beli) hanya datang dari port opsional `MovementTreatmentPolicy`; tanpa kebijakan hasilnya `UNSPECIFIED` dan writer stok/akuntansi **harus menolak** nilai itu. Kuantitas tidak bergantung pada nilai ini.
+- **Batas aplikasi** (`packages/application/src/warehouse/`): port `MappingRepository`, `ShipmentRepository`, `ItemCatalog`; konkurensi = *compare-and-set* per agregat (`version`) dengan retry terbatas (3) yang aman karena semua operasi idempoten; tidak mengasumsikan transaksi atomik lintas DB Gudang/TOKO. Pencarian shipment memakai cabang sesi aktor (cabang lain mendapat `NOT_FOUND`).
+
 ## 11. Alternatif yang dipertimbangkan
 
 | Pilihan | Trade-off | Keputusan |

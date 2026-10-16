@@ -16,7 +16,8 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
 | TASK-020, 021, 022, 024 | **VERIFIED (local)** | Checkpoint 3 (Option B). TASK-021 uses the existing SELECT-only reader (no new business pool) + the console store guard |
 | TASK-025, 026 | PARTIAL | Read of movements/loan headers only; balances and instalment detail wait for TASK-003 / index review |
-| TASK-027 … | NOT STARTED | Payroll read needs the index review |
+| TASK-027 … | NOT STARTED | Payroll read needs the index review (proposal: Checkpoint 5) |
+| TASK-062, TASK-063 | **PARTIAL** — domain + application VERIFIED | Checkpoint 4; no adapter, storage, writer or UI; accounting treatment open |
 
 ---
 
@@ -214,3 +215,64 @@ Unset `KOSIPA_READ_ENABLED` (KOSIPA pages/menu vanish; TOKO untouched), then `CO
 ### Next eligible checkpoint
 
 Checkpoint 4 (no financial writes): `TASK-027` payroll read + store-credit reconciliation **after** the index review; `TASK-025`/`026` savings and loan detail parity **after** TASK-003; `TASK-028` KOSIPA reports; Warehouse reader (`TASK-060`) needs the Gudang schema export. Safe independent work available now: a reviewed index proposal from existing DDL (SQL only), and Warehouse domain modules (receipt/mapping) with unit tests.
+
+---
+
+## Checkpoint 4 — Warehouse domain foundation (domain/application parts of TASK-062, TASK-063; REQ-051/052/054, BR-013)
+
+**Status:** domain + application contracts **IMPLEMENTED and VERIFIED** (unit tests and in-memory integration tests). **No** adapter, **no** database connection (Gudang or other), **no** stock mutation, **no** UI, **no** accounting. End-to-end inventory integration is **NOT** done and not claimed. Not staging accepted; not production ready.
+
+### Delivered
+
+| Layer | Files |
+|---|---|
+| Domain `packages/domain/src/warehouse/` (export `@koperasi/domain/warehouse`) | `errors`, `quantity`, `unit-conversion`, `item-mapping`, `dispatch-lines`, `shipment`, `reconciliation`, `index` |
+| Application `packages/application/src/warehouse/` (export `@koperasi/application/warehouse`) | `ports` (repositories, catalog, actor, permissions, treatment policy), `mapping` (suggest/propose/confirm/retire), `shipments` (register, advance, receive, resolve, close, read), `index` |
+| Tests | `packages/domain/tests/warehouse.test.mjs` (22), `packages/application/tests/warehouse-use-cases.test.mjs` (15) + `tests/helpers/warehouse-fakes.mjs` (in-memory repositories that emulate unique keys and compare-and-set, with an injectable concurrent writer) |
+
+Design decisions are recorded in `design.md` §10b. In short: mappings are explicit propose→confirm and never name- or id-based; unit conversion needs an approved, documented, exact ratio (no factors invented); shipments are quantity-only aggregates with maker≠checker approval, idempotent receiving events, an **explicit, default-less** receiving policy (resolving BR-013 "once" vs. the owner's partial receipts), explicit handling of every shortage/rejection before closing, and deterministic reconciliation plus stable-key stock *intents*. No existing calculation engine was duplicated (the stock engine is untouched; intents are the future hand-off).
+
+### Your 14 required scenarios → tests
+
+| # | Scenario | Where |
+|---|---|---|
+| 1 | Valid mapping | domain 1, application mapping flow |
+| 2 | Duplicate / ambiguous mapping | domain 2, application 12a (concurrent proposal) |
+| 3 | Unknown / inactive products | domain 3, dispatch lines, mapping flow |
+| 4 | Invalid unit conversion | domain 4 (+ inexact, overflow, unapproved) |
+| 5 | Full receiving | domain 5, application receiving |
+| 6 | Partial receiving (100/98 → 2 outstanding) | domain 6, application receiving |
+| 7 | Receiving above dispatch | domain 7 (per event and cumulative, rejected counts), application |
+| 8 | Duplicate receiving request | domain 8, application 8b (same intents, no write) |
+| 9 | Multiple partial receipts (order-independent) | domain 9 |
+| 10 | Damaged / rejected | domain 10 (reason required, never stock, must be handled to close), application discrepancy flow |
+| 11 | Invalid lifecycle transition | domain 11 (+ maker–checker) |
+| 12 | Concurrent request conflict via repository contracts | application 12a–12d: unique-key race (mapping and document), version conflict retried against fresh state (limit still holds), a request racing with itself becomes a replay, persistent conflict → `CONCURRENT_MODIFICATION` after exactly 3 tries, non-conflict failures not retried |
+| 13 | Reconciliation after partial receipt | domain 13 (balanced, traceable, pure) |
+| 14 | Terminal immutability | domain 14 (every transition, receipt and resolution refused) |
+
+Edge cases: zero, negative, fractional and non-numeric quantities; overflow at 2,147,483,647 (including conversion and cumulative sums); missing/invalid references and keys; ambiguous live mappings; corrupted aggregates reported as `INVARIANT_VIOLATION`; inputs never mutated; branch isolation (another branch gets `NOT_FOUND` / read answers identically whether or not a document exists).
+
+### Verification (actual, 16 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` | 0 errors, 4 warnings (unchanged baseline) |
+| `pnpm typecheck` / `pnpm build` | OK / OK |
+| `pnpm test` | domain **83/83**, application **51/51**, web **253 pass / 0 fail** (+45 opt-in DB tests skipped) — Checkpoints 1–3 and TOKO tests all preserved |
+| Mutation checks (to prove the tests bite) | Domain: removing the over-receipt limit, maker–checker, terminal guard, replay conflict, close-with-outstanding or branch check each fails ≥1 test. Application: removing conflict retry, mapping re-check, branch scoping (both lookups), duplicate-document check, replay short-circuit, receive/mapping permissions, warehouse scope, mapping-in-use or unique-key mapping each fails ≥1 test. (One first-pass mutant survived because it was *equivalent*, not a gap; the full removal is caught.) |
+
+No production or legacy system, no new connection pool, no auth/console schema, and no TOKO checkout or KOSIPA logic was touched. All data is synthetic and in memory.
+
+### Open questions / blockers (for the owner)
+
+1. **Accounting treatment** (internal transfer vs. commercial purchase/sale) — undecided; kept out of the model. A stock/accounting writer must refuse `UNSPECIFIED`.
+2. **Receiving policy per shipment** (`allowMultipleReceipts`) — who sets it, and the default for real Gudang documents. BR-013 text says "once".
+3. **Unit conversions** — no factors are defined; each Gudang↔TOKO unit pair needs an approved ratio with evidence. Pack sizes (`unit_perpack`) are not modelled.
+4. **Fractional quantities** — whole units only until defined.
+5. **Gudang schema export** (`smart_kopkar_gudang`) — still missing (TASK-003); needed for the item catalog/reader adapter and to learn how Gudang records the dispatch (`db_sales` to a store customer) and its identifier for `sourceRef`.
+6. **Warehouse permission mapping** — permission names exist as constants; wiring them into the console capability resolver needs the Gudang identity link design.
+
+### Remaining dependencies before any live integration
+
+Console-store tables (`warehouse_item_map`, shipment storage) via a reviewed migration; Gudang read adapter and catalog (needs #5); TOKO receiving writer with the POS lock order and its own least-privilege account (needs a connection-budget decision — the budget is already at the 12 ceiling); UI; fault-injection tests of the cross-database compensation path; UAT.
