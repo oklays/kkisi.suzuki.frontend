@@ -79,6 +79,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-020`, `REQ-021`, `REQ-042`, `SEC-004`
   - **Verification:** test: tanpa link → 0 capability KOSIPA. Link ke user nonaktif ditolak. Capability ⊆ akses legacy (property test dengan fixture menu). Audit tercatat.
 - [ ] `TASK-023`: Domain NIK, saldo, kewajiban toko
+  - **Status:** IN PROGRESS — domain layer VERIFIED (unit), see implementation-journal.md Checkpoint 2
   - **Files:** `packages/domain/src/kosipa/{nik,savings-balance,store-credit}.ts` + tests
   - **Goal:** fungsi murni BR-010, BR-007 (perhitungan), BR-011.
   - **Requirements Addressed:** `REQ-023`, `REQ-034`, `BR-003`, `BR-010`, `BR-011`, `NFR-004`
@@ -94,6 +95,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-023`, `REQ-027`
   - **Verification:** parity sample ≥ 50 anggota × 3 jenis × 2 tahun: delta = 0 atau tercatat sebagai expected delta.
 - [ ] `TASK-026`: Pinjaman read + simulasi
+  - **Status:** IN PROGRESS — domain layer VERIFIED (unit), see implementation-journal.md Checkpoint 2
   - **Files:** `packages/domain/src/kosipa/loan-schedule.ts` + tests, `kosipa-loan.repository.ts`, `app/console/kosipa/pinjaman/**`, `app/api/kosipa/loans/**`
   - **Goal:** daftar/detail/jadwal/outstanding. Simulasi Flat/Anuitas integer.
   - **Requirements Addressed:** `REQ-024`, `REQ-030`, `BR-004`, `VAL-003`, `NFR-004`
@@ -122,6 +124,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
 ## Phase 3 — P1-W: KOSIPA write (per konteks; gate MIG-002 per konteks)
 
 - [ ] `TASK-040`: Domain state machine + maker-checker + idempotency
+  - **Status:** IN PROGRESS — domain layer VERIFIED (unit), see implementation-journal.md Checkpoint 2
   - **Files:** `packages/domain/src/kosipa/document-state.ts`, `packages/application/src/kosipa/transition-document.usecase.ts`, `apps/web/src/infrastructure/auth/idempotency-store.ts`, auth DB `console_idempotency`
   - **Requirements Addressed:** `REQ-031`, `BR-008`, `BR-009`, `VAL-006`
   - **Verification:** tabel transisi lengkap (valid/invalid). Maker = checker → 409. Replay key → hasil sama.
@@ -130,6 +133,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-035`
   - **Verification:** 50 alokasi paralel di staging → 50 nomor unik berurutan tanpa duplikat.
 - [ ] `TASK-042`: Jurnal seimbang
+  - **Status:** IN PROGRESS — domain layer VERIFIED (unit), see implementation-journal.md Checkpoint 2
   - **Files:** `packages/domain/src/kosipa/journal.ts`, `kosipa-journal.repository.ts`
   - **Requirements Addressed:** `REQ-036`
   - **Verification:** unit test Σdebit = Σkredit. Mapping hilang → tolak. Posting + jurnal rollback bersama saat error.
@@ -142,10 +146,12 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-032`, `REQ-031`, `REQ-036`, `BR-007`
   - **Verification:** dua penarikan paralel melebihi saldo → hanya satu berhasil. `total_saldo` dari klien diabaikan.
 - [ ] `TASK-045`: Payroll write (generate pengganti, approve terbatas, reverse)
+  - **Status:** IN PROGRESS — domain layer VERIFIED (unit), see implementation-journal.md Checkpoint 2
   - **Files:** `packages/domain/src/kosipa/payroll-settlement.ts`, `payroll-*.usecase.ts`, `prisma-kosipa-payroll-write.ts`
   - **Requirements Addressed:** `REQ-033`, `REQ-034`, `BR-006`, `BR-011`, `MIG-004`
   - **Verification:** fixture dua group: approve ANGGOTA tidak menyentuh cicilan BMP. Reverse memulihkan persis. Generator pengganti = Kredit − retur; selisih terhadap output procedure legacy hanya pada NIK dengan retur (staging).
 - [ ] `TASK-046`: SHU write
+  - **Status:** IN PROGRESS — domain layer VERIFIED (unit), see implementation-journal.md Checkpoint 2
   - **Files:** `packages/domain/src/kosipa/shu-allocation.ts`, `shu-*.usecase.ts`, UI
   - **Requirements Addressed:** `REQ-037`
   - **Verification:** property test Σalokasi = pool (unit). Total nol → ditolak.

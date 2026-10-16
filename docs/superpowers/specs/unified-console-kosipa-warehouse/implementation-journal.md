@@ -13,7 +13,8 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-004 | BLOCKED | Depends on TASK-003 output |
 | TASK-005 | NOT STARTED | Doc reconciliation; partly covered by this journal |
 | TASK-010 … TASK-014 | **VERIFIED (local)** | Checkpoint 1 below |
-| TASK-020 … | NOT STARTED | Next checkpoints |
+| TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
+| TASK-020 … TASK-022, TASK-024, TASK-025, TASK-027 … | NOT STARTED | Next checkpoints |
 
 ---
 
@@ -92,3 +93,49 @@ Set `CONSOLE_ENABLED` unset/false and restart: `/console` → 404, login → `/p
 ### Next eligible checkpoint
 
 Checkpoint 2 — KOSIPA pure domain core (no database writes, no flags needed): `TASK-023` (NIK, savings balance, store credit net of returns), domain parts of `TASK-026` (loan schedule), `TASK-040` (document state machine + maker-checker), domain parts of `TASK-045` (batch-scoped payroll settlement), `TASK-046` (SHU allocation), `TASK-042` (balanced journal). Financial writers stay gated (owner decisions BR-005/007/012 and schema evidence TASK-003 outstanding).
+
+---
+
+## Checkpoint 2 — KOSIPA domain core (domain parts of TASK-023, 026, 040, 042, 045, 046)
+
+**Status:** domain layer VERIFIED (unit tests). No adapters, no routes, no database access, no writers — nothing is reachable from the running app yet.
+
+### Delivered (`packages/domain/src/kosipa/`, export `@koperasi/domain/kosipa`)
+
+| Module | Corrects | Behaviour |
+|---|---|---|
+| `nik.ts` | ANO-K19 | Canonical NIK (numeric: no leading zeros; alphanumeric kept — legacy `CONVERT(...,UNSIGNED)` collapsed every non-numeric NIK to 0); index-friendly lookup keys |
+| `member-eligibility.ts` | ANO-T02 (read-path side effect) | Reusable eligibility = exactly the POS Kredit rule (NIK present, `AKTIVE`, unexpired KONTRAK); never mutates members |
+| `document-state.ts` | ANO-K03 | Server-side lifecycle DRAFT→OPEN→APPROVED→DISBURSED/POSTED→SETTLED/REVERSED; client sends an action, never a status; maker-checker on approve/reject/disburse/post/reverse; reason required for reject/reverse; terminal states immutable |
+| `loan-schedule.ts` | ANO-K07/K08/K11 | Exact Flat/Anuitas schedules in integer sen (BigInt for the annuity factor), last instalment absorbs rounding so Σprincipal = principal; re-amortises only if extreme rate×term drift would overshoot; deduction-ratio check with a **required** ratio (BR-005 open) |
+| `savings.ts` | ANO-K04 | Position from persisted lines only (pending debits reserved, pending credits not spendable); withdrawal check with a **required** policy (BR-007 open) |
+| `store-credit.ts` | ANO-X01 | Payroll window = previous calendar month; Σ Final Kredit sales − Σ returns of those sales, per member × branch; return > sale refused |
+| `payroll-settlement.ts` | ANO-K05 | Settles only instalments of NIKs in the batch matrix, due in the period, fully covered by the deduction; shortfall / no-due become exceptions for review; loans fully paid computed |
+| `shu-allocation.ts` | ANO-K09 | Largest-remainder allocation: parts add up to floor(pool/unit)·unit; remainder reported; zero total / duplicate member refused |
+| `journal.ts` | ANO-K10 | Balanced double entry, one side per line, not all lines on one account |
+
+### Decisions
+
+1. Undecided business rules are **mandatory parameters without defaults** (withdrawal policy, deduction ratio) so no code path can silently adopt an invented rule.
+2. Payroll shortfall is not partially settled: it is surfaced as an exception (conservative; settlement order across multiple loans is an open business question).
+3. Store-credit returns count only for sales inside the same window, so a later period can never reopen a finalised deduction.
+4. BigInt via `BigInt()` constants (the shared tsconfig targets ES2017); amounts at the boundary stay integer sen like the rest of the domain.
+
+### Verification (actual results)
+
+| Check | Result |
+|---|---|
+| `packages/domain` tests | **56/56** (18 new KOSIPA tests incl. a 2,000-loan property test that found and drove the fix for annuity rounding drift at extreme rate×term) |
+| Eligibility parity | 7 cases evaluated through both the new policy and the existing POS `memberCredit` — identical outcomes |
+| `pnpm typecheck` / `pnpm lint` | OK / 0 errors (4 pre-existing warnings) |
+| application / web tests | 24/24, 243 pass (+42 opt-in skipped) — unchanged |
+
+### Remaining before any KOSIPA writer (activation blockers)
+
+- TASK-003 schema objects (view/procedure definitions) → persisted-value parity for loans, savings balances, payroll matrix.
+- Owner decisions BR-005 (salary ratio), BR-007 (withdrawable types/floor), BR-012 (contract expiry process), settlement order for payroll shortfalls.
+- Single-writer cutover per context (MIG-002); legacy menus are not changed by engineering.
+
+### Next eligible checkpoint
+
+Checkpoint 3 — KOSIPA read-first access on **local staging only**: `TASK-020` (console tables in the auth store: identity link, action policy, audit), `TASK-021` (dedicated read-only reader + deployment-guard target), `TASK-022` (identity-link admin + KOSIPA capabilities derived from `ref_menu_akses`), then `TASK-024` (Anggota 360) using the Checkpoint 2 domain. Production DDL/grants only as review-only SQL.

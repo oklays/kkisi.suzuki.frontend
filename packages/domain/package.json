@@ -18,7 +18,8 @@
     "./sales/history": "./src/sales/history.ts",
     "./sales/return": "./src/sales/return.ts",
     "./console/capabilities": "./src/console/capabilities.ts",
-    "./console/navigation": "./src/console/navigation.ts"
+    "./console/navigation": "./src/console/navigation.ts",
+    "./kosipa": "./src/kosipa/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

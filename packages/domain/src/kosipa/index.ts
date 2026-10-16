@@ -1,0 +1,10 @@
+export { KosipaError } from './errors.ts';
+export { canonicalNik, nikLookupKeys, sameMember } from './nik.ts';
+export { evaluateMemberEligibility, type EligibilityFacts, type IneligibleReason } from './member-eligibility.ts';
+export { DOCUMENT_STATES, nextDocumentState, isEditable, type DocumentState, type DocumentKind, type DocumentAction, type DocumentFacts, type TransitionRequest } from './document-state.ts';
+export { loanSchedule, evaluateDeductionRatio, type LoanMethod, type ScheduleInput, type ScheduleRow, type Schedule } from './loan-schedule.ts';
+export { savingsPosition, assertWithdrawal, type SavingsLine, type SavingsPosition, type WithdrawalPolicy } from './savings.ts';
+export { payrollStoreWindow, storeObligations, type KreditSale, type KreditReturn, type StoreObligation } from './store-credit.ts';
+export { planPayrollSettlement, loansFullyPaid, type MatrixLine, type DueInstallment, type SettlementPlan, type SettlementException } from './payroll-settlement.ts';
+export { allocateShu, type ShuWeight } from './shu-allocation.ts';
+export { assertBalancedJournal, type JournalLine } from './journal.ts';
