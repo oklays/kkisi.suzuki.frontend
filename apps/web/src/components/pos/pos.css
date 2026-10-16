@@ -90,7 +90,7 @@
 .pos-member-search > button:disabled { background:#dce3ef; color:#63718a; }
 .pos-member-hint { font-size:10px; line-height:1.5; color:var(--pos-muted); margin-top:7px!important; }
 .pos-member-result { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:9px; background:#f3f7ff; border:1px solid #d7e4ff; border-radius:10px; padding:8px 10px; }
-.pos-member-result strong { font-size:11px; }.pos-member-result small { display:block; font-size:10px; color:#405579; margin-top:4px; }
+.pos-member-result strong { font-size:11px; }.pos-member-result small { display:block; font-size:13px; font-weight:600; color:#123b88; line-height:1.5; margin-top:4px; }
 .pos-inline-error { display:flex; align-items:flex-start; gap:6px; margin-top:9px; background:#fdecec; border-radius:9px; color:#991b1b; padding:9px; font-size:11px; line-height:1.5; }
 .pos-cart-items { flex:1 0 auto; min-height:130px; padding:6px 16px; }.pos-cart-items ul { padding:0; margin:0; list-style:none; }
 .pos-empty-cart { min-height:130px; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px; padding:15px 25px; color:var(--pos-muted); }

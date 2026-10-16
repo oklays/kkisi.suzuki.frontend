@@ -9,7 +9,7 @@ import '../../receipt/[id]/receipt.css';
 export const dynamic = 'force-dynamic';
 const rupiah = (sen: number | null) => sen === null ? '—' : `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: sen % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(sen / 100)}`;
 
-/** 80 mm sales return note (nota retur). Same paper layout as the sales receipt. */
+/** 75 mm sales return note (nota retur). Same paper layout as the sales receipt. */
 export default async function ReturnReceiptPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ returnTo?: string | string[]; autoprint?: string | string[] }> }) {
   const auth = await requirePagePermission(['sales_return_view', 'sales_return_add']);
   if (auth.kind === 'forbidden') return <main className="receipt-message">Akses nota retur tidak diizinkan.</main>;

@@ -149,7 +149,7 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
               <CenterCart cart={cart} locked={locked} onChange={adjust} onRemove={(id) => { if (!checkoutLocked.current) setCart((current) => current.filter((line) => line.product.id !== id)); }} />
             </div>
           </section>
-          <TransactionPanel key={storageKey} cart={cart} session={session} storageKey={storageKey} onLockChange={updateLock} onClear={() => { clearCart(); loadedKey.current = null; setRetry((count) => count + 1); }} />
+          <TransactionPanel key={storageKey} cart={cart} session={session} storageKey={storageKey} onLockChange={updateLock} onClear={() => { clearCart(); setQuery(""); loadedKey.current = null; setRetry((count) => count + 1); }} />
         </div>
         <p className="pos-sr-only" role="status">{message}</p>
       </main>

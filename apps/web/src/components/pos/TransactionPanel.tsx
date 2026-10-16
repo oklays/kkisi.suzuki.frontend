@@ -50,6 +50,7 @@ export function MemberSearch({ member, onMember, disabled }: { member: PosMember
   const [busy, setBusy] = useState(false);
   const sequence = useRef(0);
   useEffect(() => { if (disabled) sequence.current++; }, [disabled]);
+  useEffect(() => () => { sequence.current++; }, []);
   async function lookup() {
     if (!query.trim() || disabled) return;
     const requestId = ++sequence.current;
@@ -74,7 +75,7 @@ export function MemberSearch({ member, onMember, disabled }: { member: PosMember
         <button type="submit" disabled={disabled || busy || !query.trim()}><UserRound size={15} />{busy ? "Mencari…" : "Pilih"}</button>
       </form>
       <div className="pos-member-hint"><span>Cari dengan</span><MemberKindPicker value={kind} disabled={disabled || busy} onChange={value => { setKind(value); changeQuery(""); }} /></div>
-      {member && <div className="pos-member-result" role="status"><div><strong>{member.name} · {member.nik}</strong><small>Sisa limit {formatRupiah(member.remainingSen)} · Limit {formatRupiah(member.limitSen)}</small></div><button disabled={disabled} className="pos-icon-button" aria-label="Lepas anggota" onClick={() => changeQuery("")}><X size={16} /></button></div>}
+      {member && <div className="pos-member-result" role="status"><div><strong>{member.name} · {member.nik}</strong><small>Sisa limit {formatRupiah(member.remainingSen)} · Total limit {formatRupiah(member.limitSen)}</small></div><button disabled={disabled} className="pos-icon-button" aria-label="Lepas anggota" onClick={() => changeQuery("")}><X size={16} /></button></div>}
       {message && <div className="pos-inline-error" role="status"><TriangleAlert size={15} />{message}</div>}
     </section>
   );
@@ -132,6 +133,7 @@ type PendingCheckout = { items: { itemId: number; quantity: number }[]; memberId
 export function TransactionPanel({ cart, session, storageKey, onLockChange, onClear }: { cart: PreviewCartLine[]; session: PosSession; storageKey: string; onLockChange: (locked: boolean) => void; onClear: () => void }) {
   const [payment, setPayment] = useState<PreviewPayment>("Cash");
   const [member, setMember] = useState<PosMember | null>(null);
+  const [memberSearchKey, setMemberSearchKey] = useState(0);
   const [paidAmount, setPaidAmount] = useState("");
   const [processing, setProcessing] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -181,7 +183,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
         setMessage(errorText(data.error)); return;
       }
       localStorage.removeItem(pendingKey); localStorage.removeItem(storageKey); pending.current = null;
-      setUncertain(false); onLockChange(false); onClear(); setMember(null); setPaidAmount(""); setPayment("Cash"); setReceipt(data.receipt);
+      setUncertain(false); onLockChange(false); onClear(); setMember(null); setMemberSearchKey((key) => key + 1); setPaidAmount(""); setPayment("Cash"); setReceipt(data.receipt);
       printReceipt(data.receipt.saleId);
     } catch {
       setUncertain(true); onLockChange(true); setMessage("Hasil pembayaran belum terkonfirmasi. Ulangi pemeriksaan dengan kunci yang sama; jangan membuat pembayaran baru.");
@@ -191,7 +193,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
     <aside className="pos-transaction" aria-label="Pembayaran transaksi">
       <header><h2><Banknote size={18} />Pembayaran Transaksi</h2></header>
       <div className="pos-transaction-scroll">
-        <MemberSearch member={member} onMember={(value) => { setMember(value); setPayment(value ? "Kredit" : "Cash"); }} disabled={locked} />
+        <MemberSearch key={memberSearchKey} member={member} onMember={(value) => { setMember(value); setPayment(value ? "Kredit" : "Cash"); }} disabled={locked} />
         <PromotionSection />
       </div>
       <div className="pos-transaction-bottom">
