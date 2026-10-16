@@ -63,17 +63,20 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
 
 ## Phase 2 — P1-R: KOSIPA read-first
 
-- [ ] `TASK-020`: Tabel console di auth DB + skrip setup
+- [x] `TASK-020`: Tabel console di auth DB + skrip setup
+  - **Status:** VERIFIED (local) — implementation-journal.md Checkpoint 3 (console store is a separate DB per owner Option B, not the auth store)
   - **Files:** `apps/web/scripts/setup-console-store.sh` (lokal/staging), `docs/migration/sql/console-store-production.sql` (review-only), `apps/web/src/infrastructure/auth/identity-link-store.ts`, `apps/web/src/infrastructure/auth/audit-store.ts`
   - **Goal:** `console_identity_link`, `console_action_policy`, `console_audit_event`.
   - **Requirements Addressed:** `MIG-003`, `REQ-020`, `OBS-002`
   - **Verification:** setup + teardown idempoten di staging. Unique link aktif ditolak duplikat (test).
-- [ ] `TASK-021`: Reader KOSIPA + deployment guard
+- [x] `TASK-021`: Reader KOSIPA + deployment guard
+  - **Status:** VERIFIED (local) — implementation-journal.md Checkpoint 3 (console store is a separate DB per owner Option B, not the auth store)
   - **Files:** `apps/web/src/infrastructure/db/prisma-kosipa-read.ts`, `apps/web/src/infrastructure/db/deployment-guard.ts` (DSN baru), `apps/web/scripts/setup-kosipa-read.mjs` (lokal), `docs/migration/sql/kosipa-reader-production.sql` (review-only, SELECT-only grants)
   - **Goal:** koneksi read-only terpisah, pool ≤ 2, timeout.
   - **Requirements Addressed:** `SEC-002`, `NFR-002`, `REQ-022`
   - **Verification:** test deployment-guard (user root/DB salah ditolak). `INSERT` via reader gagal di staging (permission denied).
-- [ ] `TASK-022`: Identity link UI + capability KOSIPA
+- [x] `TASK-022`: Identity link UI + capability KOSIPA
+  - **Status:** VERIFIED (local) — implementation-journal.md Checkpoint 3 (console store is a separate DB per owner Option B, not the auth store)
   - **Files:** `packages/application/src/identity/*`, `apps/web/src/infrastructure/repositories/kosipa-acl.repository.ts`, `apps/web/src/app/console/settings/pengguna/**`, `apps/web/src/app/api/console/identity-links/route.ts`
   - **Goal:** admin menautkan user, resolver menurunkan capability dari `ref_menu_akses` ∩ policy.
   - **Requirements Addressed:** `REQ-020`, `REQ-021`, `REQ-042`, `SEC-004`
@@ -84,7 +87,8 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Goal:** fungsi murni BR-010, BR-007 (perhitungan), BR-011.
   - **Requirements Addressed:** `REQ-023`, `REQ-034`, `BR-003`, `BR-010`, `BR-011`, `NFR-004`
   - **Verification:** unit test 100% cabang. Fixture retur Kredit lintas bulan.
-- [ ] `TASK-024`: Anggota & Anggota 360
+- [x] `TASK-024`: Anggota & Anggota 360
+  - **Status:** VERIFIED (local) — implementation-journal.md Checkpoint 3 (console store is a separate DB per owner Option B, not the auth store)
   - **Files:** `apps/web/src/infrastructure/repositories/kosipa-member.repository.ts`, `apps/web/src/app/console/kosipa/anggota/**`, `apps/web/src/app/api/kosipa/members/**`, `apps/web/src/components/kosipa/member/*`
   - **Goal:** pencarian, detail, tab simpanan/pinjaman/payroll/toko, masking PII, cetak dokumen terautentikasi (pengganti print root).
   - **Requirements Addressed:** `REQ-022`, `SEC-001`, `SEC-006`, `NFR-003`

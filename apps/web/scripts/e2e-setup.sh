@@ -28,7 +28,7 @@ main() {
 
   local seed_pw read_pw tpl
   seed_pw="$(openssl rand -hex 24)"; read_pw="$(openssl rand -hex 24)"
-  info "[1/5] E1 structure";  root_sql < db/e2e/001_e2e_structure.sql
+  info "[1/5] E1 structure";  root_sql < db/e2e/001_e2e_structure.sql; root_sql < db/e2e/003_e2e_kosipa_structure.sql
   info "[2/5] E1 accounts"
   tpl="$(cat db/e2e/002_e2e_grants.sql.tpl)"; tpl="${tpl//__E2E_HOST__/$host}"; tpl="${tpl//__SEED_PW__/$seed_pw}"; tpl="${tpl//__READ_PW__/$read_pw}"
   printf '%s\n' "$tpl" | root_sql

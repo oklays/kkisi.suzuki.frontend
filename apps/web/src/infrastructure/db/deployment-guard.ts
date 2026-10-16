@@ -9,7 +9,9 @@
  * Errors carry a short reason only: never a DSN, host, user or password.
  */
 type Env = Record<string, string | undefined>;
-export type DbTargetKind = 'legacy' | 'auth';
+export type DbTargetKind = 'legacy' | 'auth' | 'console';
+const PREFIX: Record<DbTargetKind, string> = { legacy: 'LEGACY_DB', auth: 'AUTH_DB', console: 'CONSOLE_DB' };
+const DSN_LABEL: Record<DbTargetKind, string> = { legacy: 'LEGACY_DSN', auth: 'AUTH_DSN', console: 'CONSOLE_DSN' };
 export type ProductionDsn = { url: string; user: string; host: string; database: string; connectionLimit: number; server: string };
 
 export class DeploymentConfigError extends Error {
@@ -53,7 +55,7 @@ export const TUNNEL_HOST = '127.0.0.1';
  * <P>_SERVER_PORT, which the startup check compares with the server's own @@hostname / @@port.
  */
 function target(kind: DbTargetKind, env: Env): Target {
-  const p = kind === 'legacy' ? 'LEGACY_DB' : 'AUTH_DB';
+  const p = PREFIX[kind];
   const host = (env[`${p}_HOST`] ?? '').trim().toLowerCase();
   const port = (env[`${p}_PORT`] ?? '').trim();
   const database = (env[`${p}_NAME`] ?? '').trim();
@@ -71,7 +73,7 @@ function target(kind: DbTargetKind, env: Env): Target {
   }
   const tls = env[`${p}_TLS`];
   if (!host || LOOPBACK.has(host)) fail(`${p}_HOST`);                     // direct: inside a container loopback is never production
-  if (env[kind === 'legacy' ? 'ALLOW_REMOTE_LEGACY_DB' : 'ALLOW_REMOTE_AUTH_DB'] !== 'true') fail(`ALLOW_REMOTE_${p}`);
+  if (env[`ALLOW_REMOTE_${p}`] !== 'true') fail(`ALLOW_REMOTE_${p}`);
   if (tls !== 'required' && tls !== 'disabled-acknowledged') return fail(`${p}_TLS`);
   return { host, port, database, transport, tls, serverHostname, serverPort };
 }
@@ -85,7 +87,7 @@ export function expectedServer(kind: DbTargetKind, env: Env = process.env): { ho
 /** Validates one production DSN against the explicit allowlist of its target. Returns the DSN unchanged. */
 export function assertProductionDsn(kind: DbTargetKind, raw: string | undefined, env: Env = process.env): ProductionDsn {
   const t = target(kind, env);
-  const label = kind === 'legacy' ? 'LEGACY_DSN' : 'AUTH_DSN';
+  const label = DSN_LABEL[kind];
   let url: URL;
   try { url = new URL(raw ?? ''); } catch { return fail(label); }
   if (url.protocol !== 'mysql:') fail(`${label}_PROTOCOL`);
@@ -109,6 +111,20 @@ export function assertProductionReadAndAuth(env: Env = process.env): { legacy: P
   const auth = assertProductionDsn('auth', env.DATABASE_URL_AUTH, env);
   if (legacy.user === auth.user || (legacy.server === auth.server && legacy.database === auth.database)) fail('AUTH_SHARES_LEGACY');
   return { legacy, auth };
+}
+
+/**
+ * Optional console store (identity links + audit; owner decision Option B, 16 Oct 2026). Not configured -> null and the
+ * console-store features stay off (TOKO is unaffected). Configured -> the full production allowlist applies, and it must
+ * be a third, separate account and database: never the business reader's or the auth store's.
+ */
+export function assertProductionConsole(env: Env, others: { legacy: ProductionDsn; auth: ProductionDsn }): ProductionDsn | null {
+  if (!env.DATABASE_URL_CONSOLE) return null;
+  const consoleDsn = assertProductionDsn('console', env.DATABASE_URL_CONSOLE, env);
+  for (const other of [others.legacy, others.auth]) {
+    if (consoleDsn.user === other.user || (consoleDsn.server === other.server && consoleDsn.database === other.database)) fail('CONSOLE_SHARES_STORE');
+  }
+  return consoleDsn;
 }
 
 /**

@@ -14,8 +14,9 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-005 | NOT STARTED | Doc reconciliation; partly covered by this journal |
 | TASK-010 … TASK-014 | **VERIFIED (local)** | Checkpoint 1 below |
 | TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
-| TASK-020 | **BLOCKED** (decision) | Where console-owned tables live — see Checkpoint 3 |
-| TASK-021, TASK-022, TASK-024 … | NOT STARTED | Depend on TASK-020 (no KOSIPA capability without an identity link) |
+| TASK-020, 021, 022, 024 | **VERIFIED (local)** | Checkpoint 3 (Option B). TASK-021 uses the existing SELECT-only reader (no new business pool) + the console store guard |
+| TASK-025, 026 | PARTIAL | Read of movements/loan headers only; balances and instalment detail wait for TASK-003 / index review |
+| TASK-027 … | NOT STARTED | Payroll read needs the index review |
 
 ---
 
@@ -143,15 +144,73 @@ Checkpoint 3 — KOSIPA read-first access on **local staging only**: `TASK-020` 
 
 ---
 
-## Checkpoint 3 — KOSIPA read-first access (TASK-020 …)
+## Checkpoint 3 — Console store, identity links, KOSIPA read-only, Anggota 360 (TASK-020, 021, 022, 024 + partial 025/026)
 
-**Status:** BLOCKED on one design decision (no code written).
+**Status:** IMPLEMENTED and VERIFIED (local: unit + local-staging DB + browser on synthetic data). **Not** STAGING ACCEPTED, **not** PRODUCTION READY.
+**Owner decision applied (16 Oct 2026): Option B** — dedicated console database. Authorises local/staging work and production *artifacts* only.
 
-**Contradiction found:** the spec (design §2, MIG-003) places `console_identity_link`, `console_action_policy`, `console_audit_event` (and later idempotency / warehouse mapping) in the Next.js auth store. The existing, verified auth-store contract (`apps/web/db/auth/003_verify.sql.tpl`, run by `scripts/verify-auth-store.sh`) requires **exactly two tables** (`auth_session`, `auth_throttle`) and an exact privilege set for `kkisi_auth`; `002_auth_grants.sql.tpl` also `REVOKE ALL`s on every run. Either choice changes production provisioning (operator-only, review-only SQL):
+### Delivered
 
-| Option | Effect |
+| Area | What |
 |---|---|
-| A. Extend the auth store | Same DB/account/pool; amend 001/002/003 and the verify contract; production: review-only DDL + grants on the auth DB |
-| B. Separate console store DB (`kkisi_console`, own least-privilege account) | Auth store contract untouched; new DSN + deployment-guard target + pool (inside the 12-connection budget); production: operator creates DB + account |
+| Console DB (`apps/web/db/console/`) | `001_console_schema.sql` (2 tables: `console_identity_link`, `console_audit_event`; unique active-link keys; CHECKs; 4 triggers: audit append-only, links revoke-only/no-delete), `002_console_grants.sql.tpl` (`kkisi_console`: SELECT+INSERT, UPDATE only on 4 revocation columns, no DELETE/DDL, MAX_USER_CONNECTIONS 2), `003_verify.sql.tpl`; `scripts/setup-console-store.sh` (`--apply`, `--verify`, `--prove-triggers`) |
+| Production artifact (review-only) | `docs/migration/sql/console-store-production.sql` — operator steps, DDL, verification, rollback, evolution notes. **Not executed.** |
+| Connection safety | `deployment-guard.ts`: new `console` target (full allowlist; third account AND database; pool ≤ 4, here 1); `startup-check.ts`: verifies selected DB/server identity, exactly 2 tables, no DDL, no privileges on legacy/auth DBs (incl. `*.*`); readiness reports `consoleDb` separately and never fails TOKO readiness |
+| Domain / application | `console/{capabilities,kosipa-access,identity-link}.ts`, `kosipa/masking.ts`, `application/console/{identity-links,resolve-capabilities}`, `application/kosipa/member-360.ts` |
+| Infrastructure | `prisma-console.ts`, `console/{config,console-store,kosipa-directory,services,identity-handlers}.ts`, `repositories/kosipa-member.repository.ts` |
+| API / pages | `POST /api/console/identity-links`, `POST …/{id}/revoke`, capabilities API now returns `kosipa` state; `/console/settings/identitas`, `/console/kosipa/anggota`, `/console/kosipa/anggota/[id]`, console `not-found` |
+| Flags | `KOSIPA_READ_ENABLED` (off by default; also needs `CONSOLE_ENABLED` and a usable console store) |
+| Test infra | `db/e2e/003_e2e_kosipa_structure.sql`, `scripts/e2e-kosipa-extend.sh`, seed/cleanup/guards extended for 11 KOSIPA-shaped synthetic tables |
+| Separate repair | `tests/e2e-local.mjs` updated for the current POS UI (own commit `effb4283`) |
 
-Recommendation: **B** — keeps the security-critical session store minimal and lets audit/link data have its own retention and grants; cost is one small pool (limit 2). Until decided, TASK-020/021/022/024 do not start; Checkpoint 2 domain code is unaffected.
+### Business rules and security enforced
+
+- **No automatic identity matching.** A link is created only by an administrator (`iam.link.manage` = `users_edit` **and** role ≤ 2) for another, active console user and an active KOSIPA account that has ≥1 active access group. Self-link, duplicates (both sides), inactive accounts refused — enforced in the use case **and** by unique keys/CHECK in the DB (concurrent duplicate → `ALREADY_LINKED`).
+- **KOSIPA capabilities are view-only and ⊆ legacy access**: active link → active KOSIPA account → controllers it may open (`ref_menu_akses`) → view capabilities; deactivating the KOSIPA account or revoking the link removes access on the next request. Detail tabs require the member directory.
+- **Audit:** link create/revoke, refusals, and every Anggota 360 view; written **before** member data is read (audit failure stops the read); detail is an allow-listed flat object (no NIK/name/contact keys); subjects are opaque ids. Append-only by trigger (proven as root inside rolled-back transactions).
+- **Fail closed:** console store/KOSIPA read failure removes only KOSIPA (state `unavailable`, link admin 503); TOKO and readiness are unaffected (browser-proven).
+- **Anggota 360:** read-only; contact/bank masked; salary, address, KTP never selected; savings shown as recorded movements by header status with an explicit "bukan saldo resmi" notice; Kredit usage uses the exact POS query and return offset; expired-contract members show usage but no limit.
+- **Honest gaps:** instalment detail and payroll deductions return `unavailable: INDEX_REQUIRED` because `trans_pinjaman_dtl` (~3.5M rows) and `trans_potongan_matrix` (~1.2M rows) have only primary keys in production; they are deliberately not queried (scan-test enforced). All KOSIPA statements are time-capped (`max_statement_time=5`).
+- **Reader pool:** page reads are sequential (peak 1 reader connection per view; tested), because the reader pool (3–4) is shared with POS checkout.
+
+### Verification (actual, 16 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` | 0 errors (4 pre-existing warnings) |
+| `pnpm typecheck` | OK |
+| `pnpm test` | domain **61/61**, application **36/36**, web **253 pass / 0 fail** (+45 opt-in DB tests skipped) |
+| `pnpm build` | OK |
+| Console DB integration (`console-store-db.test.mjs`, local store, app account) | 3/3: one-active-link per side + history, self-link refused, identity rewrite/delete refused (grants + triggers), audit append-only, JSON/action CHECKs |
+| `setup-console-store.sh --verify` / `--prove-triggers` | all PASS (4/4 triggers refuse as root, rolled back) |
+| Auth store contract (`verify-auth-store.sh`) | **20/20 PASS, exactly 2 tables — unchanged** |
+| Browser, flag on, store up (`console-kosipa-browser.mjs`) | PASS: link/duplicate/own-account/inactive offered; linked user search + 360 content, masking, honest gaps, expired contract, empty/not-found, CSRF; unlinked cashier; revocation effective next request; audit trail contains create/denied/view/revoke with opaque subjects; no overflow at 375–1440 |
+| Browser, console store unreachable | PASS: TOKO pages work, readiness `ready` with `consoleDb:false`, KOSIPA/link pages fail closed |
+| Existing `pos-browser.mjs` + repaired `e2e-local.mjs` (console + KOSIPA on) | **PASS / PASS** (A–H) |
+
+Synthetic data returned to empty (`e2e-cleanup.mjs`); console store retains append-only audit rows by design; no active links remain. No production system, legacy PHP or business data touched.
+
+### Connection budget (recalculated)
+
+Documented production allocation (`deploy/genesis/env.production.example`, 13 Oct 11/11): reader 3, auth 2, POS 2, register 1, returns 1, inventory 1, products 1. Console store adds **1** → **12 = `MAX_CONNECTION_BUDGET`** (leaves 8 of `max_user_connections = 20` to legacy PHP). `LEGACY_DB_CONNECTION_BUDGET` must be raised 11 → 12 **explicitly**; the startup guard refuses to start otherwise (tested). The console account is also capped server-side (`MAX_USER_CONNECTIONS 2` locally). **There is no headroom left**: any further writer/reader needs a pool redesign or fewer connections elsewhere.
+
+### Decisions / deviations
+
+1. Console store is the only new store; no cross-database FKs (ids by value). Auth DB untouched.
+2. `kkisi_console` has no DELETE and column-limited UPDATE locally; **cPanel cannot express column grants**, so production relies on the triggers (stated in the SQL; if triggers cannot be created on the host, the console store must not be enabled).
+3. Savings and loans are read from header/detail tables without the legacy `v_kartu_simpanan`/`v_saldo_awal`/`v_trans_pinjaman_*` views (definitions unavailable, TASK-003) — hence "recorded movements", not balances.
+4. Payroll/instalment sections wait for reviewed indexes (SQL not yet written: needs production `EXPLAIN` evidence).
+5. KOSIPA write capabilities, document transitions and member mutations remain **out of scope** (none authorised).
+
+### Remaining blockers
+
+**Implementation:** none for this checkpoint.
+**Production activation (all manual, none done):** (1) operator runs `console-store-production.sql` after separate authorisation and confirms triggers could be created; (2) create `n1608204_nxcon` with SELECT, INSERT, UPDATE only; (3) set the `CONSOLE_DB_*`/`DATABASE_URL_CONSOLE`, raise budget to 12, restart, check startup line `console_db=… legacy_pool=12/12`; (4) TASK-003 schema-object export for savings/loan balance parity; (5) reviewed index plan for `trans_pinjaman_dtl`/`trans_potongan_matrix`/`m_anggota.nik_kar`/`trans_simpanan_dtl.nik_kar`/`trans_pinjaman.nik`; (6) staging UAT with real roles, then owner-approved link set; (7) `CONSOLE_ENABLED` then `KOSIPA_READ_ENABLED`.
+
+### Rollback
+
+Unset `KOSIPA_READ_ENABLED` (KOSIPA pages/menu vanish; TOKO untouched), then `CONSOLE_ENABLED`, then `DATABASE_URL_CONSOLE` and restore the budget to 11. Console data is kept unless the owner decides otherwise (drop SQL is in the production file).
+
+### Next eligible checkpoint
+
+Checkpoint 4 (no financial writes): `TASK-027` payroll read + store-credit reconciliation **after** the index review; `TASK-025`/`026` savings and loan detail parity **after** TASK-003; `TASK-028` KOSIPA reports; Warehouse reader (`TASK-060`) needs the Gudang schema export. Safe independent work available now: a reviewed index proposal from existing DDL (SQL only), and Warehouse domain modules (receipt/mapping) with unit tests.

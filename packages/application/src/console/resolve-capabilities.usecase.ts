@@ -1,4 +1,5 @@
-import { TOKO_PERMISSION_SLUGS, tokoCapabilities, type CapabilitySet } from '@koperasi/domain/console/capabilities';
+import { IAM_PERMISSION_SLUGS, TOKO_PERMISSION_SLUGS, iamCapabilities, tokoCapabilities, type Capability, type CapabilitySet } from '@koperasi/domain/console/capabilities';
+import { resolveKosipaCapabilities, type IdentityPorts } from './identity-links.ts';
 
 /** Read port: which of the given slugs the role holds, answered in one query. A store failure must throw (never "none"). */
 export interface PermissionSetSource {
@@ -14,4 +15,28 @@ export type CapabilitySubject = { roleId: number; canSwitchBranch: boolean };
 export async function resolveConsoleCapabilities(source: PermissionSetSource, subject: CapabilitySubject): Promise<CapabilitySet> {
   const granted = await source.grantedAmong(subject.roleId, TOKO_PERMISSION_SLUGS);
   return tokoCapabilities(granted, subject.canSwitchBranch);
+}
+
+export type KosipaAccessState = 'disabled' | 'unlinked' | 'linked' | 'unavailable';
+export type ConsoleAccess = { capabilities: CapabilitySet; kosipa: KosipaAccessState };
+
+/**
+ * Full console access: TOKO + administration from the legacy permission table (one query) and, when KOSIPA reading is
+ * enabled, KOSIPA view capabilities from the identity link. A failing console store or KOSIPA read removes ONLY the KOSIPA
+ * part (state 'unavailable'); TOKO access stays available because it does not depend on the console database.
+ */
+export async function resolveConsoleAccess(
+  sources: { permissions: PermissionSetSource; kosipa: Pick<IdentityPorts, 'links' | 'kosipa'> | null },
+  subject: CapabilitySubject & { userId: number },
+): Promise<ConsoleAccess> {
+  const granted = await sources.permissions.grantedAmong(subject.roleId, [...TOKO_PERMISSION_SLUGS, ...IAM_PERMISSION_SLUGS]);
+  const capabilities = new Set<Capability>([...tokoCapabilities(granted, subject.canSwitchBranch), ...iamCapabilities(granted, subject.canSwitchBranch)]);
+  if (!sources.kosipa) return { capabilities, kosipa: 'disabled' };
+  try {
+    const kosipa = await resolveKosipaCapabilities(sources.kosipa, subject.userId);
+    for (const cap of kosipa.capabilities) capabilities.add(cap);
+    return { capabilities, kosipa: kosipa.linked ? 'linked' : 'unlinked' };
+  } catch {
+    return { capabilities, kosipa: 'unavailable' };
+  }
 }

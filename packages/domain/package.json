@@ -19,7 +19,9 @@
     "./sales/return": "./src/sales/return.ts",
     "./console/capabilities": "./src/console/capabilities.ts",
     "./console/navigation": "./src/console/navigation.ts",
-    "./kosipa": "./src/kosipa/index.ts"
+    "./kosipa": "./src/kosipa/index.ts",
+    "./console/kosipa-access": "./src/console/kosipa-access.ts",
+    "./console/identity-link": "./src/console/identity-link.ts"
   },
   "scripts": {
     "lint": "eslint .",

@@ -5,7 +5,8 @@ import { AuthError } from '@koperasi/domain/auth/errors';
 import { safeNextPath } from '@koperasi/domain/auth/redirect';
 import type { CapabilitySet } from '@koperasi/domain/console/capabilities';
 import { validateSession, type AuthContext } from '@koperasi/application/auth/validate-session';
-import { resolveConsoleCapabilities } from '@koperasi/application/console/capabilities';
+import { resolveConsoleAccess, type KosipaAccessState } from '@koperasi/application/console/capabilities';
+import { kosipaServices } from '../console/services.ts';
 import { getContainer } from './container.ts';
 import type { AuthServices } from './http.ts';
 
@@ -40,7 +41,7 @@ export async function requirePagePermission(permission: string | readonly string
 }
 
 export type ConsoleAuth =
-  | { kind: 'ok'; ctx: AuthContext; services: AuthServices; capabilities: CapabilitySet }
+  | { kind: 'ok'; ctx: AuthContext; services: AuthServices; capabilities: CapabilitySet; kosipa: KosipaAccessState }
   | { kind: 'unavailable' };
 
 /** One validation + capability resolution per request, shared by the console layout and its page. */
@@ -49,8 +50,9 @@ const loadConsoleSession = cache(async (): Promise<ConsoleAuth | 'login'> => {
     const container = getContainer();
     const jar = await cookies();
     const ctx = await validateSession(container.services.deps, jar.get(container.services.config.cookieName)?.value ?? null);
-    const capabilities = await resolveConsoleCapabilities(container.capabilities, { roleId: ctx.roleId, canSwitchBranch: ctx.canSwitchBranch });
-    return { kind: 'ok', ctx, services: container.services, capabilities };
+    const kosipa = kosipaServices();
+    const access = await resolveConsoleAccess({ permissions: container.capabilities, kosipa }, { userId: ctx.userId, roleId: ctx.roleId, canSwitchBranch: ctx.canSwitchBranch });
+    return { kind: 'ok', ctx, services: container.services, capabilities: access.capabilities, kosipa: access.kosipa };
   } catch (error) {
     if (error instanceof AuthError && error.code === 'UNAUTHENTICATED') return 'login';
     return { kind: 'unavailable' };

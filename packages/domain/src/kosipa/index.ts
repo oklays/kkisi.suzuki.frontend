@@ -8,3 +8,4 @@ export { payrollStoreWindow, storeObligations, type KreditSale, type KreditRetur
 export { planPayrollSettlement, loansFullyPaid, type MatrixLine, type DueInstallment, type SettlementPlan, type SettlementException } from './payroll-settlement.ts';
 export { allocateShu, type ShuWeight } from './shu-allocation.ts';
 export { assertBalancedJournal, type JournalLine } from './journal.ts';
+export { maskPhone, maskEmail, maskAccount } from './masking.ts';

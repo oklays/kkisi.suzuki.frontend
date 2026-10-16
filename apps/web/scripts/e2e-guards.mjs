@@ -30,4 +30,16 @@ export const RANGES = {
   db_buka_kasir: ['id', SYNTH.small[0], SYNTH.small[1]],
   db_category: ['id', SYNTH.small[0], SYNTH.small[1]],
   db_items: ['id', SYNTH.small[0], SYNTH.small[1]],
+  // Checkpoint 3: KOSIPA-shaped tables read by the console (db/e2e/003_e2e_kosipa_structure.sql).
+  m_anggota: ['id', SYNTH.small[0], SYNTH.small[1]],
+  ref_users: ['id_ref_user', SYNTH.small[0], SYNTH.small[1]],
+  ref_group: ['id', SYNTH.small[0], SYNTH.small[1]],
+  ref_group_akses: ['id', SYNTH.small[0], SYNTH.small[1]],
+  ref_menu: ['id', SYNTH.small[0], SYNTH.small[1]],
+  ref_menu_akses: ['id', SYNTH.small[0], SYNTH.small[1]],
+  trans_simpanan: ['id', SYNTH.small[0], SYNTH.small[1]],
+  trans_simpanan_dtl: ['id', SYNTH.small[0], SYNTH.small[1]],
+  trans_pinjaman: ['id', SYNTH.small[0], SYNTH.small[1]],
+  db_sales: ['id', SYNTH.small[0], SYNTH.small[1]],
+  db_salesreturn: ['id', SYNTH.small[0], SYNTH.small[1]],
 };

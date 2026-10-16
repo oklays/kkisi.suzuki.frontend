@@ -17,8 +17,17 @@ export const TOKO_CAPABILITIES = [
 ] as const;
 
 export type TokoCapability = (typeof TOKO_CAPABILITIES)[number];
-/** KOSIPA/Warehouse/IAM capabilities are added only once their identity links and adapters exist (spec REQ-020/050). */
-export type Capability = TokoCapability;
+
+/** Read-only KOSIPA access, derived from an active identity link (spec REQ-020/021). No write capability exists yet. */
+export const KOSIPA_CAPABILITIES = ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.store-credit.view'] as const;
+export type KosipaCapability = (typeof KOSIPA_CAPABILITIES)[number];
+
+/** Console administration. `iam.link.manage` = may create/revoke console<->KOSIPA identity links. */
+export const IAM_CAPABILITIES = ['iam.link.manage'] as const;
+export type IamCapability = (typeof IAM_CAPABILITIES)[number];
+
+export type Capability = TokoCapability | KosipaCapability | IamCapability;
+export const ALL_CAPABILITIES: readonly Capability[] = [...TOKO_CAPABILITIES, ...KOSIPA_CAPABILITIES, ...IAM_CAPABILITIES];
 export type CapabilitySet = ReadonlySet<Capability>;
 
 /** Every db_permissions slug the TOKO mapping reads; resolved in one batched query. */
@@ -59,8 +68,17 @@ export function tokoCapabilities(granted: ReadonlySet<string>, canSwitchBranch: 
   return out;
 }
 
+/**
+ * Console administration: the legacy `users_edit` permission AND a branch chooser (role <= 2). Linking a staff account to
+ * KOSIPA exposes member financial data, so ordinary branch staff with users_edit are deliberately excluded.
+ */
+export const IAM_PERMISSION_SLUGS = ['users_edit'] as const;
+export function iamCapabilities(granted: ReadonlySet<string>, canSwitchBranch: boolean): Set<Capability> {
+  return new Set<Capability>(canSwitchBranch && granted.has('users_edit') ? ['iam.link.manage'] : []);
+}
+
 /** Capabilities that make a user more than a cashier; their absence routes a fresh login straight to /pos. */
-const MANAGEMENT: readonly Capability[] = ['toko.products.view', 'toko.inventory.view'];
+const MANAGEMENT: readonly Capability[] = ['toko.products.view', 'toko.inventory.view', ...KOSIPA_CAPABILITIES, ...IAM_CAPABILITIES];
 
 export type LandingInput = { capabilities: CapabilitySet; consoleEnabled: boolean };
 

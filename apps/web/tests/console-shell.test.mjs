@@ -3,7 +3,7 @@ import test from 'node:test';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONSOLE_NAVIGATION } from '../src/features/console/navigation.ts';
-import { TOKO_CAPABILITIES } from '@koperasi/domain/console/capabilities';
+import { ALL_CAPABILITIES } from '@koperasi/domain/console/capabilities';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
@@ -14,7 +14,7 @@ test('every available navigation entry points at an existing page and needs a de
     const page = join(ROOT, 'src/app', entry.href === '/' ? '' : entry.href, 'page.tsx');
     assert.ok(existsSync(page), `${entry.id} -> ${entry.href} has no page`);
     if (entry.id !== 'dashboard') assert.ok(entry.anyOf.length > 0, `${entry.id} must require a capability`);
-    for (const cap of entry.anyOf) assert.ok(TOKO_CAPABILITIES.includes(cap), `${entry.id}: unknown capability ${cap}`);
+    for (const cap of entry.anyOf) assert.ok(ALL_CAPABILITIES.includes(cap), `${entry.id}: unknown capability ${cap}`);
   }
 });
 
@@ -78,4 +78,25 @@ test('the proxy gates /console and keeps only the console path as next', () => {
   const proxy = read('src/proxy.ts');
   assert.match(proxy, /"\/console\/:path\*", "\/api\/console\/:path\*"/);
   assert.match(proxy, /startsWith\("\/console"\) \? request\.nextUrl\.pathname : null/);
+});
+
+test('the console-store client is private to console/db infrastructure; KOSIPA code never reaches a writer client', () => {
+  const src = walk(join(ROOT, 'src')).filter((p) => /\.(ts|tsx)$/.test(p));
+  for (const file of src) {
+    const rel = file.slice(ROOT.length);
+    const text = readFileSync(file, 'utf8');
+    if (!rel.startsWith('src/infrastructure/console/') && !rel.startsWith('src/infrastructure/db/')) assert.doesNotMatch(text, /prisma-console/, `${rel} must not import the console-store client`);
+    if (rel.startsWith('src/infrastructure/console/') || rel.includes('kosipa')) assert.doesNotMatch(text, /prisma-(pos|register|inventory|product|return)-write|DATABASE_URL_\w*WRITE/, `${rel} must not reach a business writer`);
+  }
+});
+
+test('KOSIPA reads are SELECT-only and time-capped; no member mutation exists at this checkpoint', () => {
+  for (const file of ['src/infrastructure/repositories/kosipa-member.repository.ts', 'src/infrastructure/console/kosipa-directory.ts']) {
+    const text = read(file).replace(/\/\/.*$/gm, '');
+    assert.doesNotMatch(text, /\b(INSERT|UPDATE|DELETE|REPLACE|ALTER|CREATE|DROP)\b/, `${file} must not write`);
+    const queries = text.match(/\$queryRaw[^`]*`[^`]*/g) ?? [];
+    assert.ok(queries.length > 0);
+    for (const q of queries) if (!/kreditReturnedSen/.test(q)) assert.match(q, /SET STATEMENT max_statement_time=5 FOR/, `${file}: un-capped statement`);
+    assert.doesNotMatch(text, /trans_pinjaman_dtl|trans_potongan_matrix/, 'large unindexed tables stay unread until indexes exist');
+  }
 });

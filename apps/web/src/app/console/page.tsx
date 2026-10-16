@@ -30,7 +30,7 @@ export default async function ConsoleDashboard({ searchParams }: { searchParams:
     const state: ModuleState = links.length === 0 ? (planned.length > 0 && m.section !== 'toko' ? 'planned' : 'restricted') : planned.length > 0 ? 'partial' : 'available';
     return { ...m, links, planned, state };
   }).filter((m) => m.state !== 'restricted');
-  const quick = linksFor('toko').concat(linksFor('warehouse'));
+  const quick = [...linksFor('toko'), ...linksFor('kosipa'), ...linksFor('warehouse'), ...linksFor('settings')];
 
   return (
     <div className="console-page">
@@ -64,6 +64,8 @@ export default async function ConsoleDashboard({ searchParams }: { searchParams:
           ))}
         </ul>
       </section>
+
+      {auth.kosipa === 'unavailable' && <p className="console-message console-message-error" role="status">Akses KOSIPA sementara tidak dapat diperiksa, sehingga menu KOSIPA disembunyikan. Modul TOKO tetap dapat digunakan.</p>}
 
       {quick.length === 0 && (
         <section className="console-panel" role="status"><h2>Belum ada modul untuk akun ini</h2><p>Akun Anda belum memiliki izin modul operasional. Hubungi administrator koperasi bila Anda memerlukan akses.</p></section>

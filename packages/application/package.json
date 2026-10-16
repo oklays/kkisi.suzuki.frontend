@@ -18,7 +18,9 @@
     "./pos/register-lifecycle": "./src/pos/register-lifecycle.ts",
     "./sales/history": "./src/sales/read-history.ts",
     "./sales/returns": "./src/sales/returns.ts",
-    "./console/capabilities": "./src/console/resolve-capabilities.usecase.ts"
+    "./console/capabilities": "./src/console/resolve-capabilities.usecase.ts",
+    "./console/identity-links": "./src/console/identity-links.ts",
+    "./kosipa/member-360": "./src/kosipa/member-360.ts"
   },
   "scripts": {
     "lint": "eslint .",

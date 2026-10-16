@@ -1,7 +1,8 @@
 import type { PrismaClient } from '@prisma/client';
 import { loadAuthConfig } from '../auth/config.ts';
 import { authStoreStatus, pingAuthStore } from '../auth/store-health.ts';
-import { assertConnectionBudget, assertProductionDsn, assertProductionReadAndAuth, DeploymentConfigError, expectedServer, isProduction, productionWritesAllowed, type ProductionDsn } from './deployment-guard.ts';
+import { assertConnectionBudget, assertProductionConsole, assertProductionDsn, assertProductionReadAndAuth, DeploymentConfigError, expectedServer, isProduction, productionWritesAllowed, type ProductionDsn } from './deployment-guard.ts';
+import { consolePrisma } from './prisma-console.ts';
 import { prisma } from './prisma.ts';
 import { posWritePrisma, validatePosWriteConfig } from './prisma-pos-write.ts';
 import { registerWritePrisma, validateRegisterWriteConfig } from './prisma-register-write.ts';
@@ -69,7 +70,8 @@ export async function verifyProductionStartup(env: Env = process.env): Promise<s
   const { legacy, auth } = assertProductionReadAndAuth(env);   // first, so a DSN problem is reported with its reason
   loadAuthConfig(env);
   const writers = enabledWriters(env);
-  const { used, budget } = assertConnectionBudget([legacy, auth, ...writers.map((w) => w.dsn)], env);
+  const consoleDsn = assertProductionConsole(env, { legacy, auth });   // optional third store; counted in the same budget
+  const { used, budget } = assertConnectionBudget([legacy, auth, ...writers.map((w) => w.dsn), ...(consoleDsn ? [consoleDsn] : [])], env);
 
   const legacyServer = expectedServer('legacy', env);
   const authServer = expectedServer('auth', env);
@@ -88,13 +90,26 @@ export async function verifyProductionStartup(env: Env = process.env): Promise<s
   // The auth account reaches only its own store: nothing on the business database, no DDL anywhere it applies.
   if (applying(store.grants, legacy.database).some((line) => privileges(line) !== 'USAGE')) throw new DeploymentConfigError('AUTH_USER_REACHES_LEGACY_DB');
   if (applying(store.grants, auth.database).some((line) => DDL.test(privileges(line)))) throw new DeploymentConfigError('AUTH_USER_HAS_DDL');
+  if (consoleDsn) {
+    // Console store: its own database on the pinned server, exactly its two tables, no DDL, nothing on the other stores.
+    const client = consolePrisma();
+    await assertSelected(client, consoleDsn.database, expectedServer('console', env), 'CONSOLE_DB_NOT_SELECTED');
+    const [{ n }] = await client.$queryRaw<{ n: bigint }[]>`SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('console_identity_link', 'console_audit_event')`;
+    if (Number(n) !== 2) throw new DeploymentConfigError('CONSOLE_TABLES_MISSING');
+    const grants = await grantsOn(client, consoleDsn.database);
+    if (grants.some((line) => DDL.test(privileges(line)))) throw new DeploymentConfigError('CONSOLE_USER_HAS_DDL');
+    // Includes ON *.* lines: anything beyond USAGE there would reach every database, including the other stores.
+    const elsewhere = [...await grantsOn(client, legacy.database), ...await grantsOn(client, auth.database)];
+    if (elsewhere.some((line) => privileges(line) !== 'USAGE')) throw new DeploymentConfigError('CONSOLE_USER_REACHES_OTHER_DB');
+  }
 
   return `[startup] production database configuration verified: legacy_db=${legacy.database} auth_db=${auth.database} `
     + `server=${legacyServer.hostname}:${legacyServer.port} (${version}) transport=${legacyServer.transport} `
-    + `writes=${writers.map((w) => w.name).join(',') || 'none'} legacy_pool=${used}/${budget}`;
+    + `writes=${writers.map((w) => w.name).join(',') || 'none'} console_db=${consoleDsn?.database ?? 'none'} legacy_pool=${used}/${budget}`;
 }
 
-export type Readiness = { ready: boolean; checks: { config: boolean; legacyDb: boolean; authDb: boolean } };
+/** consoleDb: null when not configured. It never affects `ready`: TOKO does not depend on the console store. */
+export type Readiness = { ready: boolean; checks: { config: boolean; legacyDb: boolean; authDb: boolean; consoleDb: boolean | null } };
 
 /** Readiness probe: configuration still valid and both stores answer `SELECT 1`. Read-only; no business queries. */
 export async function checkReadiness(env: Env = process.env): Promise<Readiness> {
@@ -104,5 +119,6 @@ export async function checkReadiness(env: Env = process.env): Promise<Readiness>
   const [legacyDb, authDb] = config
     ? await Promise.all([ping(() => prisma.$queryRaw`SELECT 1`), ping(pingAuthStore)])
     : [false, false];
-  return { ready: config && legacyDb && authDb, checks: { config, legacyDb, authDb } };
+  const consoleDb = config && env.DATABASE_URL_CONSOLE ? await ping(() => consolePrisma().$queryRaw`SELECT 1`) : null;
+  return { ready: config && legacyDb && authDb, checks: { config, legacyDb, authDb, consoleDb } };
 }

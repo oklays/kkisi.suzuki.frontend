@@ -43,6 +43,8 @@ graph TD
 
 ## 2. Data Model & Database Schema Changes
 
+> **Amendment (owner decision 16 Oct 2026, Option B):** the console-owned tables below live in a **dedicated console database** (`kkisi_console`, account `kkisi_console`/production `nxcon`), **not** in `kkisi_auth`, whose two-table contract is unchanged. Implemented so far: `console_identity_link` and `console_audit_event` (see `apps/web/db/console/` and `docs/migration/sql/console-store-production.sql`; names/columns differ slightly from the sketch below: `linked_*`/`revoked_*`/`revoke_reason`, no `console_action_policy` yet). `console_idempotency`, `warehouse_item_map` and `warehouse_store_receipt` move to the same store when their checkpoints start.
+
 - **Target Table(s):** hanya `kkisi_auth` (milik Next.js). Tidak ada DDL pada `smart_kopkar` atau `smart_kopkar_gudang` di P0/P1-R.
 - **DDL / Migration Plan** (aditif, gaya existing `auth_session`, waktu UTC dari aplikasi, tanpa FK lintas skema):
 

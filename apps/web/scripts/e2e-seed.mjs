@@ -42,6 +42,20 @@ try {
     await item(9004, 'S1-D', 'SYNTH1D', 'SYNTH ITEM BRANCH1 D NOPRICE', 9002, 0, 3, 9001);
     await item(9005, 'S2-A', 'SYNTH2A', 'SYNTH ITEM BRANCH2 A', 9001, 9000, 7, 9002);
     await item(9006, 'S3-A', 'SYNTH3A', 'SYNTH ITEM BRANCH3 A', 9002, 1000, 9, 9003);
+    // Checkpoint 3: synthetic KOSIPA rows (all ids in SYNTH.small; values are fictitious).
+    await t(`INSERT INTO m_anggota (id, nik_kar, nama_kar, kd_group, status_anggota, status_karyawan, tgl_daftar, tgl_keluar, no_telp, email, no_rek, bank_rek, divisi, bagian, gaji, gaji_minus, limit_toko, limit_ppob, surat_kuasa)
+      VALUES (9001,'S9001','SYNTH ANGGOTA SATU','ANGGOTA','AKTIVE','TETAP','2020-01-01',NULL,'081200009001','satu@example.invalid','9900119001','SYNTH BANK','SYNTH DIV','SYNTH BAG',5000000,0,1000000,0,0),
+             (9002,'S9002','SYNTH ANGGOTA KONTRAK','ANGGOTA','AKTIVE','KONTRAK','2024-01-01','2026-01-31','081200009002','dua@example.invalid','9900119002','SYNTH BANK','SYNTH DIV','SYNTH BAG',4000000,0,500000,0,0)`);
+    await t(`INSERT INTO ref_users (id_ref_user, username, nama_lengkap, status, password, email, otp, token) VALUES (9001,'synth_ksp','SYNTH PETUGAS KOSIPA',1,'x','',0,''),(9002,'synth_ksp_off','SYNTH KOSIPA NONAKTIF',0,'x','',0,'')`);
+    await t(`INSERT INTO ref_group (id, nama_group, status) VALUES (9001,'SYNTH KOSIPA',1)`);
+    await t(`INSERT INTO ref_group_akses (id, id_user, id_group, status) VALUES (9001,9001,9001,1),(9002,9002,9001,1)`);
+    await t(`INSERT INTO ref_menu (id, nama_menu, url, status, parent_id, jenis_menu, akses_menu) VALUES (9001,'SYNTH Anggota','anggota/anggota_c',1,0,'WEB','PRIVATE'),(9002,'SYNTH Kas Anggota','simpanan/kas_anggota_c',1,0,'WEB','PRIVATE'),(9003,'SYNTH Pinjaman','pinjaman/pinjaman_c',1,0,'WEB','PRIVATE'),(9004,'SYNTH Toko','anggota/trans_toko_c',1,0,'WEB','PRIVATE')`);
+    await t(`INSERT INTO ref_menu_akses (id, id_menu, id_group, status, tambah, edit, hapus, posting, approved) VALUES (9001,9001,9001,1,0,0,0,0,0),(9002,9002,9001,1,0,0,0,0,0),(9003,9003,9001,1,0,0,0,0,0),(9004,9004,9001,1,0,0,0,0,0)`);
+    await t(`INSERT INTO trans_simpanan (id, doc_no, doc_date, doc_status, jenis_simpanan, jenis_transaksi, is_mobile, saldo_awal_penarikan) VALUES (9001,'SYNSIM9001','2026-09-25','APPROVED','SIMPANAN WAJIB','PAYROLL',0,0),(9002,'SYNSIM9002','2026-10-02','OPEN','SIMPANAN SUKARELA','CASH/TRANSFER',0,0)`);
+    await t(`INSERT INTO trans_simpanan_dtl (id, doc_no, nik_kar, jenis_simpanan, kredit, kredit_cash, debit, jasa_kredit, saldo) VALUES (9001,'SYNSIM9001','S9001','SIMPANAN WAJIB',500000,0,0,1000,0),(9002,'SYNSIM9002','S9001','SIMPANAN SUKARELA',0,0,100000,0,0)`);
+    await t(`INSERT INTO trans_pinjaman (id, doc_no, doc_date, nik, nama, jenis_pinjaman, jenis_suku_bunga, plan_pinjaman, plan_jangka_waktu, plan_angsuran, doc_status, status_pencairan, status_bayar) VALUES (9001,'PINSYN9001','2026-08-10','S9001','SYNTH ANGGOTA SATU','REGULER','Flat',12000000,12,1120000,'APPROVED','APPROVED','BELUM LUNAS')`);
+    await t(`INSERT INTO db_sales (id, company_id, sales_code, nik_kar, payment_type, sales_status, sales_date, grand_total) VALUES (9001,9001,'SYNSALE9001','S9001','Kredit','Final',DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR)),150000)`);
+    await t(`INSERT INTO db_salesreturn (id, company_id, sales_id, grand_total, payment_type, return_status, status, return_date) VALUES (9001,9001,9001,30000,'Kredit','Return',1,DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR))`);
   });
   writeFileSync(process.env.E2E_FIXTURE, JSON.stringify(pw)); chmodSync(process.env.E2E_FIXTURE, 0o600);
   const counts = {};
