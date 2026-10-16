@@ -9,9 +9,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
   const url = request.nextUrl.clone();
+  // Console deep links survive the login round trip; the login form re-validates `next` (same-site path only).
+  const next = request.nextUrl.pathname.startsWith("/console") ? request.nextUrl.pathname : null;
   url.pathname = "/login";
-  url.search = "";
+  url.search = next ? `?next=${encodeURIComponent(next)}` : "";
   return NextResponse.redirect(url);
 }
 
-export const config = { matcher: ["/pos/:path*", "/api/pos/:path*", "/inventory/:path*", "/api/inventory/:path*", "/sales/:path*", "/api/sales/:path*"] };
+export const config = { matcher: ["/pos/:path*", "/api/pos/:path*", "/inventory/:path*", "/api/inventory/:path*", "/sales/:path*", "/api/sales/:path*", "/console/:path*", "/api/console/:path*"] };

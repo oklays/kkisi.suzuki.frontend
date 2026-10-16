@@ -2,6 +2,7 @@ import { ProductsScreen } from '@/components/products/ProductsScreen';
 import { requirePagePermission } from '@/infrastructure/auth/page-guard';
 import type { PosSession } from '@/features/pos/types';
 import { productWritesAvailable } from '@/infrastructure/products/services';
+import { consoleEnabled } from '@/infrastructure/console/flags';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Produk & Inventory · Koperasi Suzuki Mart' };
 function Notice({ title, text }: { title: string; text: string }) {
@@ -26,7 +27,7 @@ export default async function ProductsPage() {
     ]);
     session = { userId: ctx.userId, userName: ctx.userName, branchName: company?.name ?? 'Cabang', companyId: ctx.companyId,
       canSwitchBranch: ctx.canSwitchBranch, companies, csrfToken: services.keys.csrfToken(ctx.sidHash),
-      checkoutAvailable: false, canInventory: stockOpname || warehouse, canProducts: true, canCheckout, canSales, canReturns, register: { open: null, multiple: false } };
+      checkoutAvailable: false, canInventory: stockOpname || warehouse, canProducts: true, canCheckout, canSales, canReturns, consoleAvailable: consoleEnabled(), register: { open: null, multiple: false } };
     capabilities = { add, edit, writes: productWritesAvailable() };
   } catch { return <Notice title="Layanan tidak tersedia" text="Daftar produk belum dapat dibuka. Coba lagi nanti." />; }
   return <ProductsScreen key={`${ctx.userId}:${ctx.companyId}`} session={session} capabilities={capabilities} />;

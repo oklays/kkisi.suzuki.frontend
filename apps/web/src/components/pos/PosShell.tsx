@@ -17,7 +17,7 @@ export function PosShell({ children, branchName, session, active = "pos" }: { ch
         <div className="pos-store"><Store size={18} /><div><small>CABANG</small><strong>{branchName}</strong></div><ChevronDown size={15} aria-hidden="true" /></div>
         <nav>
           <p className="pos-nav-label">Menu Utama</p>
-          <button disabled><LayoutDashboard size={18} />Dashboard Supervisor</button>
+          {session.consoleAvailable ? <Link href="/console"><LayoutDashboard size={18} />Dashboard</Link> : <button disabled><LayoutDashboard size={18} />Dashboard Supervisor</button>}
           {session.canCheckout !== false && <Link href="/pos" aria-current={active === "pos" ? "page" : undefined}><ShoppingBag size={18} />POS / Kasir</Link>}
           {session.canSales && <ShellNavLink href="/sales" activePrefix={active === "sales" ? "/sales" : null} excludePrefix="/sales/returns"><ClipboardList size={18} />Riwayat Transaksi</ShellNavLink>}
           {session.canSales && session.canReturns && <ShellNavLink href="/sales/returns" activePrefix={active === "sales" ? "/sales/returns" : null}><Undo2 size={18} />Retur Penjualan</ShellNavLink>}

@@ -5,6 +5,7 @@ import type { PosCategory, PosProduct, PosSession } from "@/features/pos/types";
 import { readRegister } from "@koperasi/application/pos/register";
 import { requirePagePermission } from "@/infrastructure/auth/page-guard";
 import { ProductReadError } from "@koperasi/domain/inventory";
+import { consoleEnabled } from "@/infrastructure/console/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function PosPage() {
       userName: ctx.userName, branchName: company?.name ?? "Cabang", companyId: ctx.companyId, canSwitchBranch: ctx.canSwitchBranch,
       kasir: register.kasir, ownedRegisters, registerOpeningAvailable: registerOpeningAvailable(),
       userId: ctx.userId, checkoutAvailable: checkoutAvailable(), companies, csrfToken: services.keys.csrfToken(ctx.sidHash),
-      canInventory: canStockOpname || canWarehouse, canProducts, canSales, canReturns, canCheckout: true,
+      canInventory: canStockOpname || canWarehouse, canProducts, canSales, canReturns, canCheckout: true, consoleAvailable: consoleEnabled(),
       register: { open: register.open ? { noref: register.open.noref, noKasir: register.open.noKasir, openedOn: register.open.openedOn, stale: register.open.stale } : null, multiple: register.warnings.length > 0 },
     };
   } catch {

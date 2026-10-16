@@ -65,13 +65,13 @@ test('every state-changing handler demands CSRF (guard csrf:true or its own orig
   }
 });
 
-test('every page other than the login and landing pages calls requirePagePermission() before anything else', () => {
+test('every page other than the login and landing pages calls a page guard (requirePagePermission or requireConsoleSession) before anything else', () => {
   const pages = walk(APP).filter((p) => p.endsWith('page.tsx'));
   const bad = [];
   for (const file of pages) {
     if (PUBLIC_PAGES.has(rel(file))) continue;
     const src = readFileSync(file, 'utf8');
-    const guardAt = src.indexOf('requirePagePermission(');
+    const guardAt = src.search(/requirePagePermission\(|requireConsoleSession\(/);
     const dataAt = src.search(/searchCatalog\(|readRegister\(|listCatalogCategories\(|\.deps\.|findActive\(/);
     if (guardAt < 0 || (dataAt >= 0 && dataAt < guardAt)) bad.push(rel(file));
   }

@@ -12,8 +12,9 @@ import { authPrisma } from '../db/prisma-auth.ts';
 import { prisma } from '../db/prisma.ts';
 import { PrismaItemRepository } from '../repositories/prisma-item.repository.ts';
 import type { AuthServices } from './http.ts';
+import type { PermissionSetSource } from '@koperasi/application/console/capabilities';
 
-type Container = { services: AuthServices; catalog: ReadProductsUseCase };
+type Container = { services: AuthServices; catalog: ReadProductsUseCase; capabilities: PermissionSetSource };
 const holder = globalThis as typeof globalThis & { kkisiAuthContainer?: Container };
 
 /**
@@ -27,6 +28,7 @@ export function getContainer(): Container {
   const keys = buildKeys(config.secrets);
   const legacy = prisma;                       // DATABASE_URL: SELECT-only
   const auth = authPrisma();                   // DATABASE_URL_AUTH: kkisi_auth, auth schema only
+  const permissions = new PrismaPermissionRepository(legacy, log);
   const services: AuthServices = {
     config, keys,
     deps: {
@@ -35,7 +37,7 @@ export function getContainer(): Container {
       identity: sessionIdentity,
       log,
       users: new PrismaUserRepository(legacy, log),
-      permissions: new PrismaPermissionRepository(legacy, log),
+      permissions,
       companies: new PrismaCompanyRepository(legacy, log),
       registers: new PrismaRegisterRepository(legacy, log),
       sessions: new PrismaSessionStore(auth, log),
@@ -44,6 +46,6 @@ export function getContainer(): Container {
       throttleKeys: (username, ip) => keys.throttleKeys(username, ip),
     },
   };
-  holder.kkisiAuthContainer = { services, catalog: new ReadProductsUseCase(new PrismaItemRepository()) };
+  holder.kkisiAuthContainer = { services, catalog: new ReadProductsUseCase(new PrismaItemRepository()), capabilities: permissions };
   return holder.kkisiAuthContainer;
 }

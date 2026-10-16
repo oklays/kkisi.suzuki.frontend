@@ -1,4 +1,5 @@
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
+import type { PermissionSetSource } from '@koperasi/application/console/capabilities';
 import type { Company, CompanyRepository, OpenRegister, PermissionRepository, RegisterRepository, UserRecord, UserRepository } from '@koperasi/application/auth/ports';
 import { withStoreRetry, type StoreLog } from './store-errors.ts';
 
@@ -38,13 +39,21 @@ export class PrismaUserRepository implements UserRepository {
   }
 }
 
-export class PrismaPermissionRepository implements PermissionRepository {
+export class PrismaPermissionRepository implements PermissionRepository, PermissionSetSource {
   private readonly db: PrismaClient; private readonly log: StoreLog;
   constructor(db: PrismaClient, log: StoreLog) { this.db = db; this.log = log; }
   has(roleId: number, slug: string): Promise<boolean> {
     return withStoreRetry(this.log, 'permission', async () => {
       const rows = await this.db.$queryRaw<{ n: number | bigint }[]>`SELECT COUNT(*) AS n FROM db_permissions WHERE role_id = ${roleId} AND permissions = ${slug}`;
       return Number(rows[0]?.n ?? 0) >= 1;
+    });
+  }
+  /** Console capability resolution: one query for a fixed slug list instead of one COUNT per slug. */
+  grantedAmong(roleId: number, slugs: readonly string[]): Promise<ReadonlySet<string>> {
+    if (slugs.length === 0) return Promise.resolve(new Set());
+    return withStoreRetry(this.log, 'permission_set', async () => {
+      const rows = await this.db.$queryRaw<{ permissions: string }[]>`SELECT DISTINCT permissions FROM db_permissions WHERE role_id = ${roleId} AND permissions IN (${Prisma.join([...slugs])})`;
+      return new Set(rows.map((r) => r.permissions));
     });
   }
 }

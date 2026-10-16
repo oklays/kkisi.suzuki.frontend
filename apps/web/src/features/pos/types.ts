@@ -27,6 +27,8 @@ export type PosSession = {
   canViewPayments?: boolean;
   canInventory?: boolean;
   canProducts?: boolean;
+  /** CONSOLE_ENABLED: the sidebar links back to the unified /console dashboard. */
+  consoleAvailable?: boolean;
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };
 };
 

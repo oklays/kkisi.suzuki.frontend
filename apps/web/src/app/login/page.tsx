@@ -1,8 +1,11 @@
 import Image from "next/image";
 import { LoginForm } from "./LoginForm";
+import { consoleEnabled } from "@/infrastructure/console/flags";
 import "./login.css";
 
 export const metadata = { title: "Masuk · Koperasi Suzuki Mart" };
+// The console flag is read per request so a runtime environment change takes effect without a rebuild.
+export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   return (
@@ -20,7 +23,8 @@ export default function LoginPage() {
       <section className="login-panel" aria-label="Form masuk">
         <div className="login-panel-content">
           <Image className="login-brand" src="/illustrations/new-landscape-logo.jpeg" width={443} height={185} unoptimized preload alt="SMART KKISI Tambun 2" />
-          <LoginForm />
+          {/* Without a valid `next`: console on -> /console decides (cashiers continue to /pos); console off -> /pos as before. */}
+          <LoginForm fallback={consoleEnabled() ? "/console?entry=login" : "/pos"} />
         </div>
       </section>
     </main>

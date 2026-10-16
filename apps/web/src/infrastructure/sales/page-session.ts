@@ -1,5 +1,6 @@
 import type { PageAuth } from '../auth/page-guard';
 import type { PosSession } from '@/features/pos/types';
+import { consoleEnabled } from '../console/flags.ts';
 
 export async function buildSalesSession({ ctx, services }: Pick<Extract<PageAuth, { kind: 'ok' }>, 'ctx' | 'services'>): Promise<PosSession> {
   const [company, companies, canCheckout, canViewPayments, canProducts, stockOpname, warehouse, canReturns] = await Promise.all([
@@ -10,6 +11,6 @@ export async function buildSalesSession({ ctx, services }: Pick<Extract<PageAuth
   ]);
   return { userId: ctx.userId, userName: ctx.userName, branchName: company?.name ?? 'Cabang', companyId: ctx.companyId,
     canSwitchBranch: ctx.canSwitchBranch, companies, csrfToken: services.keys.csrfToken(ctx.sidHash), checkoutAvailable: false,
-    canCheckout, canSales: true, canReturns, canViewPayments, canProducts, canInventory: stockOpname || warehouse,
+    canCheckout, canSales: true, canReturns, canViewPayments, canProducts, canInventory: stockOpname || warehouse, consoleAvailable: consoleEnabled(),
     register: { open: null, multiple: false } };
 }

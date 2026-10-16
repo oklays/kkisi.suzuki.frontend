@@ -11,7 +11,7 @@ const MESSAGES: Record<number, string> = {
   503: "Layanan masuk sedang tidak tersedia. Coba lagi nanti.",
 };
 
-export function LoginForm() {
+export function LoginForm({ fallback = "/pos" }: { fallback?: "/pos" | "/console?entry=login" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -24,7 +24,7 @@ export function LoginForm() {
         method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
         body: JSON.stringify({ username: String(form.get("username") ?? ""), password: String(form.get("password") ?? "") }),
       });
-      if (response.ok) { window.location.assign(safeNextPath(new URLSearchParams(window.location.search).get("next"))); return; }
+      if (response.ok) { window.location.assign(safeNextPath(new URLSearchParams(window.location.search).get("next"), fallback)); return; }
       setError(MESSAGES[response.status] ?? "Tidak dapat masuk. Coba lagi.");
     } catch { setError(MESSAGES[503]); }
     setBusy(false);
