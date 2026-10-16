@@ -4,9 +4,10 @@ import { KosipaError, nikLookupKeys } from '@koperasi/domain/kosipa';
 import type { KosipaMemberReader, LoanHeader, MemberRecordRow, MemberSummary, SavingsAggregate } from '@koperasi/application/kosipa/member-360';
 import { kreditReturnedSen } from './sales-return-ledger.ts';
 
-// Anggota 360 reads (spec REQ-022..024) through the existing SELECT-only reader. Production has only primary keys on
-// these tables, so every statement is time-capped and the two very large tables (trans_pinjaman_dtl ~3.5M rows,
-// trans_potongan_matrix ~1.2M rows) are deliberately NOT read until reviewed indexes exist.
+// Anggota 360 reads (spec REQ-022..024) through the existing SELECT-only reader. The 30 Sep 2026 production dump shows only
+// primary keys on these tables (current production state is not yet verified), so every statement is time-capped and the
+// installment-detail and payroll-matrix tables are deliberately NOT read until the index review (index-proposal.md) is decided.
+// Measured on that copy: trans_pinjaman_dtl 1.2M rows (AUTO_INCREMENT 3.6M), trans_potongan_matrix 85k rows (AUTO_INCREMENT 1.2M).
 type Num = number | bigint;
 const sen = (v: Prisma.Decimal | null) => toMinorUnits((v ?? new Prisma.Decimal(0)).toFixed(2));
 const zeroDate = (col: Prisma.Sql) => Prisma.sql`CASE WHEN ${col} IS NULL OR CAST(${col} AS CHAR) LIKE '0000-00-00%' THEN NULL ELSE DATE_FORMAT(${col}, '%Y-%m-%d') END`;

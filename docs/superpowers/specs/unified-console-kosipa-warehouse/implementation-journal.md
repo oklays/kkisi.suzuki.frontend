@@ -171,7 +171,7 @@ Checkpoint 3 — KOSIPA read-first access on **local staging only**: `TASK-020` 
 - **Audit:** link create/revoke, refusals, and every Anggota 360 view; written **before** member data is read (audit failure stops the read); detail is an allow-listed flat object (no NIK/name/contact keys); subjects are opaque ids. Append-only by trigger (proven as root inside rolled-back transactions).
 - **Fail closed:** console store/KOSIPA read failure removes only KOSIPA (state `unavailable`, link admin 503); TOKO and readiness are unaffected (browser-proven).
 - **Anggota 360:** read-only; contact/bank masked; salary, address, KTP never selected; savings shown as recorded movements by header status with an explicit "bukan saldo resmi" notice; Kredit usage uses the exact POS query and return offset; expired-contract members show usage but no limit.
-- **Honest gaps:** instalment detail and payroll deductions return `unavailable: INDEX_REQUIRED` because `trans_pinjaman_dtl` (~3.5M rows) and `trans_potongan_matrix` (~1.2M rows) have only primary keys in production; they are deliberately not queried (scan-test enforced). All KOSIPA statements are time-capped (`max_statement_time=5`).
+- **Honest gaps:** instalment detail and payroll deductions return `unavailable: INDEX_REQUIRED` and are deliberately not queried (scan-test enforced) until the index review is decided. **Correction (Checkpoint 5):** the earlier sizes "~3.5M / ~1.2M rows" were `AUTO_INCREMENT` counters; measured rows are 1,198,697 and 84,924, and "only primary keys in production" is established only for the 30 Sep dump (current production state is unverified). See `index-proposal.md`. All KOSIPA statements are time-capped (`max_statement_time=5`).
 - **Reader pool:** page reads are sequential (peak 1 reader connection per view; tested), because the reader pool (3–4) is shared with POS checkout.
 
 ### Verification (actual, 16 Oct 2026)
@@ -206,7 +206,7 @@ Documented production allocation (`deploy/genesis/env.production.example`, 13 Oc
 ### Remaining blockers
 
 **Implementation:** none for this checkpoint.
-**Production activation (all manual, none done):** (1) operator runs `console-store-production.sql` after separate authorisation and confirms triggers could be created; (2) create `n1608204_nxcon` with SELECT, INSERT, UPDATE only; (3) set the `CONSOLE_DB_*`/`DATABASE_URL_CONSOLE`, raise budget to 12, restart, check startup line `console_db=… legacy_pool=12/12`; (4) TASK-003 schema-object export for savings/loan balance parity; (5) reviewed index plan for `trans_pinjaman_dtl`/`trans_potongan_matrix`/`m_anggota.nik_kar`/`trans_simpanan_dtl.nik_kar`/`trans_pinjaman.nik`; (6) staging UAT with real roles, then owner-approved link set; (7) `CONSOLE_ENABLED` then `KOSIPA_READ_ENABLED`.
+**Production activation (all manual, none done):** (1) operator runs `console-store-production.sql` after separate authorisation and confirms triggers could be created; (2) create `n1608204_nxcon` with SELECT, INSERT, UPDATE only; (3) set the `CONSOLE_DB_*`/`DATABASE_URL_CONSOLE`, raise budget to 12, restart, check startup line `console_db=… legacy_pool=12/12`; (4) TASK-003 schema-object export for savings/loan balance parity; (5) decision on the reviewed index proposal (`index-proposal.md`: two indexes on `trans_pinjaman_dtl`; none on the payroll matrix on current evidence); (6) staging UAT with real roles, then owner-approved link set; (7) `CONSOLE_ENABLED` then `KOSIPA_READ_ENABLED`.
 
 ### Rollback
 
@@ -276,3 +276,34 @@ No production or legacy system, no new connection pool, no auth/console schema, 
 ### Remaining dependencies before any live integration
 
 Console-store tables (`warehouse_item_map`, shipment storage) via a reviewed migration; Gudang read adapter and catalog (needs #5); TOKO receiving writer with the POS lock order and its own least-privilege account (needs a connection-budget decision — the budget is already at the 12 ceiling); UI; fault-injection tests of the cross-database compensation path; UAT.
+
+---
+
+## Checkpoint 5 — KOSIPA index proposal (documentation and SQL artifacts only)
+
+**Status:** DOCUMENTED. **No DDL was executed anywhere** (not production, staging or local). Measurements were read-only `SELECT`/`EXPLAIN`/`SHOW` through the SELECT-only reader on the local staging copy (30 Sep production data). Not applied, not approved, not scheduled.
+
+### Deliverables
+
+`index-proposal.md` (queries, evidence vs assumptions, candidate columns and order, expected plans, size and write-cost estimates, validation method, rollback), `docs/migration/sql/kosipa-read-indexes-proposed.sql` (review-only DDL with pre-check, post-check, rollback), `docs/migration/sql/kosipa-read-queries-validation.sql` (read-only before/after queries).
+
+### What the evidence changed
+
+| Earlier assumption | Measured |
+|---|---|
+| "~3.5M installment rows, ~1.2M payroll rows" | Those are `AUTO_INCREMENT` counters. Rows: **1,198,697** and **84,924** |
+| Both tables need indexes | Only `trans_pinjaman_dtl` does (full scans ~190–360 ms). The payroll matrix scans in **14–65 ms**: payroll read (TASK-027) does not need to wait for an index |
+| NIK lookups might need normalisation | Every distinct NIK in every KOSIPA table matches `m_anggota.nik_kar` **exactly** (93% have leading zeros), so the Checkpoint 3 exact-string reads are correct |
+| Uniform data | Three NIKs hold ~80% of the installment rows (635k / 262k / 61k); 43% of rows have a zero `tgl_cicilan`; 33,136 detail rows reference no loan. Pagination is mandatory whatever is indexed |
+
+### Recommendation
+
+Tier 1: `trans_pinjaman_dtl (nik_kar, tgl_cicilan)` and `(doc_no, ke_cicilan)` (~75 MB, ~+38%; no maintenance on payroll status updates because those columns are not indexed). No matrix indexes now. Tier 2 (`m_anggota.nik_kar`, `db_sales.nik_kar`) left to the POS index plan owners after a production pre-check.
+
+### Corrections made in this checkpoint
+
+The unproven claims "tables are very large and unindexed in production" were removed from the repository comment and the member page message; the page now says the data "waits for a performance review". (Text-only change; the opt-in browser test string was updated to match, and that browser suite was not re-run for this change.)
+
+### Open items
+
+Production index state and `TABLE_ROWS` (pre-check SQL), identity of the three dominant NIKs (data owner), legacy write pattern on `trans_pinjaman_dtl`, view definitions (TASK-003), a staging validation run per §8 of the proposal, and the operator decision. Indexes are not required for any code in this repository to be correct.

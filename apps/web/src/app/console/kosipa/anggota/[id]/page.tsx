@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Anggota 360 · KOSIPA · KKISI TB2' };
 
 const REASON: Record<string, string> = {
-  INDEX_REQUIRED: 'Belum ditampilkan: tabel sumbernya sangat besar dan belum memiliki indeks di produksi. Data ini akan muncul setelah indeks yang direview dipasang.',
+  INDEX_REQUIRED: 'Belum ditampilkan: sumber data ini menunggu tinjauan performa (indeks) sebelum dibaca dari database produksi.',
   READ_FAILED: 'Data tidak dapat dibaca saat ini. Coba lagi beberapa saat lagi.',
 };
 

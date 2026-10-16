@@ -93,7 +93,7 @@ try {
       assert.match(text, /SIMPANAN WAJIB\s+Rp\s?501\.000/); assert.match(text, /SIMPANAN SUKARELA\s+Rp\s?0\s+Rp\s?100\.000/);
       assert.match(text, /bukan saldo resmi/);
       assert.match(text, /PINSYN9001/); assert.match(text, /Rp\s?12\.000\.000/);
-      assert.equal((text.match(/Belum ditampilkan: tabel sumbernya sangat besar/g) ?? []).length, 1, 'installments unavailable (payroll is restricted: no matrix grant)');
+      assert.equal((text.match(/Belum ditampilkan: sumber data ini menunggu tinjauan performa/g) ?? []).length, 1, 'installments unavailable (payroll is restricted: no matrix grant)');
       assert.match(text, /Belanja Kredit\s+Rp\s?150\.000/); assert.match(text, /Retur Kredit\s+Rp\s?30\.000/); assert.match(text, /Pemakaian bersih\s+Rp\s?120\.000/); assert.match(text, /Rp\s?1\.000\.000 \/ Rp\s?880\.000/);
       await page.screenshot({ path: `${output}/anggota360-1440.png`, fullPage: true });
       await noOverflow(page);
