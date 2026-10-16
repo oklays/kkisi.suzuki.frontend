@@ -16,3 +16,6 @@ node_modules/
 
 # Local compatibility symlink for an already-running pre-refactor dev server
 /kkisi.web
+
+# Private legacy vulnerability register (never commit to the public repository)
+docs/superpowers/specs/unified-console-kosipa-warehouse/legacy-anomalies.md
