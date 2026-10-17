@@ -16,7 +16,7 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
 | TASK-020, 021, 022, 024 | **VERIFIED (local)** | Checkpoint 3 (Option B). TASK-021 uses the existing SELECT-only reader (no new business pool) + the console store guard |
 | TASK-026 (read side) | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; official balance blocked on TASK-003; NOT staging-accepted | Checkpoint 7. Simulation/origination remain with TASK-043 |
-| TASK-025 | PARTIAL | Read of movements only; balances wait for TASK-003 |
+| TASK-025 (read side) | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; official balance blocked on TASK-003; parity (REQ-023) not done; NOT staging-accepted | Checkpoint 8 |
 | TASK-027 | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; NOT staging-accepted, NOT production-ready | Checkpoint 6. Payroll does not need an index (Checkpoint 5 measurement) |
 | TASK-062, TASK-063 | **PARTIAL** — domain + application VERIFIED | Checkpoint 4; no adapter, storage, writer or UI; accounting treatment open |
 
@@ -394,4 +394,38 @@ Production index state and `TABLE_ROWS` (pre-check SQL), identity of the three d
 2. Installment reads by `doc_no` / `nik_kar` are scans (no index in the dump; production unverified); measured within the cap, index proposal still deferred and **not** executed.
 3. Loan origination, approval, disbursement, repayment, settlement (TASK-043/044/045) are not started: they need the writer-readiness gate (owner policy for the 70% salary rule, interest/rounding confirmation, single-writer enforcement). No writer exists or is enabled.
 4. See `decision-register.md` for the consolidated owner decisions and blockers.
+
+---
+
+## Checkpoint 8 — KOSIPA savings ledger read, read-only (TASK-025 read side; REQ-023)
+
+**Status vocabulary.** IMPLEMENTED: yes. VERIFIED: yes (synthetic fixtures; read-only smoke on the local 30 Sep copy). STAGING ACCEPTED: **no**. PRODUCTION READY: **no**. **No savings balance is stated anywhere** (`OFFICIAL_BALANCE_UNVERIFIED` is always present in the model, API and UI).
+
+### Evidence that shaped the rules (30 Sep copy; production unverified)
+
+The detail column `saldo` is `0` in 100% of 7,921 recent rows, so there is no recorded per-row balance to show. The detail `doc_status` is empty or different from the header in ~54% of those rows, so the **header status is authoritative** (APPROVED → posted, OPEN → pending, any other → void; same mapping as Anggota 360). 11 headers are `jenis_transaksi = 'SALDO AWAL'` (opening entries): shown and labelled, but opening-balance semantics are unverified, so the per-type sums are **movement sums, not balances**. No duplicated header `doc_no` and no orphan movement exist on that copy; the code nevertheless reports duplicates (`HEADER_AMBIGUOUS`) and missing headers (`HEADER_MISSING`) as UNVERIFIED and never counts them as posted. The heaviest member has ~240 movements.
+
+### Delivered
+
+- Domain `savings-read.ts`: query/id validation, header-status state mapping, `describeMovement` (exact amounts, labelled dates, flags `HEADER_MISSING`, `HEADER_AMBIGUOUS`, `DETAIL_STATUS_DIFFERS`, `DATE_UNUSABLE`, `NEGATIVE_AMOUNT`), `summarizeTypes`. Audit action `kosipa.savings.view`.
+- Application `savings.ts`: `SavingsReader` port (3 read methods, no write), `readMemberSavings` (needs `kosipa.savings.view` **and** `kosipa.member.view`; validation → audit before any read → sequential bounded reads; sections fail independently with explicit `READ_FAILED`; unusable NIK → `MEMBER_NIK_UNUSABLE`, never guessed).
+- Adapter `kosipa-savings.repository.ts` on the existing SELECT-only reader: 5 s cap, parameterised, keyset by row id, 50 + 1 rows, movement page and header lookup as separate statements, `saldo` never selected.
+- API `GET /api/kosipa/savings/{memberId}`; pages `/console/kosipa/simpanan` (member search) and `/console/kosipa/simpanan/{id}` (summary + ledger with type filter and "load more"); sidebar entry available only with `kosipa.savings.view`; Anggota 360 links to the full ledger.
+
+### Verification (actual, 17 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **106/106**, application **88/88**, web **267 pass / 0 fail** (+49 opt-in skipped) |
+| Mutation checks (savings) | removing the member grant, audit, page bound, cursor, type filter, balance state, parse-error propagation, the unverified bucket or the header-wins rule each fails ≥1 test (9/9 killed after closing one survivor with a ledger-only test) |
+| Opt-in DB test (synthetic schema, SELECT-only) | PASS: exact sums incl. cash credit and sub-unit interest, 66 movements paged 50 + 16 without overlap, POSTING treated as other status, duplicate / missing headers unverified, header beats detail status, zero date and opening entry labelled, member isolation, no write |
+| Browser `console-savings-browser.mjs` | PASS: search → ledger, honest balance notice, per-type sums, 50-row keyset paging, type filter, empty / invalid / unknown member, 360 link, API codes, isolation (member-only and unlinked accounts), opaque audit; no overflow 375–1440; no browser errors |
+| Regression | loans, payroll, Anggota 360, console shell, POS and `e2e-local` browser suites PASS; loans/payroll DB tests PASS |
+
+### Limits and open items
+
+1. Official savings balance and opening-balance semantics: blocked on TASK-003 (view definitions) — **release blocker for any balance display and for any withdrawal check against a balance**.
+2. Reads by `nik_kar` are scans (no index in the dump; production unverified); measured within the cap on the synthetic and local copies; the index proposal stays deferred and **not** executed.
+3. Deposits, withdrawals, approvals and ledger posting (TASK-044) are **not** started: owner decision D2 (withdrawable types, minimums) and a verified balance/ledger design are prerequisites; no writer exists or is enabled.
 

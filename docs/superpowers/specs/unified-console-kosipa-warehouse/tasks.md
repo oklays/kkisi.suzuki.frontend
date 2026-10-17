@@ -94,6 +94,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-022`, `SEC-001`, `SEC-006`, `NFR-003`
   - **Verification:** e2e persona tanpa `kosipa.member.pii` melihat data termasking. p95 pencarian diukur di staging. Tab tanpa capability tidak meminta API.
 - [ ] `TASK-025`: Simpanan read
+  - **Status:** SISI BACA IMPLEMENTED + VERIFIED (fixture sintetis; smoke baca-saja) — saldo resmi BLOCKED (TASK-003), parity belum, belum staging-accepted (Checkpoint 8)
   - **Files:** `kosipa-savings.repository.ts`, `app/console/kosipa/simpanan/**`, `app/api/kosipa/members/[nik]/savings/route.ts`
   - **Goal:** daftar dokumen per jenis/status, kartu simpanan dengan kolom parity.
   - **Requirements Addressed:** `REQ-023`, `REQ-027`

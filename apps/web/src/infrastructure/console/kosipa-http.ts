@@ -13,7 +13,7 @@ export type KosipaApiBase = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | '
 export type KosipaApiDeps<P extends KosipaApiBase> = { enabled: boolean; permissions: PermissionSetSource; ports: P | null };
 export type KosipaActor = { userId: number; capabilities: CapabilitySet; requestId: string };
 
-const STATUS: Record<string, number> = { FORBIDDEN: 403, PERIOD_INVALID: 400, FILTER_INVALID: 400, CURSOR_INVALID: 400, DOC_NO_INVALID: 400, NIK_INVALID: 400, AMOUNT_INVALID: 502 };
+const STATUS: Record<string, number> = { FORBIDDEN: 403, PERIOD_INVALID: 400, FILTER_INVALID: 400, CURSOR_INVALID: 400, DOC_NO_INVALID: 400, NIK_INVALID: 400, MEMBER_ID_INVALID: 400, AMOUNT_INVALID: 502 };
 
 export async function kosipaActor<P extends KosipaApiBase>(services: AuthServices, request: Request, deps: KosipaApiDeps<P>): Promise<{ response: Response } | { actor: KosipaActor; ports: P }> {
   if (!deps.enabled) return { response: json(404, { error: 'NOT_FOUND' }) };

@@ -26,7 +26,7 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'dashboard', section: 'dashboard', label: 'Dashboard', href: '/console', order: 0, anyOf: [], readiness: 'available', icon: 'dashboard' },
 
   { id: 'kosipa-members', section: 'kosipa', label: 'Keanggotaan', href: '/console/kosipa/anggota', order: 1, anyOf: ['kosipa.member.view'], readiness: 'available', icon: 'members', description: 'Cari anggota dan lihat Anggota 360 (baca saja)' },
-  { id: 'kosipa-savings', section: 'kosipa', label: 'Simpanan', href: '/console/kosipa/simpanan', order: 2, anyOf: [], readiness: 'planned', icon: 'savings' },
+  { id: 'kosipa-savings', section: 'kosipa', label: 'Simpanan', href: '/console/kosipa/simpanan', order: 2, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'savings', description: 'Buku simpanan per anggota (baca saja)' },
   { id: 'kosipa-loans', section: 'kosipa', label: 'Pinjaman', href: '/console/kosipa/pinjaman', order: 3, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loans', description: 'Dokumen dan jadwal pinjaman (baca saja)' },
   { id: 'kosipa-installments', section: 'kosipa', label: 'Angsuran', href: '/console/kosipa/angsuran', order: 4, anyOf: [], readiness: 'planned', icon: 'installments' },
   { id: 'kosipa-payroll', section: 'kosipa', label: 'Payroll', href: '/console/kosipa/payroll', order: 5, anyOf: ['kosipa.payroll.view'], readiness: 'available', icon: 'payroll', description: 'Batch potongan bulanan (baca saja)' },

@@ -23,7 +23,8 @@
     "./kosipa/member-360": "./src/kosipa/member-360.ts",
     "./warehouse": "./src/warehouse/index.ts",
     "./kosipa/payroll": "./src/kosipa/payroll.ts",
-    "./kosipa/loans": "./src/kosipa/loans.ts"
+    "./kosipa/loans": "./src/kosipa/loans.ts",
+    "./kosipa/savings": "./src/kosipa/savings.ts"
   },
   "scripts": {
     "lint": "eslint .",

@@ -112,6 +112,17 @@ try {
     for (let i = 0; i < 3; i++) rows.push([rid++, 'PINSYN9005', 'S9003', i + 1, dueOf(i), 100000, 0, 100000, 'Belum Bayar', null]);
     for (const [id, doc, nik, no, due, pokok, bunga, total, status, type] of rows)
       await t(`INSERT INTO trans_pinjaman_dtl (id, doc_no, nik_kar, ke_cicilan, tgl_cicilan, pokok_cicilan, bunga_cicilan, angsuran_cicilan, status_cicilan, type_cicilan) VALUES (?,?,?,?,?,?,?,?,?,?)`, id, doc, nik, no, due, pokok, bunga, total, status, type);
+    // Checkpoint 8 (TASK-025 read side): synthetic savings for member S9003 (S9001's two rows above stay as they are, so Anggota 360 expectations are unchanged).
+    //   SYNSIM9010 APPROVED TRANSFER (carries 61 movements: paging)   SYNSIM9011 OPEN CASH   SYNSIM9012 POSTING   SYNSIM9013 APPROVED 'SALDO AWAL' with a zero date
+    //   SYNSIM9014 duplicated header (two rows)   SYNSIM9099 has NO header row (movement without a header)
+    const sh = (id, no, status, kind, type, date = '2026-05-01') => t(`INSERT INTO trans_simpanan (id, doc_no, doc_date, doc_status, jenis_simpanan, jenis_transaksi, is_mobile, saldo_awal_penarikan) VALUES (?,?,?,?,?,?,0,0)`, id, no, date, status, type, kind);
+    await sh(9010, 'SYNSIM9010', 'APPROVED', 'TRANSFER', 'SIMPANAN SUKARELA'); await sh(9011, 'SYNSIM9011', 'OPEN', 'CASH', 'SIMPANAN SUKARELA'); await sh(9012, 'SYNSIM9012', 'POSTING', 'CASH', 'SIMPANAN WAJIB');
+    await sh(9013, 'SYNSIM9013', 'APPROVED', 'SALDO AWAL', 'SIMPANAN POKOK', '0000-00-00'); await sh(9014, 'SYNSIM9014', 'APPROVED', 'TRANSFER', 'SIMPANAN WAJIB'); await sh(9015, 'SYNSIM9014', 'OPEN', 'TRANSFER', 'SIMPANAN WAJIB');
+    const sd = (id, doc, type, kredit, debit, jasa = 0, status = null, cash = 0) => t(`INSERT INTO trans_simpanan_dtl (id, doc_no, nik_kar, jenis_simpanan, kredit, kredit_cash, debit, jasa_kredit, saldo, doc_status) VALUES (?,?,?,?,?,?,?,?,0,?)`, id, doc, 'S9003', type, kredit, cash, debit, jasa, status);
+    await sd(9010, 'SYNSIM9011', 'SIMPANAN SUKARELA', 0, 40000, 0, 'OPEN'); await sd(9011, 'SYNSIM9012', 'SIMPANAN WAJIB', 9000, 0); await sd(9012, 'SYNSIM9013', 'SIMPANAN POKOK', 250000, 0);
+    await sd(9013, 'SYNSIM9014', 'SIMPANAN WAJIB', 7000, 0, 0, null); await sd(9014, 'SYNSIM9099', 'SIMPANAN WAJIB', 5000, 0);
+    await sd(9015, 'SYNSIM9010', 'SIMPANAN WAJIB', 100000, 0, 0, 'OPEN');   // detail status says OPEN, header says APPROVED: header wins
+    for (let i = 0; i < 60; i++) await sd(9020 + i, 'SYNSIM9010', 'SIMPANAN SUKARELA', 1000, i === 0 ? 500 : 0, i === 1 ? 12.5 : 0, null, i === 2 ? 250 : 0);
   });
   writeFileSync(process.env.E2E_FIXTURE, JSON.stringify(pw)); chmodSync(process.env.E2E_FIXTURE, 0o600);
   const counts = {};

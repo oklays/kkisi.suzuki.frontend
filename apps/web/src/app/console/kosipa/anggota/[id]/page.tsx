@@ -71,6 +71,7 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
 
       <SectionBlock title="Simpanan" section={member.savings}>{(rows) => rows.length === 0 ? <p>Belum ada mutasi simpanan tercatat.</p> : (
         <>
+          <p><Link className="console-more" href={`/console/kosipa/simpanan/${p.id}`}>Lihat buku simpanan lengkap</Link></p>
           <table className="console-table">
             <thead><tr><th scope="col">Jenis</th><th scope="col">Mutasi bersih disetujui</th><th scope="col">Penarikan menunggu</th><th scope="col">Setoran menunggu</th></tr></thead>
             <tbody>{rows.map((r) => <tr key={r.type}><td>{r.type}</td><td className="num">{formatRupiah(r.postedSen)}</td><td className="num">{formatRupiah(r.pendingDebitSen)}</td><td className="num">{formatRupiah(r.pendingCreditSen)}</td></tr>)}</tbody>
