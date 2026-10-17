@@ -69,6 +69,7 @@ try {
     await hd(9003, 'POTSYN202607A', 'ANGGOTA', 'APPROVED', '07', '0000-00-00', 50000.6666);
     await hd(9004, 'POTSYN202606A', 'ANGGOTA', 'APPROVED', '06', '2026-06-30', 0);
     await hd(9005, 'POTSYN202605A', 'ANGGOTA', 'REVIEW', '05', '2026-05-31', 99999);
+    await hd(9006, 'POTSYN202604A', 'ANGGOTA', 'APPROVED', '04', '2026-04-30', 5100.01);   // checkpoint 9: row totals that differ from the component sum (sub-sen and missing components)
     const mx = (id, no, nik, name, amounts) => {
       const cols = Object.keys(amounts); const total = cols.filter((c) => c !== 'potongan_toko').reduce((n, c) => n + Number(amounts[c]), 0);
       const all = { ...amounts, total_potongan: total, gaji_payroll: 12345678 };
@@ -80,6 +81,9 @@ try {
     await mx(9004, 'POTSYN202607A', 'S9001', 'SYNTH ANGGOTA SATU', { SIMPANAN_WAJIB: 25000.3333 });
     await mx(9005, 'POTSYN202607A', 'S9001', 'SYNTH ANGGOTA SATU', { SIMPANAN_WAJIB: 25000.3333 });
     await mx(9006, 'POTSYN202605A', 'S9002', 'SYNTH ANGGOTA KONTRAK', { SIMPANAN_SUKARELA: 10000 });
+    // total_potongan differs from the 59 components: by Rp 0.01 (row 9007) and a total with no component at all (row 9008)
+    await t(`INSERT INTO trans_potongan_matrix (id, periode, doc_no_dtl, nik_kar, nama, kd_group, SIMPANAN_SUKARELA, total_potongan, gaji_payroll) VALUES (9007,'POTSYN202604A','POTSYN202604A-9007','S9002','SYNTH ANGGOTA KONTRAK','ANGGOTA',5000,5000.01,12345678)`);
+    await t(`INSERT INTO trans_potongan_matrix (id, periode, doc_no_dtl, nik_kar, nama, kd_group, total_potongan, gaji_payroll) VALUES (9008,'POTSYN202604A','POTSYN202604A-9008','S9003','SYNTH ANGGOTA TIGA','ANGGOTA',100,12345678)`);
     void AMOUNTS;
     const sl = (id, company, nik, total) => t('INSERT INTO db_sales (id, company_id, sales_code, nik_kar, payment_type, sales_status, sales_date, grand_total) VALUES (?,?,?,?,"Kredit","Final","2026-07-15 10:00:00",?)', id, company, `SYNSALE${id}`, nik, total);
     await sl(9011, 1, 'S9001', 100000); await sl(9012, 1, 'S9002', 100000); await sl(9013, 2, 'S9001', 40000);

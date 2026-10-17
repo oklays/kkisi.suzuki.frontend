@@ -16,6 +16,8 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
 | TASK-020, 021, 022, 024 | **VERIFIED (local)** | Checkpoint 3 (Option B). TASK-021 uses the existing SELECT-only reader (no new business pool) + the console store guard |
 | TASK-026 (read side) | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; official balance blocked on TASK-003; NOT staging-accepted | Checkpoint 7. Simulation/origination remain with TASK-043 |
+| TASK-028 (loan + payroll reports, data quality; read-only subset) | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; not staging-accepted; Excel export and the other legacy reports not done | Checkpoint 9 |
+| TASK-062/063 persistence boundary | PROPOSAL + pure outbox code (no adapter, no DDL, no writer) | Checkpoint 9; `warehouse-persistence-architecture.md` |
 | TASK-025 (read side) | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; official balance blocked on TASK-003; parity (REQ-023) not done; NOT staging-accepted | Checkpoint 8 |
 | TASK-027 | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; NOT staging-accepted, NOT production-ready | Checkpoint 6. Payroll does not need an index (Checkpoint 5 measurement) |
 | TASK-062, TASK-063 | **PARTIAL** — domain + application VERIFIED | Checkpoint 4; no adapter, storage, writer or UI; accounting treatment open |
@@ -428,4 +430,57 @@ The detail column `saldo` is `0` in 100% of 7,921 recent rows, so there is no re
 1. Official savings balance and opening-balance semantics: blocked on TASK-003 (view definitions) — **release blocker for any balance display and for any withdrawal check against a balance**.
 2. Reads by `nik_kar` are scans (no index in the dump; production unverified); measured within the cap on the synthetic and local copies; the index proposal stays deferred and **not** executed.
 3. Deposits, withdrawals, approvals and ledger posting (TASK-044) are **not** started: owner decision D2 (withdrawable types, minimums) and a verified balance/ledger design are prerequisites; no writer exists or is enabled.
+
+---
+
+## Checkpoint 9 — Integrated read-only reporting, data quality, UAT, evidence handoff, persistence proposal
+
+**Status vocabulary.** IMPLEMENTED: yes. VERIFIED: yes (synthetic fixtures; read-only smoke on the local 30 Sep copy; integrated UAT). STAGING ACCEPTED: **no**. PRODUCTION READY: **no**. No writer, no DDL, no production access; the connection budget is unchanged (12/12) and the reports reuse the existing SELECT-only reader.
+
+### Delivered
+
+- **Loan report** `/console/kosipa/laporan/pinjaman` (+ `GET /api/kosipa/reports/loans`): recorded principal (rencana) and document counts per month × document status × repayment status, per year; loans whose document date is zero / NULL / implausible are counted apart and never placed in a month; official balance shown as unavailable. The loan list gained a **`periode`** (document-date month) filter; a report month drills into it.
+- **Payroll report** `/console/kosipa/laporan/payroll` (+ API): per period (from the recorded month/year TEXT columns only) the batches, rows, recorded totals, component-group totals, `TOKO_*` totals and integrity notes; a period that cannot be established is shown as `UNKNOWN` and is not offered for comparison. The comparison link is informational and labelled review-only.
+- **Financial data quality** `/console/kosipa/laporan/kualitas-data` (+ API), every diagnostic an independent section with its source named: duplicate loan document numbers (with conflicting status combinations), contradictory loan statuses, unusable loan and installment dates, installment document numbers without a loan and APPROVED loans without a schedule, batch header/detail total findings and rows without a header, payroll row-total differences (two tiers with the maximum), duplicate (batch, NIK) rows, and the **unverified branch mapping** state. Nothing is repaired or hidden; an incomplete scan is `unavailable`, never "clean"; sections are gated by the loan / payroll grant; samples are bounded (20) and group scans capped.
+- Hub `/console/kosipa/laporan`; navigation entry "Laporan KOSIPA" (any of the loan / payroll grants).
+- **Adapter** `kosipa-report.repository.ts` (existing reader, 5 s cap, parameterised, one aggregate or LIMIT per statement): **no statement joins two financial tables**; the orphan and header/detail comparisons are done in memory over separately read, capped sets.
+- **Warehouse**: `stock-outbox.ts` (ports + pure orchestration): idempotent outbox of accepted receipt quantities keyed by the domain's `intentKey`, refusal without an explicit accounting treatment (`POLICY_REQUIRED`), conflict on changed content, exactly-once drain, crash recovery, failure isolation, attempt limit. Synthetic stores only.
+- **Evidence package**: `docs/migration/operator-handoff-schema-evidence.md`, `sql/kosipa-schema-evidence-columns-readonly.sql`, `sql/gudang-schema-evidence-readonly.sql` (metadata only, operator-run, with a sensitive-content review before anything is committed). **Warehouse persistence proposal**: `warehouse-persistence-architecture.md` (options A–D, constraints, budget alternatives, outbox, migration). **Decision register** rewritten with alternatives, proposals, impact, tasks and read-only / write status.
+
+### Findings on the 30 Sep copy that the diagnostics surfaced (production unverified)
+
+1,647 installment document numbers (33,136 rows) with no loan header; 23 APPROVED loans without a schedule; 119 loans with an implausible document date; 443,755 installment due dates of `9999-12-10` and 513,925 zero dates; 7 duplicated loan numbers; 17 REJECTED+LUNAS, 3 LUNAS and 58 disbursed while not APPROVED; payroll row totals: **1,061 rows differ by a sub-sen amount, 35 by ≥ half a sen, none ≥ Rp 1 (maximum Rp 0.01)** — an earlier note that said "35 rows" meant the half-sen tier; both tiers are now reported so noise is not mistaken for a material mismatch; 11 batch findings; 4 duplicate (batch, NIK) pairs. Whole diagnostics page: 2.7 s on the local copy, each statement under the cap.
+
+### Integrated read-only UAT (`scripts/uat-run.sh`, `tests/console-uat-browser.mjs`)
+
+| # | Scenario | Result |
+|---|---|---|
+| 1–2 | Console login, authorised navigation, member identity resolution (administrator links accounts) | PASS |
+| 3 | Anggota 360 profile (masking, no salary/bank) | PASS |
+| 4 | Savings ledger navigation from the profile | PASS |
+| 5 | Loan detail and schedule from the profile; 60-row bounded page | PASS |
+| 6 | Payroll history, batch, member components | PASS |
+| 7 | Grant / link isolation: member-directory-only and unlinked accounts: nav hidden, pages "Akses ditolak" / "belum ditautkan", all 6 report/read APIs 403 | PASS |
+| 8 | Unverified branch mapping: shown on reconciliation and data quality; "selisih bukan otomatis kesalahan" | PASS |
+| 9 | Missing official balance: loan, savings, reports | PASS |
+| 10 | Console store (identity + audit) down: every KOSIPA page fails closed with no data; TOKO works | PASS |
+| 11 | KOSIPA reader outage (three synthetic tables renamed, then restored): header renders with explicit unavailable schedule, each diagnostic degrades alone, failed scans never shown as clean, payroll API 503 code-only, `/sales` unaffected | PASS |
+| 12 | TOKO regression with flags ON (`pos-browser`, `e2e-local`, console shell) and OFF (`CONSOLE_EXPECT=off`, `pos-browser`, `e2e-local`) | PASS |
+| A | Audit trail records every protected read with opaque subjects and no NIK | PASS |
+
+Audit-write failure *inside* a request is covered by unit tests for every use case (the read does not happen); the browser case is the console-store-down run. Real production role configurations were **not** exercised (no approved staging environment): synthetic roles only.
+
+### Verification (actual, 17 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **111/111**, application **105/105**, web **271 pass / 0 fail** (+50 opt-in skipped) |
+| Mutation checks | reports, diagnostics and outbox: 15 mutants, all killed (one survivor found and closed with a corrupt-data test) |
+| Opt-in DB tests (synthetic schema, SELECT-only) | payroll, loans, savings, reports PASS |
+| Browser suites | UAT (4 modes) PASS; payroll, loans, savings, Anggota 360 PASS |
+
+### Next eligible tasks and remaining blockers
+
+Eligible without external input: the other legacy reports of TASK-028 that read only verified tables (members, per-type savings movement lists) and streaming export (needs the export-security review), Warehouse read-only screens over the domain, a local synthetic rehearsal of the Warehouse store DDL once Option A is approved, an index staging validation (separate task, DDL not executed). Blocked: everything that needs B1–B6 or D1–D10 (see `decision-register.md`): official balances, parity, all financial and stock writers, loan lifecycle, payroll processing, SHU posting, Gudang connectivity, production activation.
 

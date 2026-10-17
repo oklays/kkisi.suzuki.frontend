@@ -37,12 +37,16 @@ export class PrismaKosipaLoanReader implements LoanReader {
   private readonly db: PrismaClient;
   constructor(db: PrismaClient) { this.db = db; }
 
-  async listLoans(q: Pick<LoanListQuery, 'docStatus' | 'disbursement' | 'repayment' | 'search' | 'afterId'>, limit: number): Promise<LoanHeaderRaw[]> {
+  async listLoans(q: Pick<LoanListQuery, 'docStatus' | 'disbursement' | 'repayment' | 'search' | 'afterId' | 'period'>, limit: number): Promise<LoanHeaderRaw[]> {
     const where: Prisma.Sql[] = [];
     if (q.docStatus) where.push(Prisma.sql`doc_status = ${q.docStatus}`);
     if (q.disbursement) where.push(Prisma.sql`status_pencairan = ${q.disbursement}`);
     if (q.repayment) where.push(Prisma.sql`status_bayar = ${q.repayment}`);
     if (q.afterId !== null) where.push(Prisma.sql`id < ${q.afterId}`);
+    if (q.period) {   // document-date month as a half-open range: zero / NULL / implausible dates cannot satisfy it and are never guessed into a month
+      const next = q.period.month === 12 ? { y: q.period.year + 1, m: 1 } : { y: q.period.year, m: q.period.month + 1 };
+      where.push(Prisma.sql`doc_date >= ${`${q.period.year}-${String(q.period.month).padStart(2, '0')}-01`} AND doc_date < ${`${next.y}-${String(next.m).padStart(2, '0')}-01`}`);
+    }
     if (q.search?.nikKeys) where.push(Prisma.sql`nik IN (${Prisma.join(q.search.nikKeys)})`);
     // LIKE's default escape is the backslash: user wildcards (% _ \) were escaped by the domain; a document prefix may contain '_' which is escaped here.
     else if (q.search?.docNoPrefix) where.push(Prisma.sql`doc_no LIKE ${`${q.search.docNoPrefix.replace(/[_%\\]/g, (c) => `\\${c}`)}%`}`);

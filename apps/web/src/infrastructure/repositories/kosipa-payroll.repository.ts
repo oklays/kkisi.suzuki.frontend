@@ -18,18 +18,18 @@ const txt = (col: string) => Prisma.raw(`CAST(${col} AS CHAR)`);
 
 const SAFE_COLUMN = /^[A-Za-z0-9_]{1,64}$/;
 for (const c of PAYROLL_COMPONENT_COLUMNS) if (!SAFE_COLUMN.test(c)) throw new Error(`unsafe payroll column in catalog: ${c}`);
-const AMOUNT_COLUMNS = [...PAYROLL_COMPONENT_COLUMNS, 'total_potongan', 'potongan_toko'] as const;
+export const AMOUNT_COLUMNS = [...PAYROLL_COMPONENT_COLUMNS, 'total_potongan', 'potongan_toko'] as const;
 /** `COALESCE(m.col,0)` as an exact 4-decimal value, aliased c0..cN so the result keys never depend on the legacy casing. */
 const amountSelect = Prisma.raw(AMOUNT_COLUMNS.map((c, i) => `CAST(COALESCE(\`${c}\`, 0) AS DECIMAL(24,4)) AS c${i}`).join(', '));
-const sumSelect = Prisma.raw(AMOUNT_COLUMNS.map((c, i) => `CAST(COALESCE(SUM(\`${c}\`), 0) AS DECIMAL(24,4)) AS c${i}`).join(', '));
-type AmountRow = Record<`c${number}`, Prisma.Decimal | null>;
-const amountAt = (r: AmountRow, name: (typeof AMOUNT_COLUMNS)[number]): string => dec4(r[`c${AMOUNT_COLUMNS.indexOf(name)}`]);
+export const sumSelect = Prisma.raw(AMOUNT_COLUMNS.map((c, i) => `CAST(COALESCE(SUM(\`${c}\`), 0) AS DECIMAL(24,4)) AS c${i}`).join(', '));
+export type AmountRow = Record<`c${number}`, Prisma.Decimal | null>;
+export const amountAt = (r: AmountRow, name: (typeof AMOUNT_COLUMNS)[number]): string => dec4(r[`c${AMOUNT_COLUMNS.indexOf(name)}`]);
 const toko = (r: AmountRow): Record<StoreColumn, string> => ({ TOKO_TAMBUN: amountAt(r, 'TOKO_TAMBUN'), TOKO_MJ: amountAt(r, 'TOKO_MJ'), TOKO_GIIC: amountAt(r, 'TOKO_GIIC') });
 
-type HeaderRow = { id: Num; doc_no: string; grp: string | null; status: string | null; th: string | null; bl: string | null; period_date: string | null; doc_date: string | null; cash_date: string | null; total: Prisma.Decimal | null; cash_total: Prisma.Decimal | null; cd_usr: string | null; ud_usr: string | null };
-const HEADER = Prisma.sql`id, doc_no, kd_group AS grp, doc_status AS status, periode_th AS th, periode_bl AS bl, ${txt('periode_potongan')} AS period_date, ${txt('doc_date')} AS doc_date, ${txt('tgl_cair')} AS cash_date,
+export type HeaderRow = { id: Num; doc_no: string; grp: string | null; status: string | null; th: string | null; bl: string | null; period_date: string | null; doc_date: string | null; cash_date: string | null; total: Prisma.Decimal | null; cash_total: Prisma.Decimal | null; cd_usr: string | null; ud_usr: string | null };
+export const HEADER = Prisma.sql`id, doc_no, kd_group AS grp, doc_status AS status, periode_th AS th, periode_bl AS bl, ${txt('periode_potongan')} AS period_date, ${txt('doc_date')} AS doc_date, ${txt('tgl_cair')} AS cash_date,
   CAST(total AS DECIMAL(24,4)) AS total, CAST(total_cair AS DECIMAL(24,4)) AS cash_total, cd_usr, ud_usr`;
-const header = (r: HeaderRow): BatchHeader => ({
+export const header = (r: HeaderRow): BatchHeader => ({
   id: Number(r.id), docNo: r.doc_no, group: r.grp, status: r.status, periodYear: r.th, periodMonth: r.bl, periodDate: r.period_date, docDate: r.doc_date, cashDate: r.cash_date,
   headerTotal: r.total === null ? null : dec4(r.total), cashTotal: r.cash_total === null ? null : dec4(r.cash_total), createdBy: r.cd_usr, updatedBy: r.ud_usr,
 });

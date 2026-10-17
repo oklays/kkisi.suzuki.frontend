@@ -28,3 +28,8 @@ export {
   SAVINGS_PAGE_SIZE, SAVINGS_BALANCE, parseLedgerQuery, parseMemberId, stateOfHeaderStatus, describeMovement, summarizeTypes,
   type LedgerQuery, type MovementState, type MovementRaw, type SavingsHeaderRef, type MovementFlag, type MovementView, type TypeSummaryRaw, type TypeSummary,
 } from './savings-read.ts';
+export {
+  REPORT_SAMPLE_LIMIT, REPORT_GROUP_CAP, parseReportYear, buildLoanReport, buildPayrollReport, classifyOrphans, classifyBatchTotals, capped,
+  type LoanBucketRaw, type LoanReport, type LoanMonth, type LoanStatusLine, type UnusableDateKind, type PayrollAggregateRaw, type PayrollPeriodBatch, type PayrollPeriod as PayrollReportPeriod, type PayrollReport,
+  type Capped, type InstallmentDocRaw, type LoanDocRaw, type OrphanScan, type BatchTotalFinding,
+} from './report-read.ts';

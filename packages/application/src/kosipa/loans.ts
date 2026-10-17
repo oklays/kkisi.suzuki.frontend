@@ -11,7 +11,7 @@ import type { AuditLog } from '../console/identity-links.ts';
  * (OFFICIAL_BALANCE_UNVERIFIED) until the legacy balance views are verified (TASK-003). Every read is bounded and keyset-paginated.
  */
 export interface LoanReader {
-  listLoans(query: Pick<LoanListQuery, 'docStatus' | 'disbursement' | 'repayment' | 'search' | 'afterId'>, limit: number): Promise<LoanHeaderRaw[]>;
+  listLoans(query: Pick<LoanListQuery, 'docStatus' | 'disbursement' | 'repayment' | 'search' | 'afterId' | 'period'>, limit: number): Promise<LoanHeaderRaw[]>;
   /** Every header carrying this document number (normally one; duplicates are surfaced, not hidden). */
   loanHeaders(docNo: string, limit: number): Promise<LoanHeaderRaw[]>;
   scheduleAggregate(docNo: string): Promise<ScheduleAggregate>;
@@ -31,10 +31,10 @@ export type LoanListPage = { items: LoanView[]; nextCursor: number | null; filte
 export async function listLoans(d: LoanDeps, actor: LoanActor, params: Record<string, string | string[] | undefined>): Promise<LoanListPage> {
   need(actor);
   const query = parseLoanListQuery(params);
-  await audit(d, actor, 'kosipa.loan.list.view', 'loan:list', { filters: [query.docStatus, query.disbursement, query.repayment].filter(Boolean).length, search: query.search ? 1 : 0 });
+  await audit(d, actor, 'kosipa.loan.list.view', 'loan:list', { filters: [query.docStatus, query.disbursement, query.repayment, query.period].filter(Boolean).length, search: query.search ? 1 : 0 });
   const rows = await d.reader.listLoans(query, LOAN_PAGE_SIZE + 1);
   const page = rows.slice(0, LOAN_PAGE_SIZE);
-  return { items: page.map(describeLoan), nextCursor: rows.length > LOAN_PAGE_SIZE ? page[page.length - 1].id : null, filterActive: query.docStatus !== null || query.disbursement !== null || query.repayment !== null || query.search !== null };
+  return { items: page.map(describeLoan), nextCursor: rows.length > LOAN_PAGE_SIZE ? page[page.length - 1].id : null, filterActive: query.docStatus !== null || query.disbursement !== null || query.repayment !== null || query.search !== null || query.period !== null };
 }
 
 // ---------------------------------------------------------------------------------------------------------------- detail

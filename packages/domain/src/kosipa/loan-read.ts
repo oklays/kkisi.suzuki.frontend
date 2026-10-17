@@ -21,6 +21,8 @@ export type LoanDocStatus = (typeof LOAN_DOC_STATUSES)[number];
 export type LoanListQuery = {
   docStatus: (typeof LOAN_DOC_STATUSES)[number] | null; disbursement: (typeof LOAN_DISBURSEMENT_STATUSES)[number] | null; repayment: (typeof LOAN_REPAYMENT_STATUSES)[number] | null;
   search: { nikKeys: string[] | null; docNoPrefix: string | null; nameLike: string | null } | null; afterId: number | null;
+  /** Month of the loan DOCUMENT date (YYYY-MM). Loans with a zero/invalid document date can never match a month. */
+  period: { year: number; month: number } | null;
 };
 const first = (v: string | string[] | undefined): string => (Array.isArray(v) ? v[0] : v) ?? '';
 const member = <T extends readonly string[]>(list: T, raw: string): T[number] | null => { if (!raw) return null; if (!(list as readonly string[]).includes(raw)) throw new KosipaError('FILTER_INVALID'); return raw as T[number]; };
@@ -36,8 +38,14 @@ export function parseLoanListQuery(params: Record<string, string | string[] | un
   }
   return {
     docStatus: member(LOAN_DOC_STATUSES, first(params.status)), disbursement: member(LOAN_DISBURSEMENT_STATUSES, first(params.cair)), repayment: member(LOAN_REPAYMENT_STATUSES, first(params.bayar)),
-    search, afterId: parseCursor(first(params.after) || null),
+    search, afterId: parseCursor(first(params.after) || null), period: parseLoanPeriod(first(params.periode)),
   };
+}
+function parseLoanPeriod(raw: string): { year: number; month: number } | null {
+  if (!raw) return null;
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(raw);
+  if (!m || Number(m[1]) < 2000 || Number(m[1]) > 2100) throw new KosipaError('PERIOD_INVALID');
+  return { year: Number(m[1]), month: Number(m[2]) };
 }
 export function parseLoanDocNo(raw: unknown): string {
   if (typeof raw !== 'string' || !/^[A-Za-z0-9_-]{4,50}$/.test(raw)) throw new KosipaError('DOC_NO_INVALID');

@@ -22,7 +22,7 @@ test('synthetic schema: the full payroll read path over the real SQL adapter', {
   try {
     // ---- batch list: newest first, filters, zero dates classified not guessed, unknown status flagged
     const all = await listPayrollBatches(deps, actor, {});
-    assert.deepEqual(all.items.map((i) => i.header.docNo), ['POTSYN202605A', 'POTSYN202606A', 'POTSYN202607A', 'POTSYN202608B', 'POTSYN202608A']);
+    assert.deepEqual(all.items.map((i) => i.header.docNo), ['POTSYN202604A', 'POTSYN202605A', 'POTSYN202606A', 'POTSYN202607A', 'POTSYN202608B', 'POTSYN202608A']);
     const july = all.items.find((i) => i.header.docNo === 'POTSYN202607A');
     assert.equal(july.periodDate.kind, 'zero'); assert.equal(july.headerTotal4, 500006666, 'sub-sen header total is exact');
     assert.equal(all.items.find((i) => i.header.docNo === 'POTSYN202605A').status, 'UNKNOWN');

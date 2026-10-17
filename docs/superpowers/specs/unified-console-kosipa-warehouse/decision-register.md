@@ -1,33 +1,43 @@
 # Decision & Blocker Register — `unified-console-kosipa-warehouse`
 
-Maintained by engineering; updated at each checkpoint. A release blocker stays visible until the owner/operator closes it. Nothing here is a default: unresolved decisions are implemented as interfaces/pure rules with the unsafe action disabled.
+Maintained by engineering; updated at each checkpoint (last: checkpoint 9, 17 Oct 2026). **Every "Recommended default" below is a PROPOSAL for owner review. None is approved, none is implemented as a default, and no code assumes it.** Where a decision is open the code exposes an interface or a pure rule, keeps the unsafe action disabled, and says so in the UI.
+Columns: *Read-only dev* = can read-side/engineering work continue; *Writes* = whether financial / stock writes must stay disabled until the decision (and the writer-readiness gate) is met.
 
 ## A. Owner decisions
 
-| # | Decision | Owner input needed | Current handling | Affects |
-|---|---|---|---|---|
-| D1 | Salary 70% rule | hard limit or controlled override | pure `evaluateDeductionRatio` returns `needs-override`; no override rule invented; no writer | TASK-043 |
-| D2 | Savings withdrawals | allowed savings types, minimum balance | policy object required by `assertWithdrawal`; no default; writer disabled | TASK-044 |
-| D3 | Expired membership | employment-status source, deactivation rule | eligibility shown (read-only); no status mutation | TASK-021, TASK-043 |
-| D4 | Short payroll deduction | allocation across several loans | settlement reports an exception; allocation not implemented | TASK-045 |
-| D5 | TOKO branch ↔ payroll column | confirm company 1/2/3 → TOKO_TAMBUN/MJ/GIIC | empirical map, reconciliation review-only; `KOSIPA_STORE_COLUMN_MAP` is the only way to confirm | TASK-027, TASK-045 |
-| D6 | Loan calculation | interest, due-date, rounding rules | Flat/Anuitas pure functions exist; reads show recorded values only; imported schedules differ by < Rp 1 (recorded) | TASK-026/043 |
-| D7 | Warehouse accounting | internal transfer vs commercial sale/purchase | `UNSPECIFIED` is refused by any writer | TASK-062/063 |
-| D8 | Receiving policy | who defines per-shipment policy | flag modelled, no default | TASK-063 |
-| D9 | Unit conversion | approved ratios + evidence | only equal units (1:1) accepted | TASK-062 |
-| D10 | Fractional quantities | need and precision | whole units only | TASK-062 |
+| # | Open decision | Alternatives | Recommended default (proposal) | Business impact | Affected tasks | Read-only dev | Writes |
+|---|---|---|---|---|---|---|---|
+| D1 | Salary 70% deduction rule | (a) hard limit, no exceptions; (b) limit with a controlled, audited override by a named role; (c) advisory only | (b): hard limit by default, override needs a second approver and a reason | Decides who can still borrow when installments already take >70% of salary; legacy had no enforcement | TASK-043 (loan origination), TASK-026 simulation | Yes (pure `evaluateDeductionRatio` already returns `needs-override`) | **Disabled** |
+| D2 | Savings withdrawals: which types are withdrawable, minimum balance | (a) only SUKARELA; (b) SUKARELA + selected types with a floor; (c) per-type matrix from the board | (c) a written per-type matrix; until then nothing is withdrawable | Controls member liquidity and the cooperative's capital base | TASK-044 | Yes (ledger shows recorded movements only) | **Disabled** |
+| D3 | Expired membership: source of employment status and deactivation rule | (a) `m_anggota.tgl_keluar`/contract date drives eligibility only (display); (b) automatic deactivation job; (c) manual deactivation by staff | (a) now (already read-only); (c) for any status change | Contract-expired members could keep borrowing/Kredit access; wrong auto-deactivation would block valid members | TASK-021, TASK-043 | Yes (eligibility is shown, never written) | **Disabled** (no status mutation) |
+| D4 | Short payroll deduction (paid < due) across several loans | (a) oldest loan first; (b) proportional; (c) smallest installment first; (d) leave all unsettled and flag | (d) until the board writes a rule: flag, do not allocate | Decides which loan shows as paid/arrears when payroll cannot cover everything | TASK-045 (payroll settlement) | Yes (settlement reports an exception) | **Disabled** |
+| D5 | TOKO company id ↔ payroll column (`TOKO_TAMBUN`/`TOKO_MJ`/`TOKO_GIIC`) | (a) keep the empirical map (matched on 30 Sep data); (b) owner confirms; (c) owner supplies a different map | (b): owner confirms the map once; then set `KOSIPA_STORE_COLUMN_MAP` with `basis: OWNER_CONFIRMED` | Until confirmed the store comparison stays "hanya untuk ditinjau"; a wrong map would attribute obligations to the wrong store column | TASK-027, TASK-045 | Yes (comparison is informational; unverified state shown on reports and data quality) | **Disabled** |
+| D6 | Loan calculation rules (interest, due date, rounding) and how outstanding is defined | (a) legacy views are authoritative (needs TASK-003); (b) Next.js pure rules are authoritative after parity; (c) hybrid with owner sign-off per product | (a) → (b): read the views (B1), prove parity, then switch | Decides every displayed outstanding and every generated schedule; recorded imported schedules differ by < Rp 1 from the plan | TASK-026, TASK-043, TASK-004 | Yes (recorded values only, official balance unavailable) | **Disabled** |
+| D7 | Warehouse accounting: internal transfer vs commercial purchase/sale | (a) internal transfer (one entity, no sale); (b) commercial sale/purchase between entities (invoices, valuation, tax); (c) per-destination | Owner/accounting decides; engineering recommends deciding **before** the stock writer because it defines documents and valuation | Determines valuation, ownership, financial documents and journal entries for every dispatch | TASK-062, TASK-063, stock writer | Yes (domain + synthetic outbox exist) | **Disabled** (`UNSPECIFIED` is refused: `POLICY_REQUIRED`) |
+| D8 | Receiving policy (single vs multiple receipts), who sets it | (a) always multiple (partial allowed); (b) single receipt, remainder = discrepancy; (c) set per shipment by the dispatcher | (c) with default (a) shown to the dispatcher, recorded on the document | Decides whether a short delivery stays open or becomes a discrepancy to resolve | TASK-063 | Yes (flag is explicit, no default in code) | **Disabled** |
+| D9 | Unit conversion ratios | (a) 1:1 only; (b) per-pair approved ratios with evidence | (b): each ratio approved with a document reference; none inferred from `unit_perpack` | A wrong ratio multiplies or divides stock silently | TASK-062 | Yes (only equal units accepted) | **Disabled** for different units |
+| D10 | Fractional quantities | (a) whole units only; (b) fixed precision per item class | (a) now; (b) only with a written business case and precision | Fractions need new rounding and reconciliation rules | TASK-062 | Yes | **Disabled** |
 
-## B. Evidence / operator blockers
+## B. Evidence, operator and capacity blockers
 
-| # | Blocker | Evidence needed | Safe next action | Responsible |
-|---|---|---|---|---|
-| B1 | TASK-003 view/procedure definitions (balances, simulation, payroll) | operator runs `docs/migration/sql/legacy-schema-objects-readonly.sql` after authorisation | until then: no official balance anywhere | operator |
-| B2 | Gudang schema export (`smart_kopkar_gudang`) | read-only export | no Gudang reader/writer | operator |
-| B3 | Production state of indexes / table sizes | pre-check SQL in `kosipa-read-indexes-proposed.sql` | reads are capped at 5 s and degrade to explicit "unavailable" | operator |
-| B4 | Single-writer enforcement per bounded context | technical mechanism (not staff instruction) | no financial or stock writer is enabled | owner + operator |
-| B5 | Connection budget is 12/12 | capacity decision before any new pool (warehouse writer, TOKO receiving writer) | none added | owner |
-| B6 | Console store not provisioned in production | reviewed `console-store-production.sql` run by operator | flags remain off | operator |
+| # | Blocker | Evidence needed | Safe next action | Responsible | Unblocks | Read-only dev | Writes |
+|---|---|---|---|---|---|---|---|
+| B1 | KOSIPA view and procedure definitions (TASK-003) | Operator runs the scripts in `docs/migration/operator-handoff-schema-evidence.md` §3 and returns the **redacted** output | Until then: no official balance anywhere (loans, savings), no parity claim | Operator (+ owner authorisation) | Official balances, savings/loan parity, D5/D6 evidence, payroll generator parity | Yes | **Disabled** |
+| B2 | Gudang schema export | Operator runs `gudang-schema-evidence-readonly.sql` (handoff §4) and answers the prose questions | No Gudang reader/writer; domain and synthetic tests continue | Operator | Gudang reader, item identifiers, stock semantics | Yes | **Disabled** |
+| B3 | Production index state, row estimates, triggers, `sql_mode` | Script B of the handoff (`kosipa-schema-evidence-columns-readonly.sql`) + the pre-check in `kosipa-read-indexes-proposed.sql` | Reads are capped at 5 s and degrade to explicit "unavailable"; index DDL is **not** executed | Operator | Index validation (separate task), performance claims | Yes | n/a |
+| B4 | Technical single-writer enforcement per bounded context and branch | A mechanism that makes a second writer impossible (not staff instruction) | No financial or stock writer enabled | Owner + operator | Any production write cutover | Yes | **Disabled** |
+| B5 | Connection budget is 12/12 | Measured legacy PHP peak usage and a capacity decision (see `warehouse-persistence-architecture.md` §4) | No new pool; the Warehouse module stays unconnected | Owner | Warehouse store, TOKO stock writer account | Yes | **Disabled** |
+| B6 | Console store not provisioned in production | Reviewed `console-store-production.sql` run by the operator; trigger creation confirmed | Flags stay off in production | Operator | Any console feature in production | Yes (local/staging only) | n/a |
 
-## C. Data-quality observations (30 Sep copy; production unverified)
+## C. Engineering conventions that look like decisions but are not owner policy
 
-Payroll: 35 rows total ≠ component sum; 5 headers total ≠ row sum; 3 empty headers; 4 duplicate (batch, NIK) pairs; 14% sub-sen totals; header `kd_group` unreliable. Loans: 7 duplicated `doc_no`; contradictory status combinations (e.g. REJECTED + LUNAS); `actual_*` unused; `tgl_bayar` never filled; zero and `9999-12-10` due dates widespread; installment rows with no loan parent. Savings: detail `saldo` never filled (0 on all recent rows); detail `doc_status` empty or ≠ header in ~54% (header authoritative); 11 `SALDO AWAL` headers (opening semantics unverified). Returns: `db_salesreturn` empty on the staging copy (return-adjusted derivation proven on synthetic data only).
+| Convention | Why | Where |
+|---|---|---|
+| Payroll row-total tolerance in diagnostics: report both "any sub-sen difference" and "≥ Rp 0.005" with the maximum | 14% of recorded totals carry sub-sen fractions; the 30 Sep copy has 1,061 sub-sen differences, 35 of ≥ half a sen, none ≥ Rp 1 — noise must not look material | `kosipa-report.repository.ts`, data-quality page |
+| Header status is authoritative for savings movements | detail `doc_status` is empty or different in ~54% of recent rows | `savings-read.ts` |
+| Loans are never joined or merged on `doc_no` alone | 7 document numbers are shared by two headers; schedules attach by document number, the duplicate is shown | loans use case, data-quality page |
+| Dates `0000-00-00` and `9999-12-10` are counted apart, never placed in a month | cannot be assigned without guessing | all read models |
+
+## D. Data-quality observations (30 Sep copy; production unverified)
+
+Payroll: 35 rows total ≠ component sum by ≥ half a sen (1,061 by any sub-sen amount; none ≥ Rp 1); 5 headers total ≠ row sum; 3 empty headers; 4 duplicate (batch, NIK) pairs; header `kd_group` unreliable. Loans: 7 duplicated `doc_no`; contradictory status combinations (17 REJECTED + LUNAS, 3 LUNAS and 58 pencairan-APPROVED while not APPROVED); `actual_*` unused; `tgl_bayar` never filled; 119 loans with an implausible document date; installment due dates: 513,925 zero and 443,755 `9999-12-10` of 1,198,697 rows; 1,647 installment document numbers (33,136 rows) with no loan header; 23 APPROVED loans without a schedule. Savings: detail `saldo` never filled; detail `doc_status` empty or ≠ header in ~54%; 11 `SALDO AWAL` headers (opening semantics unverified). Returns: `db_salesreturn` empty on the staging copy (return-adjusted derivation proven on synthetic data only).

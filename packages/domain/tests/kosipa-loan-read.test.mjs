@@ -10,7 +10,9 @@ const agg = (over = {}) => ({ rows: 12, distinctNo: 12, minNo: 1, maxNo: 12, pri
   zeroDue: 0, missingDue: 0, implausibleDue: 0, componentMismatch: 0, paidWithoutPaidDate: 0, ...over });
 
 test('list filters: only known statuses, NIK / document prefix / name are classified, wildcards are literal, cursor is a positive integer', () => {
-  assert.deepEqual(parseLoanListQuery({}), { docStatus: null, disbursement: null, repayment: null, search: null, afterId: null });
+  assert.deepEqual(parseLoanListQuery({}), { docStatus: null, disbursement: null, repayment: null, search: null, afterId: null, period: null });
+  assert.deepEqual(parseLoanListQuery({ periode: '2026-03' }).period, { year: 2026, month: 3 });
+  for (const bad of ['2026-13', '26-01', "2026-01' OR 1=1", '1999-01']) assert.throws(() => parseLoanListQuery({ periode: bad }), (e) => e.code === 'PERIOD_INVALID', bad);
   const q = parseLoanListQuery({ status: 'APPROVED', cair: 'OPEN', bayar: 'BELUM LUNAS', after: '500' });
   assert.deepEqual([q.docStatus, q.disbursement, q.repayment, q.afterId], ['APPROVED', 'OPEN', 'BELUM LUNAS', 500]);
   assert.deepEqual(parseLoanListQuery({ q: 'PINMOB2024' }).search, { nikKeys: null, docNoPrefix: 'PINMOB2024', nameLike: null });

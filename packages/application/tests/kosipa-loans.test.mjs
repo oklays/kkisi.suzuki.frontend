@@ -45,6 +45,14 @@ test('list: filters applied, newest first, keyset paging without overlap or gaps
   assert.equal(w.calls.length, before);
 });
 
+test('list: the document-date month filters loans; zero / invalid dates never match a month; a bad period is refused before any query', async () => {
+  const w = makeLoanWorld({ headers: [loanHdr(1, { docDate: '2026-03-10' }), loanHdr(2, { docDate: '2026-04-01' }), loanHdr(3, { docDate: '0000-00-00' }), loanHdr(4, { docDate: '9999-12-10' })] }); const { deps } = mk(w);
+  assert.deepEqual((await listLoans(deps, actor(), { periode: '2026-03' })).items.map((i) => i.header.id), [1]);
+  const before = w.named('listLoans').length;
+  assert.equal(await code(listLoans(deps, actor(), { periode: '0000-00' })), 'PERIOD_INVALID');
+  assert.equal(w.named('listLoans').length, before, 'the refused request never reached the reader');
+});
+
 test('list: contradictory status combinations are flagged as recorded, not corrected; zero/invalid dates classified', async () => {
   const w = makeLoanWorld({ headers: [loanHdr(1, { docStatus: 'REJECTED', disbursement: 'OPEN', repayment: 'LUNAS' }), loanHdr(2, { docDate: '0000-00-00', endDate: '9999-12-10' })] });
   const page = await listLoans(mk(w).deps, actor(), {});

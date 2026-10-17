@@ -74,7 +74,7 @@ try {
     await page.getByRole('table', { name: '' }).first().waitFor().catch(() => {});
     await page.getByRole('link', { name: 'POTSYN202608A' }).waitFor();
     const docs = await page.locator('main tbody tr td:first-child').allInnerTexts();
-    assert.deepEqual(docs, ['POTSYN202605A', 'POTSYN202606A', 'POTSYN202607A', 'POTSYN202608B', 'POTSYN202608A']);
+    assert.deepEqual(docs, ['POTSYN202604A', 'POTSYN202605A', 'POTSYN202606A', 'POTSYN202607A', 'POTSYN202608B', 'POTSYN202608A']);
     let t = await text(page);
     assert.match(t, /0000-00-00 \(kosong\)/, 'the zero period date is labelled, not shown as a real date');
     assert.match(t, /Status tidak dikenal/); assert.match(t, /APPROVED · disetujui/); assert.match(t, /OPEN · belum disetujui/);

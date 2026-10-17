@@ -13,7 +13,7 @@ export function makeLoanWorld({ headers = [], installments = [] } = {}) {
   const reader = {
     async listLoans(q, limit) {
       rec('listLoans', q, limit);
-      const keep = (h) => (!q.docStatus || h.docStatus === q.docStatus) && (!q.disbursement || h.disbursement === q.disbursement) && (!q.repayment || h.repayment === q.repayment) && (q.afterId === null || h.id < q.afterId)
+      const keep = (h) => (!q.docStatus || h.docStatus === q.docStatus) && (!q.disbursement || h.disbursement === q.disbursement) && (!q.repayment || h.repayment === q.repayment) && (q.afterId === null || h.id < q.afterId) && (!q.period || String(h.docDate).startsWith(`${q.period.year}-${String(q.period.month).padStart(2, '0')}`))
         && (!q.search || (q.search.nikKeys ? q.search.nikKeys.includes(h.nik) : q.search.docNoPrefix ? h.docNo.toLowerCase().startsWith(q.search.docNoPrefix.toLowerCase()) : (h.name ?? '').toLowerCase().includes(q.search.nameLike.replace(/\\/g, '').toLowerCase())));
       return headers.filter(keep).sort((a, b) => b.id - a.id).slice(0, limit).map((h) => ({ ...h }));
     },

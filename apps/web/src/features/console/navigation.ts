@@ -2,7 +2,7 @@ import type { NavEntry, NavSection } from '@koperasi/domain/console/navigation';
 
 /** Icon keys are resolved to lucide components by the UI; the registry itself stays serialisable. */
 export type ConsoleIcon = 'dashboard' | 'pos' | 'history' | 'returns' | 'products' | 'warehouse' | 'members' | 'savings' | 'loans'
-  | 'installments' | 'payroll' | 'distribution' | 'receiving' | 'identity';
+  | 'installments' | 'payroll' | 'distribution' | 'receiving' | 'identity' | 'reports';
 
 export type ConsoleNavEntry = NavEntry & { icon: ConsoleIcon; description?: string };
 
@@ -40,6 +40,7 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'warehouse-distribution', section: 'warehouse', label: 'Distribusi Barang', href: '/console/warehouse/distribusi', order: 2, anyOf: [], readiness: 'planned', icon: 'distribution' },
   { id: 'warehouse-receiving', section: 'warehouse', label: 'Penerimaan Barang', href: '/console/warehouse/penerimaan', order: 3, anyOf: [], readiness: 'planned', icon: 'receiving' },
 
+  { id: 'reports-kosipa', section: 'reports', label: 'Laporan KOSIPA', href: '/console/kosipa/laporan', order: 1, anyOf: ['kosipa.loan.view', 'kosipa.payroll.view'], readiness: 'available', icon: 'reports', description: 'Laporan pinjaman, payroll dan kualitas data (baca saja)' },
   { id: 'settings-identity', section: 'settings', label: 'Tautan Akun KOSIPA', href: '/console/settings/identitas', order: 1, anyOf: ['iam.link.manage'], readiness: 'available', icon: 'identity', description: 'Tautkan akun console ke akun KOSIPA' },
 ];
 

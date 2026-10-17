@@ -24,7 +24,8 @@
     "./warehouse": "./src/warehouse/index.ts",
     "./kosipa/payroll": "./src/kosipa/payroll.ts",
     "./kosipa/loans": "./src/kosipa/loans.ts",
-    "./kosipa/savings": "./src/kosipa/savings.ts"
+    "./kosipa/savings": "./src/kosipa/savings.ts",
+    "./kosipa/reports": "./src/kosipa/reports.ts"
   },
   "scripts": {
     "lint": "eslint .",

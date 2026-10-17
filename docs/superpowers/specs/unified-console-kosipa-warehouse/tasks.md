@@ -112,6 +112,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-025`, `REQ-034`, `BR-006`
   - **Verification:** periode `POT202609…`: selisih hanya pada NIK dengan retur Kredit (diharapkan) dan dilaporkan.
 - [ ] `TASK-028`: Laporan KOSIPA (14) + ekspor
+  - **Status:** SUBSET IMPLEMENTED + VERIFIED (laporan pinjaman, laporan payroll, kualitas data; read-only, fixture sintetis; Checkpoint 9) — ekspor, 14 laporan legacy lainnya dan parity belum; belum staging-accepted
   - **Files:** `kosipa-report.repository.ts`, `app/console/reports/kosipa/**`, `app/api/kosipa/reports/[type]/route.ts`, utilitas ekspor streaming
   - **Goal:** paritas baris/total dan ekspor XLSX streaming.
   - **Requirements Addressed:** `REQ-026`, `VAL-005`, `SEC-006`, `SEC-007`

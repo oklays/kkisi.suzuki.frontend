@@ -132,3 +132,6 @@
 .console-search.console-search-wide { max-width:none; }
 .console-search .console-filter-row.console-filter-row-4 { grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) auto; }
 @media (max-width: 767px) { .console-search .console-filter-row.console-filter-row-4 { grid-template-columns:minmax(0,1fr); } }
+.console-year-list { display:flex; flex-wrap:wrap; gap:8px; list-style:none; padding:0; margin:0; }
+.console-year-list a, .console-year-list strong { display:inline-flex; align-items:center; min-height:44px; padding:0 14px; border:1px solid var(--c-border); border-radius:10px; background:white; }
+.console-year-list strong { background:var(--c-blue); color:white; border-color:var(--c-blue); }
