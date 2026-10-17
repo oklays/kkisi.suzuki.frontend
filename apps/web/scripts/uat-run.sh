@@ -13,7 +13,7 @@ export POS_URL="http://127.0.0.1:$PORT" POS_FIXTURE="$PWD/.e2e-fixture.json" E2E
 stop_app() { lsof -nP -tiTCP:$PORT -sTCP:LISTEN | xargs -r kill 2>/dev/null || true; sleep 1; }
 start_app() { # $1 = CONSOLE_ENABLED, $2 = KOSIPA_READ_ENABLED, $3 = console store URL
   stop_app
-  ( DATABASE_URL="$E2E_READ_URL" DATABASE_URL_CONSOLE="$3" CONSOLE_ENABLED="$1" KOSIPA_READ_ENABLED="$2" KOSIPA_EXPORT_ENABLED="${EXPORT_ENABLED:-}" KOSIPA_EXPORT_USER_IDS="${EXPORT_IDS:-}" WAREHOUSE_PREVIEW_ENABLED="${WAREHOUSE_PREVIEW:-}" APP_ORIGIN="http://127.0.0.1:$PORT" pnpm exec next start -H 127.0.0.1 -p $PORT > "$LOG" 2>&1 & )
+  ( DATABASE_URL="$E2E_READ_URL" DATABASE_URL_CONSOLE="$3" CONSOLE_ENABLED="$1" KOSIPA_READ_ENABLED="$2" KOSIPA_EXPORT_ENABLED="${EXPORT_ENABLED:-}" KOSIPA_EXPORT_USER_IDS="${EXPORT_IDS:-}" WAREHOUSE_PREVIEW_ENABLED="${WAREHOUSE_PREVIEW:-}" CONSOLE_LANDING_ROLES="${LANDING_ROLES:-}" APP_ORIGIN="http://127.0.0.1:$PORT" pnpm exec next start -H 127.0.0.1 -p $PORT > "$LOG" 2>&1 & )
   for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$PORT/login" && return 0; sleep 0.5; done; echo "ERROR: app did not start" >&2; exit 1
 }
 trap 'stop_app; bash scripts/uat-outage.sh restore >/dev/null 2>&1 || true' EXIT
@@ -61,7 +61,18 @@ WAREHOUSE_EXPECT=on run node --env-file=.env.e2e --experimental-strip-types test
 fresh
 WAREHOUSE_PREVIEW= start_app true true "$CONSOLE_URL"
 WAREHOUSE_EXPECT=off run node --env-file=.env.e2e --experimental-strip-types tests/console-warehouse-browser.mjs
-echo "##### 7. Warehouse persistence rehearsal + cross-database outbox harness (no application process; two independent local stores)"
+echo "##### 7. R1 landing policy: explicit mapping ON (4:pos,1:console), then unset and malformed (unchanged behaviour)"
+fresh
+LANDING_ROLES="4:pos,1:console" start_app true true "$CONSOLE_URL"
+LANDING_EXPECT=policy run node --env-file=.env.e2e --experimental-strip-types tests/console-landing-browser.mjs
+fresh
+LANDING_ROLES= start_app true true "$CONSOLE_URL"
+LANDING_EXPECT=derived run node --env-file=.env.e2e --experimental-strip-types tests/console-landing-browser.mjs
+fresh
+LANDING_ROLES="4:pos;1:console" start_app true true "$CONSOLE_URL"
+LANDING_EXPECT=derived run node --env-file=.env.e2e --experimental-strip-types tests/console-landing-browser.mjs
+grep -q "CONSOLE_LANDING_ROLES ignored" "$LOG" && echo "malformed mapping reported in the app log" || { echo "ERROR: malformed mapping was not reported" >&2; exit 1; }
+echo "##### 8. Warehouse persistence rehearsal + cross-database outbox harness (no application process; two independent local stores)"
 stop_app
 if [ -f .env.warehouse-rehearsal ] && [ -f .env.toko-posting-test ]; then
   WAREHOUSE_REHEARSAL_DB_TEST=1 run node --experimental-strip-types --env-file=.env.warehouse-rehearsal --test tests/warehouse-store-db.test.mjs tests/warehouse-rehearsal-isolation.test.mjs

@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowRight, Info } from 'lucide-react';
-import { postLoginLanding } from '@koperasi/domain/console/capabilities';
+import { resolvePostLoginLanding } from '@koperasi/domain/console/landing-policy';
 import { visibleNavigation } from '@koperasi/domain/console/navigation';
 import { CONSOLE_ICONS } from '@/components/console/icons';
 import { CONSOLE_MODULES, CONSOLE_NAVIGATION } from '@/features/console/navigation';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
-import { consoleEnabled } from '@/infrastructure/console/flags';
+import { consoleEnabled, landingPolicy } from '@/infrastructure/console/flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,8 +19,9 @@ export default async function ConsoleDashboard({ searchParams }: { searchParams:
   if (auth.kind !== 'ok') return null; // the layout renders the unavailable state
   const { ctx, capabilities } = auth;
 
-  // Fresh login without `next`: cashier-focused users keep the one-step path to the POS (spec REQ-014).
-  if ((await searchParams).entry === 'login' && postLoginLanding({ capabilities, consoleEnabled: true }) === '/pos') redirect('/pos');
+  // Fresh login without `next`: the explicit R1 landing policy if configured, else the unchanged capability-derived rule (spec REQ-014).
+  // Landing only picks a start page; /pos is chosen only for users who can check out, so it never loops back here and never widens access.
+  if ((await searchParams).entry === 'login' && resolvePostLoginLanding({ roleId: ctx.roleId, capabilities, consoleEnabled: true, policy: landingPolicy() }).target === '/pos') redirect('/pos');
 
   const visible = visibleNavigation(CONSOLE_NAVIGATION, capabilities);
   const linksFor = (section: string) => visible.find((g) => g.section === section)?.items ?? [];
