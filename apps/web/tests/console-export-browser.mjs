@@ -89,7 +89,20 @@ try {
     { const { context, page } = await session(); await login(page, 'koperasi'); const statuses = [];
       for (let i = 0; i < 6; i++) statuses.push((await context.request.get(`${base}/api/kosipa/reports/loans/export?tahun=2025`)).status());
       const limited = await context.request.get(`${base}/api/kosipa/reports/loans/export?tahun=2025`); statuses.push(limited.status());
-      assert.ok(statuses.slice(-1)[0] === 429 && statuses.includes(429) && limited.headers()['retry-after'] === '60', JSON.stringify(statuses)); await context.close(); }
+      assert.ok(statuses.slice(-1)[0] === 429 && statuses.includes(429) && limited.headers()['retry-after'] === '60', JSON.stringify(statuses));
+      console.log('EXP-2b. the limiter is ONE instance per process: another export route is refused too after the loans budget is exhausted');
+      for (const route of ['payroll', 'membership', 'savings-movements', 'data-quality']) assert.equal((await context.request.get(`${base}/api/kosipa/reports/${route}/export`)).status(), 429, `${route} export shares the per-process budget`);
+      if (process.env.EXPORT_SECOND_BASE) {   // optional: a SECOND app process (same database, same allow-list) has its own, empty window
+        const b2 = process.env.EXPORT_SECOND_BASE; assert.equal(new URL(b2).hostname, '127.0.0.1'); assert.notEqual(new URL(b2).port, new URL(base).port);
+        const ctx2 = await browser.newContext(); const p2 = await ctx2.newPage(); await p2.goto(`${b2}/login`);
+        await p2.getByLabel('Username').fill('synth_koperasi'); await p2.getByLabel('Password').fill(pw.koperasi); await p2.getByRole('button', { name: 'Masuk', exact: true }).click(); await p2.waitForURL(/\/(console(\?entry=login)?|pos)$/);
+        const second = []; for (let i = 0; i < 7; i++) second.push((await ctx2.request.get(`${b2}/api/kosipa/reports/loans/export?tahun=2025`)).status());
+        console.log(`EXP-2c. per-process limiter: second instance, same user, same window -> ${JSON.stringify(second)}`);
+        assert.deepEqual(second, [200, 200, 200, 200, 200, 200, 429], 'each process counts separately: the effective limit is 6 x instances'); await ctx2.close();
+        await context.close(); await browser.close(); await seed.$disconnect(); await consoleDb.$disconnect();
+        console.log('export limiter two-instance probe passed (probe-only: the remaining checks run in the single-instance phase)'); process.exit(0);
+      }
+      await context.close(); }
 
     console.log('EXP-3. a user who may only view / a user outside the allow-list / an unlinked user cannot export; the download link is not even rendered');
     { const { context, page } = await session(); await login(page, 'kasir1');

@@ -120,3 +120,16 @@ test('a result with more rows than the export cap is refused even when the reade
   w.reader.payrollHeadersForYear = async () => hs; w.reader.payrollAggregates = async () => [];
   assert.equal(await code(exportPayrollReportCsv(mk(w).deps, PAYX, {})), 'EXPORT_TOO_LARGE');
 });
+
+test('the limiter is in-memory per instance: two instances each grant the full budget (effective limit = budget x instances), and a restart empties it — the documented reason a shared limiter is required before running more than one process', () => {
+  let t = 0; const a = new WindowThrottle(2, 60_000, () => t), b = new WindowThrottle(2, 60_000, () => t);
+  assert.deepEqual([a.consume(7).allowed, a.consume(7).allowed, a.consume(7).allowed], [true, true, false], 'instance A: 2 allowed, 3rd refused');
+  assert.deepEqual([b.consume(7).allowed, b.consume(7).allowed, b.consume(7).allowed], [true, true, false], 'instance B starts with an empty window for the SAME user');
+  const restarted = new WindowThrottle(2, 60_000, () => t); assert.equal(restarted.consume(7).allowed, true, 'a restart forgets earlier exports');
+  t = 61_000; assert.equal(a.consume(7).allowed, true, 'the window slides: the budget returns after windowMs');
+});
+
+test('a refused or failed export attempt still consumes the user\'s own budget only (users do not share a window)', () => {
+  let t = 0; const th = new WindowThrottle(1, 60_000, () => t);
+  assert.equal(th.consume(1).allowed, true); assert.equal(th.consume(1).allowed, false); assert.equal(th.consume(2).allowed, true, 'another user is unaffected');
+});
