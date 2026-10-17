@@ -532,3 +532,26 @@ Rate limiting is per process (best effort, not a security boundary); the env pol
 - **Verification.** Application read/scope tests (5), capability tests (2), synthetic-source tests (2) in `pnpm test` (domain 116, application 129, web 282, 0 failures; lint baseline 4 warnings). Browser `console-warehouse-browser.mjs` (flag ON and OFF) passes inside `scripts/uat-run.sh` phase 6: sidebar, banner, counts, filters, malformed filter ignored, detail reconciliation (98 of 100 → 2 outstanding), damaged and short-closed cases, wrong-branch / unknown / malformed refs → not found, cashier and anonymous have no access, no overflow at 375–1440.
 - **Not done (blocked):** a Gudang reader, real item/unit data, receiving or dispatch actions, stock posting, per-user warehouse scopes from a real identity link.
 
+---
+
+## Checkpoint 10C — Local Warehouse persistence rehearsal, integration contracts, readiness package
+
+**Status.** REHEARSED locally on the local staging container (synthetic data only); no production access, no DDL anywhere but the local rehearsal database, **no new pool in the application** (the adapter is built only by an opt-in test; a guard test asserts no `src` file reads its DSN or imports it), no posting to TOKO inventory, no accounting policy chosen.
+
+- **Store.** `db/warehouse/001_warehouse_schema.sql` (11 tables: item map, shipment + lines, receipts + lines, resolutions, history, stock outbox, simulated posting ledger and balance, append-only audit; 19+ triggers: append-only events, immutable outbox content, shipment may only change status and advance its version by one, a retired mapping never changes, a mapping's identity is immutable), `002_warehouse_grants.sql.tpl` (SELECT/INSERT plus column-limited UPDATE; no DELETE, no DDL, no other schema), `scripts/setup-warehouse-rehearsal.sh` (dry-run default, local container only, verifies grants, triggers, isolation from the legacy / auth / console schemas; DSN in a gitignored file read only by the rehearsal tests). Console data is **not** involved.
+- **Adapter and tests.** `PrismaWarehouseStore` (mappings, shipments with header compare-and-set in one transaction), `PrismaStockOutbox`, `PrismaSimulatedStockApplier`, `requeueDeadLetter`, `outboxReconciliation`; `tests/warehouse-store-db.test.mjs` (6 tests PASS, run 3×): constraint refusals, repository contracts under concurrency, the full outbox pipeline (durability, unique keys, atomic transitions, retry, **crash after apply before acknowledgement**, duplicate delivery, payload conflict, concurrent consumers, dead letters, manual recovery, reconciliation). The same **contract suites** (`packages/application/tests/contracts/stock-contracts.mjs`) pass for the in-memory doubles and the database adapters.
+- **Finding.** The rehearsal exposed a real defect no in-memory test could: MariaDB evaluates the `SET` list left to right, so `status = IF(attempts + 1 >= ?, …)` after `attempts = attempts + 1` killed a record one attempt early. Fixed and covered.
+- **What it does not prove** (architecture §8): the posting side is simulated in the same database; no OS-level kill; cPanel trigger creation unconfirmed; no load measurement. **Do not claim exactly-once from this checkpoint.**
+- **Documents.** Architecture §8 (evidence and gaps), §9 (integration contract for mapping, dispatch, receiving, posting intent, acknowledgement, reconciliation, recovery; TOKO stock ownership untouched), §10 (explicit capacity proposal: +2 connections needed, options, no spare capacity assumed); `operational-readiness.md` (implementation matrix, ownership matrix, flags, role matrix, reconciliation checklist, Warehouse UAT scenarios, single-writer requirements, rollout prerequisites, rollback, limitations, legacy exposure unchanged); handoff coverage check (§8 of `operator-handoff-schema-evidence.md`); `decision-register.md` extended (W1–W3, B7, E1–E3).
+
+### Verification (actual, 17 Oct 2026)
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **116/116**, application **131/131**, web **285 pass / 0 fail** (+57 opt-in skipped) |
+| Opt-in rehearsal DB test (local only) | 6/6 PASS ×3; `scripts/setup-warehouse-rehearsal.sh --verify` and `--prove-triggers` PASS |
+| Integrated UAT `scripts/uat-run.sh` (flags on / reader outage / console store down / flags off / export on+off / Warehouse preview on+off) | PASS; TOKO regression in every state |
+
+### Next eligible tasks
+Executable as soon as **D5 + TASK-003** arrive: official savings and loan balances with parity, payroll generator parity, store comparison promoted from review-only, loan simulation parity (TASK-026/043 read side then write side). Executable as soon as **B2 + D7–D10 + W1/W3 + B5** arrive: Gudang reader and catalog, real item mapping data, TOKO stock writer, receiving and dispatch for real, then the Warehouse store provisioning SQL (operator-run) and a non-local rehearsal. Independent and available now: report parity harness design, XLSX export decision (E-series), index staging validation (separate task, DDL not executed), console action policy store design for E1.
+

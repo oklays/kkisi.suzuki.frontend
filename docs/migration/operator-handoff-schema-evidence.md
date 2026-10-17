@@ -75,3 +75,22 @@ Then a second person reviews the redacted file. Only the redacted file may be ad
 ## 7. Reply to engineering
 
 Return: the redacted outputs (or their location), the answers to the prose questions in §4, and a note of any statement that failed (missing privilege or table). Engineering then (a) reads the definitions, (b) updates `decision-register.md` and the loan/savings/payroll specs, (c) resumes the blocked tasks (see the register, section B). No production credentials are shared, and no production change is requested by this handoff.
+
+## 8. Coverage check (checkpoint 10) — does the handoff identify everything the blocked work needs?
+
+| Required by | Needed evidence | Where it is requested | Covered |
+|---|---|---|---|
+| Official savings balance (B1) | `v_kartu_simpanan`, `v_saldo_awal` definitions; opening-balance rule; `SALDO AWAL` handling | script A §2, §3 dependency 1 | yes |
+| Official loan outstanding, simulation parity (B1, D6) | `v_trans_pinjaman_flat/anuitas/simulasi` definitions; interest, rounding, due date | script A §2, §3 dependency 2 | yes |
+| Payroll generator parity, branch map (B1, D5) | `x_proc_create_matrix` body, `proc_hari_simpanan`, matrix views | script A §2–§3, §3 dependency 3 | yes |
+| Exact monetary types / tolerance | column types incl. `decimal` vs `double`, defaults | script B1 | yes |
+| Index validation, performance claims (B3) | keys/indexes, row estimates, `AUTO_INCREMENT` vs rows | script A §5, script B2, B4 | yes |
+| Values changed behind the application's back | triggers on financial tables | script B5 | yes |
+| Zero-date behaviour | `sql_mode` | script B6, §6 step 5 | yes |
+| Connection capacity (B5) | `max_user_connections` | script B6, §6 step 5 | yes |
+| Gudang reader (B2) | tables, columns, keys, FKs, triggers, routines, events, views | Gudang script G1–G5 | yes |
+| Gudang identifiers for reliable TOKO integration | unique document id and line id; item identifiers; unit and pack fields; how a store is represented | §4 table + G2/G3 + prose answers | yes (prose answers needed from the operator) |
+| Stock semantics (when Gudang decrements) | triggers/routines/views, one sentence from the process owner | §4, G4/G5 | yes (needs the process owner's sentence) |
+| **Not requested on purpose** | table DATA, credentials, member data | §2, §5 | by design |
+
+**If the owner prohibits production reads entirely:** the blockers stay open. Engineering continues on the sanitised 30 Sep snapshot **without claiming current-production parity**: official balances remain unavailable, reconciliation stays review-only, the Warehouse stays synthetic, and every report states its source and that production is unverified. The snapshot cannot supply view/procedure definitions (they are stubs), the Gudang schema, production indexes or production `sql_mode`; those need an authorised operator regardless.

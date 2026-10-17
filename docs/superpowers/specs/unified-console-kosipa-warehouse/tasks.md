@@ -186,11 +186,13 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-050`, `REQ-053`
   - **Verification:** ekspor invoice streaming (tanpa file di disk). Parity total laporan.
 - [ ] `TASK-062`: Pemetaan barang
+  - **Status (Checkpoint 10):** domain + application VERIFIED; read-only UI over SYNTHETIC data (10B); persistence REHEARSED locally with real constraints (10C, gaps in architecture §8); no Gudang connection, no writer, no posting — blocked on B2, D7–D10, W1/W3, B5
   - **Status:** PARTIAL — domain mapping rules + application use cases VERIFIED (unit + in-memory integration, Checkpoint 4); storage (`warehouse_item_map` in the console store), reader of Gudang items and the UI are NOT STARTED. See implementation-journal.md Checkpoint 4.
   - **Files:** auth DB `warehouse_item_map`, `app/console/warehouse/pemetaan/**`
   - **Requirements Addressed:** `REQ-051`
   - **Verification:** saran barcode exact lalu item code. Konfirmasi wajib. Audit.
 - [ ] `TASK-063`: Penerimaan toko dari Gudang
+  - **Status (Checkpoint 10):** domain + application VERIFIED; read-only UI over SYNTHETIC data (10B); persistence REHEARSED locally with real constraints (10C, gaps in architecture §8); no Gudang connection, no writer, no posting — blocked on B2, D7–D10, W1/W3, B5
   - **Status:** PARTIAL — receiving domain (shipment lifecycle, receipts, discrepancies, reconciliation, quantity intents) + application use cases/ports VERIFIED (Checkpoint 4); the TOKO purchase/stock writer, Gudang reader, console store tables and UI are NOT STARTED; accounting treatment is an open owner decision. See implementation-journal.md Checkpoint 4.
   - **Files:** `packages/domain/src/warehouse/receipt.ts`, `packages/application/src/warehouse/receive-delivery.usecase.ts`, `apps/web/src/infrastructure/db/prisma-receiving-write.ts`, `app/console/toko/penerimaan/**`, `docs/migration/sql/receiving-writer-production.sql` (review-only)
   - **Requirements Addressed:** `REQ-052`, `BR-013`, `MIG-002`

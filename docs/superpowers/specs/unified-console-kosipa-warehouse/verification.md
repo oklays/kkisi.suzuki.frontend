@@ -115,3 +115,5 @@ pnpm --filter @koperasi/web exec node --experimental-strip-types scripts/kosipa-
 ## 5. Bukti audit yang dijalankan (16 Okt 2026)
 
 Semua read-only: `uapi DomainInfo domains_data`, `uapi Mysql list_databases` (nama/ukuran), `ls`/`grep`/`awk`/`sed -n` pada `public_html/{kosipa,gudang}`, `md5sum` file PHP Gudang vs salinan TOKO lokal, ekstraksi DDL (tanpa baris data, kecuali nama `db_company`/`db_suppliers` untuk topologi) dari `apps/web/staging/kkisi_full_dump.sql.gz`. Tidak membuka `config/database.php`, `.env`, atau file kredensial. Tidak mengirim request ke endpoint aplikasi. Tidak mengunduh file invoice.
+
+**Checkpoint 10 (17 Okt 2026):** ekspor CSV aman, laporan keanggotaan/mutasi simpanan, pratinjau Warehouse sintetis dan rehearsal persistensi Warehouse lokal terverifikasi (lihat jurnal 10A–10C); semua tetap BELUM staging-accepted. Bukti exactly-once pada sisi posting TOKO **belum ada** (hanya disimulasikan).

@@ -37,6 +37,15 @@ Columns: *Read-only dev* = can read-side/engineering work continue; *Writes* = w
 | E2 | Export retention and audit review | (a) audit rows only (implemented); (b) also keep a copy of exported files; (c) periodic audit review by a named owner | (a) + (c): no file copies, a named reviewer reads the export audit monthly | Exports leave the system; the audit is the only trace | TASK-028 | Yes | n/a |
 | E3 | Whether per-member exports are ever allowed | (a) never; (b) per member with a separate permission, masking and ticket reference | (a) until a use case is written down | Per-member data is personal data | TASK-028 | Yes | n/a |
 
+## B3. Decisions and blockers added by checkpoint 10C (proposals, not approved)
+
+| # | Open decision / blocker | Alternatives | Recommended default (proposal) | Business impact | Affected tasks | Read-only dev | Writes |
+|---|---|---|---|---|---|---|---|
+| W1 | How a console user gets Warehouse scopes (Gudang identity link and permission mapping) | (a) a second identity link system `gudang` in the console store; (b) derive from TOKO roles only; (c) a separate warehouse role table in the Warehouse store | (a) with the Gudang account list from B2; until then the preview needs `toko.inventory.warehouse` and shows synthetic data only | Decides who may create/approve/receive shipments and see which warehouses | TASK-062/063 | Yes (synthetic) | **Disabled** |
+| W2 | Persistence location of Warehouse documents | A dedicated schema (rehearsed) / B TOKO schema / C Console store / D Gudang DB | A (see `warehouse-persistence-architecture.md` §2); C is explicitly not allowed (owner direction) | Ownership, grants, rollback, capacity | TASK-062/063 | Yes | **Disabled** |
+| W3 | TOKO-side posting design (stock writer account, idempotency table in the TOKO database, POS lock order) | (a) dedicated account + idempotency table; (b) reuse the POS write account (rejected: ownership); (c) manual stock entry from a report | (a), after D7 and B5 | The only way quantities enter TOKO stock; cannot be proven by the local rehearsal (gap 1) | stock writer | Yes | **Disabled** |
+| B7 | Capacity for two new accounts (Warehouse store + stock writer) | A raise to 14 / B merge pools / C time-share / D stay read-only | A after measuring PHP's peak (architecture §10) | A larger budget leaves less for legacy PHP | TASK-062/063 | Yes | **Disabled** |
+
 ## C. Engineering conventions that look like decisions but are not owner policy
 
 | Convention | Why | Where |
@@ -44,6 +53,7 @@ Columns: *Read-only dev* = can read-side/engineering work continue; *Writes* = w
 | Payroll row-total tolerance in diagnostics: report both "any sub-sen difference" and "≥ Rp 0.005" with the maximum | 14% of recorded totals carry sub-sen fractions; the 30 Sep copy has 1,061 sub-sen differences, 35 of ≥ half a sen, none ≥ Rp 1 — noise must not look material | `kosipa-report.repository.ts`, data-quality page |
 | Header status is authoritative for savings movements | detail `doc_status` is empty or different in ~54% of recent rows | `savings-read.ts` |
 | Loans are never joined or merged on `doc_no` alone | 7 document numbers are shared by two headers; schedules attach by document number, the duplicate is shown | loans use case, data-quality page |
+| MariaDB evaluates a `SET` list left to right: later assignments in one `UPDATE` see the already-updated value | found by the local Warehouse rehearsal (attempt counting off by one) | `warehouse-store.repository.ts` `markFailed` |
 | Dates `0000-00-00` and `9999-12-10` are counted apart, never placed in a month | cannot be assigned without guessing | all read models |
 
 ## D. Data-quality observations (30 Sep copy; production unverified)
