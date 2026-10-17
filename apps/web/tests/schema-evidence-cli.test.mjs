@@ -51,3 +51,11 @@ test('Gudang: with a bundle but no mapping every adapter stays blocked; nothing 
   const r = capture(['--gudang-bundle', put('g.json', JSON.stringify(g))]);
   assert.equal(r.code, 2); assert.match(r.out, /ROLE_UNMAPPED/); assert.ok(!/ELIGIBLE\*\*[^\n]*ITEM_CATALOG/.test(r.out));
 });
+
+test('--semantic: evidence for a stub definition cannot raise the level; a file carrying personal data is refused outright (exit 1, no report)', () => {
+  const sem = { version: 1, gate: 'G2', object: 'v_kartu_simpanan', definitionFingerprint: '0123456789abcd', cases: [{ id: 'C1', purpose: 'opening balance carried forward' }] };
+  const ok = capture(['--bundle', put('s1.json', JSON.stringify(bundle())), '--semantic', put('sem.json', JSON.stringify(sem))]);
+  assert.equal(ok.code, 2); assert.match(ok.out, /G2[^\n]*\*\*BLOCKED\*\*/);
+  const pii = capture(['--bundle', put('s2.json', JSON.stringify(bundle())), '--semantic', put('pii.json', JSON.stringify({ ...sem, cases: [{ id: 'C1', purpose: 'NIK 3201234567890123' }] }))]);
+  assert.equal(pii.code, 1); assert.match(pii.out, /refused: contains a long digit sequence/); assert.doesNotMatch(pii.out, /3201234567890123/);
+});

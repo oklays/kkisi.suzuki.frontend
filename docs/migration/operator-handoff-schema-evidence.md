@@ -112,3 +112,7 @@ Gate to task mapping: G2 official savings balance (TASK-025 parity, TASK-044), G
 `validate-schema-evidence.mjs --gudang-bundle <g.json> --gudang-mapping <m.json>` names the adapters (item catalog, stock reader, dispatch reader) that become eligible. Without a mapping every adapter is blocked.
 
 **Run against the local staging copy (30 Sep snapshot, 17 Oct 2026):** G1 ELIGIBLE (nine contract tables compatible; double-typed money columns reported as warnings), G6/G7/G8 ELIGIBLE, **G2/G3/G5 BLOCKED** (all eight legacy report views are stubs in the copy), **G4 PARTIAL** (`x_proc_create_matrix` absent; matrix columns present). Official balances and payroll generator parity therefore remain blocked until an operator provides real definitions from production.
+
+## 10. Evidence levels and the semantic/parity workflow (checkpoint 12)
+
+Definition availability is **not** correctness. Financial gates now report a level (1 exists, 2 shape compatible, 3 definition available, 4 semantics verified, 5 parity accepted); metadata alone reaches level 3 at most, and official figures need level 5. The operator workflow for restricted definitions, sanitized test cases and the semantic evidence file (`--semantic`) is in `docs/superpowers/specs/unified-console-kosipa-warehouse/kosipa-evidence-gate-report.md` §4. Semantic files carry case ids, purposes and counts only; the validator refuses any file containing NIK/account-like digit runs or e-mail addresses.

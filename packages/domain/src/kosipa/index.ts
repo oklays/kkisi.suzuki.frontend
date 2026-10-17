@@ -39,6 +39,7 @@ export {
   type MembershipRaw, type MembershipGroupRaw, type MembershipLine, type MembershipReport, type SavingsDocAggregateRaw, type SavingsHeaderRaw, type SavingsMonthLine, type SavingsMovementReport,
 } from './report-ops.ts';
 export {
-  KOSIPA_TABLE_CONTRACT, typeFamily, fingerprint, isStubDefinition, referencedTables, validateKosipaEvidence, renderReadinessReport, parseEvidenceBundle, scanSensitive,
+  KOSIPA_TABLE_CONTRACT, typeFamily, fingerprint, isStubDefinition, referencedTables, validateKosipaEvidence, renderReadinessReport, parseEvidenceBundle, scanSensitive, parseSemanticEvidence, EVIDENCE_LEVELS, SEMANTIC_MIN_CASES, PARITY_MIN_SAMPLE,
   type EvidenceBundle, type EvidenceColumn, type EvidenceIndex, type EvidenceView, type EvidenceRoutine, type EvidenceTrigger, type ReadinessReport, type Gate, type GateStatus, type Finding, type TypeFamily,
+  type EvidenceLevel, type LevelState, type SemanticEvidence,
 } from './schema-contract.ts';

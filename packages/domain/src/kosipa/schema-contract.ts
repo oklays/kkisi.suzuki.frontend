@@ -78,7 +78,31 @@ export const KOSIPA_TABLE_CONTRACT: Readonly<Record<string, Req[]>> = {
 
 export type Finding = { level: 'ok' | 'blocker' | 'warning' | 'info'; code: string; subject: string; message: string };
 export type GateStatus = 'ELIGIBLE' | 'BLOCKED' | 'PARTIAL';
-export type Gate = { id: string; title: string; status: GateStatus; unlocks: string[]; findings: Finding[] };
+export type Gate = { id: string; title: string; status: GateStatus; unlocks: string[]; findings: Finding[]; level?: EvidenceLevel; levels?: LevelState[] };
+
+/**
+ * Evidence levels for the FINANCIAL gates (checkpoint 12). Each level unlocks only its own tasks; metadata can prove at most level 3.
+ *   1 OBJECT_EXISTS          the named view/procedure is present
+ *   2 SHAPE_COMPATIBLE       every table it references passes the column/type contract (G1)
+ *   3 DEFINITION_AVAILABLE   a real (non-stub) body, fingerprinted — engineering may READ and analyse it, nothing more
+ *   4 SEMANTICS_VERIFIED     operator-supplied, reviewed test cases bound to THAT fingerprint ran in an isolated sanitized environment with no failure
+ *   5 PARITY_ACCEPTED        a representative parity comparison has zero unexplained differences and is signed off by the data owner
+ * A movement sum or an instalment-schedule sum is never an official balance at any level; official figures need level 5.
+ */
+export type EvidenceLevel = 0 | 1 | 2 | 3 | 4 | 5;
+export const EVIDENCE_LEVELS = ['NONE', 'OBJECT_EXISTS', 'SHAPE_COMPATIBLE', 'DEFINITION_AVAILABLE', 'SEMANTICS_VERIFIED', 'PARITY_ACCEPTED'] as const;
+export type LevelState = { level: Exclude<EvidenceLevel, 0>; name: (typeof EVIDENCE_LEVELS)[number]; reached: boolean; unlocks: string[]; requires: string };
+
+/** Operator-supplied semantic / parity evidence for ONE financial object (JSON, kept out of the repository; contains no personal data). */
+export type SemanticEvidence = {
+  version: 1; gate: 'G2' | 'G3' | 'G4' | 'G5'; object: string; definitionFingerprint: string;
+  cases: { id: string; purpose: string }[];
+  run?: { executedAt: string; environment: 'isolated-sanitized'; passed: number; failed: number; reviewedBy: string; reviewedAt: string };
+  parity?: { executedAt: string; sampleSize: number; compared: number; unexplainedDifferences: number; reviewedBy: string; signedOffBy: string; signedOffAt: string };
+};
+/** PROPOSED minimums (owner/operator may raise them; never lower without a recorded decision). */
+export const SEMANTIC_MIN_CASES = 5;
+export const PARITY_MIN_SAMPLE = 30;
 export type ReadinessReport = { schema: string; capturedAt: string | null; serverVersion: string | null; gates: Gate[]; eligibleTasks: string[]; blockedTasks: { task: string; because: string[] }[]; counts: { tables: number; columns: number; views: number; routines: number; triggers: number } };
 
 const f = (level: Finding['level'], code: string, subject: string, message: string): Finding => ({ level, code, subject, message });
@@ -106,46 +130,87 @@ function checkTables(b: EvidenceBundle): Finding[] {
   return out;
 }
 
-function needViews(b: EvidenceBundle, names: string[]): Finding[] {
-  return names.map((n) => {
-    const v = b.views.find((x) => norm(x.name) === n);
-    if (!v) return f('blocker', 'VIEW_MISSING', n, 'view not present in the evidence');
-    if (isStubDefinition(v.definition)) return f('blocker', 'VIEW_STUB', n, 'definition is empty or a stub (not an exported definition): re-export with SHOW VIEW privilege');
-    const refs = referencedTables(v.definition as string);
-    return f('ok', 'VIEW_PRESENT', n, `definition present (fingerprint ${fingerprint(v.definition as string)}); references: ${refs.join(', ') || '(none found)'}`);
+
+
+type FinancialSpec = { id: 'G2' | 'G3' | 'G4' | 'G5'; title: string; objects: { name: string; kind: 'view' | 'procedure' }[]; analysis: string[]; candidate: string[]; official: string[] };
+const FINANCIAL: FinancialSpec[] = [
+  { id: 'G2', title: 'Official savings balance (opening balance + movements)', objects: [{ name: 'v_kartu_simpanan', kind: 'view' }, { name: 'v_saldo_awal', kind: 'view' }],
+    analysis: ['analyse the savings balance definition (no figure shown)'], candidate: ['TASK-025 candidate official-balance implementation under test (not displayed as official)'], official: ['TASK-025 official balance display and parity claim (REQ-023)', 'TASK-044 balance precondition'] },
+  { id: 'G3', title: 'Official loan balance, schedule and simulation', objects: [{ name: 'v_trans_pinjaman_flat', kind: 'view' }, { name: 'v_trans_pinjaman_anuitas', kind: 'view' }, { name: 'v_trans_pinjaman_simulasi', kind: 'view' }],
+    analysis: ['analyse the loan calculation definitions (no figure shown)'], candidate: ['TASK-026/043 candidate outstanding and simulation implementation under test'], official: ['TASK-026 official outstanding and simulation parity (REQ-024/030)', 'TASK-043 calculation baseline'] },
+  { id: 'G4', title: 'Payroll generator parity (procedure body + matrix columns)', objects: [{ name: 'x_proc_create_matrix', kind: 'procedure' }],
+    analysis: ['analyse the generator body; D5 evidence (company ↔ TOKO_* column) can be READ from it — the decision itself stays the owner\'s'], candidate: ['TASK-027 candidate generator re-implementation under test'], official: ['TASK-027 generator parity claim', 'TASK-045 settlement baseline'] },
+  { id: 'G5', title: 'Payroll component semantics (legacy report views)', objects: [{ name: 'v_trans_potongan_bulanan', kind: 'view' }, { name: 'v_matrix_toko', kind: 'view' }, { name: 'v_matrix_toko_dtl', kind: 'view' }],
+    analysis: ['analyse the payroll component report definitions'], candidate: ['TASK-027 candidate component semantics under test'], official: ['TASK-027 component semantics and TOKO Kredit comparison basis (official)'] },
+];
+
+function financialGate(spec: FinancialSpec, b: EvidenceBundle, compatibleTables: Set<string>, semantic: readonly SemanticEvidence[], extra: Finding[]): Gate {
+  const findings: Finding[] = [...extra];
+  const objs = spec.objects.map((o) => {
+    const def = o.kind === 'view' ? b.views.find((v) => norm(v.name) === o.name)?.definition : b.routines.find((r) => norm(r.name) === o.name)?.definition;
+    const exists = o.kind === 'view' ? b.views.some((v) => norm(v.name) === o.name) : b.routines.some((r) => norm(r.name) === o.name);
+    const real = exists && !isStubDefinition(def);
+    const refs = real ? referencedTables(def as string) : [];
+    const fp = real ? fingerprint(def as string) : null;
+    const missingRefs = refs.filter((t) => t in KOSIPA_TABLE_CONTRACT && !compatibleTables.has(t));
+    if (!exists) findings.push(f('blocker', o.kind === 'view' ? 'VIEW_MISSING' : 'ROUTINE_MISSING', o.name, `${o.kind} not present in the evidence`));
+    else if (!real) findings.push(f('blocker', o.kind === 'view' ? 'VIEW_STUB' : 'ROUTINE_STUB', o.name, o.kind === 'view' ? 'definition is empty or a stub (not an exported definition): re-export with SHOW VIEW privilege' : 'no body exported: needs the SHOW CREATE PROCEDURE privilege'));
+    else findings.push(f('ok', o.kind === 'view' ? 'VIEW_PRESENT' : 'ROUTINE_PRESENT', o.name, `definition present (fingerprint ${fp}); references: ${refs.join(', ') || '(none found)'}`));
+    if (real && missingRefs.length) findings.push(f('blocker', 'REFERENCED_TABLE_INCOMPATIBLE', o.name, `referenced tables fail the column contract: ${missingRefs.join(', ')}`));
+    const ev = semantic.filter((e) => e.gate === spec.id && norm(e.object) === o.name);
+    const current = ev.filter((e) => fp !== null && e.definitionFingerprint === fp);
+    if (ev.length && !current.length) findings.push(f('blocker', 'SEMANTIC_STALE', o.name, 'semantic evidence was produced for a different definition (fingerprint mismatch): re-run against the current definition'));
+    const sem = current.some((e) => e.cases.length >= SEMANTIC_MIN_CASES && !!e.run && e.run.environment === 'isolated-sanitized' && e.run.failed === 0 && e.run.passed === e.cases.length && !!e.run.reviewedBy && !!e.run.reviewedAt);
+    const par = sem && current.some((e) => !!e.parity && e.parity.unexplainedDifferences === 0 && e.parity.sampleSize >= PARITY_MIN_SAMPLE && e.parity.compared >= e.parity.sampleSize && !!e.parity.reviewedBy && !!e.parity.signedOffBy && !!e.parity.signedOffAt);
+    if (real && !sem) findings.push(f('info', 'SEMANTICS_UNVERIFIED', o.name, current.length ? `semantic evidence incomplete: needs >= ${SEMANTIC_MIN_CASES} reviewed cases, all passed, run in an isolated sanitized environment` : 'no semantic evidence supplied for this definition'));
+    if (sem && !par) findings.push(f('info', 'PARITY_UNACCEPTED', o.name, `no signed-off parity run with >= ${PARITY_MIN_SAMPLE} compared records and zero unexplained differences`));
+    if (sem) findings.push(f('ok', 'SEMANTICS_VERIFIED', o.name, `reviewed semantic cases passed for fingerprint ${fp}`));
+    if (par) findings.push(f('ok', 'PARITY_ACCEPTED', o.name, 'signed-off parity run with zero unexplained differences'));
+    return { exists, shape: real ? missingRefs.length === 0 : exists, real, sem, par };
   });
+  const all = (k: 'exists' | 'shape' | 'real' | 'sem' | 'par') => objs.every((o) => o[k]);
+  const extraBlocked = extra.some((x) => x.level === 'blocker');
+  const reached = [all('exists'), all('exists') && all('shape') && !extraBlocked, all('real') && all('shape') && !extraBlocked, all('real') && all('sem') && !extraBlocked, all('real') && all('par') && !extraBlocked];
+  const levels: LevelState[] = [
+    { level: 1, name: 'OBJECT_EXISTS', reached: reached[0], unlocks: [], requires: 'every named object present in the evidence bundle' },
+    { level: 2, name: 'SHAPE_COMPATIBLE', reached: reached[1], unlocks: [], requires: 'every referenced KOSIPA table passes the column/type contract' },
+    { level: 3, name: 'DEFINITION_AVAILABLE', reached: reached[2], unlocks: spec.analysis, requires: 'real (non-stub) definitions exported with SHOW VIEW / SHOW CREATE PROCEDURE' },
+    { level: 4, name: 'SEMANTICS_VERIFIED', reached: reached[3], unlocks: spec.candidate, requires: `per object: >= ${SEMANTIC_MIN_CASES} reviewed sanitized test cases bound to the current fingerprint, all passed in an isolated environment` },
+    { level: 5, name: 'PARITY_ACCEPTED', reached: reached[4], unlocks: spec.official, requires: `per object: signed-off parity run, >= ${PARITY_MIN_SAMPLE} representative records, zero unexplained differences` },
+  ];
+  // a level counts only if every lower level is reached too
+  let level: EvidenceLevel = 0; for (const l of levels) { if (l.reached && level === l.level - 1) level = l.level; }
+  for (const l of levels) l.reached = l.level <= level;
+  const statusOf: GateStatus = level === 5 ? 'ELIGIBLE' : level >= 3 ? 'PARTIAL' : 'BLOCKED';
+  return { id: spec.id, title: spec.title, status: statusOf, unlocks: [...spec.analysis, ...spec.candidate, ...spec.official], findings, level, levels };
 }
 
-export function validateKosipaEvidence(b: EvidenceBundle): ReadinessReport {
+export function validateKosipaEvidence(b: EvidenceBundle, semantic: readonly SemanticEvidence[] = []): ReadinessReport {
   const gates: Gate[] = [];
   const tableFindings = checkTables(b);
   gates.push({ id: 'G1', title: 'Implemented KOSIPA reads match the real schema', status: status(tableFindings), unlocks: ['keep TASK-021/024/025/026/027/028 reads valid against this schema'], findings: tableFindings });
 
-  const sav = needViews(b, ['v_kartu_simpanan', 'v_saldo_awal']);
-  gates.push({ id: 'G2', title: 'Official savings balance (opening balance + movements)', status: status(sav), unlocks: ['TASK-025 official balance and parity (REQ-023)', 'TASK-044 balance precondition'], findings: sav });
-  const loan = needViews(b, ['v_trans_pinjaman_flat', 'v_trans_pinjaman_anuitas', 'v_trans_pinjaman_simulasi']);
-  gates.push({ id: 'G3', title: 'Official loan balance, schedule and simulation', status: status(loan), unlocks: ['TASK-026 outstanding and simulation parity (REQ-024/030)', 'TASK-043 calculation baseline'], findings: loan });
+  const compatible = new Set(tableFindings.filter((x) => x.code === 'TABLE_COMPATIBLE').map((x) => x.subject));
+  const spec = (id: string) => FINANCIAL.find((x) => x.id === id) as FinancialSpec;
+  gates.push(financialGate(spec('G2'), b, compatible, semantic, []));
+  gates.push(financialGate(spec('G3'), b, compatible, semantic, []));
 
   const proc = b.routines.find((r) => norm(r.name) === 'x_proc_create_matrix');
   const pf: Finding[] = [];
   const matrixCols = new Set(b.columns.filter((c) => norm(c.table) === 'trans_potongan_matrix').map((c) => norm(c.column)));
   const uncovered = PAYROLL_COMPONENT_COLUMNS.filter((c) => !matrixCols.has(norm(c)));
   pf.push(uncovered.length === 0 && matrixCols.size > 0 ? f('ok', 'MATRIX_COLUMNS', 'trans_potongan_matrix', `all ${PAYROLL_COMPONENT_COLUMNS.length} catalogued component columns exist`) : f('blocker', 'MATRIX_COLUMNS', 'trans_potongan_matrix', `catalogued components missing in the evidence: ${uncovered.join(', ') || '(table absent)'}`));
-  if (!proc) pf.push(f('blocker', 'ROUTINE_MISSING', 'x_proc_create_matrix', 'procedure not present in the evidence'));
-  else if (isStubDefinition(proc.definition)) pf.push(f('blocker', 'ROUTINE_STUB', 'x_proc_create_matrix', 'no body exported: needs the SHOW CREATE PROCEDURE privilege'));
-  else {
+  if (proc && !isStubDefinition(proc.definition)) {
     const def = proc.definition as string; const refs = referencedTables(def); const lower = def.toLowerCase();
-    pf.push(f('ok', 'ROUTINE_PRESENT', 'x_proc_create_matrix', `body present (fingerprint ${fingerprint(def)}); references: ${refs.join(', ') || '(none found)'}`));
     pf.push(refs.includes('db_salesreturn') || lower.includes('db_salesreturn')
       ? f('info', 'RETURNS_REFERENCED', 'x_proc_create_matrix', 'the generator references db_salesreturn: confirm by review whether returns reduce each TOKO column')
       : f('info', 'RETURNS_NOT_REFERENCED', 'x_proc_create_matrix', 'the generator does not reference db_salesreturn: legacy store deductions are likely NOT return-adjusted (matches the observed behaviour; confirm by review)'));
     const stores = ['toko_tambun', 'toko_mj', 'toko_giic'].filter((c) => lower.includes(c));
     pf.push(stores.length === 3 ? f('info', 'STORE_COLUMNS_REFERENCED', 'x_proc_create_matrix', 'all three TOKO_* columns are written by the generator: the company↔column map (D5) can now be read from its body') : f('warning', 'STORE_COLUMNS_PARTIAL', 'x_proc_create_matrix', `TOKO_* columns found in the body: ${stores.length}/3`));
   }
-  gates.push({ id: 'G4', title: 'Payroll generator parity (procedure body + matrix columns)', status: status(pf), unlocks: ['TASK-027 generator parity', 'D5 evidence (company ↔ TOKO_* column)', 'TASK-045 settlement baseline'], findings: pf });
+  gates.push(financialGate(spec('G4'), b, compatible, semantic, pf));
 
-  const comp = needViews(b, ['v_trans_potongan_bulanan', 'v_matrix_toko', 'v_matrix_toko_dtl']);
-  gates.push({ id: 'G5', title: 'Payroll component semantics (legacy report views)', status: status(comp), unlocks: ['TASK-027 component semantics and TOKO Kredit comparison basis'], findings: comp });
+  gates.push(financialGate(spec('G5'), b, compatible, semantic, []));
 
   const fin = new Set(['trans_simpanan', 'trans_simpanan_dtl', 'trans_pinjaman', 'trans_pinjaman_dtl', 'trans_potongan_bulanan', 'trans_potongan_matrix', 'db_sales', 'db_salesreturn']);
   const trg = b.triggers.filter((t) => fin.has(norm(t.table)));
@@ -164,15 +229,24 @@ export function validateKosipaEvidence(b: EvidenceBundle): ReadinessReport {
 
   const counts = { tables: new Set(b.columns.map((c) => norm(c.table))).size, columns: b.columns.length, views: b.views.length, routines: b.routines.length, triggers: b.triggers.length };
   const blocked: { task: string; because: string[] }[] = []; const eligible: string[] = [];
-  for (const g of gates) { if (g.status === 'ELIGIBLE') eligible.push(...g.unlocks.map((u) => `${g.id}: ${u}`)); else blocked.push({ task: g.unlocks.join(' / '), because: g.findings.filter((x) => x.level === 'blocker').map((x) => `${x.code} ${x.subject}`) }); }
+  for (const g of gates) {
+    if (g.levels) {
+      for (const l of g.levels) {
+        if (!l.unlocks.length) continue;
+        if (l.reached) eligible.push(...l.unlocks.map((u) => `${g.id} (level ${l.level} ${l.name}): ${u}`));
+        else blocked.push({ task: `${g.id} level ${l.level} ${l.name}: ${l.unlocks.join(' / ')}`, because: [`requires ${l.requires}`, ...g.findings.filter((x) => x.level === 'blocker').map((x) => `${x.code} ${x.subject}`)] });
+      }
+    } else if (g.status === 'ELIGIBLE') eligible.push(...g.unlocks.map((u) => `${g.id}: ${u}`));
+    else blocked.push({ task: g.unlocks.join(' / '), because: g.findings.filter((x) => x.level === 'blocker').map((x) => `${x.code} ${x.subject}`) });
+  }
   return { schema: b.schema, capturedAt: b.capturedAt ?? null, serverVersion: b.server?.version ?? null, gates, eligibleTasks: eligible, blockedTasks: blocked, counts };
 }
 
 /** Markdown report: identifiers, statuses and fingerprints only (safe to attach to a ticket). */
 export function renderReadinessReport(r: ReadinessReport, title = 'KOSIPA schema evidence readiness'): string {
-  const out: string[] = [`# ${title}`, '', `Schema: \`${r.schema}\` · captured: ${r.capturedAt ?? 'not stated'} · server: ${r.serverVersion ?? 'not stated'} · ${r.counts.tables} tables, ${r.counts.columns} columns, ${r.counts.views} views, ${r.counts.routines} routines, ${r.counts.triggers} triggers`, '', 'This report contains identifiers, statuses and fingerprints only. It contains no definition text, row or credential.', '', '| Gate | Status | Unlocks |', '|---|---|---|'];
-  for (const g of r.gates) out.push(`| ${g.id} ${g.title} | **${g.status}** | ${g.unlocks.join('; ')} |`);
-  for (const g of r.gates) { out.push('', `## ${g.id} — ${g.title}: ${g.status}`, ''); const detail = (y: Finding) => y.level !== 'ok' || y.code === 'VIEW_PRESENT' || y.code === 'ROUTINE_PRESENT';   // present objects are listed with fingerprint and dependencies
+  const out: string[] = [`# ${title}`, '', `Schema: \`${r.schema}\` · captured: ${r.capturedAt ?? 'not stated'} · server: ${r.serverVersion ?? 'not stated'} · ${r.counts.tables} tables, ${r.counts.columns} columns, ${r.counts.views} views, ${r.counts.routines} routines, ${r.counts.triggers} triggers`, '', 'This report contains identifiers, statuses and fingerprints only. It contains no definition text, row or credential.', '', 'Financial gates (G2–G5) report an evidence level: 1 object exists, 2 shape compatible, 3 definition available, 4 semantics verified, 5 parity accepted. Metadata alone can reach level 3 at most; official figures need level 5.', '', '| Gate | Status | Evidence level | Unlocks |', '|---|---|---|---|'];
+  for (const g of r.gates) out.push(`| ${g.id} ${g.title} | **${g.status}** | ${g.level === undefined ? 'n/a' : `${g.level} ${EVIDENCE_LEVELS[g.level]}`} | ${g.unlocks.join('; ')} |`);
+  for (const g of r.gates) { out.push('', `## ${g.id} — ${g.title}: ${g.status}`, ''); if (g.levels) for (const l of g.levels) out.push(`- level ${l.level} ${l.name}: ${l.reached ? 'REACHED' : 'not reached'} — requires ${l.requires}`); const detail = (y: Finding) => y.level !== 'ok' || ['VIEW_PRESENT', 'ROUTINE_PRESENT', 'SEMANTICS_VERIFIED', 'PARITY_ACCEPTED'].includes(y.code);   // present objects are listed with fingerprint and dependencies
     for (const x of g.findings.filter(detail).slice(0, 60)) out.push(`- [${x.level}] \`${x.code}\` ${x.subject}: ${x.message}`); const oks = g.findings.filter((y) => y.level === 'ok' && !detail(y)); if (oks.length) out.push(`- ${oks.length} check(s) OK: ${oks.map((o) => o.subject).join(', ')}`); }
   out.push('', '## Tasks that become eligible', '', ...(r.eligibleTasks.length ? r.eligibleTasks.map((t) => `- ${t}`) : ['- none']), '', '## Still blocked', '', ...(r.blockedTasks.length ? r.blockedTasks.map((t) => `- ${t.task} — ${t.because.join('; ')}`) : ['- none']), '');
   return out.join('\n');
@@ -205,4 +279,29 @@ export function scanSensitive(b: EvidenceBundle): { pattern: string; objects: nu
   const patterns: [string, RegExp][] = [['password / identified by', /password|identified\s+by/i], ['secret / token / api key', /secret|token|api[_-]?key/i], ['ip address', /\b\d{1,3}(?:\.\d{1,3}){3}\b/], ['e-mail address', /[\w.+-]+@[\w-]+\.[\w.]+/], ['definer', /definer\s*=/i]];
   const bodies = [...b.views.map((v) => v.definition), ...b.routines.map((r) => r.definition)].filter((x): x is string => !!x);
   return patterns.map(([pattern, re]) => ({ pattern, objects: bodies.filter((t) => re.test(t)).length })).filter((x) => x.objects > 0);
+}
+
+// ------------------------------------------------------------------------------------------------------- semantic / parity evidence intake
+const ISO = /^\d{4}-\d{2}-\d{2}(T[\d:.]+Z?)?$/;
+/**
+ * Strict intake of ONE operator-supplied semantic evidence file. It must describe test cases and outcomes only: no row values, no member data.
+ * Anything that looks personal (a long digit run such as a NIK or account number, an e-mail address) refuses the WHOLE file, so it is never stored.
+ */
+export function parseSemanticEvidence(raw: unknown): { ok: true; evidence: SemanticEvidence } | { ok: false; error: string } {
+  const o = raw as Record<string, unknown> | null;
+  if (!o || typeof o !== 'object') return { ok: false, error: 'not a JSON object' };
+  const text = JSON.stringify(o);
+  if (/\d{8,}/.test(text.replace(/"definitionFingerprint":"[0-9a-f]+"/, '').replace(/"\d{4}-\d{2}-\d{2}T[\d:.]+Z?"/g, '""'))) return { ok: false, error: 'refused: contains a long digit sequence (possible NIK / account number); semantic evidence must not carry personal data' };
+  if (/[\w.+-]+@[\w-]+\.[\w.]+/.test(text)) return { ok: false, error: 'refused: contains an e-mail address' };
+  if (o.version !== 1) return { ok: false, error: 'unsupported version (expected 1)' };
+  if (!['G2', 'G3', 'G4', 'G5'].includes(o.gate as string)) return { ok: false, error: 'gate must be G2, G3, G4 or G5' };
+  if (typeof o.object !== 'string' || !/^[a-z0-9_]{1,64}$/i.test(o.object)) return { ok: false, error: 'object name missing or malformed' };
+  if (typeof o.definitionFingerprint !== 'string' || !/^[0-9a-f]{14}$/.test(o.definitionFingerprint)) return { ok: false, error: 'definitionFingerprint must be the 14-hex fingerprint printed by the readiness report' };
+  if (!Array.isArray(o.cases) || !o.cases.every((c) => c && typeof c.id === 'string' && typeof c.purpose === 'string' && c.purpose.length <= 200)) return { ok: false, error: 'cases must be [{ id, purpose (<= 200 chars) }]' };
+  const ids = (o.cases as { id: string }[]).map((c) => c.id); if (new Set(ids).size !== ids.length) return { ok: false, error: 'case ids must be unique' };
+  const run = o.run as Record<string, unknown> | undefined;
+  if (run && !(ISO.test(String(run.executedAt)) && run.environment === 'isolated-sanitized' && Number.isInteger(run.passed) && Number.isInteger(run.failed) && typeof run.reviewedBy === 'string' && ISO.test(String(run.reviewedAt)))) return { ok: false, error: 'run must state executedAt, environment "isolated-sanitized", integer passed/failed, reviewedBy and reviewedAt' };
+  const par = o.parity as Record<string, unknown> | undefined;
+  if (par && !(ISO.test(String(par.executedAt)) && Number.isInteger(par.sampleSize) && Number.isInteger(par.compared) && Number.isInteger(par.unexplainedDifferences) && typeof par.reviewedBy === 'string' && typeof par.signedOffBy === 'string' && ISO.test(String(par.signedOffAt)))) return { ok: false, error: 'parity must state executedAt, integer sampleSize/compared/unexplainedDifferences, reviewedBy, signedOffBy and signedOffAt' };
+  return { ok: true, evidence: o as unknown as SemanticEvidence };
 }

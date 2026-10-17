@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Schema-evidence validator (Checkpoint 11, TASK-003). OFFLINE: reads files only, never opens a database connection and never needs credentials.
 //   node --experimental-strip-types scripts/validate-schema-evidence.mjs --bundle bundle.json [--scan] [--out report.md]
-//        [--gudang-bundle gudang.json --gudang-mapping mapping.json]
+//        [--semantic g2-v_saldo_awal.json ...] [--gudang-bundle gudang.json --gudang-mapping mapping.json]
+// --semantic (repeatable): operator-supplied semantic/parity evidence per financial object (levels 4-5), refused if it carries anything personal.
 // Input is the single JSON document produced by docs/migration/sql/schema-evidence-bundle-json.sql (reviewed by the operator).
 // Output is the readiness report: identifiers, statuses, fingerprints and referenced table names; never view/routine bodies.
 // Exit code: 0 = every gate ELIGIBLE, 2 = at least one gate BLOCKED/PARTIAL (not an error: the honest current state), 1 = unusable input.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { parseEvidenceBundle, validateKosipaEvidence, renderReadinessReport, scanSensitive } from '../../../packages/domain/src/kosipa/index.ts';
+import { parseEvidenceBundle, validateKosipaEvidence, renderReadinessReport, scanSensitive, parseSemanticEvidence } from '../../../packages/domain/src/kosipa/index.ts';
 import { validateGudangMapping, renderGudangReport } from '../../../packages/domain/src/warehouse/index.ts';
 
 /** mysql --batch may prefix the column name and escape backslashes; accept both so a straight redirect works. */
@@ -24,19 +25,21 @@ function readJson(path, label) {
 }
 
 function parseArgs(argv) {
-  const a = { scan: false }; for (let i = 0; i < argv.length; i++) { const k = argv[i]; if (k === '--scan') a.scan = true; else if (['--bundle', '--gudang-bundle', '--gudang-mapping', '--out'].includes(k)) a[k.slice(2)] = argv[++i]; else return { error: `unknown argument ${k}` }; }
+  const a = { scan: false, semantic: [] }; for (let i = 0; i < argv.length; i++) { const k = argv[i]; if (k === '--scan') a.scan = true; else if (k === '--semantic') a.semantic.push(argv[++i]); else if (['--bundle', '--gudang-bundle', '--gudang-mapping', '--out'].includes(k)) a[k.slice(2)] = argv[++i]; else return { error: `unknown argument ${k}` }; }
   return a;
 }
 
 export function run(argv, { write = (s) => process.stdout.write(s) } = {}) {
   const a = parseArgs(argv); if (a.error) { write(`${a.error}\n`); return 1; }
-  if (!a.bundle && !a['gudang-bundle']) { write('usage: --bundle <kosipa.json> [--scan] [--gudang-bundle <g.json> --gudang-mapping <m.json>] [--out <report.md>]\n'); return 1; }
+  if (!a.bundle && !a['gudang-bundle']) { write('usage: --bundle <kosipa.json> [--scan] [--semantic <file> ...] [--gudang-bundle <g.json> --gudang-mapping <m.json>] [--out <report.md>]\n'); return 1; }
   const parts = []; let code = 0;
   if (a.bundle) {
     const j = readJson(a.bundle, 'bundle'); if (!j.ok) { write(`${j.error}\n`); return 1; }
     const p = parseEvidenceBundle(j.value); if (!p.ok) { write(`bundle refused: ${p.error}\n`); return 1; }
     if (a.scan) { const found = scanSensitive(p.bundle); parts.push(['# Sensitive-text scan (counts only)', '', ...(found.length ? found.map((x) => `- ${x.pattern}: ${x.objects} object(s) — review/redact the bundle before sharing it`) : ['- nothing matched']), ''].join('\n')); }
-    const r = validateKosipaEvidence(p.bundle); parts.push(renderReadinessReport(r)); if (r.gates.some((g) => g.status !== 'ELIGIBLE')) code = 2;
+    const semantic = [];
+    for (const file of a.semantic) { const j = readJson(file, 'semantic evidence'); if (!j.ok) { write(`${j.error}\n`); return 1; } const sp = parseSemanticEvidence(j.value); if (!sp.ok) { write(`semantic evidence ${file} refused: ${sp.error}\n`); return 1; } semantic.push(sp.evidence); }
+    const r = validateKosipaEvidence(p.bundle, semantic); parts.push(renderReadinessReport(r)); if (r.gates.some((g) => g.status !== 'ELIGIBLE')) code = 2;
   }
   if (a['gudang-bundle'] || a['gudang-mapping']) {
     let bundle = null, mapping = null;

@@ -26,31 +26,73 @@ test('type families and stub detection', () => {
   assert.equal(fingerprint('abc'), fingerprint('abc')); assert.notEqual(fingerprint('abc'), fingerprint('abd'));
 });
 
-test('complete, compatible evidence: every gate is ELIGIBLE and the report never contains definition text', () => {
+const FIN = ['G2', 'G3', 'G4', 'G5'];
+const OBJECTS = { G2: ['v_kartu_simpanan', 'v_saldo_awal'], G3: ['v_trans_pinjaman_flat', 'v_trans_pinjaman_anuitas', 'v_trans_pinjaman_simulasi'], G4: ['x_proc_create_matrix'], G5: ['v_trans_potongan_bulanan', 'v_matrix_toko', 'v_matrix_toko_dtl'] };
+const defOf = (b, name) => (b.views.find((v) => v.name === name) ?? b.routines.find((r) => r.name === name)).definition;
+const cases = (n) => Array.from({ length: n }, (_, i) => ({ id: `C${i + 1}`, purpose: `property ${i + 1} of the definition` }));
+const RUN = (n, over = {}) => ({ executedAt: '2026-10-18T01:00:00Z', environment: 'isolated-sanitized', passed: n, failed: 0, reviewedBy: 'operator', reviewedAt: '2026-10-18', ...over });
+const PAR = (over = {}) => ({ executedAt: '2026-10-18T02:00:00Z', sampleSize: 30, compared: 30, unexplainedDifferences: 0, reviewedBy: 'operator', signedOffBy: 'data owner', signedOffAt: '2026-10-18', ...over });
+const semanticFor = (b, gateId, over = {}) => OBJECTS[gateId].map((object) => ({ version: 1, gate: gateId, object, definitionFingerprint: fingerprint(defOf(b, object)), cases: cases(5), run: RUN(5), parity: PAR(), ...over }));
+
+test('complete metadata (real definitions, compatible tables) reaches level 3 only: analysis is unlocked, official figures and parity stay BLOCKED; no definition text in the report', () => {
   const r = validateKosipaEvidence(bundle());
-  assert.deepEqual(r.gates.map((g) => [g.id, g.status]), ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8'].map((id) => [id, 'ELIGIBLE']));
-  assert.equal(r.blockedTasks.length, 0); assert.ok(r.eligibleTasks.some((t) => t.includes('official balance')));
+  assert.deepEqual(r.gates.map((g) => [g.id, g.status]), [['G1', 'ELIGIBLE'], ['G2', 'PARTIAL'], ['G3', 'PARTIAL'], ['G4', 'PARTIAL'], ['G5', 'PARTIAL'], ['G6', 'ELIGIBLE'], ['G7', 'ELIGIBLE'], ['G8', 'ELIGIBLE']]);
+  for (const id of FIN) assert.equal(gate(r, id).level, 3, `${id} level`);
+  assert.ok(r.eligibleTasks.some((t) => t.startsWith('G2 (level 3 DEFINITION_AVAILABLE)')), 'reading the definition is allowed');
+  assert.ok(!r.eligibleTasks.some((t) => /official balance display|generator parity claim|official outstanding|component semantics and TOKO Kredit comparison basis \(official\)/.test(t)), 'no official figure from metadata');
+  assert.ok(r.blockedTasks.some((t) => t.task.startsWith('G2 level 5 PARITY_ACCEPTED') && t.because[0].includes('signed-off parity')));
   const text = renderReadinessReport(r); assert.ok(!text.includes(MARK), 'no definition text in the report'); assert.match(text, /fingerprint [0-9a-f]{14}/); assert.match(text, /references: m_anggota, trans_simpanan_dtl/);
+  assert.match(text, /\| G2 [^|]*\| \*\*PARTIAL\*\* \| 3 DEFINITION_AVAILABLE \|/);
   assert.ok(gate(r, 'G4').findings.some((x) => x.code === 'RETURNS_NOT_REFERENCED'), 'the generator body does not mention returns: reported as a finding to review, not as a conclusion');
   assert.ok(gate(r, 'G4').findings.some((x) => x.code === 'STORE_COLUMNS_REFERENCED'));
 });
 
-test('missing or stubbed views keep exactly their gate BLOCKED and name the object; other gates are unaffected', () => {
+test('levels 4 and 5 need operator evidence bound to the CURRENT definition fingerprint; every shortfall keeps the gate at the lower level', () => {
+  const b = bundle();
+  const full = validateKosipaEvidence(b, FIN.flatMap((g) => semanticFor(b, g)));
+  for (const id of FIN) { assert.equal(gate(full, id).level, 5, id); assert.equal(gate(full, id).status, 'ELIGIBLE'); }
+  assert.ok(full.eligibleTasks.some((t) => t.includes('TASK-025 official balance display')));
+  const level = (sem) => gate(validateKosipaEvidence(b, sem), 'G2').level;
+  assert.equal(level(semanticFor(b, 'G2', { definitionFingerprint: '00000000000000' })), 3, 'stale fingerprint: evidence for another definition does not count');
+  assert.ok(gate(validateKosipaEvidence(b, semanticFor(b, 'G2', { definitionFingerprint: '00000000000000' })), 'G2').findings.some((x) => x.code === 'SEMANTIC_STALE'));
+  assert.equal(level(semanticFor(b, 'G2', { cases: cases(4), run: RUN(4) })), 3, 'fewer than the minimum cases');
+  assert.equal(level(semanticFor(b, 'G2', { run: RUN(5, { failed: 1, passed: 4 }) })), 3, 'a failed case');
+  assert.equal(level(semanticFor(b, 'G2', { run: RUN(5, { environment: 'production' }) })), 3, 'not an isolated sanitized environment');
+  assert.equal(level(semanticFor(b, 'G2', { run: undefined })), 3, 'parity without a semantic run does not skip a level');
+  assert.equal(level(semanticFor(b, 'G2', { parity: PAR({ unexplainedDifferences: 1 }) })), 4, 'one unexplained difference');
+  assert.equal(level(semanticFor(b, 'G2', { parity: PAR({ sampleSize: 29, compared: 29 }) })), 4, 'sample below the minimum');
+  assert.equal(level(semanticFor(b, 'G2', { parity: PAR({ signedOffBy: '' }) })), 4, 'not signed off');
+  assert.equal(level([semanticFor(b, 'G2')[0]]), 3, 'every object of the gate needs its own evidence');
+});
+
+test('missing or stubbed objects keep their gate below level 3 (BLOCKED) and name the object; other gates are unaffected', () => {
   const b = bundle(); b.views = b.views.filter((v) => v.name !== 'v_saldo_awal'); b.views.find((v) => v.name === 'v_trans_pinjaman_flat').definition = 'select NULL AS nik, NULL AS pokok';
   const r = validateKosipaEvidence(b);
-  assert.equal(gate(r, 'G2').status, 'PARTIAL'); assert.ok(gate(r, 'G2').findings.some((x) => x.code === 'VIEW_MISSING' && x.subject === 'v_saldo_awal'));
-  assert.equal(gate(r, 'G3').status, 'PARTIAL'); assert.ok(gate(r, 'G3').findings.some((x) => x.code === 'VIEW_STUB' && x.subject === 'v_trans_pinjaman_flat'));
-  assert.deepEqual([gate(r, 'G1').status, gate(r, 'G4').status, gate(r, 'G5').status], ['ELIGIBLE', 'ELIGIBLE', 'ELIGIBLE']);
+  assert.deepEqual([gate(r, 'G2').status, gate(r, 'G2').level], ['BLOCKED', 0]); assert.ok(gate(r, 'G2').findings.some((x) => x.code === 'VIEW_MISSING' && x.subject === 'v_saldo_awal'));
+  assert.deepEqual([gate(r, 'G3').status, gate(r, 'G3').level], ['BLOCKED', 2]); assert.ok(gate(r, 'G3').findings.some((x) => x.code === 'VIEW_STUB' && x.subject === 'v_trans_pinjaman_flat'));
+  assert.deepEqual([gate(r, 'G1').status, gate(r, 'G4').status, gate(r, 'G5').status], ['ELIGIBLE', 'PARTIAL', 'PARTIAL']);
   assert.ok(r.blockedTasks.some((t) => t.because.includes('VIEW_MISSING v_saldo_awal')));
   const none = validateKosipaEvidence(bundle({ views: [] })); assert.deepEqual([gate(none, 'G2').status, gate(none, 'G3').status, gate(none, 'G5').status], ['BLOCKED', 'BLOCKED', 'BLOCKED']);
+  const shape = bundle(); shape.columns = shape.columns.filter((c) => c.table !== 'trans_simpanan_dtl');   // a table the savings views read fails the contract
+  const rs = validateKosipaEvidence(shape); assert.equal(gate(rs, 'G2').level, 1); assert.ok(gate(rs, 'G2').findings.some((x) => x.code === 'REFERENCED_TABLE_INCOMPATIBLE'));
 });
 
 test('the payroll generator gate needs the real body and the full component column set', () => {
-  const noProc = validateKosipaEvidence(bundle({ routines: [] })); assert.ok(gate(noProc, 'G4').findings.some((x) => x.code === 'ROUTINE_MISSING')); assert.equal(gate(noProc, 'G4').status, 'PARTIAL');
-  const stub = validateKosipaEvidence(bundle({ routines: [{ name: 'x_proc_create_matrix', type: 'PROCEDURE', definition: null }] })); assert.ok(gate(stub, 'G4').findings.some((x) => x.code === 'ROUTINE_STUB'));
+  const noProc = validateKosipaEvidence(bundle({ routines: [] })); assert.ok(gate(noProc, 'G4').findings.some((x) => x.code === 'ROUTINE_MISSING')); assert.deepEqual([gate(noProc, 'G4').status, gate(noProc, 'G4').level], ['BLOCKED', 0]);
+  const stub = validateKosipaEvidence(bundle({ routines: [{ name: 'x_proc_create_matrix', type: 'PROCEDURE', definition: null }] })); assert.ok(gate(stub, 'G4').findings.some((x) => x.code === 'ROUTINE_STUB')); assert.equal(gate(stub, 'G4').level, 2);
   const b = bundle(); b.columns = b.columns.filter((c) => !(c.table === 'trans_potongan_matrix' && c.column === 'PRESSING'));
-  const r = validateKosipaEvidence(b); assert.ok(gate(r, 'G4').findings.some((x) => x.code === 'MATRIX_COLUMNS' && x.message.includes('PRESSING'))); assert.equal(gate(r, 'G1').status, 'PARTIAL');
+  const r = validateKosipaEvidence(b); assert.ok(gate(r, 'G4').findings.some((x) => x.code === 'MATRIX_COLUMNS' && x.message.includes('PRESSING'))); assert.equal(gate(r, 'G1').status, 'PARTIAL'); assert.equal(gate(r, 'G4').level, 1);
   const withReturns = validateKosipaEvidence(bundle({ routines: [{ name: 'x_proc_create_matrix', type: 'PROCEDURE', definition: PROC + ' select * from db_salesreturn r' }] })); assert.ok(gate(withReturns, 'G4').findings.some((x) => x.code === 'RETURNS_REFERENCED'));
+});
+
+test('semantic evidence intake is strict and refuses anything that looks like personal data', () => {
+  const b = bundle(); const good = semanticFor(b, 'G2')[0];
+  assert.equal(parseSemanticEvidence(good).ok, true);
+  for (const [bad, msg] of [[{ ...good, cases: [{ id: 'C1', purpose: 'member 3201234567890123 opening balance' }] }, /digit sequence/], [{ ...good, cases: [{ id: 'C1', purpose: 'ask ops@example.com' }] }, /e-mail/],
+    [{ ...good, definitionFingerprint: 'abc' }, /fingerprint/], [{ ...good, gate: 'G9' }, /gate/], [{ ...good, cases: [{ id: 'C1', purpose: 'a' }, { id: 'C1', purpose: 'b' }] }, /unique/],
+    [{ ...good, run: { ...good.run, environment: undefined } }, /isolated-sanitized/], [{ ...good, parity: { ...good.parity, signedOffAt: 'yesterday' } }, /signedOffAt/], [null, /JSON object/]]) {
+    const r = parseSemanticEvidence(bad); assert.equal(r.ok, false, JSON.stringify(bad)?.slice(0, 80)); assert.match(r.error, msg);
+  }
 });
 
 test('incompatible or missing columns are named; floating-point money and strict modes are warnings, not silent', () => {
@@ -78,7 +120,7 @@ test('an empty bundle blocks everything instead of passing vacuously', () => {
   assert.equal(r.eligibleTasks.some((t) => t.startsWith('G1') || t.startsWith('G2')), false);
 });
 
-import { parseEvidenceBundle, scanSensitive } from '../src/kosipa/index.ts';
+import { parseEvidenceBundle, scanSensitive, parseSemanticEvidence } from '../src/kosipa/index.ts';
 test('operator JSON is normalised (0/1 booleans) and anything malformed is refused with a precise message', () => {
   const ok = parseEvidenceBundle({ version: 1, schema: 'n1608204_smart_kopkar', columns: [{ table: 't', column: 'c', type: 'int(11)', nullable: 1 }], indexes: [{ table: 't', index: 'PRIMARY', unique: 1, columns: ['c'] }], views: [{ name: 'v', definition: null }], routines: [{ name: 'p', type: 'PROCEDURE', definition: 'x' }], triggers: [{ name: 'trg', table: 't', event: 'INSERT', timing: 'AFTER' }], server: { version: '11.4', sqlMode: '', maxUserConnections: '20' } });
   assert.equal(ok.ok, true); assert.deepEqual([ok.bundle.columns[0].nullable, ok.bundle.indexes[0].unique, ok.bundle.server.maxUserConnections], [true, true, 20]);
