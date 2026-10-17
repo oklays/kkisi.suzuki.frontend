@@ -1,6 +1,6 @@
 # Connection capacity analysis — Warehouse needs +2 (decision B5)
 
-Status: **analysis and recommendation only. Nothing here changes a production setting, a pool, an account or the guard.** Decision B5 stays **open / Warehouse module disabled**.
+Status: **analysis and recommendation only; section 7 (checkpoint 12) supersedes the interpretation in section 6.** Nothing here changes a production setting, a pool, an account or the guard.** Decision B5 stays **open / Warehouse module disabled**.
 Numbers below are produced by `apps/web/src/infrastructure/db/capacity-plan.ts` and asserted in `apps/web/tests/capacity-plan.test.mjs`, which also fails if the documented pools drift from `deploy/genesis/env.production.example`.
 
 ## 1. Evidence (what is measured, what is not)
@@ -77,7 +77,7 @@ The Warehouse fits *today* (S1) and *with POS cut over* (S4). It does **not** fi
 | Owner-approved cutover order of POS / register / inventory / products / returns / Warehouse | owner | makes option B concrete |
 | Peak per pool under realistic production concurrency (not the synthetic UAT) | operator | needed before any option A reduction |
 
-## 6. Local measurement (synthetic only)
+## 6. Local measurement (synthetic only) — checkpoint 11, **interpretation corrected in section 7**
 
 `apps/web/scripts/sample-db-connections.sh` counts open connections per account on the **local** container (processlist, 0.25 s interval, idle pooled connections included) while the complete `scripts/uat-run.sh` (six phases, all passing) ran against the built application, 17 Oct 2026:
 
@@ -91,3 +91,50 @@ The Warehouse fits *today* (S1) and *with POS cut over* (S4). It does **not** fi
 **What this does and does not show.** It shows that, in this repository's synthetic UAT, the pools that option A would shrink are **not idle**; it therefore gives option A no evidence, and the honest reading is that production ceilings (3 and 2) are already tight. It is a measurement of *demand with a larger local ceiling*, not of the production behaviour with ceilings of 3 and 2 (which would queue rather than open more connections, bounded by `pool_timeout`), and it says nothing about the legacy PHP application. Option A is therefore **not recommended on current evidence**; B (and, if needed, C) are.
 
 The Warehouse harness gives the other measured number: the Warehouse and TOKO-test accounts each needed **1** connection per drain process (`connection_limit = 1`) and a second drain process costs another 1 on each account.
+
+## 7. Checkpoint 12 investigation — what the numbers really were, one defect fixed
+
+**Method (reproducible):** `apps/web/scripts/measure-app-connections.sh [pages|api|mixed] <concurrency> <seconds>` starts **one** built Next.js process with **production-sized pools** (reader 3, auth 2, console 1; overridable), signs in synthetic users, drives a fixed page/API mix (`scripts/lib/connection-load.mjs`) and samples `information_schema.processlist` **inside the container** every ~50 ms. It reports, per account, the configured `connection_limit`, the peak of **simultaneous** connections, the peak of **active** (non-`Sleep`) connections, and the number of **distinct connection ids over the whole run** (accumulated, to detect churn), plus the number of app processes. Synthetic schema and local container only.
+
+### Defect found and fixed — two reader pools in one process
+
+| Load (one app process, 8 workers, 15 s) | Reader configured | Reader peak simultaneous (before) | Distinct ids (before) | Reader peak (after fix) |
+|---|---|---|---|---|
+| API routes only | 3 | 3 | 3 | 3 |
+| Server-rendered pages only | 3 | **6** | 6 | **3** |
+| Mixed | 3 | **6** | 6 | **3** |
+
+A temporary probe in `prisma.ts` logged **two** `PrismaClient` constructions from the same module file in the **same pid**: Next.js evaluated the module in two server module graphs, and `prisma.ts` cached the client on `globalThis` only when `NODE_ENV !== 'production'`. Under `next start` every graph therefore built its own client and pool, so one process could open **2 × connection_limit** reader connections while the startup guard counted one. Auth, console and every writer already cached unconditionally and were not affected. **Fix:** `prisma.ts` now always uses `globalThis.prismaClient ??= new PrismaClient()`. **Regression tests** (`tests/db-client-lifecycle.test.mjs`): the module evaluated twice in a production process yields one client; every client module caches unconditionally with no `NODE_ENV` gate; no client is built outside `src/infrastructure/db`. Both fail on the old code.
+
+**Consequence for the production budget:** before the fix, the documented 12/12 was in practice up to **15** (reader 6 instead of 3) whenever both page and API paths were used. After the fix the guard's arithmetic matches the process.
+
+### Checkpoint 11's numbers, explained
+
+| Observation (C11) | What it actually was |
+|---|---|
+| Reader peak 10 "against 3" | The local UAT configured the reader with `connection_limit=8`, not 3. The duplicated pool (2 × 8) plus extra app processes that `tests/e2e-local.mjs` spawns (`withApp`, outage scenarios) pushed demand above 10, and the **local account's own cap** `MAX_USER_CONNECTIONS 10` stopped it at 10. It was a server-enforced ceiling being reached, not 10 connections from one pool. |
+| Auth peak 3 "against 2" | Local `connection_limit` was 8; 3 was ordinary demand under that limit, across the main app and spawned instances. No defect. |
+| Console peak 1 | At its ceiling of 1; correct. |
+
+### Representative local load after the fix (one process, production-sized pools)
+
+| Load | Requests | Errors | p50 / p95 / max latency | Reader | Auth | Console |
+|---|---|---|---|---|---|---|
+| mixed, 8 workers, 15 s | 5,422 | 0 | 21 / 41 / 180 ms | 3 of 3 | 2 of 2 | 1 of 1 |
+| mixed, 32 workers, 20 s | 6,988 | **0** (no pool timeout) | 97 / 184 / 570 ms | 3 of 3 | 2 of 2 | 0–1 of 1 |
+
+The production pool sizes serve this synthetic load without errors; requests queue for a connection rather than failing. Latency to the real server through the SSH tunnel will be higher, so these numbers are a lower bound. Fixture gap noted: the synthetic schema has no `db_brands`, so `/api/products` cannot run there and is excluded from the load (it is exercised against the staging copy elsewhere).
+
+### How the limit is counted (interpretation)
+
+In MariaDB, `max_user_connections` is the maximum number of simultaneous connections **per account** (`user@host`), and a per-account `MAX_USER_CONNECTIONS` overrides it (the local accounts show exactly this: each is capped separately). Under that semantics the application's separate accounts do **not** share one pool of 20 with the PHP account. The project's "12 of a shared 20" rule is the **stricter** reading and may reflect a hosting-level limit (shared-hosting governors can cap a whole hosting account) that is not visible in the MariaDB variable. Which one applies on Niagahoster is **unverified** and remains evidence item B8. Until it is confirmed, keep the strict reading.
+
+### Recommended safe allocation (unchanged budget, no new pool)
+
+* Keep reader 3, auth 2, console 1 and the writers as documented. The fix restores the guard's arithmetic, so the documented 12 is now real rather than optimistic.
+* Exactly one application process; no extra drain or worker process.
+* The Warehouse +2 still needs B5/B8/B9 (sections 3–5). No production budget was increased and no pool was added.
+
+### Remaining production evidence
+
+B8 (how the hosting counts connections, and the legacy PHP peak), B9 (cutover order), and a production-like latency measurement through the tunnel before any pool size is reduced.
