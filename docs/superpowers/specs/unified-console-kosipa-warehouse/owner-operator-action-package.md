@@ -44,3 +44,21 @@ The eligible internal engineering work is done. **Every remaining major task now
 | Scale-out decision | Build the shared count-after-insert export limiter |
 
 Engineering-only items that need no input are small: an outbox permanent-error class (a conflict parks the record as DEAD immediately), and extending the persona fixtures once W5 is answered.
+
+## 5. Checkpoint 13: final list of tasks blocked by external decisions or evidence
+
+| Task / capability | Blocked by | Type |
+|---|---|---|
+| Release of the login credential-exposure fix; historical exposure check and rotation | S1 release authorisation; operator checklist | Owner + Operator |
+| Console for cashiers (landing policy activation) | R1 approval + O3 role ids | Owner + Operator |
+| KOSIPA savings official balance (TASK-025/044) | O1 → O5 (level 5) | Operator |
+| KOSIPA loan outstanding and simulation (TASK-026/043) | O1 → O5; D6 | Operator + Owner |
+| Payroll generator and component parity (TASK-027/045) | O1 (procedure body), O5 | Operator |
+| Payroll ↔ TOKO Kredit official comparison | D5 (+ O1 level 3) | Owner |
+| Loan origination, withdrawals, payroll settlement, status changes | D1, D2, D4, D3 (+ maker-checker roles) | Owner |
+| Real Gudang reader, mapping persistence on real items | Gudang schema bundle + mapping; D9/D10 | Operator + Owner |
+| Dispatch/receiving beyond preview | W1/W5 roles, D8 | Owner |
+| TOKO stock posting (applier activation) | **D7** (ledger), O6 (DDL/grants review), B4, B5/B8/B9 | Owner + Operator |
+| Any production writer cutover | B4, B9, O4, backups, owner go (`cutover-plan.md`) | Owner + Operator |
+| Console store in production | O7 / B6 | Operator |
+| Staging acceptance of every scenario | `staging-acceptance-matrix.md` "Missing" column | Owner + Operator |

@@ -1,6 +1,6 @@
 # Decision & Blocker Register — `unified-console-kosipa-warehouse`
 
-Maintained by engineering; updated at each checkpoint (last: checkpoint 12, 18 Oct 2026). **Every "Recommended default" below is a PROPOSAL for owner review. None is approved, none is implemented as a default, and no code assumes it.** Where a decision is open the code exposes an interface or a pure rule, keeps the unsafe action disabled, and says so in the UI.
+Maintained by engineering; updated at each checkpoint (last: checkpoint 13, 18 Oct 2026). **Every "Recommended default" below is a PROPOSAL for owner review. None is approved, none is implemented as a default, and no code assumes it.** Where a decision is open the code exposes an interface or a pure rule, keeps the unsafe action disabled, and says so in the UI.
 Columns: *Read-only dev* = can read-side/engineering work continue; *Writes* = whether financial / stock writes must stay disabled until the decision (and the writer-readiness gate) is met.
 
 ## A. Owner decisions
@@ -73,6 +73,16 @@ Columns: *Read-only dev* = can read-side/engineering work continue; *Writes* = w
 | Q1 | Reliability: Checkpoint 11 identity-link UAT timeout | **Root cause found and fixed**: per-phase reset did not clear console-store links (audit shows `CONSOLE_USER_ALREADY_LINKED` at the failure). Also fixed: pre-hydration native form submit (login could put the password in the URL). 5/5 cold runs with a planted leftover link pass | — | Engineering (done) | Yes | n/a |
 
 Unchanged and still **open** (no default chosen): D1 salary deduction policy, D2 withdrawable savings types, D3 expired contract treatment, D4 payroll short-payment allocation, D5 TOKO company ↔ payroll column, D6 loan calculation rules, D7 Warehouse accounting treatment, D8 receiving authority/policy, D9 unit conversion, D10 quantity precision, W1/W5 Warehouse roles, W2/W3 Warehouse production architecture, B4 technical single-writer cutover, B6 console store provisioning, B8/B9 capacity evidence and cutover order.
+
+## B6. Checkpoint 13 updates (no new owner decision recorded; A4 and E1 remain the only ones)
+
+| # | Item | Status | Proposal (not approved) | Responsible |
+|---|---|---|---|---|
+| R1 (update) | Cashier landing | **Option (c) implemented and inactive**: explicit server-side policy `CONSOLE_LANDING_ROLES` (role → pos/console; /pos only with checkout; malformed maps ignored as a whole; unset = unchanged behaviour). Verified with the mapping on, unset and malformed | Approve (c) with the cashier role id from the production export (O3); roles 1/2 → console. Separately review the cashier role's legacy permissions (ANO-R01) | Owner |
+| T1 (update) | TOKO stock writer | **Staging implementation, unwired**: `PrismaTokoStockApplier` behind a `LedgerWriter` port with no implementation in src (D7). Outbox → applier proven across two stores incl. a lost acknowledgement | D7 first; then O6 review of the DDL; then authorised staging | Owner + operator |
+| S1 | Login credential exposure | Fixed locally (hydration gate + POST fallback + redirect-loop refusal), eight-scenario closeout; **not released** | Authorise a release containing commits `87e2ee8f` and `861b234b`; run the operator exposure checklist; decide rotation | Owner + operator |
+
+Decision sheet with options, proposals and evidence for every open item: `owner-decision-sheet.md`.
 
 ## C. Engineering conventions that look like decisions but are not owner policy
 

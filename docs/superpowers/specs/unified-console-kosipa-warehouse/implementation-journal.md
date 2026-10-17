@@ -662,3 +662,35 @@ Staging acceptance or production readiness of anything; official balances, loan 
 ### Next
 
 See `owner-operator-action-package.md`: operator exports O1–O3 and the capacity evidence O4 unlock the next phase; D7, D5, R1, B9 and B4 are owner decisions. Engineering-only items left are small (outbox permanent-error class; persona fixtures once W5 is answered).
+
+---
+
+## Checkpoint 13 — Evidence resolution, business policy gate and integration readiness
+
+Legend as in checkpoint 12. Nothing pushed, merged or deployed; no legacy PHP, production record, schema, infrastructure, credential or permission touched. **No operator evidence arrived** (O1, O3, O4, Gudang, O5–O7 all missing; `operator-evidence-acceptance.md`), so no evidence-dependent task was unlocked and nothing was guessed.
+
+| # | Deliverable | Status | Evidence |
+|---|---|---|---|
+| 1 | **Login credential-exposure closeout.** Added a server-rendered safe fallback (`method="post" action="/api/auth/login"`: a bypassed or JS-less submission is a refused POST, never a GET with credentials) and refused every `/login` form as a post-login redirect target (loop). Eight-scenario browser suite: not hydrated, JS disabled, slow init, Enter, double-click, refresh, failed login, malformed/foreign/looping `next` + deep-link preservation; every request URL, the page and the app log scanned; no request leaves the host | Implemented, locally verified; **not released** (any deployed instance stays exposed until an authorised release) | `login-security-browser.mjs` (UAT phase 1); mutation (no `method/action`) fails LS-1; `auth-policy.test.mjs`; `login-security-closeout.md`; restricted `docs/migration/operator-credential-exposure-checklist.md` |
+| 2 | **R1 explicit landing policy** (`CONSOLE_LANDING_ROLES`, server-side): role → pos/console; /pos only with checkout (no expansion, no loop); unset = unchanged derived rule; malformed = ignored as a whole + logged; valid deep links win | Implemented, locally verified, **inactive** (owner R1 pending; no production mapping) | 4 domain tests; `console-landing-browser.mjs` in UAT phase 7 (mapping on / unset / malformed). Finding while testing: the landing redirect from `/console?entry=login` is a streamed redirect (NEXT_REDIRECT + meta refresh), unchanged behaviour |
+| 3 | Owner decision sheet (exact register IDs; proposals marked; evidence and release effect per decision) | Done | `owner-decision-sheet.md` |
+| 4 | Operator evidence acceptance report + real-role vs persona differences | Done (nothing to accept) | `operator-evidence-acceptance.md` |
+| 5 | Financial task-unlocking matrix + financial writer invariants as acceptance criteria | Done | `integration-readiness-matrices.md` §1 |
+| 6 | **Warehouse staging implementation**: `PrismaTokoStockApplier` (ledger-based movement through a D7 `LedgerWriter` port with **no implementation in src**; receiving reference, idempotency key, atomic posting record, retry/ack, conflict rejection, item/company scope, opname lock, recompute-compatible). Unwired, enforced by an always-on guard. Outbox → applier across two stores incl. a lost acknowledgement | Implemented (unwired), locally verified; **blocked by D7, O6, B4, B5/B9** | contract suite 5/5 now runs the src adapter; `warehouse-toko-applier-db.test.mjs` 2/2; `cross-db-isolation.test.mjs` 6/6; readiness matrix §2 |
+| 7 | Connection-capacity and single-writer cutover plan (plan only, not executed) | Done | `cutover-plan.md` |
+| 8 | Staging acceptance matrix (none accepted) | Done | `staging-acceptance-matrix.md` |
+| 9 | Decision register (R1/T1 updated, S1 added; no new approval) and final blocked list | Done | `decision-register.md` §B6, `owner-operator-action-package.md` §5 |
+
+### Verification (actual, 18 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline; a 5th introduced by the new test was removed) / OK / OK |
+| `pnpm test` | domain **141/141**, application **139/139**, web **320 pass / 0 fail** (+76 opt-in skipped) |
+| Integrated UAT `scripts/uat-run.sh` — 8 phases (new: login security in phase 1, R1 landing phase 7, outbox → applier in phase 8) | **PASS on the first run**; TOKO regression 585 / 397 requests in both flag states |
+| Opt-in DB suites (phase 8) | rehearsal 9/9, cross-database harness 11/11, stock-writer contract 5/5 (src adapter), outbox → applier 2/2, isolation 2/2 |
+| Unresolved failures | none. Test-side corrections made during the work: an alert locator matching Next's route announcer, a waitFor on a streamed redirect, the synthetic admin's expected landing in derived mode, a GET on a POST-only API, an over-eager `networkidle` on `/products` |
+
+### Not claimed
+
+Program completion, staging acceptance, production readiness, official financial figures, financial writers, Warehouse stock posting, or any cutover. The next phase must be driven by the operator evidence and owner decisions listed in `owner-operator-action-package.md` §5.

@@ -33,7 +33,7 @@ const button = (page) => page.getByRole('button', { name: /Masuk|Memeriksa/ });
 
 try {
   console.log('LS-1. before hydration (JS delayed 8 s): the submit control is disabled in the server HTML; Enter does nothing; a forced native submit is a POST to the JSON-only API');
-  { const { context, page, requests, check } = await ctx({}, 8000);
+  { const { context, page, check } = await ctx({}, 8000);
     await page.goto(`${base}/login`, { waitUntil: 'domcontentloaded' });
     assert.equal(await button(page).isDisabled(), true, 'disabled before hydration');
     assert.equal(await page.locator('form.login-card').evaluate((f) => [f.method, new URL(f.action).pathname].join(' ')), 'post /api/auth/login', 'server-rendered fallback is a POST to the API');

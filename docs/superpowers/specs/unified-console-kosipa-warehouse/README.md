@@ -29,6 +29,12 @@ Tujuan: melanjutkan revamp Next.js setelah TOKO/POS dengan (1) console terpadu, 
 | 18 | [toko-stock-writer-contract.md](toko-stock-writer-contract.md) | Kontrak penulis stok TOKO: ledger wajib, idempotensi, hak akses minimum, DDL usulan |
 | 19 | [staging-role-readiness.md](staging-role-readiness.md) | Ekspor peran nyata (pseudonim) dan validasi dengan aturan runtime console |
 | 20 | [owner-operator-action-package.md](owner-operator-action-package.md) | Paket tindakan owner/operator: bukti minimum untuk fase berikutnya |
+| 21 | [login-security-closeout.md](login-security-closeout.md) | Penutupan temuan eksposur kredensial login + bukti regresi |
+| 22 | [owner-decision-sheet.md](owner-decision-sheet.md) | Lembar keputusan owner (opsi, usulan, bukti, dampak rilis) |
+| 23 | [operator-evidence-acceptance.md](operator-evidence-acceptance.md) | Laporan penerimaan bukti operator (O1/O3/O4/Gudang) |
+| 24 | [integration-readiness-matrices.md](integration-readiness-matrices.md) | Matriks pembukaan tugas keuangan + kesiapan integrasi Warehouse |
+| 25 | [cutover-plan.md](cutover-plan.md) | Rencana kapasitas koneksi dan cutover single-writer (rencana saja) |
+| 26 | [staging-acceptance-matrix.md](staging-acceptance-matrix.md) | Matriks penerimaan staging berbasis bukti |
 | — | [`docs/migration/sql/legacy-schema-objects-readonly.sql`](../../../migration/sql/legacy-schema-objects-readonly.sql) | SQL **read-only** untuk operator: ambil definisi view/procedure yang tidak ada di dump |
 
 ## Temuan yang mengubah asumsi PRD/Baseline
