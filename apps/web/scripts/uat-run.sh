@@ -82,6 +82,7 @@ else
 fi
 if [ -f .env.toko-writer-contract ]; then   # checkpoint 12: TOKO stock-writer contract on the exact legacy DDL
   TOKO_WRITER_CONTRACT_TEST=1 run node --experimental-strip-types --env-file=.env.toko-writer-contract --test tests/toko-writer-contract-db.test.mjs
+  [ -f .env.warehouse-rehearsal ] && CROSS_STORE_APPLIER_TEST=1 run node --experimental-strip-types --env-file=.env.warehouse-rehearsal --env-file=.env.toko-writer-contract --test tests/warehouse-toko-applier-db.test.mjs
 else echo "SKIPPED: provision with scripts/setup-toko-writer-contract.sh --apply"; fi
 E2E_ISOLATION_DB_TEST=1 CONSOLE_STORE_TEST_URL="$CONSOLE_URL" run node --experimental-strip-types --test tests/e2e-isolation.test.mjs
 echo "UAT complete."

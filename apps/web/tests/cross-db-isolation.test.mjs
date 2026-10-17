@@ -13,7 +13,7 @@ const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm,
 const SRC = walk(join(ROOT, 'src')).filter((p) => /\.(ts|tsx)$/.test(p));
 
 test('no application source mentions the TOKO posting test store, its DSN, its applier or the test support code', () => {
-  const offenders = SRC.filter((f) => /TOKO_POSTING_TEST_URL|kkisi_toko_posting_test|kkisi_toko_post_test|toko_test_stock|TokoTestApplier|tests\/support|cross-db-worker|fault-proxy|TOKO_WRITER_CONTRACT_URL|kkisi_toko_writer_contract|kkisi_toko_writer_ct|nx_stock_posting|TokoStockWriterContract/.test(strip(readFileSync(f, 'utf8')))).map((f) => relative(ROOT, f));
+  const offenders = SRC.filter((f) => /TOKO_POSTING_TEST_URL|kkisi_toko_posting_test|kkisi_toko_post_test|toko_test_stock|TokoTestApplier|tests\/support|cross-db-worker|fault-proxy|TOKO_WRITER_CONTRACT_URL|kkisi_toko_writer_contract|kkisi_toko_writer_ct|TokoStockWriterContract/.test(strip(readFileSync(f, 'utf8')))).map((f) => relative(ROOT, f));
   assert.deepEqual(offenders, []);
 });
 
@@ -56,4 +56,19 @@ test('the harness cannot be pointed at anything but the two local stores: DSN, d
   for (const must of ["['127.0.0.1', 'localhost']", "'kkisi_warehouse_rehearsal'", "'kkisi_toko_posting_test'", "'kkisi_wh_rehearsal'", "'kkisi_toko_post_test'"]) assert.ok(t.includes(must), must);
   const w = readFileSync(join(ROOT, 'tests/support/cross-db-worker.mjs'), 'utf8');
   assert.match(w, /xdb:\[a-z0-9\]\+/, 'the worker only drains a test namespace');
+});
+
+test('checkpoint 13: the TOKO stock applier exists as an UNWIRED staging implementation — nothing imports it, no ledger implementation exists in src, nx_stock_posting appears only there', () => {
+  const adapter = 'src/infrastructure/warehouse/toko-stock-applier.ts';
+  const offenders = [];
+  for (const f of SRC) {
+    const t = strip(readFileSync(f, 'utf8')); const r = relative(ROOT, f);
+    if (r === adapter) continue;
+    if (/toko-stock-applier|PrismaTokoStockApplier/.test(t)) offenders.push(`${r}: imports the stock applier`);
+    if (/nx_stock_posting/.test(t)) offenders.push(`${r}: references the idempotency table`);
+    if (/implements LedgerWriter|ledgerTable\s*[:=]/.test(t)) offenders.push(`${r}: provides a ledger implementation (decision D7)`);
+  }
+  assert.deepEqual(offenders, []);
+  const src = strip(readFileSync(join(ROOT, adapter), 'utf8'));
+  assert.match(src, /LedgerWriter required \(decision D7\)/); assert.doesNotMatch(src, /ON DUPLICATE KEY/i); assert.doesNotMatch(src, /process\.env/);
 });
