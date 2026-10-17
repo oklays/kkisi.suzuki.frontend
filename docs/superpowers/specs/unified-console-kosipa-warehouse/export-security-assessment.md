@@ -47,3 +47,27 @@ What it protects: accidental loops and casual repetition by an authorised, audit
 | X4 | Exports are only as complete as the verified reports; official balances are explicitly absent | Info | By design (OFFICIAL_BALANCE_UNVERIFIED) |
 
 No finding blocks a staging UAT of the export. None changes E1.
+
+## 4. Checkpoint 12 — single-instance assumption verified; shared limiter designed (not built)
+
+E1 stands: the operator-controlled allow-list remains, and no persistent policy store was added. All export authorisation, auditing and CSV protections are unchanged.
+
+### The single-instance assumption is structural, and now pinned by a test
+
+`apps/web/tests/single-instance-deployment.test.mjs` (always on) fails if any of these change:
+
+1. **One container:** the `web` service has a fixed `container_name: genesis-web` and no replicas/scale/deploy settings, so `docker compose up --scale web=2` cannot create a second container.
+2. **One listener:** the service runs in `network_mode: "service:netns"`, so a second server in that namespace could not bind port 3000.
+3. **One server process:** the image's only `CMD` is a single `next start`, with no cluster mode and no process manager.
+
+A deliberate scale-out therefore has to edit this test, which brings the shared-limiter requirement (below) and the capacity decision (B5) with it. Operator runtime check at each deployment: `docker ps --filter name=genesis-web --format '{{.Names}}' | wc -l` must print `1`.
+
+### Shared limiter for future multi-instance operation (design, required before any multi-process rollout)
+
+* **Store:** the existing append-only console audit table, which already receives one `kosipa.report.export` row per attempt (success or `denied`). No new table, no new connection: it uses the console client the export already uses for its audit write, so the 12-connection budget is unchanged.
+* **Algorithm (count after insert):** write the attempt's audit row first, inside the same short statement sequence, then `SELECT COUNT(*) FROM console_audit_event WHERE actor_user_id = ? AND action = 'kosipa.report.export' AND occurred_at > UTC_TIMESTAMP(3) - INTERVAL 10 MINUTE`. If the count (including this attempt) exceeds 6, refuse with 429 and record the refusal. Because every request counts its own row, two concurrent requests on different instances can never both slip under the limit: the worst case is over-refusal at the boundary, never over-admission.
+* **Index (operator DDL, reviewed like any production change):** `(actor_user_id, action, occurred_at)` on `console_audit_event`.
+* **Failure behaviour:** if the console store is unavailable the audit write already fails closed (503, nothing read). The limiter adds no new failure mode.
+* **Clock:** the database's `UTC_TIMESTAMP(3)`, not the application hosts' clocks.
+* **Cost:** one indexed COUNT per export request on the console connection. Exports are rare (at most 6 per user per 10 minutes, and only allow-listed users).
+* **Not built now**, because the deployment is provably single-process and E1 asks for no policy store. Building it is a prerequisite of the scale-out decision (decision register X1).
