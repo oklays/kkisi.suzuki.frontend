@@ -68,7 +68,7 @@ test('list, batch, member and reconciliation: 200 with the documented shape; sal
   const rec = await handlePayrollReconciliation(world.services, get('/api/kosipa/payroll/POT202608001/store-reconciliation?all=1', cookie), 'POT202608001', deps);
   assert.equal(rec.status, 200); const rb = await bodyOf(rec); assert.equal(rb.state, 'ok'); assert.equal(rb.data.comparability.reviewOnly, true);
   for (const b of [lb, bb, mb, rb]) assert.ok(!JSON.stringify(b).includes('98765432'), 'gaji_payroll is never exposed');
-  assert.deepEqual(p.audit.map((a) => a.action), ['kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile']);
+  assert.deepEqual(p.audit.map((a) => a.action), ['kosipa.payroll.list.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile'], 'owner decision A4: the list is audited too');
 });
 
 test('malformed input is 400 before any query; unknown batch or member is 404; only GET handlers exist', async () => {

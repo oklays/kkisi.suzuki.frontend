@@ -197,7 +197,7 @@ try {
   console.log('9. audit trail: payroll reads are recorded with opaque subjects and no NIK');
   { const events = await consoleDb.$queryRaw`SELECT action, outcome, subject_id FROM console_audit_event WHERE action LIKE 'kosipa.payroll.%' AND occurred_at > NOW(3) - INTERVAL 30 MINUTE ORDER BY id`;
     const actions = new Set(events.map((e) => e.action));
-    for (const a of ['kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile']) assert.ok(actions.has(a), `audit has ${a}`);
+    for (const a of ['kosipa.payroll.list.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile']) assert.ok(actions.has(a), `audit has ${a}`);
     assert.ok(events.every((e) => /^payroll:POT[A-Z0-9]+$/.test(e.subject_id) && e.outcome === 'success'), JSON.stringify(events.slice(0, 3)));
     assert.ok(!JSON.stringify(events).includes('S9001')); }
 

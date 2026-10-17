@@ -47,7 +47,7 @@ export type Section<T> = { state: 'ok'; data: T } | { state: 'restricted' } | { 
 
 const need = (actor: PayrollActor, ...caps: Parameters<CapabilitySet['has']>[0][]) => { for (const c of caps) if (!actor.capabilities.has(c)) throw new KosipaError('FORBIDDEN'); };
 /** Audit BEFORE any financial data is read: if the audit cannot be written, nothing is read (fail closed). Opaque subject only. */
-const audit = (d: PayrollDeps, a: PayrollActor, action: 'kosipa.payroll.batch.view' | 'kosipa.payroll.member.view' | 'kosipa.payroll.reconcile', docNo: string, detail?: Record<string, unknown>) =>
+const audit = (d: PayrollDeps, a: PayrollActor, action: 'kosipa.payroll.list.view' | 'kosipa.payroll.batch.view' | 'kosipa.payroll.member.view' | 'kosipa.payroll.reconcile', docNo: string, detail?: Record<string, unknown>) =>
   d.audit.append({ actorUserId: a.userId, action, subjectType: 'payroll', subjectId: `payroll:${docNo}`.slice(0, 64), outcome: 'success', requestId: a.requestId, detail, occurredAt: d.now() });
 
 // ----------------------------------------------------------------------------------------------------------- batch list
@@ -65,6 +65,9 @@ export function describeHeader(header: BatchHeader): BatchListItem {
 export async function listPayrollBatches(d: PayrollDeps, actor: PayrollActor, params: Record<string, string | string[] | undefined>): Promise<BatchListPage> {
   need(actor, 'kosipa.payroll.view');
   const query = parseBatchListQuery(params);
+  // Owner decision A4 (checkpoint 12): the list carries header totals, so it is audited like every other payroll read — before the read, fail closed.
+  // Detail holds only which filters were used and whether this is a later page: no period value, amount, NIK or name.
+  await audit(d, actor, 'kosipa.payroll.list.view', 'list', { filters: [query.period, query.status, query.group].filter(Boolean).length, paged: query.afterId === null ? 0 : 1 });
   const rows = await d.reader.listBatches(query, PAYROLL_PAGE_SIZE + 1);
   const page = rows.slice(0, PAYROLL_PAGE_SIZE);
   return { items: page.map(describeHeader), nextCursor: rows.length > PAYROLL_PAGE_SIZE ? page[page.length - 1].id : null, filter: { period: query.period, status: query.status, group: query.group } };

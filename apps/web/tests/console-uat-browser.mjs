@@ -155,7 +155,7 @@ try {
     console.log('UAT-A. audit trail covers every protected read, opaque subjects, no NIK');
     { const events = await consoleDb.$queryRaw`SELECT action, outcome, subject_id FROM console_audit_event WHERE action LIKE 'kosipa.%' AND occurred_at > NOW(3) - INTERVAL 30 MINUTE ORDER BY id`;
       const actions = new Set(events.map((e) => e.action));
-      for (const a of ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.list.view', 'kosipa.loan.detail.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile', 'kosipa.report.loan.view', 'kosipa.report.payroll.view', 'kosipa.report.quality.view', 'kosipa.report.membership.view', 'kosipa.report.savings.view']) assert.ok(actions.has(a), `audit has ${a}`);
+      for (const a of ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.list.view', 'kosipa.loan.detail.view', 'kosipa.payroll.list.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile', 'kosipa.report.loan.view', 'kosipa.report.payroll.view', 'kosipa.report.quality.view', 'kosipa.report.membership.view', 'kosipa.report.savings.view']) assert.ok(actions.has(a), `audit has ${a}`);
       assert.ok(!JSON.stringify(events).includes('S900')); }
   }
 

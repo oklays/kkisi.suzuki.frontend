@@ -267,3 +267,37 @@ test('the reader contract has no write capability and the use cases only call re
   for (const n of names) assert.ok(!/^(insert|update|delete|save|approve|post|generate|create|settle|set)/i.test(n), n);
   assert.deepEqual(Object.keys(w.reader).filter((n) => /^(insert|update|delete|save|approve|post|generate|create|settle|write|set)/i.test(n)), []);
 });
+
+// --------------------------------------------------------------------------------------- batch list audit (owner decision A4, checkpoint 12)
+test('A4: the batch list is audited BEFORE the read, once per request, with an opaque subject and no period value, amount or member data', async () => {
+  const w = makePayrollWorld({ headers: [hdr(5, { docNo: 'POT202608001', headerTotal: '12345678.9000' })] }); const order = [];
+  const deps = { reader: new Proxy(w.reader, { get: (t, k) => (typeof t[k] === 'function' ? (...a) => { order.push(`read:${String(k)}`); return t[k](...a); } : t[k]) }), audit: { async append(e) { order.push(e); } }, now: NOW };
+  await listPayrollBatches(deps, actor(), { periode: '2026-08', status: 'APPROVED' });
+  assert.equal(typeof order[0], 'object', 'the audit record comes first'); assert.equal(order[1], 'read:listBatches');
+  assert.equal(order.filter((x) => typeof x === 'object').length, 1, 'exactly one audit event per list request (no nested duplicate)');
+  const e = order[0];
+  assert.deepEqual({ action: e.action, subjectType: e.subjectType, subjectId: e.subjectId, outcome: e.outcome, actorUserId: e.actorUserId, requestId: e.requestId, detail: e.detail }, { action: 'kosipa.payroll.list.view', subjectType: 'payroll', subjectId: 'payroll:list', outcome: 'success', actorUserId: 7, requestId: 'req-1', detail: { filters: 2, paged: 0 } });
+  assert.ok(e.occurredAt instanceof Date);
+  assert.doesNotMatch(JSON.stringify({ ...e, occurredAt: undefined }), /2026|12345678|POT2026|APPROVED/, 'no period, total, document number or status value in the audit record');
+});
+
+test('A4: audit failure stops the list (fail closed, nothing read); denial and invalid filters are neither audited nor read', async () => {
+  const w = makePayrollWorld({ headers: [hdr(5)] });
+  await assert.rejects(listPayrollBatches({ reader: w.reader, audit: { async append() { throw new Error('console db down'); } }, now: NOW }, actor(), {}), /console db down/);
+  assert.equal(w.calls.length, 0, 'no batch header was read without an audit record');
+  const { deps, events } = mk(w);
+  assert.equal(await code(listPayrollBatches(deps, actor(caps('kosipa.member.view')), {})), 'FORBIDDEN');
+  assert.equal(await code(listPayrollBatches(deps, actor(), { periode: '2026-13' })), 'PERIOD_INVALID');
+  assert.equal(await code(listPayrollBatches(deps, actor(), { after: 'abc' })), 'CURSOR_INVALID');
+  assert.deepEqual([w.calls.length, events.length], [0, 0]);
+});
+
+test('A4: every page is audited as a later page; an unexpected database error after a successful audit propagates (the authorised access stays recorded)', async () => {
+  const headers = Array.from({ length: 30 }, (_, i) => hdr(i + 1, { docNo: `POT2026${String(i + 1).padStart(6, '0')}` }));
+  const w = makePayrollWorld({ headers }); const { deps, events } = mk(w);
+  const p1 = await listPayrollBatches(deps, actor(), {}); await listPayrollBatches(deps, actor(), { after: String(p1.nextCursor) });
+  assert.deepEqual(events.map((e) => e.detail), [{ filters: 0, paged: 0 }, { filters: 0, paged: 1 }]);
+  w.failures.add('listBatches');
+  await assert.rejects(listPayrollBatches(deps, actor(), {}), /timeout 1969/);
+  assert.equal(events.length, 3, 'the attempt was audited before the failing read');
+});

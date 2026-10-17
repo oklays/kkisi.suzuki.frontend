@@ -71,11 +71,19 @@ test('export permission: a view capability never implies export; only the allow-
   assert.ok(PERSONAS.filter((p) => p.link?.menus.length).length >= 3 && !(await evaluatePersona(P.auditor)).capabilities.includes('kosipa.report.export'), 'the auditor sees every report but cannot export');
 });
 
-test('audit failure behaviour: with the audit store down, every audited endpoint answers 503 and reads NOTHING; the payroll batch LIST is the one unaudited read (by design, recorded as finding F5)', async () => {
+test('audit failure behaviour (owner decision A4 applied): with the audit store down, ALL six endpoints answer 503 and nothing is read — the payroll list included', async () => {
   const r = await apiMatrix(P['kosipa-admin'], { auditFails: true });
-  assert.deepEqual(ENDPOINTS.map((n) => r.statuses[n]), [503, 200, 503, 503, 503, 503], 'only the payroll list still answers');
-  assert.deepEqual(r.touchedBy, { loans: 0, payroll: 1, reports: 0, savings: 0 }, 'audit-before-read everywhere else: the only reader call is the payroll header list');
+  assert.deepEqual(ENDPOINTS.map((n) => r.statuses[n]), [503, 503, 503, 503, 503, 503]);
+  assert.deepEqual(r.touchedBy, { loans: 0, payroll: 0, reports: 0, savings: 0 }, 'audit-before-read everywhere');
   assert.equal(r.audit.length, 0);
+});
+
+test('A4 over HTTP: an allowed payroll list writes exactly one kosipa.payroll.list.view record for the session user before the read', async () => {
+  const r = await apiMatrix(P['kosipa-admin']);
+  const list = r.audit.filter((a) => a.action === 'kosipa.payroll.list.view');
+  assert.equal(list.length, 1); assert.equal(list[0].actorUserId, P['kosipa-admin'].userId); assert.equal(list[0].subjectId, 'payroll:list');
+  const denied = await apiMatrix(P['kosipa-staff']);
+  assert.equal(denied.statuses['payroll list'], 403); assert.equal(denied.audit.filter((a) => a.action === 'kosipa.payroll.list.view').length, 0, 'a denial is not recorded as an access');
 });
 
 test('feature-flag behaviour: KOSIPA API flag off is 404 for every persona; Warehouse preview flag off removes the capability and its four menu entries; KOSIPA off removes only KOSIPA', async () => {
