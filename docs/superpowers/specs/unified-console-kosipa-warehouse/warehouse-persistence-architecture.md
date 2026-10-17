@@ -120,3 +120,24 @@ Today: reader 3, auth 2, POS 2, register 1, returns 1, inventory 1, products 1, 
 | D. Keep Warehouse read-only (preview, synthetic) | 0 | none | no operational Warehouse | **current state** |
 
 Recommendation (proposal): measure PHP's peak connections for two weeks, then take **A** with both new pools at `connection_limit = 1`. Until the owner decides, nothing is added. The rehearsal account's limit of 4 exists only to test concurrency locally and is asserted rehearsal-only by a test.
+
+## 11. Cross-database verification (checkpoint 11) — what is now proven and what is not
+
+`apps/web/tests/cross-db-outbox.test.mjs` (opt-in; setup `scripts/setup-warehouse-rehearsal.sh` and `scripts/setup-toko-posting-test.sh`, local container only) joins **two independent local transactional stores with separate least-privilege accounts** (neither can read the other): the Warehouse store holding the outbox, and a **TOKO stock-posting TEST store** (`kkisi_toko_posting_test`: `toko_test_stock`, `toko_test_stock_posting` with `PRIMARY KEY (intent_key)`, immutable postings, no DELETE). The test applier writes the posting row and the stock change in **one transaction** and, on a duplicate key, compares the stored content: identical → `ALREADY_APPLIED`, different → a conflict that changes nothing.
+
+| Property | Evidence (all in the one test file) |
+|---|---|
+| Durable delivery intent; unique source event identity | replayed enqueue = `existing`; changed payload under the same key = `conflict`, never stored; a fresh connection (and fresh processes) sees the original content |
+| Atomic stock mutation + idempotency record on the target | a failure after the posting insert rolls back both; stock = Σ distinct postings after every scenario |
+| Duplicate delivery; payload conflict | three deliveries → one posting; conflicting content refused, retried to DEAD, reported as `CONTENT_MISMATCH` |
+| Retry after network failure | a TCP fault proxy cuts the connection mid-transaction, before COMMIT, drops the reply after COMMIT, and refuses connections; each converges to exactly one posting |
+| Process interruption | a child process killed with SIGKILL **inside** the TOKO transaction (nothing committed) and **after** the TOKO commit before acknowledgement (posting present, outbox PENDING); restart repairs both without a second post |
+| Concurrent consumers | three separate processes drain one outbox at once; each of 12 intents applied exactly once |
+| Reconciliation after incomplete acknowledgement | `reconcileOutboxAgainstPostings` classifies CONSISTENT / PENDING_NOT_POSTED / POSTED_NOT_ACKNOWLEDGED (repairable) / DEAD_* / ACKNOWLEDGED_WITHOUT_POSTING, CONTENT_MISMATCH and POSTING_WITHOUT_OUTBOX (critical) and checks the stock invariant |
+| Seeded chaos | 24 intents under random faults and replayed drains converge |
+
+Mutation checks (applier deliberately broken, then restored): moving the stock update outside the transaction, dropping the content comparison, and applying the stock change on a duplicate key each turn the suite red (2, 1 and 5 tests respectively).
+
+**Claim, exactly:** with a unique idempotency record committed in the same transaction as the stock change, repeated, concurrent, interrupted and conflicting deliveries leave stock equal to the sum of distinct postings. **Not claimed:** exactly-once delivery in general; anything about the real TOKO tables, their locking or the POS lock order (decision T1); anything about production networks. Production stock posting and Warehouse accounting remain disabled and unwired (`cross-db-isolation.test.mjs`).
+
+Findings that shape the real writer: (1) `INSERT … ON DUPLICATE KEY UPDATE` needs UPDATE on every inserted column in MariaDB, defeating a column-level `UPDATE (quantity)` grant — use `INSERT IGNORE` of a zero row plus a column-restricted `UPDATE`; (2) a conflicting payload is retried until DEAD today; a permanent-error class that parks it immediately is a candidate improvement; (3) each consumer process costs one connection on each account (capacity analysis), so production runs a single drain.

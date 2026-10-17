@@ -18,6 +18,13 @@ Tujuan: melanjutkan revamp Next.js setelah TOKO/POS dengan (1) console terpadu, 
 | 7 | [tasks.md](tasks.md) | Task atomik per fase dengan file, requirement, dan verifikasi |
 | 8 | [verification.md](verification.md) | Matriks traceability dan gate |
 | 9 | [implementation-journal.md](implementation-journal.md) | Jurnal checkpoint implementasi: task, file, keputusan, hasil verifikasi, status |
+| 10 | [decision-register.md](decision-register.md) | Keputusan owner dan blocker bukti/kapasitas (tidak ada default yang disetujui) |
+| 11 | [operational-readiness.md](operational-readiness.md) | Paket kesiapan operasional menuju staging acceptance (bukan produksi) |
+| 12 | [warehouse-persistence-architecture.md](warehouse-persistence-architecture.md) | Arsitektur persistensi Warehouse, kontrak integrasi, bukti rehearsal (§8) dan verifikasi lintas-database (§11) |
+| 13 | [connection-capacity-analysis.md](connection-capacity-analysis.md) | Kapasitas koneksi (12/12, perlu +2): opsi A/B/C, pengukuran lokal, rekomendasi |
+| 14 | [staging-rbac-uat-matrix.md](staging-rbac-uat-matrix.md) | Matriks RBAC 8 persona uji (dibangkitkan dari kode, dicek drift) |
+| 15 | [staging-uat-plan.md](staging-uat-plan.md) | Persiapan UAT staging terintegrasi: skenario, bukti sintetis, yang butuh staging |
+| 16 | [export-security-assessment.md](export-security-assessment.md) | Penilaian keamanan ekspor CSV, batas rate limiter per proses |
 | — | [`docs/migration/sql/legacy-schema-objects-readonly.sql`](../../../migration/sql/legacy-schema-objects-readonly.sql) | SQL **read-only** untuk operator: ambil definisi view/procedure yang tidak ada di dump |
 
 ## Temuan yang mengubah asumsi PRD/Baseline

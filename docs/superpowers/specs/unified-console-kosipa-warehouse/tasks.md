@@ -13,6 +13,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-002`, `SEC-005`
   - **Verification:** padanan aman diverifikasi pada ekspor/scanner Next.js (`TASK-061`, `TASK-064`).
 - [ ] `TASK-003`: Snapshot objek skema produksi (read-only)
+  - **Status (Checkpoint 11):** ALAT VALIDASI SELESAI + TERVERIFIKASI (`schema-evidence-bundle-json.sql`, `validate-schema-evidence.mjs`, `schema-contract.ts`); **bukti produksi BELUM ADA** — pada salinan staging lokal: G1/G6/G7/G8 eligible, G2/G3/G5 blocked (8 view hanya stub), G4 partial (prosedur tidak ada). Saldo resmi dan parity tetap BLOCKED.
   - **Files:** `docs/migration/sql/legacy-schema-objects-readonly.sql` (sudah disiapkan), hasil disimpan di `docs/migration/_baseline/schema-objects-<tanggal>.sql` (**gitignored**, tanpa data)
   - **Goal:** definisi 45 view, procedure/function/trigger/event, skema no-data Gudang, identifikasi konsumen `smart_kopkar_toko` dan `m_barang`.
   - **Requirements Addressed:** `REQ-003`, `MIG-001`
@@ -186,12 +187,14 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-050`, `REQ-053`
   - **Verification:** ekspor invoice streaming (tanpa file di disk). Parity total laporan.
 - [ ] `TASK-062`: Pemetaan barang
+  - **Status (Checkpoint 11):** validator pemetaan skema Gudang (`gudang-contract.ts`) + harness outbox lintas-database (store uji TOKO terpisah) terverifikasi; **adapter Gudang tetap BLOCKED** (tidak ada bukti skema, B2), tidak ada posting stok produksi, D7/B5 terbuka.
   - **Status (Checkpoint 10):** domain + application VERIFIED; read-only UI over SYNTHETIC data (10B); persistence REHEARSED locally with real constraints (10C, gaps in architecture §8); no Gudang connection, no writer, no posting — blocked on B2, D7–D10, W1/W3, B5
   - **Status:** PARTIAL — domain mapping rules + application use cases VERIFIED (unit + in-memory integration, Checkpoint 4); storage (`warehouse_item_map` in the console store), reader of Gudang items and the UI are NOT STARTED. See implementation-journal.md Checkpoint 4.
   - **Files:** auth DB `warehouse_item_map`, `app/console/warehouse/pemetaan/**`
   - **Requirements Addressed:** `REQ-051`
   - **Verification:** saran barcode exact lalu item code. Konfirmasi wajib. Audit.
 - [ ] `TASK-063`: Penerimaan toko dari Gudang
+  - **Status (Checkpoint 11):** validator pemetaan skema Gudang (`gudang-contract.ts`) + harness outbox lintas-database (store uji TOKO terpisah) terverifikasi; **adapter Gudang tetap BLOCKED** (tidak ada bukti skema, B2), tidak ada posting stok produksi, D7/B5 terbuka.
   - **Status (Checkpoint 10):** domain + application VERIFIED; read-only UI over SYNTHETIC data (10B); persistence REHEARSED locally with real constraints (10C, gaps in architecture §8); no Gudang connection, no writer, no posting — blocked on B2, D7–D10, W1/W3, B5
   - **Status:** PARTIAL — receiving domain (shipment lifecycle, receipts, discrepancies, reconciliation, quantity intents) + application use cases/ports VERIFIED (Checkpoint 4); the TOKO purchase/stock writer, Gudang reader, console store tables and UI are NOT STARTED; accounting treatment is an open owner decision. See implementation-journal.md Checkpoint 4.
   - **Files:** `packages/domain/src/warehouse/receipt.ts`, `packages/application/src/warehouse/receive-delivery.usecase.ts`, `apps/web/src/infrastructure/db/prisma-receiving-write.ts`, `app/console/toko/penerimaan/**`, `docs/migration/sql/receiving-writer-production.sql` (review-only)

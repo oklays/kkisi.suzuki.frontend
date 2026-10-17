@@ -16,6 +16,8 @@ Status at checkpoint 10 (17 Oct 2026): everything below marked VERIFIED is verif
 | CSV export | TASK-028 (subset) | `…/export` on loans, payroll, membership, savings-movements, data-quality | same | read | `kosipa.report.export` **and** the view grant | `KOSIPA_EXPORT_ENABLED`, `KOSIPA_EXPORT_USER_IDS` | VERIFIED |
 | Warehouse preview | TASK-062/063 (UI) | `/console/warehouse/**` | **synthetic, in memory** | read | `warehouse.preview.view` (= flag + `toko.inventory.warehouse`) | `WAREHOUSE_PREVIEW_ENABLED` | VERIFIED (synthetic only) |
 | Warehouse persistence | TASK-062/063 | none | `kkisi_warehouse_rehearsal` (local only) | rehearsal | none | none (not wired) | REHEARSED locally; gaps in the architecture §8 |
+| Cross-database stock hand-off harness | checkpoint 11 | none | Warehouse rehearsal store + `kkisi_toko_posting_test` (**test store, not TOKO**) | rehearsal | none | none (not wired; guarded by `cross-db-isolation.test.mjs`) | PROVEN against the test contract only (target-side idempotency invariant); **not** a TOKO posting, **not** exactly-once for the real system |
+| Schema evidence validation | TASK-003 tooling | `scripts/validate-schema-evidence.mjs` (offline) | operator JSON bundle | none | none | none | TOOLING VERIFIED; evidence itself still missing (gates G2/G3/G5 blocked, G4 partial on the local copy) |
 | TOKO (POS, sales, returns, products, inventory) | existing | unchanged | TOKO tables | read/write | existing slugs | existing flags | VERIFIED (regression suites with console flags on and off) |
 | Financial / stock **writers** (loans, savings, payroll processing, SHU, stock posting) | TASK-040…046 | none | — | — | — | — | **NOT BUILT; disabled by design** |
 
@@ -36,6 +38,8 @@ See `decision-register.md`: D1–D10 (owner), E1–E3 (export), B1–B6 (evidenc
 ## 4. Connection budget and capacity risk
 12 / 12 (reader 3, auth 2, POS 2, register 1, returns 1, inventory 1, products 1, console 1); 8 of `max_user_connections = 20` remain for legacy PHP. Every report, export and preview in this package reuses the existing reader or no database. A real Warehouse needs +2 (see architecture §10, decision B5); **nothing may be added silently** (the startup guard refuses a larger budget).
 
+**Checkpoint 11:** `connection-capacity-analysis.md` compares consolidation (A), reallocation by activation/cutover order (B) and a separate Warehouse service (C). Recommendation: **B first** (the guard already counts only enabled writers), C in reserve, **A not supported** (under synthetic UAT the auth pool peaked at 3 against a production ceiling of 2, the reader at 10 against 3). Open evidence: how the hosting counts the 20 and the legacy PHP peak (B8), and the owner's cutover order (B9). Exactly one drain/application process is assumed: a second process doubles every pool.
+
 ## 5. Module feature flags (all default OFF; independent rollback)
 `CONSOLE_ENABLED` (shell) → `KOSIPA_READ_ENABLED` (needs a usable console store) → `KOSIPA_EXPORT_ENABLED` + `KOSIPA_EXPORT_USER_IDS` (allow-list; any malformed id empties it) → `KOSIPA_STORE_COLUMN_MAP` (only with an owner-confirmed map) → `WAREHOUSE_PREVIEW_ENABLED` (synthetic data only). Activation order = that order; rollback = reverse order, no data change (links and audit rows are kept).
 
@@ -53,6 +57,8 @@ See `decision-register.md`: D1–D10 (owner), E1–E3 (export), B1–B6 (evidenc
 
 Every cell marked "no" is asserted server-side by a browser test (page and API), not only by hiding the menu.
 
+**Checkpoint 11:** the eight-persona matrix (Console Administrator, KOSIPA Administrator, KOSIPA Operational Staff, TOKO Cashier, TOKO Supervisor, Warehouse Operator, Warehouse Supervisor, Read-only Auditor) is generated from the code and checked for drift in `staging-rbac-uat-matrix.md`; Warehouse Operator/Supervisor have **no defined mapping** (W5). Finding F5: the payroll batch list is the one KOSIPA read without an audit record (A4).
+
 ## 7. Financial reconciliation checklist (for staging acceptance by the data owner)
 1. Pick 20 members per loan type and compare the recorded schedule sums on the loan page with the legacy loan card; differences < Rp 1 are the known imported-schedule rounding, anything else is logged.
 2. For three periods compare each report's recorded payroll totals with the legacy matrix output; confirm header/detail findings are the same rows the owner already knows.
@@ -69,10 +75,10 @@ Full receipt; partial receipt keeps the outstanding units; receipt with damaged 
 For each bounded context and branch a **technical** mechanism must make a second writer impossible (database grant, trigger, or routing), not a staff instruction. Until proven: no console financial or stock writer is enabled; legacy PHP remains the only writer for KOSIPA tables and for Gudang.
 
 ## 10. Production rollout prerequisites (all must hold)
-Business decisions D1–D10 relevant to the module; schema evidence (B1/B2) reviewed and redacted; console store provisioned by the operator with trigger creation confirmed (B6); budget decision (B5) and startup guard updated deliberately; module acceptance by authorised users on representative staging data; parity demonstrated where a parity requirement exists; export allow-list approved by the owner (E1) and audit-review owner named (E2); rollback rehearsed; separate, explicit deployment approval.
+Business decisions D1–D10 relevant to the module; schema evidence (B1/B2) reviewed and redacted; console store provisioned by the operator with trigger creation confirmed (B6); budget decision (B5) and startup guard updated deliberately; module acceptance by authorised users on representative staging data; parity demonstrated where a parity requirement exists; export allow-list approved by the owner (E1) and audit-review owner named (E2); rollback rehearsed; separate, explicit deployment approval. **Added by checkpoint 11:** the capacity evidence B8/B9 answered and recorded; one application process only, or a shared export limiter built first (X1); a real TOKO stock-posting design reviewed against the POS lock order (T1) before any Warehouse quantity enters TOKO stock; the payroll-list audit question answered (A4).
 
 ## 11. Rollback procedure
 Unset the module flag (reverse activation order); restart. KOSIPA/Warehouse/Export pages and APIs return 404, navigation entries disappear, TOKO is untouched. Console data is kept unless the owner decides otherwise. For a database rollback see `docs/migration/sql/console-store-production.sql` (Console store) and architecture §6 (Warehouse store, not provisioned).
 
 ## 12. Known limitations to state at acceptance
-Official balances absent (B1); reconciliation review-only (D5); synthetic Warehouse; CSV only (no XLSX); per-process export rate limit; export allow-list is a deployment setting; production index state unverified (B3; index DDL not executed); real role configurations untested; legacy security exposure unchanged.
+Official balances absent (B1); reconciliation review-only (D5); synthetic Warehouse; CSV only (no XLSX); per-process export rate limit (measured: 6 × instances, reset on restart; one process only); export allow-list is a deployment setting; production index state unverified (B3; index DDL not executed); real role configurations untested; legacy security exposure unchanged.

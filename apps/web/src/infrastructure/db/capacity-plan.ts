@@ -21,8 +21,8 @@ export const POOLS: readonly Pool[] = [
   { id: 'products', account: '(product writer)', limit: 1, flag: 'PRODUCTS_WRITES_ENABLED', server: 'legacy', existing: true },
   { id: 'returns', account: 'n1608204_nxret', limit: 1, flag: 'SALES_RETURN_WRITES_ENABLED', server: 'legacy', existing: true },
   // PROPOSED, not provisioned anywhere: the Warehouse store (documents, mappings, outbox) and the TOKO stock-apply writer (idempotency record + stock).
-  { id: 'warehouseStore', account: '(proposed) Warehouse store account', limit: 1, flag: 'WAREHOUSE_PERSISTENCE_ENABLED', server: 'legacy', existing: false },
-  { id: 'stockApply', account: '(proposed) TOKO stock-apply writer', limit: 1, flag: 'WAREHOUSE_STOCK_APPLY_ENABLED', server: 'legacy', existing: false },
+  { id: 'warehouseStore', account: '(proposed) Warehouse store account', limit: 1, flag: '(proposed; no such flag exists)', server: 'legacy', existing: false },
+  { id: 'stockApply', account: '(proposed) TOKO stock-apply writer', limit: 1, flag: '(proposed; no such flag exists)', server: 'legacy', existing: false },
 ];
 
 export type Evaluation = { used: number; budget: number; withinBudget: boolean; headroom: number; legacyPhpLeft: number; pools: { id: PoolId; limit: number }[] };

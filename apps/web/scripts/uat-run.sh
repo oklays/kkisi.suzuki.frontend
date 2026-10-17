@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Integrated read-only UAT (checkpoint 9) on the SYNTHETIC schema kkisi_e2e_legacy and the local console store. It starts the BUILT app on
+# Integrated UAT (checkpoints 9-11) on the SYNTHETIC schema kkisi_e2e_legacy and the local console store. It starts the BUILT app on
 # 127.0.0.1:3100 four times (flags on / reader outage / console store down / flags off), runs the browser suites, and always stops the app.
 # It never points the app at kkisi_staging, never uses production, and executes no financial transaction. Requires: pnpm build, scripts/e2e-setup.sh done,
 # the local kkisi-staging container running, Playwright (PLAYWRIGHT_MODULE).
@@ -59,4 +59,12 @@ WAREHOUSE_EXPECT=on run node --env-file=.env.e2e --experimental-strip-types test
 fresh
 WAREHOUSE_PREVIEW= start_app true true "$CONSOLE_URL"
 WAREHOUSE_EXPECT=off run node --env-file=.env.e2e --experimental-strip-types tests/console-warehouse-browser.mjs
+echo "##### 7. Warehouse persistence rehearsal + cross-database outbox harness (no application process; two independent local stores)"
+stop_app
+if [ -f .env.warehouse-rehearsal ] && [ -f .env.toko-posting-test ]; then
+  WAREHOUSE_REHEARSAL_DB_TEST=1 run node --experimental-strip-types --env-file=.env.warehouse-rehearsal --test tests/warehouse-store-db.test.mjs tests/warehouse-rehearsal-isolation.test.mjs
+  CROSS_DB_OUTBOX_TEST=1 run node --experimental-strip-types --env-file=.env.warehouse-rehearsal --env-file=.env.toko-posting-test --test tests/cross-db-outbox.test.mjs
+else
+  echo "SKIPPED: provision with scripts/setup-warehouse-rehearsal.sh --apply and scripts/setup-toko-posting-test.sh --apply (local staging container only)"
+fi
 echo "UAT complete."

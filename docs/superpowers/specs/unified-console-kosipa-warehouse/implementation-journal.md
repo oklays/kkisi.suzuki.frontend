@@ -555,3 +555,71 @@ Rate limiting is per process (best effort, not a security boundary); the env pol
 ### Next eligible tasks
 Executable as soon as **D5 + TASK-003** arrive: official savings and loan balances with parity, payroll generator parity, store comparison promoted from review-only, loan simulation parity (TASK-026/043 read side then write side). Executable as soon as **B2 + D7–D10 + W1/W3 + B5** arrive: Gudang reader and catalog, real item mapping data, TOKO stock writer, receiving and dispatch for real, then the Warehouse store provisioning SQL (operator-run) and a non-local rehearsal. Independent and available now: report parity harness design, XLSX export decision (E-series), index staging validation (separate task, DDL not executed), console action policy store design for E1.
 
+
+---
+
+## Checkpoint 11 — Integration verification, schema evidence and staging readiness
+
+**Status.** VERIFIED LOCALLY on the local staging container with synthetic data only. Checkpoint 10 accepted by the owner as *implemented and locally verified only*; E1 retained (explicit export allow-list, no persistent policy store); D5 and D7 remain open. No legacy PHP, production database, production infrastructure or operational financial record was touched; nothing pushed, merged or deployed. **Simulated integration is not marked operationally accepted anywhere.**
+
+### Delivered
+
+| Area | What | Where |
+|---|---|---|
+| Schema evidence (TASK-003 tooling) | Pure validator with contract per KOSIPA table/column/type family, view/routine stub detection (a view `SELECT NULL AS …` or empty definition is **not** a definition), fingerprints (non-cryptographic), referenced tables, gates G1–G8 each naming the tasks it unlocks or keeps blocked; report contains identifiers/statuses/fingerprints only, never a body; bundle parser; sensitive-text scan (counts only). Operator SQL → one JSON bundle; offline CLI `validate-schema-evidence.mjs` (exit 0/2/1) | `packages/domain/src/kosipa/schema-contract.ts`, `docs/migration/sql/schema-evidence-bundle-json.sql`, `apps/web/scripts/validate-schema-evidence.mjs`, handoff §9 |
+| Gudang readiness | Role→column mapping validator (item identity, barcode, stock, dispatch document and line, store relation, units, status, uniqueness, composite line key, fractional-quantity warning); **no table is assumed**; without a mapping every adapter is blocked | `packages/domain/src/warehouse/gudang-contract.ts`, `docs/migration/gudang-mapping.template.json` |
+| Cross-database outbox harness | Second isolated local store `kkisi_toko_posting_test` (own account, no DELETE, immutable postings), a TCP fault proxy, a SIGKILL-able worker, a pure cross-store reconciliation (`reconcileOutboxAgainstPostings`), 11 opt-in tests, 5 always-on isolation guards, UAT phase 7 | `apps/web/db/toko-posting-test/**`, `scripts/setup-toko-posting-test.sh`, `tests/cross-db-outbox.test.mjs`, `tests/support/**`, `packages/application/src/warehouse/stock-reconciliation.ts`, `tests/cross-db-isolation.test.mjs`; architecture §11 |
+| Capacity | Options A/B/C with all requested attributes, recommendation, measured local peaks, pure plan evaluator checked against `env.production.example` | `connection-capacity-analysis.md`, `src/infrastructure/db/capacity-plan.ts`, `scripts/sample-db-connections.sh` |
+| RBAC/UAT | Eight testing personas through the real resolver, navigation registry and HTTP handlers; matrix generated from code and drift-checked | `staging-rbac-uat-matrix.md`, `tests/console-persona-matrix.test.mjs`, `tests/support/personas.mjs` |
+| Export | Control-by-control assessment; measured limiter scope; two-instance probe | `export-security-assessment.md`, `scripts/uat-export-instances.sh`, EXP-2b/2c |
+| Governance | Staging UAT plan, decision register (B1/B2 updated; B8, B9, X1, A4, W5, T1 added), readiness package, tasks | `staging-uat-plan.md`, `decision-register.md`, `operational-readiness.md`, `tasks.md` |
+
+### Findings (all real, none cosmetic)
+
+1. **Local copy evidence.** Running the new tooling on the 30 Sep staging copy: nine contract tables compatible (money stored as `double` in several columns is reported as a warning); **all eight legacy report views are stubs and `x_proc_create_matrix` is absent** → G2/G3/G5 BLOCKED, G4 PARTIAL. Official balances and payroll parity stay blocked; this is the honest current state, not a failure.
+2. **MariaDB `INSERT … ON DUPLICATE KEY UPDATE` demands UPDATE on every inserted column**, so it cannot work with a column-level `UPDATE (quantity)` grant. The target applier uses `INSERT IGNORE` of a zero row plus a column-restricted `UPDATE`. This shapes the real TOKO writer's grants (T1).
+3. **A conflicting payload is retried until DEAD** (5 attempts) because the applier contract has no permanent-error class. Safe (never posted), but wasteful; candidate improvement.
+4. **Export rate limiter:** one instance per process, shared by all five export routes (measured on the built app); a second process gives the same user a fresh window (`[200×6, 429]`) → effective limit 6 × instances; a restart resets it. Shared limiter required before scale-out (X1).
+5. **Capacity:** under synthetic UAT the auth pool peaked at 3 (production ceiling 2) and the reader at 10 (ceiling 3): option A has no support. A second application instance also exhausts the local console account (cap 2): every instance holds its own pools.
+6. **F5:** the payroll batch **list** is the only KOSIPA read without an audit record (loans list is audited). Pinned in the persona test; owner question A4; no code changed.
+7. The persona suite originally let `iam.link.manage` survive removal of the branch-chooser condition (no persona combined `users_edit` with a branch-bound role); a dedicated test now fails on that mutation.
+
+### Mutation checks (broken on purpose, then restored)
+
+| Subject | Mutation | Result |
+|---|---|---|
+| Target applier | stock update outside the transaction | 2 tests fail |
+| Target applier | no content comparison on duplicate | 1 test fails |
+| Target applier | stock applied on a duplicate key | 5 tests fail |
+| Capability resolver | export without allow-list | 5 tests fail |
+| Capability resolver | `iam.link.manage` without branch chooser | survived once → test added → 1 test fails |
+
+### Verification (actual, 17 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **131/131**, application **136/136**, web **309 pass / 0 fail** (+68 opt-in skipped) |
+| Opt-in cross-database harness `cross-db-outbox.test.mjs` | **11/11** (repeated runs green; chaos run injected ≥ 8 faults) |
+| Opt-in Warehouse rehearsal (`warehouse-store-db`, `warehouse-rehearsal-isolation`) alongside the harness rows | 9/9 |
+| Integrated UAT `scripts/uat-run.sh`, **7 phases** (flags on / reader outage / console store down / flags off / export on+off / Warehouse preview on+off / rehearsal + cross-database harness) | PASS; TOKO regression (584 and 397 requests) in both flag states. The first full run after a fresh build failed once at the first UI step (`Tautan dibuat.` not shown within 30 s); phase 1 alone and a complete re-run both passed; the cause was not identified (single transient UI timeout) |
+| `scripts/uat-export-instances.sh` | PASS |
+| Local measurement (`sample-db-connections.sh` around the earlier full UAT) | see `connection-capacity-analysis.md` §6 |
+
+### Not proven (do not claim)
+
+* Exactly-once delivery in general. Proven only: with a unique idempotency record committed in the same transaction as the stock change, repeated, concurrent, interrupted and conflicting deliveries leave stock equal to the sum of distinct postings **on a test store**. Real TOKO tables, their locking and the POS lock order are untouched (T1).
+* Anything about production networks, hosting limits or cPanel trigger creation (B6).
+* Official savings/loan balances, loan simulation, payroll generator parity, store comparison beyond review-only (TASK-003 evidence).
+* Warehouse operation, stock posting, accounting (D7, B2, B5, T1, W5).
+
+### Production-readiness blockers (unchanged or sharpened)
+
+Evidence B1/B2/B3; capacity B5/B8/B9; D1–D10 incl. D5/D7; technical single-writer enforcement B4; console store provisioning B6; shared export limiter before scale-out (X1); payroll-list audit question (A4); real TOKO posting design (T1); Warehouse role mapping (W5); staging walk-through by authorised users.
+
+### Next executable tasks
+
+* As soon as an operator returns the schema bundle: run `validate-schema-evidence.mjs`, then open exactly the tasks the report names (savings/loan official balance and parity, payroll generator parity, store comparison promotion).
+* As soon as the Gudang bundle and a filled mapping arrive: Gudang item catalog / stock / dispatch readers behind the existing ports (synthetic preview first).
+* Engineering-only, no decision needed: permanent-error class for the outbox applier (finding 3); extend the persona fixtures when W5 is answered; build the shared export limiter together with any scale-out decision.
+* Owner: B8/B9 (capacity evidence and cutover order), A4, D5, D7.
