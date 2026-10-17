@@ -13,7 +13,7 @@ const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm,
 const SRC = walk(join(ROOT, 'src')).filter((p) => /\.(ts|tsx)$/.test(p));
 
 test('no application source mentions the TOKO posting test store, its DSN, its applier or the test support code', () => {
-  const offenders = SRC.filter((f) => /TOKO_POSTING_TEST_URL|kkisi_toko_posting_test|kkisi_toko_post_test|toko_test_stock|TokoTestApplier|tests\/support|cross-db-worker|fault-proxy/.test(strip(readFileSync(f, 'utf8')))).map((f) => relative(ROOT, f));
+  const offenders = SRC.filter((f) => /TOKO_POSTING_TEST_URL|kkisi_toko_posting_test|kkisi_toko_post_test|toko_test_stock|TokoTestApplier|tests\/support|cross-db-worker|fault-proxy|TOKO_WRITER_CONTRACT_URL|kkisi_toko_writer_contract|kkisi_toko_writer_ct|nx_stock_posting|TokoStockWriterContract/.test(strip(readFileSync(f, 'utf8')))).map((f) => relative(ROOT, f));
   assert.deepEqual(offenders, []);
 });
 
