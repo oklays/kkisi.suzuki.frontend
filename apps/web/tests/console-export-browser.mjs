@@ -39,7 +39,7 @@ const choose = async (select, text) => select.selectOption(await select.locator(
 const text = async (page) => { await page.waitForFunction(() => { const m = document.querySelector('main'); return m && m.innerText.trim() !== 'Memuat…' && m.innerText.trim() !== ''; }); await page.waitForLoadState('networkidle'); return page.locator('main').innerText(); };
 
 const lines = (body) => body.trimEnd().split('\r\n');
-try {
+try { checks: {
   await seed.$executeRawUnsafe("SET SESSION sql_mode=''");
   await seed.$executeRawUnsafe(`INSERT INTO ref_menu_akses (id, id_menu, id_group, status, tambah, edit, hapus, posting, approved) VALUES (9007,9001,9002,1,0,0,0,0,0)`);
   await seed.$executeRawUnsafe(`INSERT INTO ref_users (id_ref_user, username, nama_lengkap, status, password, email, otp, token) VALUES (9003,'synth_ksp_member','SYNTH KOSIPA ANGGOTA SAJA',1,'x','',0,'')`);
@@ -99,8 +99,9 @@ try {
         const second = []; for (let i = 0; i < 7; i++) second.push((await ctx2.request.get(`${b2}/api/kosipa/reports/loans/export?tahun=2025`)).status());
         console.log(`EXP-2c. per-process limiter: second instance, same user, same window -> ${JSON.stringify(second)}`);
         assert.deepEqual(second, [200, 200, 200, 200, 200, 200, 429], 'each process counts separately: the effective limit is 6 x instances'); await ctx2.close();
-        await context.close(); await browser.close(); await seed.$disconnect(); await consoleDb.$disconnect();
-        console.log('export limiter two-instance probe passed (probe-only: the remaining checks run in the single-instance phase)'); process.exit(0);
+        await context.close();
+        console.log('export limiter two-instance probe passed (probe-only: the remaining checks run in the single-instance phase)');
+        break checks;   // NOT process.exit(): the finally block below must still revoke the links this run created (checkpoint 12 isolation fix)
       }
       await context.close(); }
 
@@ -124,7 +125,7 @@ try {
   }
   assert.deepEqual(errors, [], `browser errors: ${errors.join(' | ')}`);
   console.log(`export checks (${expectExport ? 'on' : 'off'}) passed`);
-} finally {
+} } finally {
   await seed.$executeRawUnsafe('DELETE FROM ref_menu_akses WHERE id IN (9005,9006,9007)'); await seed.$executeRawUnsafe('DELETE FROM ref_menu WHERE id IN (9005,9006)');
   await seed.$executeRawUnsafe('DELETE FROM ref_group_akses WHERE id = 9003'); await seed.$executeRawUnsafe('DELETE FROM ref_group WHERE id = 9002'); await seed.$executeRawUnsafe('DELETE FROM ref_users WHERE id_ref_user = 9003');
   for (const [role, slug] of [[1, 'users_edit'], [1, 'sales_view'], [2, 'sales_view'], [4, 'sales_view']]) await seed.$executeRawUnsafe('DELETE FROM db_permissions WHERE role_id = ? AND permissions = ?', role, slug);

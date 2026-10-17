@@ -47,3 +47,15 @@ export const RANGES = {
   trans_potongan_matrix: ['id', SYNTH.small[0], SYNTH.small[1]],
   trans_pinjaman_dtl: ['id', SYNTH.small[0], SYNTH.small[1]],
 };
+
+/**
+ * Console store: revoke every ACTIVE identity link of the synthetic console users (checkpoint 12). Without this, a test process that ended before its own
+ * cleanup (crash, kill, early exit) left a link active and the NEXT run's first link creation was refused as CONSOLE_USER_ALREADY_LINKED — the root cause of
+ * the checkpoint-11 "Tautan dibuat." timeout. Local staging console store only; links are revoke-only (never deleted), so history is kept.
+ */
+export async function revokeSyntheticConsoleLinks(db, expectedDb = 'kkisi_console_staging') {
+  const who = await db.$queryRawUnsafe('SELECT DATABASE() AS d');
+  if (who[0].d !== expectedDb) throw new Error('refusing: not the local staging console store');
+  const [lo, hi] = SYNTH.users;
+  return num(await db.$executeRawUnsafe("UPDATE console_identity_link SET status = 'revoked', revoked_by = ?, revoked_at = UTC_TIMESTAMP(), revoke_reason = 'e2e cleanup' WHERE status = 'active' AND console_user_id BETWEEN ? AND ?", lo, lo, hi));
+}

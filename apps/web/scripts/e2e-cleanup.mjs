@@ -2,7 +2,7 @@
 // transactions that are rolled back on any surprise. It never drops anything (E3b is not approved) and never writes kkisi_staging.
 //   node --env-file=.env.local --env-file=.env.e2e scripts/e2e-cleanup.mjs
 import { PrismaClient, Prisma } from '@prisma/client';
-import { assertE2eTarget, num, RANGES, SYNTH, THROTTLE_USERNAMES } from './e2e-guards.mjs';
+import { assertE2eTarget, num, RANGES, SYNTH, THROTTLE_USERNAMES, revokeSyntheticConsoleLinks } from './e2e-guards.mjs';
 import { buildKeys } from '../src/infrastructure/auth/keys.ts';
 import { loadAuthConfig } from '../src/infrastructure/auth/config.ts';
 
@@ -10,7 +10,9 @@ for (const k of ['E2E_SEED_URL', 'DATABASE_URL', 'DATABASE_URL_AUTH', 'AUTH_SECR
 class Abort extends Error {}
 const seed = new PrismaClient({ datasourceUrl: process.env.E2E_SEED_URL });
 const auth = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL_AUTH });
-const real = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });   // kkisi_read on the REAL legacy: only used for the id-collision check
+const real = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
+// Console store (identity links): reset too, so every phase starts without a link left by a process that never reached its own cleanup.
+const consoleStore = process.env.DATABASE_URL_CONSOLE && ['127.0.0.1', 'localhost'].includes(new URL(process.env.DATABASE_URL_CONSOLE).hostname) ? new PrismaClient({ datasourceUrl: process.env.DATABASE_URL_CONSOLE }) : null;   // kkisi_read on the REAL legacy: only used for the id-collision check
 const [uLo, uHi] = SYNTH.users;
 try {
   // ---- 0. checks that must pass BEFORE anything is deleted anywhere
@@ -43,8 +45,10 @@ try {
     if ((await outsideS()) !== oS || (await outsideT()) !== oT) throw new Abort('rows outside the synthetic set changed: rolled back');
     report.auth.foreignRowsLeft = { sessions: oS, throttle: oT };
   });
+  // ---- 3. console store: active identity links of the synthetic console users are revoked (revoke-only; history kept)
+  report.console = consoleStore ? { linksRevoked: await revokeSyntheticConsoleLinks(consoleStore) } : 'skipped (no local console store configured)';
   console.log('E3a done:', JSON.stringify(report));
 } catch (e) {
   console.error(e instanceof Abort ? `E3a ABORTED (nothing changed): ${e.message}` : `E3a FAILED (nothing changed): ${String(e.message).split('\n')[0].slice(0, 160)}`);
   process.exitCode = 1;
-} finally { await Promise.all([seed.$disconnect(), auth.$disconnect(), real.$disconnect()]); }
+} finally { await Promise.all([seed.$disconnect(), auth.$disconnect(), real.$disconnect(), consoleStore?.$disconnect()]); }

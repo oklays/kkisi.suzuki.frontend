@@ -104,6 +104,7 @@ try {
     console.log('UAT-6/8. payroll history and components; unverified branch mapping; informational (not error) comparison');
     { const { context, page } = await session(); await login(page, 'koperasi');
       await page.goto(`${base}/console/kosipa/anggota/9001`); await page.getByRole('heading', { name: 'Potongan payroll' }).waitFor(); let t = await text(page); assert.match(t, /POTSYN202608A[\s\S]*Rp 150\.000/);
+      await page.goto(`${base}/console/kosipa/payroll`); await page.getByRole('heading', { name: 'Payroll', exact: true }).waitFor(); assert.match(await text(page), /POTSYN202608A/);   // A4: the list is audited
       await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A`); await page.getByRole('heading', { name: 'Batch POTSYN202608A' }).waitFor(); assert.match(await text(page), /Belanja toko \(Kredit\)\s+Rp 200\.000/);
       await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A/anggota/S9001`); await page.getByRole('heading', { name: 'Potongan anggota' }).waitFor(); t = await text(page);
       assert.match(t, /TOKO TAMBUN\s+Belanja toko \(Kredit\)\s+Rp 100\.000/); assert.match(t, /PPOB\s+PPOB\s+Rp 50\.000/);

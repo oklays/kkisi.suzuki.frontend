@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useHydrated } from "@/components/use-hydrated";
 import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
 import { safeNextPath } from "@koperasi/domain/auth/redirect";
 
@@ -14,6 +15,7 @@ const MESSAGES: Record<number, string> = {
 export function LoginForm({ fallback = "/pos" }: { fallback?: "/pos" | "/console?entry=login" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const hydrated = useHydrated();   // no native (GET) submission of the credentials before React owns the form
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,7 +45,7 @@ export function LoginForm({ fallback = "/pos" }: { fallback?: "/pos" | "/console
         <span className="login-input-wrap"><LockKeyhole size={19} aria-hidden="true" /><input name="password" type="password" autoComplete="current-password" placeholder="Masukkan password Anda" required maxLength={128} /></span>
       </label>
       {error && <p className="login-error" role="alert">{error}</p>}
-      <button type="submit" disabled={busy}>{busy ? "Memeriksa…" : "Masuk"}<ArrowRight size={19} aria-hidden="true" /></button>
+      <button type="submit" disabled={busy || !hydrated}>{busy ? "Memeriksa…" : "Masuk"}<ArrowRight size={19} aria-hidden="true" /></button>
     </form>
   );
 }

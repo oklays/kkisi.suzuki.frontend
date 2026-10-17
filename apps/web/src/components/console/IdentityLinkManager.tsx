@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useHydrated } from '../use-hydrated';
 
 export type LinkRow = { id: number; consoleLabel: string; kosipaLabel: string; linkedAt: string; linkedByLabel: string };
 type Option = { id: number; label: string };
@@ -27,6 +28,9 @@ async function post(path: string, csrfToken: string, body: unknown): Promise<{ o
 export function IdentityLinkManager({ links, consoleUsers, kosipaUsers, csrfToken }: { links: LinkRow[]; consoleUsers: Option[]; kosipaUsers: Option[]; csrfToken: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // Before hydration a click would submit the form natively (GET reload, nothing saved), and React resets an uncontrolled <select> to its
+  // defaultValue when it hydrates, silently discarding an earlier choice: inputs and buttons stay disabled until React owns the form.
+  const hydrated = useHydrated();
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
   const [revoking, setRevoking] = useState<number | null>(null);
   const [reason, setReason] = useState('');
@@ -51,9 +55,9 @@ export function IdentityLinkManager({ links, consoleUsers, kosipaUsers, csrfToke
       <section className="console-card" aria-labelledby="link-new">
         <h2 id="link-new">Buat tautan</h2>
         <form className="console-form" onSubmit={(e) => { e.preventDefault(); void create(new FormData(e.currentTarget)); }}>
-          <label>Akun console<select name="consoleUserId" required defaultValue=""><option value="" disabled>Pilih akun console…</option>{consoleUsers.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</select></label>
-          <label>Akun KOSIPA<select name="kosipaUserId" required defaultValue=""><option value="" disabled>Pilih akun KOSIPA…</option>{kosipaUsers.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</select></label>
-          <button type="submit" disabled={busy}>Tautkan</button>
+          <label>Akun console<select name="consoleUserId" required defaultValue="" disabled={!hydrated}><option value="" disabled>Pilih akun console…</option>{consoleUsers.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</select></label>
+          <label>Akun KOSIPA<select name="kosipaUserId" required defaultValue="" disabled={!hydrated}><option value="" disabled>Pilih akun KOSIPA…</option>{kosipaUsers.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</select></label>
+          <button type="submit" disabled={busy || !hydrated}>Tautkan</button>
         </form>
         <p className="console-notice">Tautan memberi akun console hak baca KOSIPA sesuai grup akun KOSIPA. Tidak ada pencocokan otomatis berdasarkan nama, e-mail, atau NIK.</p>
       </section>
@@ -73,7 +77,7 @@ export function IdentityLinkManager({ links, consoleUsers, kosipaUsers, csrfToke
                     <button type="submit" disabled={busy}>Cabut</button>
                     <button type="button" className="console-button-quiet" onClick={() => { setRevoking(null); setReason(''); }}>Batal</button>
                   </form>
-                ) : <button type="button" className="console-button-quiet" onClick={() => { setRevoking(l.id); setReason(''); }}>Cabut tautan…</button>}</td>
+                ) : <button type="button" className="console-button-quiet" disabled={!hydrated} onClick={() => { setRevoking(l.id); setReason(''); }}>Cabut tautan…</button>}</td>
               </tr>
             ))}</tbody>
           </table>
