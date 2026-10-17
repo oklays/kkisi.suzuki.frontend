@@ -7,6 +7,7 @@ import type { CapabilitySet } from '@koperasi/domain/console/capabilities';
 import { validateSession, type AuthContext } from '@koperasi/application/auth/validate-session';
 import { resolveConsoleAccess, type KosipaAccessState } from '@koperasi/application/console/capabilities';
 import { kosipaServices } from '../console/services.ts';
+import { warehousePreviewEnabled } from '../warehouse/preview-flag.ts';
 import { getContainer } from './container.ts';
 import type { AuthServices } from './http.ts';
 
@@ -51,7 +52,7 @@ const loadConsoleSession = cache(async (): Promise<ConsoleAuth | 'login'> => {
     const jar = await cookies();
     const ctx = await validateSession(container.services.deps, jar.get(container.services.config.cookieName)?.value ?? null);
     const kosipa = kosipaServices();
-    const access = await resolveConsoleAccess({ permissions: container.capabilities, kosipa }, { userId: ctx.userId, roleId: ctx.roleId, canSwitchBranch: ctx.canSwitchBranch });
+    const access = await resolveConsoleAccess({ permissions: container.capabilities, kosipa, features: { warehousePreview: warehousePreviewEnabled() } }, { userId: ctx.userId, roleId: ctx.roleId, canSwitchBranch: ctx.canSwitchBranch });
     return { kind: 'ok', ctx, services: container.services, capabilities: access.capabilities, kosipa: access.kosipa };
   } catch (error) {
     if (error instanceof AuthError && error.code === 'UNAUTHENTICATED') return 'login';

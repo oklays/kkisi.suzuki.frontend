@@ -29,11 +29,13 @@ export type ConsoleAccess = { capabilities: CapabilitySet; kosipa: KosipaAccessS
  * part (state 'unavailable'); TOKO access stays available because it does not depend on the console database.
  */
 export async function resolveConsoleAccess(
-  sources: { permissions: PermissionSetSource; kosipa: (Pick<IdentityPorts, 'links' | 'kosipa'> & { exportPolicy?: ExportPolicy }) | null },
+  sources: { permissions: PermissionSetSource; kosipa: (Pick<IdentityPorts, 'links' | 'kosipa'> & { exportPolicy?: ExportPolicy }) | null; features?: { warehousePreview?: boolean } },
   subject: CapabilitySubject & { userId: number },
 ): Promise<ConsoleAccess> {
   const granted = await sources.permissions.grantedAmong(subject.roleId, [...TOKO_PERMISSION_SLUGS, ...IAM_PERMISSION_SLUGS]);
   const capabilities = new Set<Capability>([...tokoCapabilities(granted, subject.canSwitchBranch), ...iamCapabilities(granted, subject.canSwitchBranch)]);
+  // The SYNTHETIC Warehouse preview: deployment flag AND the existing global-warehouse capability; independent of KOSIPA and the console store.
+  if (sources.features?.warehousePreview && capabilities.has('toko.inventory.warehouse')) capabilities.add('warehouse.preview.view');
   if (!sources.kosipa) return { capabilities, kosipa: 'disabled' };
   try {
     const kosipa = await resolveKosipaCapabilities(sources.kosipa, subject.userId);

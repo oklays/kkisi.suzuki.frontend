@@ -41,6 +41,7 @@ export interface ItemCatalog {
 
 export const WAREHOUSE_PERMISSIONS = {
   MAPPING_MANAGE: 'warehouse.mapping.manage',
+  MAPPING_VIEW: 'warehouse.mapping.view',
   DISPATCH_CREATE: 'warehouse.dispatch.create',
   DISPATCH_APPROVE: 'warehouse.dispatch.approve',
   DISPATCH_RELEASE: 'warehouse.dispatch.release',

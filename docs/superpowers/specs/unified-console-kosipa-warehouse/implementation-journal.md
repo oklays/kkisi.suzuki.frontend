@@ -519,3 +519,16 @@ Each diagnostic carries a kind: **CONFIRMED** (recorded data contradicts itself)
 ### Limits
 Rate limiting is per process (best effort, not a security boundary); the env policy needs a restart to change (acceptable for a risky action); no `console_action_policy`; no spreadsheet (XLSX) export (CSV only); per-member exports are intentionally not offered.
 
+---
+
+## Checkpoint 10B — Warehouse read-only presentation over SYNTHETIC data (TASK-062/063 UI foundation)
+
+**Status.** IMPLEMENTED + VERIFIED locally; **no Gudang connection exists** (schema B2 not obtained) and none was made; nothing here is real warehouse data or TOKO stock. Staging accepted: no. Production ready: no.
+
+- **What it is.** Read-only screens `/console/warehouse` (overview), `/pemetaan` (item mappings), `/distribusi` (+ `/{ref}?cabang=` detail with lines, receipts, resolutions, reconciliation, **stock intents shown as intents, not postings**, history) and `/penerimaan` (documents still awaiting units or holding unresolved rejections), in the unified console shell, with a `DATA SINTETIS` banner on every page and no action control of any kind.
+- **Data source.** `infrastructure/warehouse/synthetic-world.ts` builds a fictitious world **through the real application use cases** (propose/confirm/retire mappings with an approved ratio; register, submit, approve, dispatch; partial, damaged, short-closed, closed and untouched receipts) over `MemoryWarehouseStore`, an in-memory implementation of the real ports with real unique-key / compare-and-set contracts. Document ids all start with `synthetic:`. A real adapter drops in behind the same ports.
+- **Read use cases** (`packages/application/src/warehouse/read.ts`): `listMappingsView`, `listShipmentsView`, `warehouseOverview`, with new list ports `MappingReadRepository` / `ShipmentReadRepository`. Scope is enforced like `readShipment`: a Gudang user sees their warehouses, a branch user only documents addressed to their branch (cannot widen it by asking), the repository filter is not trusted for scope, refusals look the same, lists are bounded (50 + 1 truncation probe). New permission constant `warehouse.mapping.view`.
+- **Access.** New capability `warehouse.preview.view` = deployment flag `WAREHOUSE_PREVIEW_ENABLED=true` **and** the existing `toko.inventory.warehouse` capability (inventory_view + branch chooser); independent of KOSIPA and the console store. Flag off or capability missing → the pages are `404` and the sidebar entries do not exist. The real Warehouse permission/identity-link wiring is still open (register B2/B4) and is not simulated.
+- **Verification.** Application read/scope tests (5), capability tests (2), synthetic-source tests (2) in `pnpm test` (domain 116, application 129, web 282, 0 failures; lint baseline 4 warnings). Browser `console-warehouse-browser.mjs` (flag ON and OFF) passes inside `scripts/uat-run.sh` phase 6: sidebar, banner, counts, filters, malformed filter ignored, detail reconciliation (98 of 100 → 2 outstanding), damaged and short-closed cases, wrong-branch / unknown / malformed refs → not found, cashier and anonymous have no access, no overflow at 375–1440.
+- **Not done (blocked):** a Gudang reader, real item/unit data, receiving or dispatch actions, stock posting, per-user warehouse scopes from a real identity link.
+

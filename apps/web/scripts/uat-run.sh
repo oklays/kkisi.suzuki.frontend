@@ -13,7 +13,7 @@ export POS_URL="http://127.0.0.1:$PORT" POS_FIXTURE="$PWD/.e2e-fixture.json" E2E
 stop_app() { lsof -nP -tiTCP:$PORT -sTCP:LISTEN | xargs -r kill 2>/dev/null || true; sleep 1; }
 start_app() { # $1 = CONSOLE_ENABLED, $2 = KOSIPA_READ_ENABLED, $3 = console store URL
   stop_app
-  ( DATABASE_URL="$E2E_READ_URL" DATABASE_URL_CONSOLE="$3" CONSOLE_ENABLED="$1" KOSIPA_READ_ENABLED="$2" KOSIPA_EXPORT_ENABLED="${EXPORT_ENABLED:-}" KOSIPA_EXPORT_USER_IDS="${EXPORT_IDS:-}" APP_ORIGIN="http://127.0.0.1:$PORT" pnpm exec next start -H 127.0.0.1 -p $PORT > "$LOG" 2>&1 & )
+  ( DATABASE_URL="$E2E_READ_URL" DATABASE_URL_CONSOLE="$3" CONSOLE_ENABLED="$1" KOSIPA_READ_ENABLED="$2" KOSIPA_EXPORT_ENABLED="${EXPORT_ENABLED:-}" KOSIPA_EXPORT_USER_IDS="${EXPORT_IDS:-}" WAREHOUSE_PREVIEW_ENABLED="${WAREHOUSE_PREVIEW:-}" APP_ORIGIN="http://127.0.0.1:$PORT" pnpm exec next start -H 127.0.0.1 -p $PORT > "$LOG" 2>&1 & )
   for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$PORT/login" && return 0; sleep 0.5; done; echo "ERROR: app did not start" >&2; exit 1
 }
 trap 'stop_app; bash scripts/uat-outage.sh restore >/dev/null 2>&1 || true' EXIT
@@ -52,4 +52,11 @@ EXPORT_EXPECT=on run node --env-file=.env.e2e --experimental-strip-types tests/c
 fresh
 EXPORT_ENABLED= EXPORT_IDS= start_app true true "$CONSOLE_URL"
 EXPORT_EXPECT=off run node --env-file=.env.e2e --experimental-strip-types tests/console-export-browser.mjs
+echo "##### 6. SYNTHETIC Warehouse preview: flag ON, then OFF"
+fresh
+WAREHOUSE_PREVIEW=true start_app true true "$CONSOLE_URL"
+WAREHOUSE_EXPECT=on run node --env-file=.env.e2e --experimental-strip-types tests/console-warehouse-browser.mjs
+fresh
+WAREHOUSE_PREVIEW= start_app true true "$CONSOLE_URL"
+WAREHOUSE_EXPECT=off run node --env-file=.env.e2e --experimental-strip-types tests/console-warehouse-browser.mjs
 echo "UAT complete."

@@ -30,12 +30,16 @@ export type KosipaCapability = (typeof KOSIPA_CAPABILITIES)[number];
 export const EXPORT_CAPABILITIES = ['kosipa.report.export'] as const;
 export type ExportCapability = (typeof EXPORT_CAPABILITIES)[number];
 
+/** Read-only SYNTHETIC Warehouse preview (no Gudang connection exists). Granted only by the deployment flag on top of `toko.inventory.warehouse`. */
+export const WAREHOUSE_CAPABILITIES = ['warehouse.preview.view'] as const;
+export type WarehouseCapability = (typeof WAREHOUSE_CAPABILITIES)[number];
+
 /** Console administration. `iam.link.manage` = may create/revoke console<->KOSIPA identity links. */
 export const IAM_CAPABILITIES = ['iam.link.manage'] as const;
 export type IamCapability = (typeof IAM_CAPABILITIES)[number];
 
-export type Capability = TokoCapability | KosipaCapability | ExportCapability | IamCapability;
-export const ALL_CAPABILITIES: readonly Capability[] = [...TOKO_CAPABILITIES, ...KOSIPA_CAPABILITIES, ...EXPORT_CAPABILITIES, ...IAM_CAPABILITIES];
+export type Capability = TokoCapability | KosipaCapability | ExportCapability | WarehouseCapability | IamCapability;
+export const ALL_CAPABILITIES: readonly Capability[] = [...TOKO_CAPABILITIES, ...KOSIPA_CAPABILITIES, ...EXPORT_CAPABILITIES, ...WAREHOUSE_CAPABILITIES, ...IAM_CAPABILITIES];
 export type CapabilitySet = ReadonlySet<Capability>;
 
 /** Every db_permissions slug the TOKO mapping reads; resolved in one batched query. */
