@@ -130,3 +130,21 @@ export function classifyBatchTotals(headers: readonly BatchHeader[], aggregates:
   const orphan = aggregates.filter((a) => !known.has(a.docNo)).map((a) => ({ docNo: a.docNo, rows: a.rowCount }));
   return { findings: capped(findings.length, false, findings), rowsWithoutHeader: capped(orphan.length, false, orphan), checked: headers.length };
 }
+
+// ------------------------------------------------------------------------------------------------- diagnostic classification
+/**
+ * What kind of statement a diagnostic makes, so a reader never mistakes a hint for a proof:
+ *  CONFIRMED            the recorded data contradicts itself or a rule (e.g. REJECTED and LUNAS on one document)
+ *  POTENTIAL            consistent with an anomaly but also with a legitimate cause (e.g. an installment document number absent from the loan table)
+ *  EXPECTED_PRECISION   a sub-sen difference explained by decimal storage; not material
+ *  UNVERIFIED           a comparison whose basis is not confirmed (inferred branch map)
+ * Independent of the kind, a SCAN has a status: OK, FAILED (could not be read), TRUNCATED (source larger than the safe bound). A failed or
+ * truncated scan has NO count and is never shown as zero problems.
+ */
+export type DiagnosticKind = 'CONFIRMED' | 'POTENTIAL' | 'EXPECTED_PRECISION' | 'UNVERIFIED';
+export type ScanStatus = 'OK' | 'FAILED' | 'TRUNCATED' | 'RESTRICTED';
+export const DIAGNOSTIC_KIND: Readonly<Record<string, DiagnosticKind>> = {
+  duplicateRefs: 'CONFIRMED', statusConflicts: 'CONFIRMED', loanDates: 'CONFIRMED', installmentDates: 'CONFIRMED', orphanInstallments: 'POTENTIAL', approvedWithoutSchedule: 'POTENTIAL',
+  batchTotals: 'CONFIRMED', rowTotalsMaterial: 'CONFIRMED', rowTotalsSubSen: 'EXPECTED_PRECISION', rowTotalsNoComponents: 'POTENTIAL', duplicateBatchNik: 'CONFIRMED', branchMapping: 'UNVERIFIED',
+};
+export const scanStatusOf = (part: { state: 'ok' } | { state: 'unavailable'; reason: string }): ScanStatus => (part.state === 'ok' ? 'OK' : part.reason === 'SOURCE_TRUNCATED' ? 'TRUNCATED' : 'FAILED');

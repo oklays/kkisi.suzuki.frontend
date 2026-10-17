@@ -29,7 +29,12 @@ export {
   type LedgerQuery, type MovementState, type MovementRaw, type SavingsHeaderRef, type MovementFlag, type MovementView, type TypeSummaryRaw, type TypeSummary,
 } from './savings-read.ts';
 export {
-  REPORT_SAMPLE_LIMIT, REPORT_GROUP_CAP, parseReportYear, buildLoanReport, buildPayrollReport, classifyOrphans, classifyBatchTotals, capped,
+  REPORT_SAMPLE_LIMIT, REPORT_GROUP_CAP, parseReportYear, buildLoanReport, buildPayrollReport, classifyOrphans, classifyBatchTotals, capped, DIAGNOSTIC_KIND, scanStatusOf, type DiagnosticKind, type ScanStatus,
   type LoanBucketRaw, type LoanReport, type LoanMonth, type LoanStatusLine, type UnusableDateKind, type PayrollAggregateRaw, type PayrollPeriodBatch, type PayrollPeriod as PayrollReportPeriod, type PayrollReport,
   type Capped, type InstallmentDocRaw, type LoanDocRaw, type OrphanScan, type BatchTotalFinding,
 } from './report-read.ts';
+export { csvCell, csvLine, csvDocument, neutralizeFormula, amount4ToDecimal, type CsvCell } from './csv.ts';
+export {
+  KNOWN_MEMBER_STATUS, KNOWN_EMPLOYMENT, KNOWN_MEMBER_GROUP, buildMembershipReport, buildSavingsMovementReport,
+  type MembershipRaw, type MembershipGroupRaw, type MembershipLine, type MembershipReport, type SavingsDocAggregateRaw, type SavingsHeaderRaw, type SavingsMonthLine, type SavingsMovementReport,
+} from './report-ops.ts';

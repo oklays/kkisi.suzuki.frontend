@@ -27,6 +27,7 @@ export default async function PayrollReportPage({ searchParams }: { searchParams
   try { r = await readPayrollReport({ reader: services.reports, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, params); }
   catch (error) { if (error instanceof KosipaError && error.code === 'PERIOD_INVALID') invalid = true; else failed = true; }
   const canCompare = auth.capabilities.has('kosipa.store-credit.view');
+  const canExport = auth.capabilities.has('kosipa.report.export');
 
   return (
     <div className="console-page">
@@ -35,6 +36,8 @@ export default async function PayrollReportPage({ searchParams }: { searchParams
       {invalid && <section className="console-panel" role="alert"><h2>Tahun tidak valid</h2><p>Tahun harus empat digit antara 2000 dan 2100. Tidak ada data yang dibaca.</p></section>}
       {failed && <section className="console-panel" role="alert"><h2>Laporan tidak dapat dibaca</h2><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></section>}
       {r && (<>
+        {canExport && <p><a className="console-more" href={`/api/kosipa/reports/payroll/export${qs({ tahun: r.year === null ? '' : String(r.year) })}`} download>Unduh CSV laporan ini</a></p>}
+        {canExport && <p className="console-notice">Ekspor berisi ringkasan agregat tanpa nama, NIK atau gaji anggota, dan setiap unduhan dicatat dalam audit.</p>}
         {r.years.length > 0 && <nav aria-label="Pilih tahun"><ul className="console-year-list">{r.years.map((y) => <li key={y}>{y === r.year ? <strong aria-current="page">{y}</strong> : <Link href={`/console/kosipa/laporan/payroll${qs({ tahun: String(y) })}`}>{y}</Link>}</li>)}</ul></nav>}
         {r.periods.length === 0 ? <section className="console-panel" role="status"><h2>Tidak ada batch</h2><p>Tidak ada batch payroll tercatat{r.year ? ` pada tahun ${r.year}` : ''}.</p></section> : r.periods.map((p) => (
           <section className="console-card" key={p.period} aria-labelledby={`sec-${p.period}`}>

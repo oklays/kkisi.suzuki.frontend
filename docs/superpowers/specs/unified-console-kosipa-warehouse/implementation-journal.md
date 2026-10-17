@@ -484,3 +484,38 @@ Audit-write failure *inside* a request is covered by unit tests for every use ca
 
 Eligible without external input: the other legacy reports of TASK-028 that read only verified tables (members, per-type savings movement lists) and streaming export (needs the export-security review), Warehouse read-only screens over the domain, a local synthetic rehearsal of the Warehouse store DDL once Option A is approved, an index staging validation (separate task, DDL not executed). Blocked: everything that needs B1–B6 or D1–D10 (see `decision-register.md`): official balances, parity, all financial and stock writers, loan lifecycle, payroll processing, SHU posting, Gudang connectivity, production activation.
 
+---
+
+## Checkpoint 10A — Secure CSV export and operational reports (TASK-028 subset, REQ-026)
+
+**Status.** IMPLEMENTED + VERIFIED on synthetic fixtures; STAGING ACCEPTED: no; PRODUCTION READY: no. No writer, no DDL, no pool, no production access.
+
+### Export (CSV) — loan report, payroll report, data-quality diagnostics, membership summary, savings movement summary
+- **Permission model.** `kosipa.report.export` is a **new capability that is never derived from a legacy menu or a view grant**: it is granted only by an operator-owned deployment policy (`KOSIPA_EXPORT_ENABLED=true` AND `KOSIPA_EXPORT_USER_IDS=<allow-list of console user ids>`; one malformed id empties the list; both unset = nobody) and only to a **linked** account that already holds a KOSIPA grant. Every export endpoint additionally requires **the report's own view grant**; the export grant alone shows nothing and a view grant alone exports nothing. This is an interim mechanism: the spec's `console_action_policy` store was not built because the production console account can only receive database-level `SELECT, INSERT, UPDATE` (cPanel), so a policy table writable by the web account would let the application grant itself export; env-based policy cannot be changed by the application. Proposal for the reviewed store is in the decision register (E1).
+- **Order of checks:** flag → session → services → capabilities (server) → export + view grants → filter validation (400) → per-user rate limit (6 per 10 min per process; a refusal is audited as `denied` and reads nothing) → **audit of the export before any read** (failure aborts: nothing is read) → bounded reads → result and size caps (`EXPORT_TOO_LARGE`, 413) → response. Cross-site navigations (`Sec-Fetch-Site: cross-site`) are refused before audit. Downloads are GET, `no-store`, `attachment`, `nosniff`.
+- **Data minimisation.** Exports are aggregate or diagnostic only: no member name, NIK, salary or bank detail in any file, and **no per-member export exists** (it would need its own permission and review). Document references of anomalous documents are included.
+- **Correctness.** CSV writer: RFC 4180 quoting and **formula-injection neutralisation** (leading `= + - @ TAB CR LF`, also after spaces, gets an apostrophe; control characters removed) for every text cell; amounts only from exact decimal text (up to 4 decimals, validated), the only cells allowed to start with `-`. Sub-sen values preserved. Loan export states the official balance as unavailable; payroll export keeps unknown periods (`UNKNOWN`), the review-only comparison note and the header/detail difference; the data-quality export writes a failed / truncated / restricted scan with an **empty count and a status**, never zero.
+- **No unbounded materialisation.** Each report reads through its existing bounded statements; an export whose source reached the reader's limit is refused rather than truncated.
+- **Routes (GET):** `/api/kosipa/reports/{loans|payroll|membership|savings-movements}/export[?tahun=]`, `/api/kosipa/reports/data-quality/export`; pages show the download link only with the export capability.
+
+### Diagnostic classification (data quality page and export)
+Each diagnostic carries a kind: **CONFIRMED** (recorded data contradicts itself), **POTENTIAL** (orphan installments, approved loans without a schedule, rows with a total but no component), **EXPECTED_PRECISION** (sub-sen payroll difference), **UNVERIFIED** (inferred branch map), and each scan a status: OK / FAILED / TRUNCATED / RESTRICTED. A failed or truncated scan has no count.
+
+### New operational reports (verified tables only, no joins)
+- **Membership summary** `/console/kosipa/laporan/keanggotaan`: counts by recorded status and employment, exit dates as recorded facts (D3 open: not a deactivation list), unrecognised values counted apart (the 30 Sep copy has column-shifted amounts such as `0,00` in `status_anggota` for 1,427 rows and amount-like `kd_group` values).
+- **Savings movement summary** `/console/kosipa/laporan/simpanan`: movement sums per month and type; header status decides; movements without a usable date or with a missing/duplicated header counted apart; document aggregates and headers are read separately and matched in memory; **not a balance**.
+- The reports hub now lists a report only when its grant is held (a member-directory-only account sees just the membership summary).
+
+### Verification (actual, 17 Oct 2026)
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` | 0 errors, 4 warnings (baseline) / OK |
+| `pnpm test` | domain **116/116**, application **122/122**, web **280 pass** (incl. export HTTP, config, guard-scan for the shared gate) |
+| Mutation checks (export, CSV, policy) | 15 mutants: 14 killed; the survivor is an **equivalent mutant** (`kosipa.linked &&` is redundant because a non-empty KOSIPA capability set already implies a link) |
+| Opt-in DB tests | operational reports adapter PASS (synthetic schema, SELECT-only) |
+| Browser | `console-export-browser.mjs` PASS in both policy states (links rendered only with the grant; exact decimals incl. sub-sen; no NIK/name/salary/bank text; formula cells neutral; 400 / 403 cross-site / 405; 429 on the 7th request; audit `success`/`denied` opaque; flag off: no link and 403) |
+| Integrated UAT `scripts/uat-run.sh` (flags on, reader outage, console store down, flags off, export on/off) | PASS, TOKO regression suites PASS in every state |
+
+### Limits
+Rate limiting is per process (best effort, not a security boundary); the env policy needs a restart to change (acceptable for a risky action); no `console_action_policy`; no spreadsheet (XLSX) export (CSV only); per-member exports are intentionally not offered.
+

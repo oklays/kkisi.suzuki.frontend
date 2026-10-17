@@ -58,5 +58,5 @@ test('invalid year 400 before any read; database outage 503 with a code only; ma
   rw.failures.add('loanYears'); const out = await handleLoanReport(w.services, get('/x', cookie), deps); assert.equal(out.status, 503); assert.equal(JSON.stringify(await bodyOf(out)), '{"error":"KOSIPA_UNAVAILABLE"}');
   const bad = makeReportWorld({ loanBuckets: [bucket('2026-01', 'APPROVED', 'LUNAS', 1, 'oops')] });
   assert.equal((await handleLoanReport(w.services, get('/x', cookie), { enabled: true, permissions, ports: ports(bad).value })).status, 502);
-  assert.deepEqual(Object.keys(reportHandlers).sort(), ['handleDataQuality', 'handleLoanReport', 'handlePayrollReport']);
+  assert.deepEqual(Object.keys(reportHandlers).sort(), ['handleDataQuality', 'handleDataQualityExport', 'handleLoanReport', 'handleLoanReportExport', 'handleMembershipReport', 'handleMembershipReportExport', 'handlePayrollReport', 'handlePayrollReportExport', 'handleSavingsMovementExport', 'handleSavingsMovementReport']);
 });

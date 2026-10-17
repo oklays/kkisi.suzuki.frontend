@@ -42,8 +42,8 @@ export type ReportDeps = { reader: ReportReader; audit: AuditLog; now: () => Dat
 export type Part<T> = { state: 'ok'; data: T } | { state: 'unavailable'; reason: 'READ_FAILED' | 'SOURCE_TRUNCATED' };
 
 const PAYROLL_HEADER_LIMIT = 120;
-const audit = (d: ReportDeps, a: ReportActor, action: 'kosipa.report.loan.view' | 'kosipa.report.payroll.view' | 'kosipa.report.quality.view', detail: Record<string, unknown>) =>
-  d.audit.append({ actorUserId: a.userId, action, subjectType: 'report', subjectId: action.split('.')[2] === 'quality' ? 'report:quality' : `report:${action.split('.')[2]}`, outcome: 'success', requestId: a.requestId, detail, occurredAt: d.now() });
+export const audit = (d: ReportDeps, a: ReportActor, action: 'kosipa.report.loan.view' | 'kosipa.report.payroll.view' | 'kosipa.report.quality.view' | 'kosipa.report.membership.view' | 'kosipa.report.savings.view' | 'kosipa.report.export', detail: Record<string, unknown>, options: { subject?: string; outcome?: 'success' | 'denied' } = {}) =>
+  d.audit.append({ actorUserId: a.userId, action, subjectType: 'report', subjectId: options.subject ?? `report:${action.split('.')[2]}`, outcome: options.outcome ?? 'success', requestId: a.requestId, detail, occurredAt: d.now() });
 async function section<T>(read: () => Promise<T>): Promise<Part<T>> {
   try { return { state: 'ok', data: await read() }; } catch (e) { if (e instanceof KosipaError) throw e; return { state: 'unavailable', reason: 'READ_FAILED' }; }   // malformed stored data is an error, not an "unavailable"
 }
@@ -54,6 +54,10 @@ export async function readLoanReport(d: ReportDeps, actor: ReportActor, params: 
   if (!actor.capabilities.has('kosipa.loan.view')) throw new KosipaError('FORBIDDEN');
   const requested = parseReportYear(params.tahun);
   await audit(d, actor, 'kosipa.report.loan.view', { year: requested ? 1 : 0 });
+  return loadLoanReport(d, requested);
+}
+/** Reads and builds the loan report with NO authorisation and NO audit: callers (view and export) do both first. */
+export async function loadLoanReport(d: ReportDeps, requested: number | null): Promise<LoanReportResult> {
   const years = await d.reader.loanYears();
   const year = requested ?? years[0] ?? null;   // years are newest first; the default is the newest year that has loans
   const rows = await d.reader.loanBuckets(year);
@@ -65,6 +69,10 @@ export async function readPayrollReport(d: ReportDeps, actor: ReportActor, param
   if (!actor.capabilities.has('kosipa.payroll.view')) throw new KosipaError('FORBIDDEN');
   const requested = parseReportYear(params.tahun);
   await audit(d, actor, 'kosipa.report.payroll.view', { year: requested ? 1 : 0 });
+  return loadPayrollReport(d, requested);
+}
+/** Same contract as loadLoanReport. */
+export async function loadPayrollReport(d: ReportDeps, requested: number | null): Promise<PayrollReport> {
   const years = await d.reader.payrollYears();
   const year = requested ?? years[0] ?? null;
   const headers = year === null ? [] : await d.reader.payrollHeadersForYear(year, PAYROLL_HEADER_LIMIT);
@@ -93,6 +101,10 @@ export async function readDataQuality(d: ReportDeps, actor: ReportActor): Promis
   const loans = actor.capabilities.has('kosipa.loan.view'), payroll = actor.capabilities.has('kosipa.payroll.view');
   if (!loans && !payroll) throw new KosipaError('FORBIDDEN');
   await audit(d, actor, 'kosipa.report.quality.view', { loans, payroll });
+  return loadDataQuality(d, loans, payroll);
+}
+/** Same contract as loadLoanReport; `loans` / `payroll` say which domains the caller may read. */
+export async function loadDataQuality(d: ReportDeps, loans: boolean, payroll: boolean): Promise<DataQualityReport> {
   const map = d.storeColumnMap ?? DEFAULT_STORE_COLUMN_MAP;
   const r = d.reader;
   // Sequential on purpose: one reader connection per page view (the reader pool is shared with POS).

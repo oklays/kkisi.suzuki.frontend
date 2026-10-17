@@ -22,12 +22,20 @@ export type TokoCapability = (typeof TOKO_CAPABILITIES)[number];
 export const KOSIPA_CAPABILITIES = ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.store-credit.view'] as const;
 export type KosipaCapability = (typeof KOSIPA_CAPABILITIES)[number];
 
+/**
+ * Risky action, NOT derived from legacy menus: exporting aggregate KOSIPA reports. It is granted only by an explicit deployment policy
+ * (feature flag + allow-list of console user ids, see infrastructure/console/export-config.ts) and ALWAYS requires the matching view capability too.
+ * Being allowed to view a report (or one member) never confers the right to export it.
+ */
+export const EXPORT_CAPABILITIES = ['kosipa.report.export'] as const;
+export type ExportCapability = (typeof EXPORT_CAPABILITIES)[number];
+
 /** Console administration. `iam.link.manage` = may create/revoke console<->KOSIPA identity links. */
 export const IAM_CAPABILITIES = ['iam.link.manage'] as const;
 export type IamCapability = (typeof IAM_CAPABILITIES)[number];
 
-export type Capability = TokoCapability | KosipaCapability | IamCapability;
-export const ALL_CAPABILITIES: readonly Capability[] = [...TOKO_CAPABILITIES, ...KOSIPA_CAPABILITIES, ...IAM_CAPABILITIES];
+export type Capability = TokoCapability | KosipaCapability | ExportCapability | IamCapability;
+export const ALL_CAPABILITIES: readonly Capability[] = [...TOKO_CAPABILITIES, ...KOSIPA_CAPABILITIES, ...EXPORT_CAPABILITIES, ...IAM_CAPABILITIES];
 export type CapabilitySet = ReadonlySet<Capability>;
 
 /** Every db_permissions slug the TOKO mapping reads; resolved in one batched query. */

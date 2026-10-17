@@ -40,7 +40,7 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'warehouse-distribution', section: 'warehouse', label: 'Distribusi Barang', href: '/console/warehouse/distribusi', order: 2, anyOf: [], readiness: 'planned', icon: 'distribution' },
   { id: 'warehouse-receiving', section: 'warehouse', label: 'Penerimaan Barang', href: '/console/warehouse/penerimaan', order: 3, anyOf: [], readiness: 'planned', icon: 'receiving' },
 
-  { id: 'reports-kosipa', section: 'reports', label: 'Laporan KOSIPA', href: '/console/kosipa/laporan', order: 1, anyOf: ['kosipa.loan.view', 'kosipa.payroll.view'], readiness: 'available', icon: 'reports', description: 'Laporan pinjaman, payroll dan kualitas data (baca saja)' },
+  { id: 'reports-kosipa', section: 'reports', label: 'Laporan KOSIPA', href: '/console/kosipa/laporan', order: 1, anyOf: ['kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.member.view', 'kosipa.savings.view'], readiness: 'available', icon: 'reports', description: 'Laporan pinjaman, payroll, keanggotaan, simpanan dan kualitas data (baca saja)' },
   { id: 'settings-identity', section: 'settings', label: 'Tautan Akun KOSIPA', href: '/console/settings/identitas', order: 1, anyOf: ['iam.link.manage'], readiness: 'available', icon: 'identity', description: 'Tautkan akun console ke akun KOSIPA' },
 ];
 

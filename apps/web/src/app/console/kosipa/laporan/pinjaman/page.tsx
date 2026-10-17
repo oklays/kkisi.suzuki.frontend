@@ -26,6 +26,7 @@ export default async function LoanReportPage({ searchParams }: { searchParams: P
   try { result = await readLoanReport({ reader: services.reports, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, params); }
   catch (error) { if (error instanceof KosipaError && error.code === 'PERIOD_INVALID') invalid = true; else failed = true; }
   const r = result?.report;
+  const canExport = auth.capabilities.has('kosipa.report.export');
 
   return (
     <div className="console-page">
@@ -35,6 +36,8 @@ export default async function LoanReportPage({ searchParams }: { searchParams: P
       {failed && <section className="console-panel" role="alert"><h2>Laporan tidak dapat dibaca</h2><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></section>}
       {r && (<>
         <p className="console-notice" role="status">{LOAN_REASON_TEXT.OFFICIAL_BALANCE_UNVERIFIED}</p>
+        {canExport && <p><a className="console-more" href={`/api/kosipa/reports/loans/export${qs({ tahun: r.year === null ? '' : String(r.year) })}`} download>Unduh CSV laporan ini</a></p>}
+        {canExport && <p className="console-notice">Ekspor berisi ringkasan agregat tanpa nama, NIK atau gaji anggota, dan setiap unduhan dicatat dalam audit.</p>}
         {r.years.length > 0 && <nav aria-label="Pilih tahun"><ul className="console-year-list">{r.years.map((y) => <li key={y}>{y === r.year ? <strong aria-current="page">{y}</strong> : <Link href={`/console/kosipa/laporan/pinjaman${qs({ tahun: String(y) })}`}>{y}</Link>}</li>)}</ul></nav>}
         {r.year === null ? <section className="console-panel" role="status"><h2>Belum ada pinjaman bertanggal</h2><p>Tidak ada pinjaman dengan tanggal dokumen yang dapat dipakai.</p></section> : (
           <section className="console-card" aria-labelledby="sec-bulan">

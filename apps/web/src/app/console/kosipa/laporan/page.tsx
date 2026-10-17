@@ -12,13 +12,15 @@ export default async function ReportsHubPage() {
   if (!consoleEnabled()) notFound();
   const auth = await requireConsoleSession({ next: '/console/kosipa/laporan' });
   if (auth.kind !== 'ok') return null;
-  const loan = auth.capabilities.has('kosipa.loan.view'), payroll = auth.capabilities.has('kosipa.payroll.view');
-  if (!loan && !payroll) return <KosipaNotice state={auth.kosipa === 'linked' ? 'linked' : auth.kosipa} />;
+  const loan = auth.capabilities.has('kosipa.loan.view'), payroll = auth.capabilities.has('kosipa.payroll.view'), member = auth.capabilities.has('kosipa.member.view'), savings = auth.capabilities.has('kosipa.savings.view');
+  if (!loan && !payroll && !member && !savings) return <KosipaNotice state={auth.kosipa === 'linked' ? 'linked' : auth.kosipa} />;
   if (!kosipaServices()) return <KosipaNotice state="unavailable" />;
   const cards = [
     loan && { href: '/console/kosipa/laporan/pinjaman', title: 'Laporan pinjaman', text: 'Jumlah dan pokok tercatat per bulan dan status dokumen. Saldo/outstanding resmi tidak ditampilkan.' },
     payroll && { href: '/console/kosipa/laporan/payroll', title: 'Laporan payroll', text: 'Ringkasan batch per periode, komponen potongan tercatat, dan temuan integritas.' },
-    { href: '/console/kosipa/laporan/kualitas-data', title: 'Kualitas data keuangan', text: 'Diagnostik baca-saja: referensi ganda, status bertentangan, tanggal tidak valid, angsuran yatim, selisih total payroll, dan pemetaan cabang yang belum diverifikasi.' },
+    member && { href: '/console/kosipa/laporan/keanggotaan', title: 'Ringkasan keanggotaan', text: 'Jumlah anggota menurut status tercatat; nilai tidak dikenal dihitung terpisah. Bukan daftar nonaktif dan tanpa data pribadi.' },
+    savings && { href: '/console/kosipa/laporan/simpanan', title: 'Ringkasan mutasi simpanan', text: 'Jumlah mutasi tercatat per bulan dan jenis (bukan saldo). Status dokumen menentukan; mutasi tanpa tanggal/header dihitung terpisah.' },
+    (loan || payroll) && { href: '/console/kosipa/laporan/kualitas-data', title: 'Kualitas data keuangan', text: 'Diagnostik baca-saja: referensi ganda, status bertentangan, tanggal tidak valid, angsuran yatim, selisih total payroll, dan pemetaan cabang yang belum diverifikasi.' },
   ].filter(Boolean) as { href: string; title: string; text: string }[];
   return (
     <div className="console-page">

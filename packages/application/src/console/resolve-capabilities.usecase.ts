@@ -17,6 +17,9 @@ export async function resolveConsoleCapabilities(source: PermissionSetSource, su
   return tokoCapabilities(granted, subject.canSwitchBranch);
 }
 
+/** Deployment policy for the risky export action (never read from the browser or the console store). */
+export type ExportPolicy = { enabled: boolean; allowedUserIds: ReadonlySet<number> };
+
 export type KosipaAccessState = 'disabled' | 'unlinked' | 'linked' | 'unavailable';
 export type ConsoleAccess = { capabilities: CapabilitySet; kosipa: KosipaAccessState };
 
@@ -26,7 +29,7 @@ export type ConsoleAccess = { capabilities: CapabilitySet; kosipa: KosipaAccessS
  * part (state 'unavailable'); TOKO access stays available because it does not depend on the console database.
  */
 export async function resolveConsoleAccess(
-  sources: { permissions: PermissionSetSource; kosipa: Pick<IdentityPorts, 'links' | 'kosipa'> | null },
+  sources: { permissions: PermissionSetSource; kosipa: (Pick<IdentityPorts, 'links' | 'kosipa'> & { exportPolicy?: ExportPolicy }) | null },
   subject: CapabilitySubject & { userId: number },
 ): Promise<ConsoleAccess> {
   const granted = await sources.permissions.grantedAmong(subject.roleId, [...TOKO_PERMISSION_SLUGS, ...IAM_PERMISSION_SLUGS]);
@@ -35,6 +38,9 @@ export async function resolveConsoleAccess(
   try {
     const kosipa = await resolveKosipaCapabilities(sources.kosipa, subject.userId);
     for (const cap of kosipa.capabilities) capabilities.add(cap);
+    // Export is an explicit, per-user deployment grant on top of a linked KOSIPA account; it never follows from a view capability.
+    const policy = sources.kosipa.exportPolicy;
+    if (kosipa.linked && policy?.enabled && policy.allowedUserIds.has(subject.userId) && kosipa.capabilities.size > 0) capabilities.add('kosipa.report.export');
     return { capabilities, kosipa: kosipa.linked ? 'linked' : 'unlinked' };
   } catch {
     return { capabilities, kosipa: 'unavailable' };

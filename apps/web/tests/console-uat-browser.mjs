@@ -116,7 +116,7 @@ try {
     console.log('UAT-R. reports and data-quality diagnostics');
     { const { context, page } = await session(); await login(page, 'koperasi');
       await page.goto(`${base}/console/kosipa/laporan`); await page.getByRole('heading', { name: 'Laporan KOSIPA' }).waitFor();
-      for (const name of ['Laporan pinjaman', 'Laporan payroll', 'Kualitas data keuangan']) await page.getByRole('link', { name }).waitFor();
+      for (const name of ['Laporan pinjaman', 'Laporan payroll', 'Ringkasan keanggotaan', 'Ringkasan mutasi simpanan', 'Kualitas data keuangan']) await page.getByRole('link', { name }).waitFor();
       await page.getByRole('link', { name: 'Laporan pinjaman' }).click(); await page.getByRole('heading', { name: 'Laporan pinjaman' }).waitFor(); let t = await text(page);
       assert.match(t, /2026-03\s+5\s+Rp 3\.400\.000/); assert.match(t, /2026-08\s+1\s+Rp 12\.000\.000/); assert.match(t, /Tanggal dokumen 0000-00-00 \(kosong\)\s+1\s+Rp 500\.000/);
       assert.match(t, /APPROVED \/ BELUM LUNAS: 4 \(Rp 3\.100\.000\)/); assert.doesNotMatch(t, /77\.000\.000|9900770077/);
@@ -126,12 +126,16 @@ try {
       await page.goto(`${base}/console/kosipa/laporan/payroll`); await page.getByRole('heading', { name: 'Laporan payroll' }).waitFor(); t = await text(page);
       for (const period of ['2026-08', '2026-07', '2026-06', '2026-05', '2026-04']) assert.ok(t.includes(`Periode ${period}`), period);
       assert.match(t, /total header ≠ jumlah baris/); assert.match(t, /NIK ganda/); assert.match(t, /tanpa baris/); assert.doesNotMatch(t, /12\.345\.678/);
+      await page.goto(`${base}/console/kosipa/laporan/keanggotaan`); await page.getByRole('heading', { name: 'Ringkasan keanggotaan' }).waitFor(); t = await text(page);
+      assert.match(t, /AKTIVE\s+TETAP\s+2/); assert.match(t, /bukan daftar nonaktif/i); assert.doesNotMatch(t, /S900\d|SYNTH ANGGOTA|@example/, 'counts only, no personal data');
+      await page.goto(`${base}/console/kosipa/laporan/simpanan`); await page.getByRole('heading', { name: 'Ringkasan mutasi simpanan' }).waitFor(); t = await text(page);
+      assert.match(t, /Saldo resmi belum tersedia/); assert.match(t, /2026-05\s+SIMPANAN SUKARELA\s+61/); assert.match(t, /Header dokumen ganda/); assert.match(t, /Tanggal dokumen kosong \/ 0000-00-00/);
       await page.goto(`${base}/console/kosipa/laporan/kualitas-data`); await page.getByRole('heading', { name: 'Kualitas data keuangan' }).waitFor(); t = await text(page);
       assert.match(t, /1 nomor dokumen dipakai lebih dari satu dokumen/); assert.match(t, /REJECTED tetapi LUNAS\s+1/); assert.match(t, /1 nomor dokumen angsuran \(1 baris\) tidak memiliki dokumen pinjaman/); assert.match(t, /1 pinjaman APPROVED tidak memiliki baris angsuran/);
-      assert.match(t, /3 dengan temuan/); assert.match(t, /berbeda setengah sen atau lebih/); assert.match(t, /Selisih sub-sen berasal dari presisi desimal/);
+      assert.match(t, /3 dengan temuan/); assert.match(t, /berbeda setengah sen atau lebih/); assert.match(t, /hanya selisih sub-sen: presisi desimal/); assert.match(t, /Anomali terkonfirmasi/); assert.match(t, /Potensi anomali/); assert.match(t, /Perbandingan belum diverifikasi/);
       assert.doesNotMatch(t, /perbaiki sekarang|hapus data/i); await assertReadOnly(page);
       await page.screenshot({ path: `${output}/uat-quality-1440.png`, fullPage: true });
-      for (const path of ['/console/kosipa/laporan', '/console/kosipa/laporan/pinjaman', '/console/kosipa/laporan/payroll', '/console/kosipa/laporan/kualitas-data']) { await page.goto(`${base}${path}`); await text(page); await noOverflow(page, path); }
+      for (const path of ['/console/kosipa/laporan', '/console/kosipa/laporan/pinjaman', '/console/kosipa/laporan/payroll', '/console/kosipa/laporan/keanggotaan', '/console/kosipa/laporan/simpanan', '/console/kosipa/laporan/kualitas-data']) { await page.goto(`${base}${path}`); await text(page); await noOverflow(page, path); }
       const api = await context.request.get(`${base}/api/kosipa/reports/data-quality`); assert.equal(api.status(), 200); assert.ok(!(await api.text()).includes('12345678'));
       assert.equal((await context.request.post(`${base}/api/kosipa/reports/loans`, { data: {} })).status(), 405);
       await context.close(); }
@@ -139,9 +143,11 @@ try {
     console.log('UAT-7. branch / member / grant isolation: member-directory-only and unlinked accounts');
     { const { context, page } = await session(); await login(page, 'kasir1');
       await page.goto(`${base}/console`); const links = await sidebar(page);
-      assert.ok(links.includes('/console/kosipa/anggota')); for (const href of ['/console/kosipa/pinjaman', '/console/kosipa/payroll', '/console/kosipa/simpanan', '/console/kosipa/laporan']) assert.ok(!links.includes(href), `${href} hidden`);
-      for (const path of ['/console/kosipa/pinjaman', '/console/kosipa/pinjaman/PINSYN9002', '/console/kosipa/payroll', '/console/kosipa/simpanan/9003', '/console/kosipa/laporan', '/console/kosipa/laporan/kualitas-data']) { await page.goto(`${base}${path}`); await page.getByRole('heading', { name: 'Akses ditolak' }).waitFor(); }
-      for (const api of ['loans', 'savings/9003', 'payroll', 'reports/loans', 'reports/payroll', 'reports/data-quality']) assert.equal((await context.request.get(`${base}/api/kosipa/${api}`)).status(), 403, api);
+      assert.ok(links.includes('/console/kosipa/anggota')); for (const href of ['/console/kosipa/pinjaman', '/console/kosipa/payroll', '/console/kosipa/simpanan']) assert.ok(!links.includes(href), `${href} hidden`);
+      assert.ok(links.includes('/console/kosipa/laporan'), 'the member grant gives the membership summary, so the hub is listed');
+      await page.goto(`${base}/console/kosipa/laporan`); await page.getByRole('link', { name: 'Ringkasan keanggotaan' }).waitFor(); for (const name of ['Laporan pinjaman', 'Laporan payroll', 'Ringkasan mutasi simpanan', 'Kualitas data keuangan']) assert.equal(await page.getByRole('link', { name }).count(), 0, `${name} not offered`);
+      for (const path of ['/console/kosipa/pinjaman', '/console/kosipa/pinjaman/PINSYN9002', '/console/kosipa/payroll', '/console/kosipa/simpanan/9003', '/console/kosipa/laporan/pinjaman', '/console/kosipa/laporan/payroll', '/console/kosipa/laporan/simpanan', '/console/kosipa/laporan/kualitas-data']) { await page.goto(`${base}${path}`); await page.getByRole('heading', { name: 'Akses ditolak' }).waitFor(); }
+      for (const api of ['loans', 'savings/9003', 'payroll', 'reports/loans', 'reports/payroll', 'reports/data-quality', 'reports/savings-movements', 'reports/savings-movements/export', 'reports/membership/export']) assert.equal((await context.request.get(`${base}/api/kosipa/${api}`)).status(), 403, api);
       await context.close();
       const other = await session(); await login(other.page, 'kasir2'); await other.page.goto(`${base}/console/kosipa/laporan/kualitas-data`); await other.page.getByRole('heading', { name: 'Akun belum ditautkan ke KOSIPA' }).waitFor();
       assert.equal((await other.context.request.get(`${base}/api/kosipa/reports/loans`)).status(), 403); await other.context.close(); }
@@ -149,7 +155,7 @@ try {
     console.log('UAT-A. audit trail covers every protected read, opaque subjects, no NIK');
     { const events = await consoleDb.$queryRaw`SELECT action, outcome, subject_id FROM console_audit_event WHERE action LIKE 'kosipa.%' AND occurred_at > NOW(3) - INTERVAL 30 MINUTE ORDER BY id`;
       const actions = new Set(events.map((e) => e.action));
-      for (const a of ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.list.view', 'kosipa.loan.detail.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile', 'kosipa.report.loan.view', 'kosipa.report.payroll.view', 'kosipa.report.quality.view']) assert.ok(actions.has(a), `audit has ${a}`);
+      for (const a of ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.list.view', 'kosipa.loan.detail.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile', 'kosipa.report.loan.view', 'kosipa.report.payroll.view', 'kosipa.report.quality.view', 'kosipa.report.membership.view', 'kosipa.report.savings.view']) assert.ok(actions.has(a), `audit has ${a}`);
       assert.ok(!JSON.stringify(events).includes('S900')); }
   }
 

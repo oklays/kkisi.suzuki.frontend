@@ -29,6 +29,14 @@ Columns: *Read-only dev* = can read-side/engineering work continue; *Writes* = w
 | B5 | Connection budget is 12/12 | Measured legacy PHP peak usage and a capacity decision (see `warehouse-persistence-architecture.md` §4) | No new pool; the Warehouse module stays unconnected | Owner | Warehouse store, TOKO stock writer account | Yes | **Disabled** |
 | B6 | Console store not provisioned in production | Reviewed `console-store-production.sql` run by the operator; trigger creation confirmed | Flags stay off in production | Operator | Any console feature in production | Yes (local/staging only) | n/a |
 
+## B2. Decisions introduced by checkpoint 10 (proposals, not approved)
+
+| # | Open decision | Alternatives | Recommended default (proposal) | Business impact | Affected tasks | Read-only dev | Writes |
+|---|---|---|---|---|---|---|---|
+| E1 | Who may export KOSIPA reports, and where that grant lives | (a) env allow-list of user ids (interim, implemented); (b) `console_action_policy` table in the console store, grants by role, set only by an operator through reviewed SQL; (c) legacy menu `laporan/*` grant implies export | (a) now; (b) when the owner approves a role-based policy and the operator confirms the application account cannot write the table (cPanel database-level grants can) | Decides who can take aggregate financial data out of the system; (c) was rejected: viewing is not exporting | TASK-028 | Yes | n/a (read-only) |
+| E2 | Export retention and audit review | (a) audit rows only (implemented); (b) also keep a copy of exported files; (c) periodic audit review by a named owner | (a) + (c): no file copies, a named reviewer reads the export audit monthly | Exports leave the system; the audit is the only trace | TASK-028 | Yes | n/a |
+| E3 | Whether per-member exports are ever allowed | (a) never; (b) per member with a separate permission, masking and ticket reference | (a) until a use case is written down | Per-member data is personal data | TASK-028 | Yes | n/a |
+
 ## C. Engineering conventions that look like decisions but are not owner policy
 
 | Convention | Why | Where |
