@@ -623,3 +623,42 @@ Evidence B1/B2/B3; capacity B5/B8/B9; D1–D10 incl. D5/D7; technical single-wri
 * As soon as the Gudang bundle and a filled mapping arrive: Gudang item catalog / stock / dispatch readers behind the existing ports (synthetic preview first).
 * Engineering-only, no decision needed: permanent-error class for the outbox applier (finding 3); extend the persona fixtures when W5 is answered; build the shared export limiter together with any scale-out decision.
 * Owner: B8/B9 (capacity evidence and cutover order), A4, D5, D7.
+
+---
+
+## Checkpoint 12 — Integration hardening, capacity validation and evidence readiness
+
+**Status legend used below:** *Implemented* (code merged locally) · *Locally verified* (tests/UAT on the local container, synthetic or 30 Sep copy) · *Staging accepted* (none) · *Production ready* (none) · *Blocked by owner decision* · *Blocked by operator evidence*. Nothing was pushed, merged or deployed; no legacy PHP, production database, production infrastructure or business record was touched.
+
+### Delivered
+
+| # | Deliverable | Status | Evidence |
+|---|---|---|---|
+| 1 | **A4 (owner-approved): payroll batch list audited** — `kosipa.payroll.list.view` written after validation and before the read, fail closed, detail = filter count + paged flag only; one event per request (only the page and the API call it) | Implemented, locally verified | 3 application tests (order, no amounts/periods, audit failure, denial/invalid filters, pagination, DB error after audit); HTTP and persona tests replaced the test that pinned the unaudited list; integrated UAT now opens the list and finds the audit row in the real console store |
+| 2 | **Connection investigation: defect found and fixed.** `next start` built two reader `PrismaClient`s in one process (6 connections against a pool of 3) because `prisma.ts` cached on `globalThis` only outside production. Now cached unconditionally; regression tests fail on the old code. Checkpoint 11's "10 against 3" and "3 against 2" re-explained (local pool 8, duplicated pool, spawned test app instances, local account cap 10) | Implemented, locally verified | `scripts/measure-app-connections.sh` (in-container sampler: simultaneous / active / accumulated per account); before: pages 6, mixed 6; after: 3/3, 2/2, 1/1; 32 workers: 6,988 requests, 0 errors, p95 184 ms; `connection-capacity-analysis.md` §7 |
+| 3 | **Identity-link UAT failure: root cause found and fixed.** Audit trail shows `identity_link.denied CONSOLE_USER_ALREADY_LINKED` at 12:05:31 UTC on 17 Oct, the failing run: a link left active by a test process that exited before its own cleanup (the C11 two-instance probe used `process.exit`). The per-phase reset never touched the console store. Fix: reset revokes synthetic links (guarded to the local console store); probe no longer exits early. **Second, independent defect found while reproducing:** forms submitted before hydration fall back to a native GET — the identity form reloads without saving, and the **login form puts username and password into the URL**. Fix: `useHydrated()` keeps submit controls (and the identity selects, which React resets on hydration) disabled until React owns the form | Implemented, locally verified | deterministic reproduction with delayed JS chunks (`console-hydration-browser.mjs`) fails on the old code at 1.5/5/8 s and passes after; 5/5 cold-start phase-1 runs each with a planted leftover link pass; `e2e-isolation.test.mjs` (static + opt-in DB) |
+| 4 | **KOSIPA evidence levels**: financial gates G2–G5 report 1 exists / 2 shape / 3 definition / 4 semantics / 5 parity; metadata reaches level 3 at most; official figures need level 5; semantic evidence bound to the definition fingerprint (stale evidence ignored), intake refuses NIK-like digit runs and e-mails | Implemented, locally verified; **TASK-003 work blocked by operator evidence** | 5 domain tests + 1 CLI test; local copy now reads G2/G3/G5 level 2, G4 level 0 (it previously displayed G4 as PARTIAL); `kosipa-evidence-gate-report.md` |
+| 5 | **TOKO stock-writer contract** on tables with the exact legacy DDL (`db_items`, `db_stockentry`, verified column- and index-equal) + proposed `nx_stock_posting`, least-privilege account. Finding: legacy `update_items_quantity()` recomputes `db_items.stock` from five ledgers, so a cache-only posting is erased; the writer must add a ledger row (which ledger = **D7**). No ODKU (privilege-incompatible); idempotency needs a reviewed DDL (no existing ledger has a usable key) | Locally verified (contract only); **blocked by owner decision D7 and operator review** | 5 opt-in tests ×3 runs green, 3 mutants killed; `toko-stock-writer-contract.md`, `toko-stock-posting-idempotency-proposed.sql` (review-only) |
+| 6 | **Export multi-process readiness**: single instance structurally verified (fixed container name, shared netns, one `next start`) and pinned by a test; shared count-after-insert limiter designed on the existing audit table (no new connection); E1 retained, no policy store | Implemented (test), design only (limiter) | `single-instance-deployment.test.mjs`; `export-security-assessment.md` §4 |
+| 7 | **Real role readiness**: pseudonymised role export SQL + validator using the runtime rules; on the 30 Sep copy no real role resembles a cashier (the cashier role carries management permissions → R1, details private), Warehouse roles impossible (W5) | Implemented, locally verified on the copy; **production export blocked by operator** | 3 domain + 2 CLI tests; `staging-role-readiness.md` |
+| 8 | Decision register (A4 approved and implemented; E1 retained; R1, B10, Q1 added; B1/B5/T1/X1 updated; everything else still open) and the owner/operator action package | Done | `decision-register.md` §B5, `owner-operator-action-package.md` |
+
+### Verification (actual, 18 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **136/136**, application **139/139**, web **319 pass / 0 fail** (+74 opt-in skipped) |
+| Integrated UAT `scripts/uat-run.sh` (7 phases, now incl. the hydration check, the audited payroll list, the stock-writer contract and the isolation DB test) | **PASS on the first run**; TOKO regression 587 / 397 requests in both flag states |
+| Opt-in DB suites | cross-database harness 11/11, Warehouse rehearsal 9/9, stock-writer contract 5/5 (×3 earlier), isolation 2/2, KOSIPA DB suites 6/6 |
+| Measurements | `measure-app-connections.sh`: see deliverable 2 |
+| Reliability | hydration reproduction passes at 1.5/5/8 s delays; 5/5 cold runs with a planted leftover link |
+| Intermittent failures during this checkpoint | none unexplained. The only failures were the deliberate reproductions on old code and test-side mistakes corrected in the same step (error-code expectation 1142 vs 1143, an over-broad regex, a missing UAT visit) |
+
+### Not claimed
+
+Staging acceptance or production readiness of anything; official balances, loan outstanding or payroll parity; exactly-once stock posting in production; real Warehouse operation; KOSIPA financial writes. Simultaneous old+new financial or inventory writes remain unauthorised.
+
+### Next
+
+See `owner-operator-action-package.md`: operator exports O1–O3 and the capacity evidence O4 unlock the next phase; D7, D5, R1, B9 and B4 are owner decisions. Engineering-only items left are small (outbox permanent-error class; persona fixtures once W5 is answered).

@@ -25,6 +25,10 @@ Tujuan: melanjutkan revamp Next.js setelah TOKO/POS dengan (1) console terpadu, 
 | 14 | [staging-rbac-uat-matrix.md](staging-rbac-uat-matrix.md) | Matriks RBAC 8 persona uji (dibangkitkan dari kode, dicek drift) |
 | 15 | [staging-uat-plan.md](staging-uat-plan.md) | Persiapan UAT staging terintegrasi: skenario, bukti sintetis, yang butuh staging |
 | 16 | [export-security-assessment.md](export-security-assessment.md) | Penilaian keamanan ekspor CSV, batas rate limiter per proses |
+| 17 | [kosipa-evidence-gate-report.md](kosipa-evidence-gate-report.md) | Lima level bukti KOSIPA, tugas yang masih terblokir, alur aman definisi terbatas dan kasus uji tersanitasi |
+| 18 | [toko-stock-writer-contract.md](toko-stock-writer-contract.md) | Kontrak penulis stok TOKO: ledger wajib, idempotensi, hak akses minimum, DDL usulan |
+| 19 | [staging-role-readiness.md](staging-role-readiness.md) | Ekspor peran nyata (pseudonim) dan validasi dengan aturan runtime console |
+| 20 | [owner-operator-action-package.md](owner-operator-action-package.md) | Paket tindakan owner/operator: bukti minimum untuk fase berikutnya |
 | — | [`docs/migration/sql/legacy-schema-objects-readonly.sql`](../../../migration/sql/legacy-schema-objects-readonly.sql) | SQL **read-only** untuk operator: ambil definisi view/procedure yang tidak ada di dump |
 
 ## Temuan yang mengubah asumsi PRD/Baseline

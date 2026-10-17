@@ -82,3 +82,8 @@ Unset the module flag (reverse activation order); restart. KOSIPA/Warehouse/Expo
 
 ## 12. Known limitations to state at acceptance
 Official balances absent (B1); reconciliation review-only (D5); synthetic Warehouse; CSV only (no XLSX); per-process export rate limit (measured: 6 × instances, reset on restart; one process only); export allow-list is a deployment setting; production index state unverified (B3; index DDL not executed); real role configurations untested; legacy security exposure unchanged.
+
+## 13. Checkpoint 12 status changes
+
+* **Implemented and locally verified:** payroll list audit (A4); single reader pool per process (connection defect fixed, budget arithmetic now real); per-phase console-link reset and pre-hydration form protection (login no longer able to leak credentials into a URL); five-level KOSIPA evidence gates; stock-writer contract on the exact legacy DDL; single-instance deployment pinned; real-role validator.
+* **Still not staging-accepted, not production-ready.** Added prerequisites: R1 (cashier role and landing) before enabling the console for cashiers; D7 before any TOKO stock writer (it decides the ledger); operator review of the `nx_stock_posting` DDL and grants; production role export (B10); semantic and parity evidence (levels 4–5) before any official figure.
