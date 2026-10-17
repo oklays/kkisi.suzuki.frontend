@@ -94,3 +94,21 @@ Return: the redacted outputs (or their location), the answers to the prose quest
 | **Not requested on purpose** | table DATA, credentials, member data | §2, §5 | by design |
 
 **If the owner prohibits production reads entirely:** the blockers stay open. Engineering continues on the sanitised 30 Sep snapshot **without claiming current-production parity**: official balances remain unavailable, reconciliation stays review-only, the Warehouse stays synthetic, and every report states its source and that production is unverified. The snapshot cannot supply view/procedure definitions (they are stubs), the Gudang schema, production indexes or production `sql_mode`; those need an authorised operator regardless.
+
+## 9. Automated validation (checkpoint 11) — from reviewed metadata to eligible tasks
+
+The manual review in §6 is now backed by tooling. It is **offline** (file in, report out): no connection, no credentials, no procedure is executed.
+
+| Step | Who | What |
+|---|---|---|
+| 1 | Operator | Runs `docs/migration/sql/schema-evidence-bundle-json.sql` (information_schema only; one JSON document) with `mysql --batch --raw --skip-column-names`, saved under `docs/migration/_baseline/` (gitignored). Replace the schema name at the top. |
+| 2 | Operator | `node --experimental-strip-types apps/web/scripts/validate-schema-evidence.mjs --bundle <bundle.json> --scan`. `--scan` prints **counts** of objects whose bodies contain password-like text, IPs, e-mail addresses or `DEFINER=`; redact the bundle before it leaves the operator's machine if any are reported. |
+| 3 | Operator or engineering | Attach the **report** (identifiers, statuses, fingerprints, referenced table names; never a view or procedure body) to the ticket. The report is safe to commit. |
+| 4 | Engineering | Reads "Tasks that become eligible" / "Still blocked" and opens only the unlocked tasks. Gates never flip on assumption: a view whose definition is empty, a stub (`SELECT NULL AS …`) or missing keeps its gate BLOCKED. |
+
+Gate to task mapping: G2 official savings balance (TASK-025 parity, TASK-044), G3 official loan balance/schedule/simulation (TASK-026 parity, TASK-043), G4 payroll generator (TASK-027 parity, D5 evidence, TASK-045), G5 payroll component semantics, G1/G6/G7/G8 housekeeping. Exit code 0 = all ELIGIBLE, 2 = at least one gate not eligible (the honest state, not a failure), 1 = unusable input.
+
+**Gudang:** the same SQL against the Gudang schema produces its bundle; `docs/migration/gudang-mapping.template.json` is filled from that bundle by a person who knows the process (a role is left out, never guessed), then
+`validate-schema-evidence.mjs --gudang-bundle <g.json> --gudang-mapping <m.json>` names the adapters (item catalog, stock reader, dispatch reader) that become eligible. Without a mapping every adapter is blocked.
+
+**Run against the local staging copy (30 Sep snapshot, 17 Oct 2026):** G1 ELIGIBLE (nine contract tables compatible; double-typed money columns reported as warnings), G6/G7/G8 ELIGIBLE, **G2/G3/G5 BLOCKED** (all eight legacy report views are stubs in the copy), **G4 PARTIAL** (`x_proc_create_matrix` absent; matrix columns present). Official balances and payroll generator parity therefore remain blocked until an operator provides real definitions from production.

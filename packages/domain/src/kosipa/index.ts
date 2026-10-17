@@ -38,3 +38,7 @@ export {
   KNOWN_MEMBER_STATUS, KNOWN_EMPLOYMENT, KNOWN_MEMBER_GROUP, buildMembershipReport, buildSavingsMovementReport,
   type MembershipRaw, type MembershipGroupRaw, type MembershipLine, type MembershipReport, type SavingsDocAggregateRaw, type SavingsHeaderRaw, type SavingsMonthLine, type SavingsMovementReport,
 } from './report-ops.ts';
+export {
+  KOSIPA_TABLE_CONTRACT, typeFamily, fingerprint, isStubDefinition, referencedTables, validateKosipaEvidence, renderReadinessReport, parseEvidenceBundle, scanSensitive,
+  type EvidenceBundle, type EvidenceColumn, type EvidenceIndex, type EvidenceView, type EvidenceRoutine, type EvidenceTrigger, type ReadinessReport, type Gate, type GateStatus, type Finding, type TypeFamily,
+} from './schema-contract.ts';

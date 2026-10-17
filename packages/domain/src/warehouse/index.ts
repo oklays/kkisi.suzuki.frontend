@@ -9,3 +9,4 @@ export {
   type Resolution, type ResolutionInput, type ResolutionKind, type ResolutionTarget, type HistoryEntry, type Actor, type CreateShipmentInput,
 } from './shipment.ts';
 export { reconcile, stockIntents, type Reconciliation, type LineReconciliation, type Outcome, type StockIntent } from './reconciliation.ts';
+export { GUDANG_ROLES, GUDANG_ADAPTERS, validateGudangMapping, renderGudangReport, type GudangRoleId, type GudangRole, type GudangMapping } from './gudang-contract.ts';

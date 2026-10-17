@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "note": "TEMPLATE. Fill ONLY from a reviewed Gudang evidence bundle (docs/migration/sql/gudang-schema-evidence-readonly.sql). Remove a role the source does not have (optional ones may stay unmapped); never guess.",
+  "roles": {
+    "ITEM_ID": { "table": "<gudang item table>", "column": "<unique item key>" },
+    "ITEM_CODE": { "table": "<gudang item table>", "column": "<item code>" },
+    "ITEM_BARCODE": { "table": "<gudang item table>", "column": "<barcode (optional)>" },
+    "ITEM_NAME": { "table": "<gudang item table>", "column": "<name (optional)>" },
+    "ITEM_UNIT": { "table": "<gudang item table>", "column": "<unit of measure>" },
+    "ITEM_ACTIVE": { "table": "<gudang item table>", "column": "<active/status flag>" },
+    "STOCK_ITEM_ID": { "table": "<gudang stock table>", "column": "<item key>" },
+    "STOCK_QTY": { "table": "<gudang stock table>", "column": "<quantity on hand>" },
+    "STOCK_WAREHOUSE": { "table": "<gudang stock table>", "column": "<warehouse/location (optional)>" },
+    "DOC_ID": { "table": "<dispatch document table>", "column": "<document key>" },
+    "DOC_NO": { "table": "<dispatch document table>", "column": "<document number>" },
+    "DOC_STATUS": { "table": "<dispatch document table>", "column": "<status>" },
+    "DOC_DATE": { "table": "<dispatch document table>", "column": "<document date>" },
+    "DOC_STORE_REF": { "table": "<dispatch document table>", "column": "<destination store/customer>" },
+    "LINE_DOC_ID": { "table": "<dispatch line table>", "column": "<document key>" },
+    "LINE_NO": { "table": "<dispatch line table>", "column": "<line number>" },
+    "LINE_ITEM_ID": { "table": "<dispatch line table>", "column": "<item key>" },
+    "LINE_QTY": { "table": "<dispatch line table>", "column": "<dispatched quantity>" },
+    "LINE_UNIT": { "table": "<dispatch line table>", "column": "<line unit (optional)>" },
+    "STORE_ID": { "table": "<store/customer table>", "column": "<key>" },
+    "STORE_NAME": { "table": "<store/customer table>", "column": "<name (optional)>" }
+  }
+}
