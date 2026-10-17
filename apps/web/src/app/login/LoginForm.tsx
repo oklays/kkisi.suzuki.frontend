@@ -32,8 +32,10 @@ export function LoginForm({ fallback = "/pos" }: { fallback?: "/pos" | "/console
     setBusy(false);
   }
 
+  // method/action make the server-rendered fallback safe on its own: even if the disabled state were bypassed before hydration (or with JavaScript
+  // off), a native submission is a POST to the JSON-only login API (refused; nothing in any URL), never a GET carrying the credentials.
   return (
-    <form className="login-card" onSubmit={(event) => void submit(event)}>
+    <form className="login-card" method="post" action="/api/auth/login" onSubmit={(event) => void submit(event)}>
       <header className="login-heading">
         <h1>Masuk ke Akun Anda</h1>
         <p>Silakan masuk dengan akun Anda untuk mengakses sistem Koperasi Suzuki.</p>

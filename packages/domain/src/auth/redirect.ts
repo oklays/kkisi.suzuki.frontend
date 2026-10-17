@@ -3,6 +3,6 @@ export function safeNextPath(value: string | null | undefined, fallback = '/pos'
   if (typeof value !== 'string' || value.length === 0 || value.length > 200) return fallback;
   if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return fallback;
   if (/[\u0000-\u001f\u007f\\]/.test(value)) return fallback;
-  if (value.startsWith('/api/') || value === '/login') return fallback;
+  if (value.startsWith('/api/') || /^\/login(?:[/?#]|$)/.test(value)) return fallback;   // any /login form would land back on the login page (loop)
   return value;
 }

@@ -28,6 +28,7 @@ fresh
 echo "##### 1. flags ON, console store up"
 start_app true true "$CONSOLE_URL"
 run node --env-file=.env.e2e --experimental-strip-types tests/console-hydration-browser.mjs   # checkpoint 12: no native submit before hydration
+APP_LOG="$LOG" run node --env-file=.env.e2e --experimental-strip-types tests/login-security-browser.mjs   # checkpoint 13: credential-exposure closeout
 UAT_MODE=ok run node --env-file=.env.e2e --experimental-strip-types tests/console-uat-browser.mjs
 run node --env-file=.env.e2e --experimental-strip-types tests/console-browser.mjs
 echo "##### TOKO regression with the console flags ON"
