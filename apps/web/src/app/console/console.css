@@ -130,3 +130,5 @@
 @media (max-width: 767px) { .console-search .console-filter-row { grid-template-columns:minmax(0,1fr); align-items:stretch; } }
 .console-page .console-section { min-width:0; overflow-x:auto; }
 .console-search.console-search-wide { max-width:none; }
+.console-search .console-filter-row.console-filter-row-4 { grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) auto; }
+@media (max-width: 767px) { .console-search .console-filter-row.console-filter-row-4 { grid-template-columns:minmax(0,1fr); } }

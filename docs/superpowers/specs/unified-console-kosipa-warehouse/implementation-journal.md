@@ -15,7 +15,8 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-010 … TASK-014 | **VERIFIED (local)** | Checkpoint 1 below |
 | TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
 | TASK-020, 021, 022, 024 | **VERIFIED (local)** | Checkpoint 3 (Option B). TASK-021 uses the existing SELECT-only reader (no new business pool) + the console store guard |
-| TASK-025, 026 | PARTIAL | Read of movements/loan headers only; balances and instalment detail wait for TASK-003 / index review |
+| TASK-026 (read side) | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; official balance blocked on TASK-003; NOT staging-accepted | Checkpoint 7. Simulation/origination remain with TASK-043 |
+| TASK-025 | PARTIAL | Read of movements only; balances wait for TASK-003 |
 | TASK-027 | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; NOT staging-accepted, NOT production-ready | Checkpoint 6. Payroll does not need an index (Checkpoint 5 measurement) |
 | TASK-062, TASK-063 | **PARTIAL** — domain + application VERIFIED | Checkpoint 4; no adapter, storage, writer or UI; accounting treatment open |
 
@@ -356,4 +357,41 @@ Production index state and `TABLE_ROWS` (pre-check SQL), identity of the three d
 ### Next eligible checkpoint (recommendation)
 
 **TASK-026 read side**: loan list/detail/schedule pages using the same patterns (the installment reads were measured within the cap even for the heaviest member). Balances/outstanding stay pending TASK-003 view definitions. Alternatives: index staging validation (separate task), Warehouse adapters (blocked on the Gudang schema export).
+
+---
+
+## Checkpoint 7 — KOSIPA loan read, read-only (TASK-026 read side; REQ-024, BR-004 read aspects) + payroll semantic correction
+
+**Status vocabulary.** IMPLEMENTED: yes. VERIFIED: yes (synthetic fixtures; read-only smoke on the local copy of the 30 Sep data). STAGING ACCEPTED: **no**. PRODUCTION READY: **no**. The **official outstanding balance is not delivered**: it is a first-class `unavailable / OFFICIAL_BALANCE_UNVERIFIED` state in the model, API and UI until the legacy balance views are verified (TASK-003).
+
+### Delivered
+
+- Domain `packages/domain/src/kosipa/loan-read.ts`: filter/cursor validation, status-flag rules, header description (exact amounts, labelled dates), schedule integrity (`assessSchedule`) and row description. Audit actions `kosipa.loan.list.view`, `kosipa.loan.detail.view`.
+- Application `packages/application/src/kosipa/loans.ts`: `LoanReader` port (4 read methods, no write), `listLoans`, `readLoan`. Capability → validation → audit (before any read) → bounded reads. An outage in the schedule leaves the header visible with an explicit `READ_FAILED` schedule; an unparsable stored amount surfaces as `AMOUNT_INVALID` (HTTP 502), never as zero.
+- Adapter `apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts` on the existing SELECT-only reader (no new pool; 12/12 unchanged): 5 s time cap, parameterised, `LIMIT`ed, keyset (`id DESC` for the list; `(COALESCE(ke_cicilan,0), id)` for the schedule), one bounded aggregate for the integrity sums, headers and rows in separate statements, dates as text. Salary (`gaji_pokok`), bank account and approver user names are never selected.
+- API (GET only): `/api/kosipa/loans`, `/api/kosipa/loans/{docNo}`. Pages `/console/kosipa/pinjaman`, `/console/kosipa/pinjaman/{docNo}`; the sidebar entry is available only with `kosipa.loan.view`; Anggota 360 links each loan to its detail. The gate shared with payroll moved to `console/kosipa-http.ts` (flag → session guard → server-side capabilities); the route-guard scan now verifies that gate's order.
+- Payroll semantic correction (owner directive): the reconciliation page states that **A−B is informational, not automatically an error**, that the comparison is per component (`TOKO_*` columns vs derived Kredit net of returns, never total deductions), and uses “selisih informasi”. The branch map is now an explicit boundary: `KOSIPA_STORE_COLUMN_MAP` (JSON, `basis: OWNER_CONFIRMED`) is the only way to leave the empirical default; malformed or ambiguous values fall back to it. Reconciliation stays review-only until the owner supplies it.
+
+### Evidence from the 30 Sep copy that shaped the rules (production unverified)
+
+32,631 loan headers, 7 `doc_no` values used by two headers; status combinations that contradict each other exist (17 REJECTED yet LUNAS); `actual_*` columns are unused (0) while `plan_*` are the working figures; for a 1,793-loan APPROVED sample Σ pokok = `plan_pinjaman` and row count = `plan_jangka_waktu` in 100%, and the few larger imported loans differ by under Rp 1 (2-decimal rounding), which is reported as an exact difference; `tgl_bayar` is **never** filled (242k paid rows), so a missing paid date is a shown fact, not an anomaly; zero and `9999-12-10` due dates are common and are counted and labelled, never placed in a month.
+
+### Verification (actual, 17 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **101/101**, application **81/81**, web **264 pass / 0 fail** (+48 opt-in skipped) |
+| Mutation checks (loans) | removing the capability check, audit, list bound, schedule bound, cursor, duplicate-header display, parse-error propagation, or replacing the balance state each fails ≥1 test (8/8 killed; one survivor was found and closed with a new test) |
+| Opt-in DB tests (synthetic schema, SELECT-only account) | loans and payroll PASS, including a 70-row schedule paged 60 + 10 without overlap and the account's inability to write |
+| Browser `console-loans-browser.mjs` | PASS: list/filters/search/invalid/empty, detail integrity notes, keyset paging, anomalies (messy schedule, duplicate header, missing schedule, rejected-but-settled), 360 → detail link, API codes, isolation (member-only and unlinked accounts), audit trail opaque; no overflow 375–1440; no browser errors |
+| Regression | payroll, Anggota 360, console shell, POS, `e2e-local` browser suites PASS; flag-off 404 for API routes |
+| Read-only smoke on the local copy | loan list 40–90 ms; detail 340–520 ms (one 1.8 s cold); 180-row schedule paged 60 per request; all under the 5 s cap |
+
+### Limits and open items
+
+1. Official outstanding/balance: blocked on TASK-003 (view definitions) — **release blocker for any balance display**.
+2. Installment reads by `doc_no` / `nik_kar` are scans (no index in the dump; production unverified); measured within the cap, index proposal still deferred and **not** executed.
+3. Loan origination, approval, disbursement, repayment, settlement (TASK-043/044/045) are not started: they need the writer-readiness gate (owner policy for the 70% salary rule, interest/rounding confirmation, single-writer enforcement). No writer exists or is enabled.
+4. See `decision-register.md` for the consolidated owner decisions and blockers.
 

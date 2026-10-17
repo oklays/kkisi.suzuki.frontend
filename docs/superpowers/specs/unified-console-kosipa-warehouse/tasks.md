@@ -99,7 +99,7 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Requirements Addressed:** `REQ-023`, `REQ-027`
   - **Verification:** parity sample ≥ 50 anggota × 3 jenis × 2 tahun: delta = 0 atau tercatat sebagai expected delta.
 - [ ] `TASK-026`: Pinjaman read + simulasi
-  - **Status:** IN PROGRESS — domain layer VERIFIED (unit), see implementation-journal.md Checkpoint 2
+  - **Status:** READ SIDE IMPLEMENTED + VERIFIED (synthetic fixtures; read-only smoke on the local 30 Sep copy; Checkpoint 7) — saldo resmi BLOCKED (TASK-003); simulasi/originasi belum (TASK-043); NOT staging-accepted
   - **Files:** `packages/domain/src/kosipa/loan-schedule.ts` + tests, `kosipa-loan.repository.ts`, `app/console/kosipa/pinjaman/**`, `app/api/kosipa/loans/**`
   - **Goal:** daftar/detail/jadwal/outstanding. Simulasi Flat/Anuitas integer.
   - **Requirements Addressed:** `REQ-024`, `REQ-030`, `BR-004`, `VAL-003`, `NFR-004`

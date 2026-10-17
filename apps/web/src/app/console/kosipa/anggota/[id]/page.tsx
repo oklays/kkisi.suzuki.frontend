@@ -82,7 +82,7 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
       <SectionBlock title="Pinjaman" section={member.loans}>{(rows) => rows.length === 0 ? <p>Tidak ada pinjaman tercatat.</p> : (
         <table className="console-table">
           <thead><tr><th scope="col">Dokumen</th><th scope="col">Tanggal</th><th scope="col">Jenis</th><th scope="col">Pokok</th><th scope="col">Tenor</th><th scope="col">Angsuran rencana</th><th scope="col">Status</th></tr></thead>
-          <tbody>{rows.map((l) => <tr key={l.docNo}><td>{l.docNo}</td><td>{l.docDate ?? '—'}</td><td>{[l.type, l.method].filter(Boolean).join(' · ') || '—'}</td><td className="num">{formatRupiah(l.principalSen)}</td><td>{l.months ? `${l.months} bln` : '—'}</td><td className="num">{formatRupiah(l.installmentSen)}</td><td>{[l.docStatus, l.disbursement, l.repayment].filter(Boolean).join(' · ') || '—'}</td></tr>)}</tbody>
+          <tbody>{rows.map((l) => <tr key={l.docNo}><td><Link href={`/console/kosipa/pinjaman/${encodeURIComponent(l.docNo)}`}>{l.docNo}</Link></td><td>{l.docDate ?? '—'}</td><td>{[l.type, l.method].filter(Boolean).join(' · ') || '—'}</td><td className="num">{formatRupiah(l.principalSen)}</td><td>{l.months ? `${l.months} bln` : '—'}</td><td className="num">{formatRupiah(l.installmentSen)}</td><td>{[l.docStatus, l.disbursement, l.repayment].filter(Boolean).join(' · ') || '—'}</td></tr>)}</tbody>
         </table>
       )}</SectionBlock>
 

@@ -41,9 +41,18 @@ test('every API route is guarded (or explicitly public): the handler it delegate
     const src = readFileSync(file, 'utf8');
     if (PUBLIC_ROUTES.has(rel(file))) continue;
     const handlers = handlerSource(src);
-    if (!/\bguard\(/.test(handlers) && !/\bguard\(/.test(src)) unguarded.push(rel(file));
+    // `kosipaActor(` is the shared KOSIPA gate (flag -> guard() -> capabilities); its own body is verified in the next test.
+    if (!/\bguard\(/.test(handlers) && !/\bguard\(/.test(src) && !/\bkosipaActor\(/.test(handlers)) unguarded.push(rel(file));
   }
   assert.deepEqual(unguarded, [], 'routes reachable without a guard');
+});
+
+test('the shared KOSIPA gate checks the flag, then the session guard, then resolves capabilities on the server — in that order', () => {
+  const src = readFileSync(join(ROOT, 'src/infrastructure/console/kosipa-http.ts'), 'utf8');
+  const body = src.slice(src.indexOf('export async function kosipaActor'), src.indexOf('export function kosipaFailure'));
+  const [flag, guardAt, caps] = [body.indexOf('deps.enabled'), body.indexOf('guard('), body.indexOf('resolveConsoleAccess(')];
+  assert.ok(flag >= 0 && guardAt > flag && caps > guardAt, 'flag -> guard -> capability resolution');
+  assert.doesNotMatch(body, /csrf:\s*true/, 'GET gate: nothing is written, so no CSRF token is required');
 });
 
 test('every state-changing handler demands CSRF (guard csrf:true or its own origin+token check)', () => {

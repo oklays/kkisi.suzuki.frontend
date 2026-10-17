@@ -90,6 +90,28 @@ try {
       (9001,'PINSYN9001','S9001',3,'2026-08-25',100000,5000,105000,'Belum Bayar',NULL),(9002,'PINSYN-ORPH','S9001',1,'2026-08-26',1,0,1,'Belum Bayar',NULL),
       (9003,'PINSYN9001','S9001',2,'0000-00-00',1,0,1,'Belum Bayar',NULL),(9004,'PINSYN9001','S9001',9,'9999-12-10',1,0,1,'Belum Bayar',NULL),
       (9005,'PINSYN9001','S9002',1,'2026-08-25',1,0,1,'Bayar','PAYROLL')`);
+    await t(`INSERT INTO m_anggota (id, nik_kar, nama_kar, kd_group, status_anggota, status_karyawan, tgl_daftar, tgl_keluar, no_telp, email, no_rek, bank_rek, divisi, bagian, gaji, gaji_minus, limit_toko, limit_ppob, surat_kuasa) VALUES (9003,'S9003','SYNTH ANGGOTA TIGA','ANGGOTA','AKTIVE','TETAP','2021-01-01',NULL,'081200009003','tiga@example.invalid','9900119003','SYNTH BANK','SYNTH DIV','SYNTH BAG',6000000,0,800000,0,0)`);
+    // Checkpoint 7 (TASK-026): synthetic loans for the read-only loan pages. PINSYN9001 (above, member S9001) keeps the messy payroll-fixture installments; the others belong to member S9003 so payroll/360 expectations are unaffected:
+    // 5 rows against a 12-month plan (zero and 9999 due dates, a row of another member). Others: clean, long (70 rows = paging), rejected-but-settled,
+    // duplicate header, approved without a schedule.
+    const loan = (id, no, nik, name, status, cair, bayar, plan, months, over = {}) => t(
+      `INSERT INTO trans_pinjaman (id, doc_no, doc_date, nik, nama, jenis_pinjaman, jenis_suku_bunga, biaya_suku_bunga, plan_pinjaman, plan_jangka_waktu, plan_angsuran, doc_status, status_pencairan, status_bayar, nominal_pencairan, tgl_pencairan, awal_pinjaman, akhir_pinjaman, gaji_pokok, no_rekening)
+       VALUES (?,?,?,?,?,'PINJAMAN REGULAR','Flat','1',?,?,?,?,?,?,?,?,?,?,?,?)`,
+      id, no, over.docDate ?? '2026-03-10', nik, name, plan, months, Math.round(plan / months), status, cair, bayar, over.disbursed ?? plan, over.disbursedOn ?? '2026-03-15', '2026-04-01', '2027-03-01', 77000000, '9900770077');
+    await loan(9002, 'PINSYN9002', 'S9003', 'SYNTH ANGGOTA TIGA', 'APPROVED', 'APPROVED', 'BELUM LUNAS', 1200000, 12);
+    await loan(9003, 'PINSYN9003', 'S9003', 'SYNTH ANGGOTA TIGA', 'APPROVED', 'APPROVED', 'BELUM LUNAS', 700000, 70);
+    await loan(9004, 'PINSYN9004', 'S9003', 'SYNTH ANGGOTA TIGA', 'REJECTED', 'OPEN', 'LUNAS', 500000, 5, { docDate: '0000-00-00', disbursedOn: '0000-00-00' });
+    await loan(9005, 'PINSYN9005', 'S9003', 'SYNTH ANGGOTA TIGA', 'APPROVED', 'APPROVED', 'BELUM LUNAS', 300000, 3);
+    await loan(9006, 'PINSYN9005', 'S9003', 'SYNTH ANGGOTA TIGA', 'REJECTED', 'OPEN', 'BELUM LUNAS', 300000, 3);
+    await loan(9007, 'PINSYN9007', 'S9003', 'SYNTH ANGGOTA TIGA', 'APPROVED', 'APPROVED', 'BELUM LUNAS', 900000, 9);
+    const dueOf = (i) => { const m = 15 + i; return `${2026 + Math.floor((m - 1) / 12)}-${String(((m - 1) % 12) + 1).padStart(2, '0')}-25`; };
+    const rows = [];
+    let rid = 9010;
+    for (let i = 0; i < 12; i++) rows.push([rid++, 'PINSYN9002', 'S9003', i + 1, dueOf(i), 100000, 10000, 110000, i < 2 ? 'Bayar' : 'Belum Bayar', i < 2 ? 'PAYROLL' : null]);
+    for (let i = 0; i < 70; i++) rows.push([rid++, 'PINSYN9003', 'S9003', i + 1, dueOf(i), 10000, 0, 10000, 'Belum Bayar', null]);
+    for (let i = 0; i < 3; i++) rows.push([rid++, 'PINSYN9005', 'S9003', i + 1, dueOf(i), 100000, 0, 100000, 'Belum Bayar', null]);
+    for (const [id, doc, nik, no, due, pokok, bunga, total, status, type] of rows)
+      await t(`INSERT INTO trans_pinjaman_dtl (id, doc_no, nik_kar, ke_cicilan, tgl_cicilan, pokok_cicilan, bunga_cicilan, angsuran_cicilan, status_cicilan, type_cicilan) VALUES (?,?,?,?,?,?,?,?,?,?)`, id, doc, nik, no, due, pokok, bunga, total, status, type);
   });
   writeFileSync(process.env.E2E_FIXTURE, JSON.stringify(pw)); chmodSync(process.env.E2E_FIXTURE, 0o600);
   const counts = {};

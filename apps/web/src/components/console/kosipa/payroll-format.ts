@@ -35,8 +35,8 @@ export const ISSUE_TEXT: Record<string, string> = {
 
 export const DIFFERENCE_LABEL: Record<string, string> = {
   MATCH: 'Sama',
-  RECORDED_HIGHER: 'Payroll lebih besar dari turunan',
-  RECORDED_LOWER: 'Payroll lebih kecil dari turunan',
+  RECORDED_HIGHER: 'Payroll lebih besar dari turunan (informasi, belum tentu salah)',
+  RECORDED_LOWER: 'Payroll lebih kecil dari turunan (informasi, belum tentu salah)',
   RECORDED_ONLY: 'Hanya ada di payroll',
   DERIVED_ONLY_MEMBER_ABSENT: 'Ada belanja Kredit, anggota tidak ada di payroll periode ini',
   DERIVED_ONLY_RECORDED_ZERO: 'Ada belanja Kredit, payroll tercatat Rp 0',

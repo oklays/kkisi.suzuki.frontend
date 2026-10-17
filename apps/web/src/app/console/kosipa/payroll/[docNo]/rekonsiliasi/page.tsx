@@ -26,7 +26,7 @@ export default async function PayrollReconciliationPage({ params, searchParams }
   const sp = await searchParams; const after = one(sp.after); const all = one(sp.all) === '1';
   let result: ReconciliationResult | null = null; let failed = false;
   try {
-    result = await readStoreReconciliation({ reader: services.payroll, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, { docNo, after, all });
+    result = await readStoreReconciliation({ reader: services.payroll, audit: services.audit, now: services.now, storeColumnMap: services.storeColumnMap }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, { docNo, after, all });
   } catch (error) { if (error instanceof KosipaError) notFound(); failed = true; }
   if (!failed && !result) notFound();
   const base = `/console/kosipa/payroll/${encodeURIComponent(docNo)}`;
@@ -36,7 +36,7 @@ export default async function PayrollReconciliationPage({ params, searchParams }
       <Link className="console-back" href={base}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
       <header className="console-page-head">
         <h1>Rekonsiliasi kredit toko</h1>
-        <p>Tinjauan saja. Tiga angka dipisahkan: <strong>A</strong> nilai payroll yang tercatat, <strong>B</strong> kewajiban Kredit toko turunan (belanja Kredit bulan sumber dikurangi retur), dan <strong>C</strong> selisih A−B. Nilai tercatat tidak pernah diubah.</p>
+        <p>Tinjauan saja. Tiga angka dipisahkan: <strong>A</strong> nilai payroll yang tercatat, <strong>B</strong> kewajiban Kredit toko turunan (belanja Kredit bulan sumber dikurangi retur), dan <strong>C</strong> selisih informasi A−B. Perbandingan dilakukan per komponen (hanya kolom TOKO_* payroll terhadap belanja Kredit toko), bukan terhadap total potongan. <strong>Selisih bukan otomatis kesalahan</strong>: payroll bisa mencatat nilai yang berbeda karena alasan yang belum dapat dibuktikan dari data ini. Nilai tercatat tidak pernah diubah.</p>
       </header>
       {failed && <section className="console-panel" role="alert"><h2>Rekonsiliasi tidak dapat dibaca</h2><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></section>}
       {result?.state === 'unavailable' && <section className="console-panel" role="status"><h2>Rekonsiliasi tidak tersedia</h2><p>{REASON_TEXT[result.reason] ?? 'Tidak tersedia.'}</p></section>}
@@ -53,7 +53,7 @@ export default async function PayrollReconciliationPage({ params, searchParams }
           <section className="console-card" aria-labelledby="sec-ringkasan">
             <h2 id="sec-ringkasan">Ringkasan per toko</h2>
             <table className="console-table">
-              <thead><tr><th scope="col">Kolom toko</th><th scope="col">A · Tercatat di payroll</th><th scope="col">B · Turunan (bersih retur)</th><th scope="col">C · Selisih A−B</th></tr></thead>
+              <thead><tr><th scope="col">Kolom toko</th><th scope="col">A · Tercatat di payroll</th><th scope="col">B · Turunan (bersih retur)</th><th scope="col">C · Selisih informasi (A−B)</th></tr></thead>
               <tbody>{(Object.keys(COLUMN_LABEL) as (keyof typeof COLUMN_LABEL)[]).map((c) => {
                 const a = d.summary.recordedTotal4[c as 'TOKO_TAMBUN']; const b = d.summary.derivedTotal4[c as 'TOKO_TAMBUN'];
                 return <tr key={c}><td>{COLUMN_LABEL[c]}</td><td className="num">{formatAmount4(a)}</td><td className="num">{formatAmount4(b)}</td><td className="num">{formatAmount4(a - b)}</td></tr>;
@@ -72,7 +72,7 @@ export default async function PayrollReconciliationPage({ params, searchParams }
             <p><Link className="console-more" href={`${base}/rekonsiliasi${d.differencesOnly ? '?all=1' : ''}`}>{d.differencesOnly ? 'Tampilkan juga yang sama' : 'Tampilkan hanya selisih'}</Link></p>
             {d.rows.length === 0 ? <section className="console-panel" role="status"><h3>Tidak ada selisih</h3><p>Semua pasangan yang dapat dibandingkan sama.</p></section> : (
               <table className="console-table">
-                <thead><tr><th scope="col">NIK</th><th scope="col">Toko</th><th scope="col">A · Payroll</th><th scope="col">Belanja Kredit</th><th scope="col">Retur</th><th scope="col">B · Turunan</th><th scope="col">C · Selisih</th><th scope="col">Keterangan</th></tr></thead>
+                <thead><tr><th scope="col">NIK</th><th scope="col">Toko</th><th scope="col">A · Payroll</th><th scope="col">Belanja Kredit</th><th scope="col">Retur</th><th scope="col">B · Turunan</th><th scope="col">C · Selisih informasi</th><th scope="col">Keterangan</th></tr></thead>
                 <tbody>{d.rows.map((r) => (
                   <tr key={`${r.nik}|${r.column}`}>
                     <td>{r.nik}{r.recordedRows > 1 ? ` (${r.recordedRows} baris)` : ''}</td><td>{COLUMN_LABEL[r.column]}</td>

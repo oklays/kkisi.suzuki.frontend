@@ -55,5 +55,5 @@ export function sanitizeAuditDetail(detail: Record<string, unknown> | undefined)
   return Object.keys(out).length ? out : null;
 }
 
-export const AUDIT_ACTIONS = ['identity_link.create', 'identity_link.revoke', 'identity_link.denied', 'kosipa.member.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile'] as const;
+export const AUDIT_ACTIONS = ['identity_link.create', 'identity_link.revoke', 'identity_link.denied', 'kosipa.member.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile', 'kosipa.loan.list.view', 'kosipa.loan.detail.view'] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
