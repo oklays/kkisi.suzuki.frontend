@@ -21,7 +21,8 @@
     "./console/capabilities": "./src/console/resolve-capabilities.usecase.ts",
     "./console/identity-links": "./src/console/identity-links.ts",
     "./kosipa/member-360": "./src/kosipa/member-360.ts",
-    "./warehouse": "./src/warehouse/index.ts"
+    "./warehouse": "./src/warehouse/index.ts",
+    "./kosipa/payroll": "./src/kosipa/payroll.ts"
   },
   "scripts": {
     "lint": "eslint .",

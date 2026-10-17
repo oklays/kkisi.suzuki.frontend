@@ -35,7 +35,8 @@ test('audit detail keeps only safe flat identifiers and drops anything that coul
 
 test('KOSIPA capabilities follow the legacy controller grants, case-insensitively; no member view -> nothing', () => {
   assert.deepEqual([...kosipaCapabilitiesFromMenus(['ANGGOTA/anggota_c', 'simpanan/kas_anggota_c ', 'pinjaman/pinjaman_c'])].sort(), ['kosipa.loan.view', 'kosipa.member.view', 'kosipa.savings.view']);
-  assert.deepEqual([...kosipaCapabilitiesFromMenus(['simpanan/simpanan_c', 'payroll/matrix_c'])], [], 'detail tabs need the member directory');
+  assert.deepEqual([...kosipaCapabilitiesFromMenus(['simpanan/simpanan_c', 'anggota/trans_toko_c'])], [], 'member tabs need the member directory');
+  assert.deepEqual([...kosipaCapabilitiesFromMenus(['simpanan/simpanan_c', 'payroll/matrix_c'])], ['kosipa.payroll.view'], 'payroll batches are their own grant and do not need the directory');
   assert.deepEqual([...kosipaCapabilitiesFromMenus(['master/anggota_c', 'anggota/trans_toko_c', 'payroll/matrix_c'])].sort(), ['kosipa.member.view', 'kosipa.payroll.view', 'kosipa.store-credit.view']);
   assert.equal(kosipaCapabilitiesFromMenus(['admin/adm_menu_c', 'shu/shu_c']).size, 0);
   for (const cap of kosipaCapabilitiesFromMenus(KOSIPA_MENU_URLS)) assert.ok(ALL_CAPABILITIES.includes(cap));

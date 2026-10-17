@@ -42,4 +42,8 @@ export const RANGES = {
   trans_pinjaman: ['id', SYNTH.small[0], SYNTH.small[1]],
   db_sales: ['id', SYNTH.small[0], SYNTH.small[1]],
   db_salesreturn: ['id', SYNTH.small[0], SYNTH.small[1]],
+  // Checkpoint 6 (TASK-027): payroll and installment tables (db/e2e/003_e2e_kosipa_structure.sql).
+  trans_potongan_bulanan: ['id', SYNTH.small[0], SYNTH.small[1]],
+  trans_potongan_matrix: ['id', SYNTH.small[0], SYNTH.small[1]],
+  trans_pinjaman_dtl: ['id', SYNTH.small[0], SYNTH.small[1]],
 };

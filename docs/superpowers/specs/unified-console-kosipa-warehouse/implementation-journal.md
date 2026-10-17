@@ -16,7 +16,7 @@ Owner decisions applied (16 Oct 2026): legacy applications (KOSIPA, TOKO PHP, Gu
 | TASK-023, TASK-026, TASK-040, TASK-042, TASK-045, TASK-046 | **IN PROGRESS** — domain layer VERIFIED (unit) | Checkpoint 2; adapters, use cases, UI and writers still to do |
 | TASK-020, 021, 022, 024 | **VERIFIED (local)** | Checkpoint 3 (Option B). TASK-021 uses the existing SELECT-only reader (no new business pool) + the console store guard |
 | TASK-025, 026 | PARTIAL | Read of movements/loan headers only; balances and instalment detail wait for TASK-003 / index review |
-| TASK-027 … | NOT STARTED | Payroll read needs the index review (proposal: Checkpoint 5) |
+| TASK-027 | **IMPLEMENTED + VERIFIED (synthetic fixtures, local staging copy read-only)**; NOT staging-accepted, NOT production-ready | Checkpoint 6. Payroll does not need an index (Checkpoint 5 measurement) |
 | TASK-062, TASK-063 | **PARTIAL** — domain + application VERIFIED | Checkpoint 4; no adapter, storage, writer or UI; accounting treatment open |
 
 ---
@@ -307,3 +307,53 @@ The unproven claims "tables are very large and unindexed in production" were rem
 ### Open items
 
 Production index state and `TABLE_ROWS` (pre-check SQL), identity of the three dominant NIKs (data owner), legacy write pattern on `trans_pinjaman_dtl`, view definitions (TASK-003), a staging validation run per §8 of the proposal, and the operator decision. Indexes are not required for any code in this repository to be correct.
+
+---
+
+## Checkpoint 6 — KOSIPA payroll read, read-only (TASK-027; REQ-025, REQ-034 read side, BR-006)
+
+**Status vocabulary.** IMPLEMENTED: yes. VERIFIED: yes, on synthetic fixtures (`kkisi_e2e_legacy`) and by read-only smoke on the local copy of the 30 Sep 2026 data. STAGING ACCEPTED: **no** (needs the data owner to review real figures and confirm the store-column map). PRODUCTION READY: **no** (production state unverified; console store and flags are not provisioned there; nothing was run against production).
+
+### Three figures, never mixed
+
+| | Meaning | Source |
+|---|---|---|
+| **A** recorded | what the legacy matrix stored (`trans_potongan_matrix`, header `trans_potongan_bulanan`) | read as exact decimal strings, parsed to integer 1/10,000 rupiah (14% of recorded totals carry fractions of a sen), never overwritten, never "fixed" |
+| **B** derived | store-credit obligation = Kredit Final sales of the previous calendar month minus Kredit returns, per member and store column | computed on the fly for review only |
+| **C** difference | A − B, per member × store column, only where both sides are comparable | anomalies are carried as their own category (`NOT_COMPARABLE_ANOMALY`, unmapped branch, duplicate sale, return without sale, truncated source), never dropped |
+
+### Delivered
+
+- Domain `packages/domain/src/kosipa/payroll-read.ts`, `payroll-reconciliation.ts` (parsing, date classification, 59-column catalog and groups, batch integrity, derivation, reconciliation); console capability: payroll is independent of the member directory; three audit actions.
+- Application `packages/application/src/kosipa/payroll.ts`: `PayrollReader` port (no write method), `listPayrollBatches`, `readPayrollBatch`, `readPayrollMember`, `readStoreReconciliation`, `loadMemberPayrollHistory`. Order everywhere: capability → input validation → audit (before any read; audit failure stops the read) → bounded reads. Anggota 360 now shows the member's recorded payroll history (optional port, `NOT_CONFIGURED` when absent).
+- Adapter `apps/web/src/infrastructure/repositories/kosipa-payroll.repository.ts` on the **existing** SELECT-only reader (no new pool; budget unchanged at 12/12): every statement `SET STATEMENT max_statement_time=5`, parameterised, `LIMIT`ed, keyset-paginated (batches/history `id DESC`, rows `id ASC`), dates read as text, column names only from the domain catalog, headers and rows read by separate statements (no join can duplicate a row), `gaji_payroll` never selected.
+- API (GET only): `/api/kosipa/payroll`, `/{docNo}`, `/{docNo}/anggota/{nik}`, `/{docNo}/store-reconciliation`. Pages: `/console/kosipa/payroll`, `/{docNo}`, `/{docNo}/anggota/{nik}`, `/{docNo}/rekonsiliasi`; sidebar entry available only with `kosipa.payroll.view`. No approve/post/generate control exists; the matrix procedure is never called.
+
+### Verification (actual, 17 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK (the existing `process.exit` instrumentation warning is unchanged) |
+| `pnpm test` | domain **94/94**, application **70/70**, web **258 pass / 0 fail** (+47 opt-in skipped) |
+| Mutation checks (application) | removing the payroll grant, the audit, the page bound, the store-credit grant, the truncated-source guard, NIK validation, the loan grant or the history bound each fails ≥1 test (8/8 killed) |
+| Opt-in DB test `kosipa-payroll-db.test.mjs` (synthetic schema, SELECT-only account) | PASS: filters, keyset, zero/9999 dates, orphan parents, duplicates, sub-sen totals, return-adjusted derivation, unmapped branch, wildcard input literal, the account cannot write, server-side time cap |
+| Browser `console-payroll-browser.mjs` (built app, synthetic data) | PASS: 9 scenarios incl. list/filter/empty/invalid, batch detail + 50-row keyset, member breakdown + installment references, reconciliation A/B/C, Anggota 360 history, API codes (200/400/404/405/401/403), member-directory-only and unlinked accounts see nothing, audit trail opaque; no overflow at 375–1440; zero browser errors |
+| Regression browsers | `console-browser.mjs`, `console-kosipa-browser.mjs`, `pos-browser.mjs`, `e2e-local.mjs` PASS. Flag off: payroll APIs 404 |
+| Read-only smoke on the local copy of 30 Sep data | batch (161 rows) 0.4 s; reconciliation 0.35 s; member history 40 ms; heaviest member (635k installment rows): installment summary 0.56 s, month list 0.17 s, history 0.24 s: all under the 5 s cap |
+
+### Data anomalies observed (30 Sep copy; production not verified)
+
+35 of 84,924 matrix rows have total ≠ sum of the 59 components; 5 headers have total ≠ sum of rows; 3 headers have no rows; 4 duplicate (batch, NIK) pairs; 14% of totals carry sub-sen precision; a member can sit in two batches of the same period (the comparison is period-level for this reason); header `kd_group` is not a reliable membership key; `potongan_toko` is a redundant subtotal (never added again); installment due dates: zero dates on ~43% of rows and the placeholder `9999-12-10` on many (counted, never placed in a month); detail rows with no loan parent (orphans reported); `db_salesreturn` is empty on the staging copy, so return-adjusted derivation is proven on synthetic fixtures only.
+
+### Limitations and open items
+
+1. **TOKO column ↔ branch map is empirical** (company 1/2/3 → `TOKO_TAMBUN`/`TOKO_MJ`/`TOKO_GIIC` matched on the 30 Sep data). Until the process owner confirms it the reconciliation is labelled review-only; one line in `DEFAULT_STORE_COLUMN_MAP` changes when confirmed.
+2. Reconciliation depends on the previous-month window (BR-006) and refuses to compare when the period is ambiguous or the source exceeds the 60,000-row cap, rather than inventing differences.
+3. `trans_pinjaman_dtl` and `trans_potongan_matrix` reads are scans (no secondary index in the dump); measured within the cap. The index proposal stays deferred and was **not** executed.
+4. Not delivered here: matrix generation (the replacement for the legacy procedure stays in TASK-045 behind its own approval), settlement, any write.
+5. Anggota 360 "Rincian angsuran" stays gated; payroll history there is read with the member view audit.
+
+### Next eligible checkpoint (recommendation)
+
+**TASK-026 read side**: loan list/detail/schedule pages using the same patterns (the installment reads were measured within the cap even for the heaviest member). Balances/outstanding stay pending TASK-003 view definitions. Alternatives: index staging validation (separate task), Warehouse adapters (blocked on the Gudang schema export).
+

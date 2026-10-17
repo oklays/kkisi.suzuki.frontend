@@ -20,8 +20,9 @@ export function kosipaCapabilitiesFromMenus(urls: readonly string[]): Set<Capabi
   for (const [capability, menus] of Object.entries(MENU_CAPABILITIES) as [KosipaCapability, readonly string[]][]) {
     if (menus.some((m) => allowed.has(m))) out.add(capability);
   }
-  // Member detail tabs are reachable only from the member directory.
-  if (!out.has('kosipa.member.view')) return new Set();
+  // The member-level tabs (savings, loans, store credit) are reached only through the member directory. Payroll batches are a
+  // separate controller (payroll/matrix_c) with its own grant, so payroll access does not depend on the directory.
+  if (!out.has('kosipa.member.view')) for (const memberTab of ['kosipa.savings.view', 'kosipa.loan.view', 'kosipa.store-credit.view'] as const) out.delete(memberTab);
   return out;
 }
 

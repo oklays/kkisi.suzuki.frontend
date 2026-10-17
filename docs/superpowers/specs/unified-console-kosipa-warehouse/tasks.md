@@ -104,7 +104,8 @@ Aturan umum: satu task = satu PR yang dapat direview. Tidak menulis ke DB produk
   - **Goal:** daftar/detail/jadwal/outstanding. Simulasi Flat/Anuitas integer.
   - **Requirements Addressed:** `REQ-024`, `REQ-030`, `BR-004`, `VAL-003`, `NFR-004`
   - **Verification:** Σpokok = principal untuk 10.000 kombinasi acak (property test). Parity vs `v_trans_pinjaman_simulasi` untuk sampel. Kasus ANO-K07 dilaporkan.
-- [ ] `TASK-027`: Payroll read + rekonsiliasi toko
+- [x] `TASK-027`: Payroll read + rekonsiliasi toko
+  - **Status:** IMPLEMENTED + VERIFIED (synthetic fixtures; read-only smoke on the local copy of the 30 Sep data) — NOT staging-accepted, NOT production-ready. Lihat implementation-journal.md Checkpoint 6
   - **Files:** `kosipa-payroll.repository.ts`, `app/console/kosipa/payroll/**`, `app/api/kosipa/payroll/[docNo]/store-reconciliation/route.ts`
   - **Goal:** header, matriks per NIK (paginasi server), total, laporan selisih `TOKO_*` vs Kredit − retur.
   - **Requirements Addressed:** `REQ-025`, `REQ-034`, `BR-006`

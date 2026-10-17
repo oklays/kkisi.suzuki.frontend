@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { readMember360, type Member360, type Section } from '@koperasi/application/kosipa/member-360';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { formatRupiah } from '@/components/pos/preview';
+import { formatAmount4, STATUS_LABEL } from '@/components/console/kosipa/payroll-format';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import { kosipaServices } from '@/infrastructure/console/services';
@@ -14,6 +15,7 @@ export const metadata = { title: 'Anggota 360 · KOSIPA · KKISI TB2' };
 const REASON: Record<string, string> = {
   INDEX_REQUIRED: 'Belum ditampilkan: sumber data ini menunggu tinjauan performa (indeks) sebelum dibaca dari database produksi.',
   READ_FAILED: 'Data tidak dapat dibaca saat ini. Coba lagi beberapa saat lagi.',
+  NOT_CONFIGURED: 'Sumber data ini belum dikonfigurasi di lingkungan ini.',
 };
 
 function SectionBlock<T>({ title, section, children }: { title: string; section: Section<T>; children: (data: T) => React.ReactNode }) {
@@ -39,7 +41,7 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
   if (!/^\d{1,10}$/.test(id)) notFound();
   let member: Member360 | null;
   try {
-    member = await readMember360({ reader: services.members, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, Number(id));
+    member = await readMember360({ reader: services.members, payroll: services.payroll, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, Number(id));
   } catch { return <KosipaNotice state="unavailable" />; }
   if (!member) notFound();
   const p = member.profile;
@@ -85,7 +87,23 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
       )}</SectionBlock>
 
       <SectionBlock title="Rincian angsuran" section={member.installments}>{() => null}</SectionBlock>
-      <SectionBlock title="Potongan payroll" section={member.payroll}>{() => null}</SectionBlock>
+      <SectionBlock title="Potongan payroll" section={member.payroll}>{(rows) => rows.length === 0 ? <p>Belum ada potongan payroll tercatat.</p> : (
+        <>
+          <table className="console-table">
+            <thead><tr><th scope="col">Batch</th><th scope="col">Periode</th><th scope="col">Status</th><th scope="col">Toko (Kredit)</th><th scope="col">Total potongan tercatat</th></tr></thead>
+            <tbody>{rows.map((r) => (
+              <tr key={r.id}>
+                <td>{r.header.state === 'OK' ? <Link href={`/console/kosipa/payroll/${encodeURIComponent(r.docNo)}/anggota/${encodeURIComponent(p.nik)}`}>{r.docNo}</Link> : r.docNo}</td>
+                <td>{r.header.state === 'OK' ? (r.header.period ?? '—') : '—'}</td>
+                <td>{r.header.state === 'OK' ? STATUS_LABEL[r.header.status] : r.header.state === 'MISSING' ? 'Header batch tidak ditemukan' : 'Header ganda: status tidak dapat dipastikan'}</td>
+                <td className="num">{formatAmount4(r.toko4.TOKO_TAMBUN + r.toko4.TOKO_MJ + r.toko4.TOKO_GIIC)}</td>
+                <td className="num">{formatAmount4(r.total4)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+          <p className="console-notice">Menampilkan paling banyak 24 baris terbaru, sebagai nilai yang tercatat di KOSIPA. Bukan perhitungan ulang.</p>
+        </>
+      )}</SectionBlock>
 
       <SectionBlock title="Kredit toko bulan berjalan" section={member.storeCredit}>{(c) => (
         <dl className="console-dl">

@@ -9,3 +9,13 @@ export { planPayrollSettlement, loansFullyPaid, type MatrixLine, type DueInstall
 export { allocateShu, type ShuWeight } from './shu-allocation.ts';
 export { assertBalancedJournal, type JournalLine } from './journal.ts';
 export { maskPhone, maskEmail, maskAccount } from './masking.ts';
+export {
+  AMOUNT4_SCALE, parseAmount4, amount4FromSen, sumAmount4, classifyLegacyDate, parsePayrollPeriod, periodLabel, periodColumns, periodSourceWindow, parseBatchListQuery, parseCursor, parseDocNo, parseMemberFilter,
+  PAYROLL_STATUSES, PAYROLL_GROUPS, PAYROLL_PAGE_SIZE, PAYROLL_MEMBER_PAGE_SIZE, PAYROLL_HISTORY_LIMIT, PAYROLL_COMPONENT_COLUMNS, STORE_COLUMNS, GROUP_LABEL, componentGroup, componentLabel, describeRow, assessBatch,
+  type LegacyDate, type PayrollPeriod, type PayrollStatus, type PayrollGroup, type BatchListQuery, type MemberSearch, type PayrollComponentColumn, type StoreColumn, type ComponentGroup,
+  type RecordedAmounts, type ComponentLine, type RowBreakdown, type IntegrityIssue, type BatchHeader, type BatchSummaryFacts, type BatchIntegrity,
+} from './payroll-read.ts';
+export {
+  DEFAULT_STORE_COLUMN_MAP, deriveStoreObligations, reconcileStoreCredit, isDifference,
+  type StoreColumnMap, type KreditSaleRow, type KreditReturnRow, type Anomaly, type AnomalyCode, type Derived, type RecordedStoreRow, type Difference, type ReconciliationRow, type ReconciliationSummary,
+} from './payroll-reconciliation.ts';

@@ -2,6 +2,7 @@ import { evaluateMemberEligibility, maskAccount, maskEmail, maskPhone, nikLookup
 import { businessDates, memberCredit, PosError } from '@koperasi/domain/pos/sale';
 import type { CapabilitySet } from '@koperasi/domain/console/capabilities';
 import type { AuditLog } from '../console/identity-links.ts';
+import { loadMemberPayrollHistory, type MemberPayrollRow, type PayrollReader } from './payroll.ts';
 
 export type MemberSummary = { id: number; nik: string; name: string; group: string | null; status: string | null; employment: string | null };
 export type MemberRecordRow = MemberSummary & { exitOn: string | null; joinedOn: string | null; division: string | null; section: string | null; phone: string | null; email: string | null; bankAccount: string | null; bankName: string | null; limitTokoSen: number; gajiMinusSen: number; limitPpobSen: number };
@@ -17,7 +18,7 @@ export interface KosipaMemberReader {
   storeCredit(nik: string, monthStart: string, monthEndExclusive: string): Promise<{ spentSen: number; returnedSen: number }>;
 }
 
-export type Section<T> = { state: 'ok'; data: T } | { state: 'restricted' } | { state: 'unavailable'; reason: 'INDEX_REQUIRED' | 'READ_FAILED' };
+export type Section<T> = { state: 'ok'; data: T } | { state: 'restricted' } | { state: 'unavailable'; reason: 'INDEX_REQUIRED' | 'READ_FAILED' | 'NOT_CONFIGURED' };
 
 export const SEARCH_LIMIT = 25;
 /** NIK-shaped input (digits/letters, no spaces) is matched exactly by NIK; anything else by name. */
@@ -43,7 +44,8 @@ export type Member360 = {
   savings: Section<{ type: string; postedSen: number; pendingDebitSen: number; pendingCreditSen: number }[]>;
   loans: Section<LoanHeader[]>;
   installments: Section<never>;
-  payroll: Section<never>;
+  /** RECORDED payroll rows (legacy trans_potongan_matrix), newest first, bounded. Never recomputed. */
+  payroll: Section<MemberPayrollRow[]>;
   storeCredit: Section<{ monthStart: string; limitSen: number | null; spentSen: number; returnedSen: number; netSen: number; remainingSen: number | null }>;
 };
 
@@ -53,7 +55,7 @@ export type Member360 = {
  * query in production (no index on large tables) are reported as unavailable instead of being estimated.
  */
 export async function readMember360(
-  ports: { reader: KosipaMemberReader; audit: AuditLog; now: () => Date },
+  ports: { reader: KosipaMemberReader; audit: AuditLog; now: () => Date; payroll?: Pick<PayrollReader, 'memberHistory' | 'headersByDocNo'> },
   actor: { userId: number; capabilities: CapabilitySet; requestId: string },
   memberId: number,
 ): Promise<Member360 | null> {
@@ -92,7 +94,10 @@ export async function readMember360(
     } catch (e) { if (!(e instanceof PosError)) throw e; }   // ineligible: usage is shown, no limit is offered
     return { monthStart: dates.monthStart, limitSen, spentSen: usage.spentSen, returnedSen: usage.returnedSen, netSen, remainingSen };
   });
-  const indexRequired = (cap: Parameters<CapabilitySet['has']>[0]): Section<never> => (can(cap) ? { state: 'unavailable', reason: 'INDEX_REQUIRED' } : { state: 'restricted' });
+  const payrollReader = ports.payroll;
+  const payroll: Section<MemberPayrollRow[]> = !payrollReader ? (can('kosipa.payroll.view') ? { state: 'unavailable', reason: 'NOT_CONFIGURED' } : { state: 'restricted' })
+    : await guarded('kosipa.payroll.view', () => loadMemberPayrollHistory(payrollReader, m.nik));
+  const installmentsGate: Section<never> = can('kosipa.loan.view') ? { state: 'unavailable', reason: 'INDEX_REQUIRED' } : { state: 'restricted' };
   return {
     profile: {
       id: m.id, nik: m.nik, name: m.name, group: m.group, status: m.status, employment: m.employment, exitOn: m.exitOn, joinedOn: m.joinedOn,
@@ -100,7 +105,7 @@ export async function readMember360(
       eligibility: evaluateMemberEligibility({ nik: m.nik, status: m.status ?? '', employment: m.employment ?? '', exitOn: m.exitOn }, dates.day),
     },
     savings, loans, storeCredit,
-    installments: indexRequired('kosipa.loan.view'),
-    payroll: indexRequired('kosipa.payroll.view'),
+    installments: installmentsGate,
+    payroll,
   };
 }

@@ -122,3 +122,11 @@
 .console-message { padding:10px 14px; border-radius:10px; background:#e7f6ec; color:#05603a; }
 .console-message-error { background:#fef3f2; color:#b42318; }
 @media (max-width: 767px) { .console-form { grid-template-columns:minmax(0,1fr); } .console-search div { flex-direction:column; } }
+.console-search .console-filter-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:12px; align-items:end; flex-direction:initial; }
+.console-filter-row label { display:flex; flex-direction:column; gap:6px; min-width:0; font-size:13px; }
+.console-filter-row input, .console-filter-row select { width:100%; min-width:0; min-height:40px; }
+.console-notice ul { margin:6px 0 0; padding-left:18px; }
+.console-more { color:var(--c-blue); font-weight:650; display:inline-flex; align-items:center; min-height:44px; }
+@media (max-width: 767px) { .console-search .console-filter-row { grid-template-columns:minmax(0,1fr); align-items:stretch; } }
+.console-page .console-section { min-width:0; overflow-x:auto; }
+.console-search.console-search-wide { max-width:none; }

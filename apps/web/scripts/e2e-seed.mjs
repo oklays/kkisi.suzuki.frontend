@@ -56,6 +56,40 @@ try {
     await t(`INSERT INTO trans_pinjaman (id, doc_no, doc_date, nik, nama, jenis_pinjaman, jenis_suku_bunga, plan_pinjaman, plan_jangka_waktu, plan_angsuran, doc_status, status_pencairan, status_bayar) VALUES (9001,'PINSYN9001','2026-08-10','S9001','SYNTH ANGGOTA SATU','REGULER','Flat',12000000,12,1120000,'APPROVED','APPROVED','BELUM LUNAS')`);
     await t(`INSERT INTO db_sales (id, company_id, sales_code, nik_kar, payment_type, sales_status, sales_date, grand_total) VALUES (9001,9001,'SYNSALE9001','S9001','Kredit','Final',DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR)),150000)`);
     await t(`INSERT INTO db_salesreturn (id, company_id, sales_id, grand_total, payment_type, return_status, status, return_date) VALUES (9001,9001,9001,30000,'Kredit','Return',1,DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR))`);
+    // Checkpoint 6 (TASK-027): synthetic payroll. Period 2026-08 reads the July 2026 Kredit sales (BR-006). Values are fictitious.
+    //   A POTSYN202608A (APPROVED, ANGGOTA): S9001 150000 (TOKO_TAMBUN 100000 + PPOB 50000), S9002 100000 (TOKO_TAMBUN, recorded NOT net of its 20000 return)
+    //   B POTSYN202608B (OPEN, BMP):         S9001 40000 (TOKO_MJ)
+    //   C POTSYN202607A: zero period date, duplicate (batch, NIK) rows with sub-sen amounts   D POTSYN202606A: header without rows
+    //   E POTSYN202605A: unknown status, header total differs from the rows
+    const AMOUNTS = ['TOKO_TAMBUN', 'TOKO_MJ', 'TOKO_GIIC', 'PPOB', 'SIMPANAN_WAJIB', 'SIMPANAN_SUKARELA'];
+    const hd = (id, no, grp, status, bl, periodDate, total) => t('INSERT INTO trans_potongan_bulanan (id, doc_no, doc_date, doc_status, periode_potongan, remarks, cd_usr, ud_usr, total, periode_bl, periode_th, kd_group, tgl_cair, total_cair, is_mobile) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)',
+      id, no, '2026-09-28', status, periodDate, 'SYNTH', 'synth_maker', 'synth_checker', total, bl, '2026', grp, '2026-09-30', total);
+    await hd(9001, 'POTSYN202608A', 'ANGGOTA', 'APPROVED', '08', '2026-08-31', 250000);
+    await hd(9002, 'POTSYN202608B', 'BMP', 'OPEN', '08', '2026-08-31', 40000);
+    await hd(9003, 'POTSYN202607A', 'ANGGOTA', 'APPROVED', '07', '0000-00-00', 50000.6666);
+    await hd(9004, 'POTSYN202606A', 'ANGGOTA', 'APPROVED', '06', '2026-06-30', 0);
+    await hd(9005, 'POTSYN202605A', 'ANGGOTA', 'REVIEW', '05', '2026-05-31', 99999);
+    const mx = (id, no, nik, name, amounts) => {
+      const cols = Object.keys(amounts); const total = cols.filter((c) => c !== 'potongan_toko').reduce((n, c) => n + Number(amounts[c]), 0);
+      const all = { ...amounts, total_potongan: total, gaji_payroll: 12345678 };
+      return t(`INSERT INTO trans_potongan_matrix (id, periode, doc_no_dtl, nik_kar, nama, kd_group, ${Object.keys(all).join(', ')}) VALUES (?,?,?,?,?,?,${Object.keys(all).map(() => '?').join(',')})`, id, no, `${no}-${id}`, nik, name, 'ANGGOTA', ...Object.values(all));
+    };
+    await mx(9001, 'POTSYN202608A', 'S9001', 'SYNTH ANGGOTA SATU', { TOKO_TAMBUN: 100000, potongan_toko: 100000, PPOB: 50000 });
+    await mx(9002, 'POTSYN202608A', 'S9002', 'SYNTH ANGGOTA KONTRAK', { TOKO_TAMBUN: 100000, potongan_toko: 100000 });
+    await mx(9003, 'POTSYN202608B', 'S9001', 'SYNTH ANGGOTA SATU', { TOKO_MJ: 40000, potongan_toko: 40000 });
+    await mx(9004, 'POTSYN202607A', 'S9001', 'SYNTH ANGGOTA SATU', { SIMPANAN_WAJIB: 25000.3333 });
+    await mx(9005, 'POTSYN202607A', 'S9001', 'SYNTH ANGGOTA SATU', { SIMPANAN_WAJIB: 25000.3333 });
+    await mx(9006, 'POTSYN202605A', 'S9002', 'SYNTH ANGGOTA KONTRAK', { SIMPANAN_SUKARELA: 10000 });
+    void AMOUNTS;
+    const sl = (id, company, nik, total) => t('INSERT INTO db_sales (id, company_id, sales_code, nik_kar, payment_type, sales_status, sales_date, grand_total) VALUES (?,?,?,?,"Kredit","Final","2026-07-15 10:00:00",?)', id, company, `SYNSALE${id}`, nik, total);
+    await sl(9011, 1, 'S9001', 100000); await sl(9012, 1, 'S9002', 100000); await sl(9013, 2, 'S9001', 40000);
+    await sl(9014, 9001, 'S9001', 5000);          // a branch the empirical store-column map does not know: must be reported, not dropped
+    await sl(9015, 3, 'S9003', 30000);            // Kredit sale of a member with no payroll row in the period
+    await t(`INSERT INTO db_salesreturn (id, company_id, sales_id, grand_total, payment_type, return_status, status, return_date) VALUES (9011,1,9012,20000,'Kredit','Return',1,'2026-07-20 09:00:00')`);
+    await t(`INSERT INTO trans_pinjaman_dtl (id, doc_no, nik_kar, ke_cicilan, tgl_cicilan, pokok_cicilan, bunga_cicilan, angsuran_cicilan, status_cicilan, type_cicilan) VALUES
+      (9001,'PINSYN9001','S9001',3,'2026-08-25',100000,5000,105000,'Belum Bayar',NULL),(9002,'PINSYN-ORPH','S9001',1,'2026-08-26',1,0,1,'Belum Bayar',NULL),
+      (9003,'PINSYN9001','S9001',2,'0000-00-00',1,0,1,'Belum Bayar',NULL),(9004,'PINSYN9001','S9001',9,'9999-12-10',1,0,1,'Belum Bayar',NULL),
+      (9005,'PINSYN9001','S9002',1,'2026-08-25',1,0,1,'Bayar','PAYROLL')`);
   });
   writeFileSync(process.env.E2E_FIXTURE, JSON.stringify(pw)); chmodSync(process.env.E2E_FIXTURE, 0o600);
   const counts = {};

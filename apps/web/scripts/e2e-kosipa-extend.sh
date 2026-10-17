@@ -12,7 +12,7 @@ load_root_env; assert_local_container
 marker="$(root_sql -e "SELECT COUNT(*) FROM kkisi_e2e_legacy._e2e_marker WHERE purpose='synthetic-only'" 2>/dev/null || echo 0)"
 [ "$marker" = "1" ] || die "synthetic marker missing: kkisi_e2e_legacy is not the synthetic e2e schema (run scripts/e2e-setup.sh first)"
 legacy_before="$(legacy_object_count)"
-info "target: kkisi_e2e_legacy (synthetic). Adds 11 structure-only tables if missing. Mode: $mode"
+info "target: kkisi_e2e_legacy (synthetic). Adds 14 structure-only tables if missing. Mode: $mode"
 [ "$mode" = "apply" ] || { info "DRY RUN: nothing was changed."; exit 0; }
 root_sql < db/e2e/003_e2e_kosipa_structure.sql
 [ "$(legacy_object_count)" = "$legacy_before" ] || die "legacy object count changed: STOP and investigate"

@@ -22,7 +22,7 @@ Status 16 Okt 2026: **spesifikasi saja**. Belum ada task implementasi yang dijal
 | `REQ-022` | Anggota & 360 | §6 members API | `TASK-021`, `TASK-024` | e2e masking + capability per tab. p95 |
 | `REQ-023` | Ledger & saldo simpanan | §4 saldo | `TASK-023`, `TASK-025` | Parity ≥ 50×3×2 sampel |
 | `REQ-024` | Pinjaman read | §6 loans API | `TASK-026` | Detail/jadwal vs legacy staging |
-| `REQ-025` | Payroll read + rekonsiliasi | §6 reconciliation | `TASK-027` | Periode `POT202609…`: selisih = NIK dengan retur |
+| `REQ-025` | Payroll read + rekonsiliasi | §6 reconciliation | `TASK-027` | Periode `POT202609…`: selisih = NIK dengan retur. **Status 17 Okt 2026:** terverifikasi di fixture sintetis (selisih = NIK dengan retur yang tidak dipotong; cabang tak terpetakan dan anggota tanpa baris payroll dilaporkan); belum diterima di staging (butuh konfirmasi pemilik data atas peta kolom TOKO_*) |
 | `REQ-026` | Laporan KOSIPA | §6 ekspor | `TASK-028` | Parity total per laporan. Ekspor tanpa file disk |
 | `REQ-027` | Parity harness | §4 parity | `TASK-004`, `TASK-025`, `TASK-029` | Laporan harness. Gate blocked bila mismatch |
 | `REQ-030` | Originasi pinjaman | §4 Flat/Anuitas | `TASK-026`, `TASK-043` | Property Σpokok. `m_anggota.gaji` tak berubah |

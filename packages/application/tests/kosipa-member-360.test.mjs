@@ -44,7 +44,7 @@ test('360: masked contact data, savings by header status, honest unavailable sec
   assert.ok(!('limitTokoSen' in v.profile) && !('gaji' in v.profile));
   assert.deepEqual(v.savings, { state: 'ok', data: [{ type: 'SIMPANAN WAJIB', postedSen: RP(501_000), pendingDebitSen: RP(100_000), pendingCreditSen: 0 }] }, 'ambiguous headers are excluded');
   assert.deepEqual(v.installments, { state: 'unavailable', reason: 'INDEX_REQUIRED' });
-  assert.deepEqual(v.payroll, { state: 'unavailable', reason: 'INDEX_REQUIRED' });
+  assert.deepEqual(v.payroll, { state: 'unavailable', reason: 'NOT_CONFIGURED' }, 'no payroll reader wired -> an honest state, not an invented empty list');
   assert.deepEqual(v.storeCredit, { state: 'ok', data: { monthStart: '2026-10-01', limitSen: RP(1_000_000), spentSen: RP(150_000), returnedSen: RP(30_000), netSen: RP(120_000), remainingSen: RP(880_000) } });
   assert.equal(v.profile.eligibility.eligible, true);
 });
@@ -72,4 +72,42 @@ test('360: section reads never overlap (one shared-pool connection per page view
   const r = reader({ savings: slow([]), loans: slow([]), storeCredit: slow({ spentSen: 0, returnedSen: 0 }) });
   await readMember360({ reader: r.value, audit: { async append() {} }, now }, { userId: 7, capabilities: ALL, requestId: 'q' }, 4410);
   assert.equal(peak, 1);
+});
+
+const payrollPort = (over = {}) => ({
+  calls: [],
+  async memberHistory(nikKeys, before, limit) { this.calls.push(['history', nikKeys, before, limit]); return [
+    { id: 30, docNo: 'POT20260800001', total: '1500000.3333', toko: { TOKO_TAMBUN: '200000.0000', TOKO_MJ: '0.0000', TOKO_GIIC: '0.0000' } },
+    { id: 20, docNo: 'POT20260700001', total: '900000.0000', toko: { TOKO_TAMBUN: '0.0000', TOKO_MJ: '0.0000', TOKO_GIIC: '0.0000' } },
+    { id: 10, docNo: 'POT20260600009', total: '100.0000', toko: { TOKO_TAMBUN: '0.0000', TOKO_MJ: '0.0000', TOKO_GIIC: '0.0000' } },
+    { id: 9, docNo: 'POT20260500001', total: '50.0000', toko: { TOKO_TAMBUN: '0.0000', TOKO_MJ: '0.0000', TOKO_GIIC: '0.0000' } },
+  ]; },
+  async headersByDocNo(docNos) { this.calls.push(['headers', docNos]); return [
+    { docNo: 'POT20260800001', headerCount: 1, header: { id: 1, docNo: 'POT20260800001', group: 'ANGGOTA', status: 'APPROVED', periodYear: '2026', periodMonth: '08' } },
+    { docNo: 'POT20260700001', headerCount: 1, header: { id: 2, docNo: 'POT20260700001', group: 'BMP', status: 'OPEN', periodYear: '2026', periodMonth: '07' } },
+    { docNo: 'POT20260600009', headerCount: 0, header: null },
+    { docNo: 'POT20260500001', headerCount: 2, header: { id: 3, docNo: 'POT20260500001', group: 'BMP', status: 'APPROVED', periodYear: '2026', periodMonth: '05' } },
+  ]; },
+  ...over,
+});
+
+test('360 payroll: recorded rows with their header state (OK / MISSING / AMBIGUOUS), exact 4-decimal amounts, bounded, bounded to the member', async () => {
+  const payroll = payrollPort();
+  const v = await readMember360({ reader: reader().value, audit: { async append() {} }, now, payroll }, { userId: 7, capabilities: ALL, requestId: 'q' }, 4410);
+  assert.equal(v.payroll.state, 'ok');
+  assert.deepEqual(v.payroll.data.map((r) => [r.docNo, r.total4, r.header.state]), [['POT20260800001', 15000003333, 'OK'], ['POT20260700001', 9000000000, 'OK'], ['POT20260600009', 1000000, 'MISSING'], ['POT20260500001', 500000, 'AMBIGUOUS']],
+    'an orphan row and a duplicated header are surfaced, not joined away; sub-sen total preserved');
+  assert.deepEqual(v.payroll.data[0].header, { state: 'OK', status: 'APPROVED', period: '2026-08' });
+  assert.deepEqual(payroll.calls[0][1], ['00123', '123'], 'looked up by the member NIK keys only');
+  assert.ok(payroll.calls[0][3] <= 24, 'bounded history');
+});
+
+test('360 payroll: not queried without the payroll capability; a failing payroll read only affects its own section', async () => {
+  const payroll = payrollPort();
+  const noCap = await readMember360({ reader: reader().value, audit: { async append() {} }, now, payroll }, { userId: 7, capabilities: new Set(['kosipa.member.view', 'kosipa.savings.view']), requestId: 'q' }, 4410);
+  assert.deepEqual(noCap.payroll, { state: 'restricted' }); assert.equal(payroll.calls.length, 0);
+  const failing = payrollPort({ async memberHistory() { throw new Error('timeout 1969'); } });
+  const v = await readMember360({ reader: reader().value, audit: { async append() {} }, now, payroll: failing }, { userId: 7, capabilities: ALL, requestId: 'q' }, 4410);
+  assert.deepEqual(v.payroll, { state: 'unavailable', reason: 'READ_FAILED' });
+  assert.equal(v.savings.state, 'ok'); assert.equal(v.storeCredit.state, 'ok');
 });
