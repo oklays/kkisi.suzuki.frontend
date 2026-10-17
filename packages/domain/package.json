@@ -22,6 +22,7 @@
     "./kosipa": "./src/kosipa/index.ts",
     "./console/kosipa-access": "./src/console/kosipa-access.ts",
     "./console/identity-link": "./src/console/identity-link.ts",
+    "./console/role-config": "./src/console/role-config.ts",
     "./warehouse": "./src/warehouse/index.ts"
   },
   "scripts": {
