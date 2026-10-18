@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useHydrated } from "@/components/use-hydrated";
 import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
 import { safeNextPath } from "@koperasi/domain/auth/redirect";
 
@@ -14,6 +15,7 @@ const MESSAGES: Record<number, string> = {
 export function LoginForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const hydrated = useHydrated();   // no native (GET) submission of the credentials before React owns the form
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,8 +32,10 @@ export function LoginForm() {
     setBusy(false);
   }
 
+  // method/action make the server-rendered fallback safe on its own: even if the disabled state were bypassed before hydration (or with JavaScript
+  // off), a native submission is a POST to the JSON-only login API (refused; nothing in any URL), never a GET carrying the credentials.
   return (
-    <form className="login-card" onSubmit={(event) => void submit(event)}>
+    <form className="login-card" method="post" action="/api/auth/login" onSubmit={(event) => void submit(event)}>
       <header className="login-heading">
         <h1>Masuk ke Akun Anda</h1>
         <p>Silakan masuk dengan akun Anda untuk mengakses sistem Koperasi Suzuki.</p>
@@ -43,7 +47,7 @@ export function LoginForm() {
         <span className="login-input-wrap"><LockKeyhole size={19} aria-hidden="true" /><input name="password" type="password" autoComplete="current-password" placeholder="Masukkan password Anda" required maxLength={128} /></span>
       </label>
       {error && <p className="login-error" role="alert">{error}</p>}
-      <button type="submit" disabled={busy}>{busy ? "Memeriksa…" : "Masuk"}<ArrowRight size={19} aria-hidden="true" /></button>
+      <button type="submit" disabled={busy || !hydrated}>{busy ? "Memeriksa…" : "Masuk"}<ArrowRight size={19} aria-hidden="true" /></button>
     </form>
   );
 }

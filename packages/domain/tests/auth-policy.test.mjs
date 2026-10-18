@@ -40,3 +40,8 @@ test('post-login redirect is same-site only', () => {
   assert.equal(safeNextPath('/pos'), '/pos'); assert.equal(safeNextPath('/pos?x=1'), '/pos?x=1');
   for (const bad of ['//evil.test', 'https://evil.test', '/\\evil', '\\evil', 'javascript:alert(1)', '/api/pos/products', '/login', '', null, undefined, '/a\nb', '/' + 'a'.repeat(300)]) assert.equal(safeNextPath(bad), '/pos', String(bad));
 });
+
+test('checkpoint 13: no post-login redirect can land on any form of /login (loop) or leave the site; valid deep links survive', () => {
+  for (const bad of ['/login', '/login?next=/pos', '/login/', '/login#x', '/api/auth/session', '//evil.test', '/\\evil.test', 'https://evil.test', 'javascript:alert(1)', '/%0d%0a'.replace('%0d%0a', '\r\n'), '/' + 'a'.repeat(300), '']) assert.equal(safeNextPath(bad, '/console?entry=login'), '/console?entry=login', JSON.stringify(bad));
+  for (const ok of ['/console/kosipa/anggota', '/pos', '/sales?page=2', '/loginx', '/logins/help']) assert.equal(safeNextPath(ok), ok);
+});
