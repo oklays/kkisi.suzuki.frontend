@@ -750,3 +750,42 @@ Rules confirmed (not defects): Kredit refuses sub-rupiah totals (`PAYMENT_PRECIS
 ### Next milestone (local UAT → representative staging)
 
 Owner completes `owner-uat-checklist.md` and the hotfix is released (S1). Operator delivers O1, O3, O4 and the Gudang bundle. Owner decides R1, D5, D7, B9. Then a representative staging environment can be built from authorised, sanitised copies, with the reviewed console store (B6/O7).
+
+---
+
+## Checkpoint 15 — Owner manual UAT support, defect resolution and security release readiness
+
+**Status legend:** Implemented · Locally verified · Staging accepted (none) · Production ready (none) · Blocked by owner decision · Blocked by operator evidence. **Owner acceptance has NOT been given**: the owner has not yet reported any manual result, so every owner column in `uat-findings-register.md` is NOT TESTED. Nothing pushed, merged or deployed; no legacy PHP, production data or infrastructure touched; the developer's own `next dev` on :3000 was not touched.
+
+### Delivered
+
+| # | Deliverable | Status | Evidence |
+|---|---|---|---|
+| 1 | **DEV LOCAL verified, not assumed.** Process, flags, isolation and permissions re-checked; restart without reset keeps logins and links (7 accounts); two resets give identical data (same fingerprint, 284 tables); no synthetic password in any log or in 728 tracked files; credential files mode 600 and ignored; static tests pin the reset script's refusals (fixed target name, container guard first, DROP only after the marker check) and the launcher (preflight before start, loopback, no kill-by-name) | Implemented, locally verified | `dev-local-preflight.test.mjs` (5), `dev-local-guide.md` §6 |
+| 2 | **Owner UAT support.** `tests/owner-uat-walkthrough-browser.mjs`: 44 checklist rows through the real UI (login incl. keyboard and expiry, sidebar/active state/breadcrumb, mobile drawer, POS cart/search/barcode/Cash/QRIS/Kredit, receipt page, register close recap, sales history, a **return via the form** with the supervisor's own register, product edit form, stock opname draft, KOSIPA 360/savings/loans/payroll/reconciliation/reports/CSV, Warehouse pages and banner, no financial action control anywhere). Three consecutive runs from clean resets: 44 PASS / 0 FAIL. Findings register is generated from the checklist + machine results (owner column NOT TESTED) | Locally verified (machine); owner pending | `uat-findings-register.md`, screenshots `/private/tmp/kkisi-owner-uat` |
+| 3 | **Defect triage.** **0 application defects reproduced.** The 5 failures of the first run were all wrong test assumptions (two-step register close, `/sales/invoice/{id}` links, disabled "Tinjau retur" until a quantity is chosen, a search race in the test, a lower-case heading and a wrong report slug); each was investigated against the real DOM/screenshots, not patched around. Visual review of key screens found no layout defect; observations O-01…O-05 recorded (existing disabled "Laporan Keuangan" and "Diskon / Promo", TOKO pages without console breadcrumb, R1, return/register rules) | Done | `uat-defect-register.md` |
+| 4 | **Login hotfix review-ready.** Diff reviewed against `master`: one commit `9ddb7cd2`, 5 files, no console/KOSIPA/Warehouse/flag/`process.env` reference, no dependency change. **`e2e-local` retested with each tree's own seed and build:** master's committed test fails at step B ("SYNTH MAKANAN" chip) **on master and on the hotfix identically** (the chips were removed from master's UI by `f3b8bad6` on 3 Oct while the test was last edited on 2 Oct); with the corrected test, **the full A–H suite passes on master (397 requests) and on the hotfix (396)**, so no authorisation, session or TOKO regression is introduced. Release package completed (diff review, evidence, backup/rollback checks, flag impact, post-deployment verification, shared-password rotation considerations, exposure checklist) | Locally verified; **not released** | `login-hotfix-release-plan.md` §3 |
+| 5 | **R1 trial on DEV LOCAL** (`scripts/dev-local.sh r1-trial`): throw-away instance :3202; synthetic cashier role temporarily given the management grants the real cashier role carries. Without the mapping every role derives to `/console` (the problem); with `4:pos,1:console` the cashiers land on `/pos`, admin on `/console`, unmapped roles keep the derived rule; the branch-bound cashier never sees identity-link administration; grants restored and the owner-facing server untouched. The owner-facing preflight still refuses any mapping (tested); only the exact trial mapping with `--r1-trial` is accepted | Locally verified; **inactive, not approved** | trial output 10/10 PASS, `dev-local-preflight.test.mjs` |
+| 6 | **Executable evidence intake.** `evidence-intake-runbook.md` (command, accept and reject criteria per evidence item); new `validate-capacity-evidence.mjs` for O4 (scope per-account vs hosting-wide, legacy PHP peak, reserve, instances; never invents a missing number; 14 pools-worth needed with everything enabled) | Implemented, locally verified | `capacity-plan.test.mjs`, `capacity-evidence-cli.test.mjs` |
+| 7 | **Representative staging design** (plan only; entry and exit criteria; sanitised schema-equivalent data; real roles; production-sized pools; one writer at a time; scripted reset/rollback). DEV LOCAL is explicitly not staging | Done | `representative-staging-plan.md` |
+| 8 | Blocker list, decision register (R1 trial evidence, S1 review-ready, capacity intake) and README index updated | Done | `owner-operator-action-package.md` §6, `decision-register.md` §B7 |
+
+### Verification (actual, 18 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **141/141**, application **139/139**, web **329 pass / 0 fail** (+76 opt-in skipped; run below) |
+| Integrated UAT `scripts/uat-run.sh` (8 phases) | **PASS** (TOKO regression 585 / 396 requests in both flag states) |
+| Opt-in suites | KOSIPA DB suites 6/6; rehearsal 9/9, cross-database harness 11/11, stock-writer contract 5/5, outbox→applier 2/2, isolation 2/2 (inside UAT phase 8) |
+| DEV LOCAL browser smoke / write smoke / login security / walkthrough | 22 checks PASS / PASS / 8 scenarios + log scan PASS / 44 PASS, 0 FAIL |
+| Baseline-only vs regression | No regression introduced. The only failing test found, `e2e-local` as committed on master, is **baseline-only** (proved on unmodified master with its own seed) |
+| Development mode (`next dev`) | not run (one `next dev` per folder; the developer's :3000 server was left alone); production mode is what the owner tests |
+
+### Not claimed
+
+Owner acceptance; staging acceptance; production readiness; official financial figures; any financial or stock writer; R1 approval; hotfix release.
+
+### Next
+
+Owner completes `owner-uat-checklist.md` against http://127.0.0.1:3200/login (after `bash scripts/dev-local.sh reset` for clean data) and reports defects with the template in `uat-defect-register.md`; owner decides on releasing the hotfix. Operator evidence (O1, O3, O4, Gudang, O5–O7, exposure counts) and the open decisions (R1, D5, D7, B9, B4, D1–D4, D6, D8–D10, W1/W5) are unchanged; each has a same-day validation path in `evidence-intake-runbook.md`.
