@@ -26,7 +26,7 @@ Walkthrough otomatis (44 skenario UI pada data sintetis DEV LOCAL, tiga kali ber
 | O-04 | Retur Cash memerlukan sesi kasir milik pengguna yang melakukan retur hari itu | aturan bisnis yang ada |
 | O-05 | Penjualan Kredit menolak total dengan sen (mis. Rp 4.000,10) | aturan yang ada (`PAYMENT_PRECISION`) |
 
-## 3. Template defect dari owner
+## 3. Template defect dari owner (setiap temuan diklasifikasi dengan salah satu dari enam kelas di bawah)
 
 | Kolom | Isi |
 |---|---|
@@ -35,7 +35,7 @@ Walkthrough otomatis (44 skenario UI pada data sintetis DEV LOCAL, tiga kali ber
 | Peran / akun | |
 | Langkah | |
 | Diharapkan / Aktual | |
-| Jenis | fungsional · izin · keterbatasan data sintetis · UX |
+| Klasifikasi | defect fungsional · masalah UX/UI · masalah izin · fitur disetujui yang belum ada · keterbatasan data sintetis · pertanyaan aturan bisnis |
 | Prioritas | blokir (login, navigasi, akses data berwenang, POS, interpretasi data keuangan) · tinggi · normal |
 | Bukti | tangkapan layar (jangan memuat password) |
 | Penyelesaian | reproduksi di DEV LOCAL → penyebab → perbaikan minimal → tes regresi → tes terkait → TOKO tidak terganggu → checklist dan jurnal diperbarui |

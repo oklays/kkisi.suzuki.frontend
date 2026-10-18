@@ -42,6 +42,7 @@ Tujuan: melanjutkan revamp Next.js setelah TOKO/POS dengan (1) console terpadu, 
 | 31 | [uat-defect-register.md](uat-defect-register.md) | Register defect, pengamatan, dan template defect owner |
 | 32 | [evidence-intake-runbook.md](evidence-intake-runbook.md) | Perintah validasi bukti operator (O1/O3/O4/O5/O6/O7/Gudang) |
 | 33 | [representative-staging-plan.md](representative-staging-plan.md) | Rancangan staging representatif (rencana saja) |
+| 34 | [module-readiness-status.md](module-readiness-status.md) | Status kesiapan per modul: verifikasi lokal dipisah dari penerimaan owner |
 | — | [`docs/migration/sql/legacy-schema-objects-readonly.sql`](../../../migration/sql/legacy-schema-objects-readonly.sql) | SQL **read-only** untuk operator: ambil definisi view/procedure yang tidak ada di dump |
 
 ## Temuan yang mengubah asumsi PRD/Baseline

@@ -66,3 +66,11 @@ Operator Warehouse **tidak punya peran sendiri** (keputusan W5 belum ada); prati
 * **Akun console terpisah:** DEV LOCAL memakai akun console sendiri, sehingga server `next dev` Anda di :3000 tidak berebut batas koneksi.
 * **Penolakan tempat salah:** skrip reset menolak target selain `kkisi_devlocal_staging` dan hanya menghapusnya jika bertanda `_devlocal_marker` (tes statis `dev-local-preflight.test.mjs`).
 * **Walkthrough UI otomatis (bukan penerimaan owner):** `node tests/owner-uat-walkthrough-browser.mjs` setelah `reset` → 44 skenario, 3 kali berturut-turut tanpa kegagalan; hasil per baris di `uat-findings-register.md`.
+
+## 7. Cara menyerahkan hasil UAT owner
+
+1. Jalankan `bash scripts/dev-local.sh reset` (di `apps/web`) untuk data bersih, lalu buka http://127.0.0.1:3200/login.
+2. Isi kolom **Lulus/Gagal** dan **Catatan** di `owner-uat-checklist.md` per baris. Nilai yang dikenali: `PASS`/`Lulus`, `FAIL`/`Gagal`, `BLOCKED`/`Terblokir`; kosong = belum diuji. Isian lain dilaporkan sebagai INVALID dan dihitung belum diuji (tidak ditebak).
+3. Untuk setiap FAIL/BLOCKED, tambahkan entri `D-001`, `D-002`, … di `uat-defect-register.md` (template §3). Jangan menempelkan password pada tangkapan layar.
+4. Engineering menjalankan `node scripts/lib/render-uat-findings.mjs <results.json> <docs/…/uat-findings-register.md>`: ringkasan owner, daftar triase FAIL/BLOCKED dan penerimaan diperbarui. **Penerimaan owner hanya ada jika owner menyatakannya tertulis**; tidak ada alat yang menurunkannya dari hasil mesin.
+5. Setiap defect yang terkonfirmasi diproses: reproduksi di DEV LOCAL → akar masalah → perbaikan minimal → tes regresi → tes TOKO → register dan jurnal diperbarui.

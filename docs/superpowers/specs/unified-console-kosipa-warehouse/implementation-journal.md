@@ -789,3 +789,15 @@ Owner acceptance; staging acceptance; production readiness; official financial f
 ### Next
 
 Owner completes `owner-uat-checklist.md` against http://127.0.0.1:3200/login (after `bash scripts/dev-local.sh reset` for clean data) and reports defects with the template in `uat-defect-register.md`; owner decides on releasing the hotfix. Operator evidence (O1, O3, O4, Gudang, O5–O7, exposure counts) and the open decisions (R1, D5, D7, B9, B4, D1–D4, D6, D8–D10, W1/W5) are unchanged; each has a same-day validation path in `evidence-intake-runbook.md`.
+
+---
+
+## Owner UAT intake checkpoint (after checkpoint 15)
+
+**No owner feedback was supplied**: 0 of 46 checklist rows filled, no defect entries, owner column untouched. Owner UAT therefore remains **NOT TESTED / not accepted**; nothing was marked accepted and no defect was invented. No code change to the application was needed.
+
+Done: verified DEV LOCAL (running on :3200, credential files mode 600, container up) and that the hotfix `9ddb7cd2` is still a clean one-commit descendant of the **current** `master` (`81dab9ed`) with no console/flag/`process.env` reference in its source diff; added strict owner-result intake (`scripts/lib/uat-findings.mjs`: PASS/FAIL/BLOCKED read only from the owner's cells, unknown text INVALID, machine results never mixed in, triage list for FAIL/BLOCKED, drift test between checklist and register); six-class defect classification; `module-readiness-status.md` (local verification separate from owner acceptance); hand-off steps in `dev-local-guide.md` §7.
+
+Verification: lint 0 errors / 4 warnings (baseline), typecheck OK, `pnpm test` domain 141, application 139, web 332 pass (+76 opt-in). Not re-run: the browser/UAT suites (no application or UI code changed since the last full pass).
+
+Waiting on: the owner's manual results; hotfix release authorisation; operator evidence O1/O3/O4/O5/O6/O7/Gudang/exposure counts; decisions R1, D5, D7, B9, B4, D1–D4, D6, D8–D10, W1/W5.
