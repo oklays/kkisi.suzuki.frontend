@@ -718,6 +718,7 @@ Program completion, staging acceptance, production readiness, official financial
 3. **Returns and product edits were impossible on any local database except `kkisi_staging`:** their writers were pinned to that exact name. Fix: an exact two-name local allowlist (`kkisi_staging`, `kkisi_devlocal_staging`); production path unchanged; tests added.
 4. Warehouse banner now reads **DATA SINTETIS — BELUM TERHUBUNG KE GUDANG OPERASIONAL** (assertion updated).
 5. The e2e cleanup now prints the real database error instead of an empty message.
+6. **Intermittent rehearsal test** (`warehouse-store-db` #5, pre-existing): (a) two concurrent mapping proposals for one store item are refused with either `AMBIGUOUS_MAPPING` (pre-check sees the winner) or `DUPLICATE_MAPPING` (unique key), both correct, but the test pinned one code; (b) the fake clock restarts each run and the scenario reused the same warehouse id, so older runs' shipments (the account cannot delete) could crowd the current one out of `list(…, 10)`. Fixed in the test (run-unique ids/warehouse ids, invariant asserted: one winner, one persisted mapping); 8/8 consecutive runs green. A first hypothesis (id collision alone) was tested and found insufficient.
 
 Rules confirmed (not defects): Kredit refuses sub-rupiah totals (`PAYMENT_PRECISION`); a return needs the refunding user's own open register today (`REGISTER_CLOSED`) and a configured return prefix (`RETURN_CODE_CONFIG`); synthetic role 3 is inactive in the e2e seed by design.
 
@@ -732,7 +733,7 @@ Rules confirmed (not defects): Kredit refuses sub-rupiah totals (`PAYMENT_PRECIS
 | Login security on DEV LOCAL (production mode) | 8 scenarios + log scan PASS |
 | Development mode (`next dev`) | **not run**: Next.js allows one `next dev` per folder and the developer's own server was running on :3000 (not stopped). The launcher explains this |
 | Isolation | test sales exist only in `kkisi_devlocal_staging`; `kkisi_staging` and the synthetic source schema unchanged |
-| Full UAT `scripts/uat-run.sh` (8 phases) | PASS before the writer-allowlist change (console store via the DEV LOCAL console account, see defect 2); re-run after it recorded below |
+| Full UAT `scripts/uat-run.sh` (8 phases) | **PASS** after all changes (console store reached through the DEV LOCAL console account, see defect 2). One earlier run failed in phase 8 (`warehouse-store-db` #5); root causes found and fixed (defect 6) |
 | Hotfix branch | lint/typecheck/test/build OK; login security 8/8 PASS; `pos-browser` PASS; `e2e-local` fails at step B on the hotfix **and on unmodified master** (pre-existing fixture drift, not the hotfix) |
 
 ### Readiness
