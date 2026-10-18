@@ -16,7 +16,9 @@ import { runApplierContract, runOutboxContract } from '../../../packages/applica
 // Never touches TOKO stock, Gudang, the Console store or any production database. The account cannot DELETE, so every test works in its own random namespace.
 const ON = process.env.WAREHOUSE_REHEARSAL_DB_TEST === '1';
 const RUN = randomBytes(3).toString('hex');
-let seq = 0; const uid = () => 100_000 + (parseInt(RUN, 16) % 700_000) + ++seq * 1000;   // unique ids per run and test: the account has no DELETE
+// Unique ids per run: the account has no DELETE, so every run's rows stay. Each run owns its own block of 1000 ids above 1e9 (the old 100000 + RUN % 700000 + seq*1000
+// scheme could overlap between runs whose offsets differed by a multiple of 1000).
+let seq = 0; const uid = () => 1_000_000_000 + (parseInt(RUN, 16) % 900_000) * 1000 + ++seq;
 
 const code = async (p) => { try { await p; return null; } catch (e) { return e instanceof WarehouseError ? e.code : `OTHER:${String(e?.message).slice(0, 80)}`; } };
 const refused = async (db, sql, ...p) => { try { await db.$executeRawUnsafe(sql, ...p); return 'ALLOWED'; } catch (e) { const m = String(e?.message); return /1644/.test(m) ? 'TRIGGER' : /1062/.test(m) ? 'DUPLICATE' : /4025|3819|CONSTRAINT/i.test(m) ? 'CHECK' : /1265/.test(m) ? 'ENUM' : /1142|denied/i.test(m) ? 'DENIED' : /1451|1452|foreign/i.test(m) ? 'FK' : `OTHER:${m.slice(0, 120)}`; } };
@@ -35,7 +37,7 @@ async function harness() {
 async function scenario(h, { qty = 100, multi = true } = {}) {
   const g = uid(), s = uid(), c = 1 + (seq % 3);   // gudang item, store item, branch (1..3)
   h.catalog.seedGudangItem({ id: g, active: true, code: `RG-${g}`, barcode: `B${g}`, unit: 'PCS' }); h.catalog.seedStoreItem(c, { id: s, active: true, code: `RS-${s}`, barcode: `B${g}`, unit: 'PCS' });
-  const admin = actor(1, [P.MAPPING_MANAGE, P.MAPPING_VIEW]), confirmer = actor(2, [P.MAPPING_MANAGE]), warehouseIds = new Set([seq + 5000]);
+  const admin = actor(1, [P.MAPPING_MANAGE, P.MAPPING_VIEW]), confirmer = actor(2, [P.MAPPING_MANAGE]), warehouseIds = new Set([uid()]);   // run-unique: the fake clock restarts each run, so a shared warehouse id let older runs' shipments crowd the current one out of list(..., 10)
   const maker = actor(10, [P.DISPATCH_CREATE, P.DISPATCH_VIEW], { warehouseIds }), checker = actor(11, [P.DISPATCH_APPROVE, P.DISPATCH_RELEASE], { warehouseIds }), branch = actor(20, [P.RECEIVE, P.RESOLVE, P.RECEIVING_VIEW], { storeCompanyId: c });
   const m = await proposeItemMapping(h.deps, admin, { gudangItemId: g, storeCompanyId: c, storeItemId: s, conversion: IDENT, basis: 'barcode' }); await confirmItemMapping(h.deps, confirmer, { ref: m.ref });
   const sourceRef = `rehearsal:dispatch:${RUN}-${g}`;
@@ -106,7 +108,10 @@ test('repositories keep the port contracts: persisted aggregates round-trip, rep
     // (different gudang ids, same store item: the TOKO side is unique per branch, so exactly one of two concurrent proposals may win)
     const s2 = uid(); const g3 = uid(), g4 = uid(); h.catalog.seedGudangItem({ id: g3, active: true, code: `RG-${g3}`, barcode: null, unit: 'PCS' }); h.catalog.seedGudangItem({ id: g4, active: true, code: `RG-${g4}`, barcode: null, unit: 'PCS' }); h.catalog.seedStoreItem(2, { id: s2, active: true, code: `RS-${s2}`, barcode: null, unit: 'PCS' });
     const race = await Promise.allSettled([g3, g4].map((g, i) => proposeItemMapping(h.deps, actor(30 + i, [P.MAPPING_MANAGE]), { gudangItemId: g, storeCompanyId: 2, storeItemId: s2, conversion: IDENT, basis: 'manual' })));
-    assert.deepEqual(race.map((r) => r.status).sort(), ['fulfilled', 'rejected']); assert.equal(race.find((r) => r.status === 'rejected').reason.code, 'DUPLICATE_MAPPING'); void dup;
+    // Exactly one wins. Which refusal the loser gets depends on timing and both are correct: AMBIGUOUS_MAPPING when its pre-check already sees the winner's committed
+    // mapping, DUPLICATE_MAPPING when both passed the pre-check and the unique key refused the second insert (pinning one code made this test timing-dependent).
+    assert.deepEqual(race.map((r) => r.status).sort(), ['fulfilled', 'rejected']); assert.ok(['DUPLICATE_MAPPING', 'AMBIGUOUS_MAPPING'].includes(race.find((r) => r.status === 'rejected').reason.code)); void dup;
+    assert.equal(Number((await h.db.$queryRaw`SELECT COUNT(*) AS n FROM warehouse_item_map WHERE store_company_id = 2 AND store_item_id = ${s2}`)[0].n), 1, 'exactly one mapping persisted for the contested store item');
 
     // concurrent receipts with DIFFERENT event keys on one shipment: version compare-and-set serialises them; the bounded retry lets both succeed; no unit is lost or doubled
     const [r1, r2] = await Promise.all([recv(h, sc, 'a', 30), recv(h, sc, 'b', 20)]);

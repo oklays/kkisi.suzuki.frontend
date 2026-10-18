@@ -1,6 +1,6 @@
 # Checklist UAT manual owner — DEV LOCAL (checkpoint 14)
 
-Buka **http://127.0.0.1:3200/login** (lihat `dev-local-guide.md`). Password akun ada di `apps/web/.env.dev-local-accounts.json`. Isi kolom **Lulus/Gagal** dan **Catatan** (nomor defect, misalnya D-01).
+Buka **http://127.0.0.1:3200/login** (lihat `dev-local-guide.md`). Mulai dari data bersih: `bash scripts/dev-local.sh reset` (di `apps/web`). Password akun ada di `apps/web/.env.dev-local-accounts.json`. Isi kolom **Lulus/Gagal** dan **Catatan** (nomor defect, misalnya D-01).
 
 Status: **F** = fungsional & tersedia · **B** = baca saja · **S** = pratinjau sintetis · **N** = nonaktif sengaja · **E** = terblokir bukti/keputusan eksternal · **X** = belum dibangun.
 
@@ -34,11 +34,11 @@ Status: **F** = fungsional & tersedia · **B** = baca saja · **S** = pratinjau 
 | B3 | /pos | synth_kasir1 | tambah, ubah jumlah, hapus dari keranjang | total berubah benar; stok kosong tidak bisa ditambah | F | | |
 | B4 | /pos | synth_kasir1 | bayar **Cash** dengan uang lebih | struk tampil, kembalian benar | F | | |
 | B5 | /pos | synth_kasir1 | bayar **QRIS** | dialog konfirmasi "Sudah Terverifikasi — Proses"; struk "Lunas (QRIS Non-Tunai)" | F | | |
-| B6 | /pos | synth_kasir1 | pilih jenis scan "NIK karyawan", masukkan `S9001`, bayar **Kredit Anggota** | sisa limit tampil; transaksi tersimpan bila dalam limit | F | | |
+| B6 | /pos | synth_kasir1 | tambah **SYNTH ITEM BRANCH1 B** (`SYNTH1B`), pilih jenis scan "NIK karyawan", masukkan `S9001`, bayar **Kredit Anggota** | sisa limit tampil; transaksi tersimpan (harga sen seperti Rp 4.000,10 ditolak untuk pembayaran ini: aturan `PAYMENT_PRECISION`) | F | | |
 | B7 | /pos | synth_kasir1 | cetak / lihat struk | halaman struk terbuka | F | | |
 | B8 | /pos | synth_kasir1 | tutup kasir lalu buka kembali | status register berubah sesuai aturan | F | | |
 | B9 | /sales | synth_kepala | buka riwayat | transaksi uji B4–B6 tampil | F | | |
-| B10 | /sales/returns | synth_kepala | buat retur atas transaksi Cash | retur tercatat; stok kembali | F | | |
+| B10 | /pos lalu /sales | synth_kepala | buka kasir **KRS02** dengan saldo awal (mis. Rp 100.000), lalu dari riwayat buat retur atas transaksi Cash | retur `RS9001…` tercatat; refund dari laci supervisor; stok kembali. Tanpa sesi kasir sendiri retur ditolak (`REGISTER_CLOSED`, aturan) | F | | |
 | B11 | /products | synth_kepala | buka, cari, ubah barang | perubahan tersimpan (database sintetis) | F | | |
 | B12 | /inventory | synth_admin | buat stock opname | dokumen opname tercatat; barang terkunci selama opname | F | | |
 

@@ -35,6 +35,9 @@ Tujuan: melanjutkan revamp Next.js setelah TOKO/POS dengan (1) console terpadu, 
 | 24 | [integration-readiness-matrices.md](integration-readiness-matrices.md) | Matriks pembukaan tugas keuangan + kesiapan integrasi Warehouse |
 | 25 | [cutover-plan.md](cutover-plan.md) | Rencana kapasitas koneksi dan cutover single-writer (rencana saja) |
 | 26 | [staging-acceptance-matrix.md](staging-acceptance-matrix.md) | Matriks penerimaan staging berbasis bukti |
+| 27 | [dev-local-guide.md](dev-local-guide.md) | Panduan DEV LOCAL: URL, perintah start/stop/reset, isolasi, flag, akun uji |
+| 28 | [owner-uat-checklist.md](owner-uat-checklist.md) | Checklist UAT manual owner (Lulus/Gagal per skenario) |
+| 29 | [login-hotfix-release-plan.md](login-hotfix-release-plan.md) | Rencana rilis hotfix login (cabang lokal `hotfix/login-credential-exposure`) |
 | — | [`docs/migration/sql/legacy-schema-objects-readonly.sql`](../../../migration/sql/legacy-schema-objects-readonly.sql) | SQL **read-only** untuk operator: ambil definisi view/procedure yang tidak ada di dump |
 
 ## Temuan yang mengubah asumsi PRD/Baseline

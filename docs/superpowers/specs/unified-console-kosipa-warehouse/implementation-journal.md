@@ -694,3 +694,58 @@ Legend as in checkpoint 12. Nothing pushed, merged or deployed; no legacy PHP, p
 ### Not claimed
 
 Program completion, staging acceptance, production readiness, official financial figures, financial writers, Warehouse stock posting, or any cutover. The next phase must be driven by the operator evidence and owner decisions listed in `owner-operator-action-package.md` §5.
+
+---
+
+## Checkpoint 14 — DEV LOCAL launch, manual UAT and owner acceptance preparation
+
+**Outcome: a running, isolated DEV LOCAL application at http://127.0.0.1:3200/login** (production-mode build), with synthetic data, the existing feature flags, seven test personas and an owner checklist. Nothing pushed, deployed, or changed in legacy PHP or production.
+
+### What was built
+
+| Item | Detail |
+|---|---|
+| DEV LOCAL database | `kkisi_devlocal_staging` = structure of the local legacy copy (no rows copied from it) + rows of the seeded synthetic schema + test-only settings (persona grants, synthetic role 3 activated, KOSIPA staff account `synth_ksp_staff`, second register device `KRS02`, return-number prefixes). Rebuilt only when it carries `_devlocal_marker` |
+| Accounts | `devlocal_read`, one writer per TOKO module with the **existing** local grant sets re-targeted (POS, register, returns, products) plus the documented inventory set, and `devlocal_console` (same grants as the console account, its own connection cap) |
+| Launcher | `scripts/dev-local.sh start [prod|dev] | stop | status | reset | accounts | links`; fail-closed preflight (`scripts/lib/dev-local-preflight.mjs`, tested) refuses any non-approved database, root/admin, `APP_ENV=production` or an active R1 mapping; identity links created through the app (audited) |
+| Flags | console, KOSIPA read, Warehouse preview, export for `synth_koperasi` only; writers only to the DEV LOCAL database; R1, D5 map, financial writers and stock posting stay off |
+| Hotfix | local branch `hotfix/login-credential-exposure` (`9ddb7cd2`, 5 files on top of master), verified separately; plan in `login-hotfix-release-plan.md` |
+
+### Defects found and fixed during DEV LOCAL testing
+
+1. **DEV LOCAL logins broke after any e2e/UAT run:** every e2e seed writes new synthetic passwords. Fix: DEV LOCAL snapshots its own passwords (`.env.dev-local-accounts.json`, ignored).
+2. **The console account's local cap (2) was exhausted** by the developer's own `next dev` (an idle connection held for hours) plus DEV LOCAL, which made the e2e cleanup and the UAT fail. Fix: DEV LOCAL uses its own console account. The final UAT run reached the same store through it because the developer's server was left running. The standard cap was not changed.
+3. **Returns and product edits were impossible on any local database except `kkisi_staging`:** their writers were pinned to that exact name. Fix: an exact two-name local allowlist (`kkisi_staging`, `kkisi_devlocal_staging`); production path unchanged; tests added.
+4. Warehouse banner now reads **DATA SINTETIS — BELUM TERHUBUNG KE GUDANG OPERASIONAL** (assertion updated).
+5. The e2e cleanup now prints the real database error instead of an empty message.
+
+Rules confirmed (not defects): Kredit refuses sub-rupiah totals (`PAYMENT_PRECISION`); a return needs the refunding user's own open register today (`REGISTER_CLOSED`) and a configured return prefix (`RETURN_CODE_CONFIG`); synthetic role 3 is inactive in the e2e seed by design.
+
+### Verification (actual, 18 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain **141/141**, application **139/139**, web **324 pass / 0 fail** (+76 opt-in skipped: DB and browser suites that need the local container; run separately below) |
+| DEV LOCAL browser smoke (`dev-local-smoke-browser.mjs`, 22 checks) | PASS: invalid login, 5 landings, menus for 3 personas, unauthorised pages and APIs, KOSIPA staff limits, KOSIPA admin pages + invalid filter + CSV, Warehouse banner/no actions, **Cash and QRIS checkout**, supervisor pages, logout, responsive 375/390/768/1024/1440 incl. mobile drawer with focus return; no browser errors. Screenshots `/private/tmp/kkisi-devlocal-screens` |
+| DEV LOCAL write smoke (`dev-local-writes-smoke.mjs`) | PASS: **Kredit** + idempotent replay, Cash sale + **return** by the supervisor, **product edit**, **stock opname** create/cancel, **register** close/reopen |
+| Login security on DEV LOCAL (production mode) | 8 scenarios + log scan PASS |
+| Development mode (`next dev`) | **not run**: Next.js allows one `next dev` per folder and the developer's own server was running on :3000 (not stopped). The launcher explains this |
+| Isolation | test sales exist only in `kkisi_devlocal_staging`; `kkisi_staging` and the synthetic source schema unchanged |
+| Full UAT `scripts/uat-run.sh` (8 phases) | PASS before the writer-allowlist change (console store via the DEV LOCAL console account, see defect 2); re-run after it recorded below |
+| Hotfix branch | lint/typecheck/test/build OK; login security 8/8 PASS; `pos-browser` PASS; `e2e-local` fails at step B on the hotfix **and on unmodified master** (pre-existing fixture drift, not the hotfix) |
+
+### Readiness
+
+| Category | Items |
+|---|---|
+| Available for DEV LOCAL testing | login/console, TOKO POS (Cash/QRIS/Kredit), register, sales history, returns, products, inventory/opname, KOSIPA read modules and reports with CSV export, Warehouse preview |
+| Locally verified (automated) | everything in the row above, per the verification table |
+| Awaiting owner manual acceptance | all of `owner-uat-checklist.md` (nothing is accepted by automated runs) |
+| Blocked by schema/evidence | official balances and parity (O1/O5), real Gudang reader (Gudang schema), real roles (O3), capacity (O4) |
+| Blocked by business decision | R1, D5, D7, D1–D4, D6, D8–D10, W1/W5, B4, B9 |
+| Not production-ready | the whole Unified Console; the login hotfix is ready for review but needs release authorisation |
+
+### Next milestone (local UAT → representative staging)
+
+Owner completes `owner-uat-checklist.md` and the hotfix is released (S1). Operator delivers O1, O3, O4 and the Gudang bundle. Owner decides R1, D5, D7, B9. Then a representative staging environment can be built from authorised, sanitised copies, with the reviewed console store (B6/O7).
