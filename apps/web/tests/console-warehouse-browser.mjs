@@ -52,7 +52,7 @@ try {
     { const { context, page } = await session(); await login(page, 'admin'); const links = await sidebar(page);
       for (const href of ['/console/warehouse', '/console/warehouse/distribusi', '/console/warehouse/pemetaan', '/console/warehouse/penerimaan']) assert.ok(links.includes(href), `${href} in sidebar`);
       await page.goto(`${base}/console/warehouse`); await page.getByRole('heading', { name: 'Pratinjau Warehouse' }).waitFor(); let t = await text(page);
-      assert.match(t, /DATA SINTETIS UNTUK PRATINJAU/); assert.match(t, /Dikonfirmasi\s+3/); assert.match(t, /Diusulkan \(belum dipakai\)\s+1/); assert.match(t, /Dihentikan\s+1/); assert.match(t, /Diterima penuh\s+1/); assert.match(t, /Diterima sebagian\s+1/); assert.match(t, /Diterima dengan selisih\s+2/); assert.match(t, /Belum diterima\s+3/);
+      assert.match(t, /DATA SINTETIS — BELUM TERHUBUNG KE GUDANG OPERASIONAL/); assert.match(t, /Dikonfirmasi\s+3/); assert.match(t, /Diusulkan \(belum dipakai\)\s+1/); assert.match(t, /Dihentikan\s+1/); assert.match(t, /Diterima penuh\s+1/); assert.match(t, /Diterima sebagian\s+1/); assert.match(t, /Diterima dengan selisih\s+2/); assert.match(t, /Belum diterima\s+3/);
       assert.match(t, /belum ditentukan/i); await assertReadOnly(page); await page.screenshot({ path: `${output}/warehouse-overview-1440.png`, fullPage: true }); await noOverflow(page, 'overview');
       await context.close(); }
 
