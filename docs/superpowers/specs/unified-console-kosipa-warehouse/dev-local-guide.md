@@ -19,6 +19,7 @@ bash scripts/dev-local.sh start          # menjalankan lagi tanpa reset (mode pr
 bash scripts/dev-local.sh status         # cek URL dan proses
 bash scripts/dev-local.sh accounts       # daftar akun uji dan perannya
 bash scripts/dev-local.sh links          # pasang ulang tautan KOSIPA (perlu setelah scripts/uat-run.sh dijalankan)
+bash scripts/dev-local.sh r1-trial       # uji kebijakan landing R1 di instance sementara :3202 (peran kasir sintetis diberi izin manajemen sementara, lalu dikembalikan); server utama tidak disentuh
 bash scripts/dev-local.sh stop           # menghentikan server DEV LOCAL (tidak menyentuh server lain)
 ```
 
@@ -56,3 +57,12 @@ Operator Warehouse **tidak punya peran sendiri** (keputusan W5 belum ada); prati
 * Warehouse: **data sintetis**, tidak terhubung ke Gudang, tanpa aksi operasional.
 * `scripts/uat-run.sh` mencabut tautan identitas sintetis di console store bersama; jalankan `scripts/dev-local.sh links` sesudahnya. Password DEV LOCAL disimpan terpisah (`.env.dev-local-accounts.json`) sehingga seed e2e berikutnya tidak membuatnya tidak berlaku.
 * Skema sintetis tidak memiliki data merek/satuan/pajak; halaman Produk tetap terbuka tetapi daftar master lebih sedikit dibanding data nyata.
+
+## 6. Stabilitas yang diverifikasi (checkpoint 15)
+
+* **Restart tanpa reset:** `stop` lalu `start` mempertahankan login dan tautan KOSIPA (7 akun diuji; `synth_off`/`synth_nobranch` tetap ditolak).
+* **Reset konsisten:** dua `reset` berturut-turut menghasilkan sidik jari data yang sama (284 tabel, baris identik).
+* **Kredensial:** `.env.dev-local` dan `.env.dev-local-accounts.json` bermode 600 dan diabaikan Git; tidak ada password sintetis di log aplikasi maupun 728 file yang dilacak Git; password tidak muncul di URL (diuji setiap run oleh `login-security-browser.mjs` dan walkthrough).
+* **Akun console terpisah:** DEV LOCAL memakai akun console sendiri, sehingga server `next dev` Anda di :3000 tidak berebut batas koneksi.
+* **Penolakan tempat salah:** skrip reset menolak target selain `kkisi_devlocal_staging` dan hanya menghapusnya jika bertanda `_devlocal_marker` (tes statis `dev-local-preflight.test.mjs`).
+* **Walkthrough UI otomatis (bukan penerimaan owner):** `node tests/owner-uat-walkthrough-browser.mjs` setelah `reset` → 44 skenario, 3 kali berturut-turut tanpa kegagalan; hasil per baris di `uat-findings-register.md`.

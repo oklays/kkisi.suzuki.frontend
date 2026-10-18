@@ -62,3 +62,9 @@ Engineering-only items that need no input are small: an outbox permanent-error c
 | Any production writer cutover | B4, B9, O4, backups, owner go (`cutover-plan.md`) | Owner + Operator |
 | Console store in production | O7 / B6 | Operator |
 | Staging acceptance of every scenario | `staging-acceptance-matrix.md` "Missing" column | Owner + Operator |
+
+## 6. Checkpoint 15 status of the blocker list (nothing new was delivered; the intake is now executable)
+
+Still **missing**: O1, O3, O4, Gudang bundle + mapping, O5, O6, O7, credential-exposure counts. Still **open decisions**: R1, D5, D7, B9, B4, D1–D4, D6, D8–D10, W1/W5.
+
+What changed: every evidence item now has a same-day validation command and accept/reject criteria in `evidence-intake-runbook.md`; the O4 capacity answer has its own validator (`validate-capacity-evidence.mjs`); the hotfix is **review-ready** (`login-hotfix-release-plan.md`, with a controlled master-vs-hotfix comparison) but needs your release authorisation; R1 has DEV LOCAL trial evidence (`scripts/dev-local.sh r1-trial`) and stays inactive; the owner's manual UAT (`owner-uat-checklist.md`) is the next gate before `representative-staging-plan.md`.

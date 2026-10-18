@@ -23,24 +23,43 @@ Local branch **`hotfix/login-credential-exposure`**, one commit **`9ddb7cd2`** o
 
 5 files, +129 / −3. **No feature flag is involved, added or changed.** The fix applies whether or not `CONSOLE_ENABLED` is set (master has no console).
 
-## 3. Verification already done on the hotfix branch (local, synthetic data)
+## 3. Review and verification evidence (local, synthetic data; checkpoint 15 re-verified)
 
-| Check | Result |
+### 3.1 Diff review against `master` (`git diff master hotfix/login-credential-exposure`)
+
+| Question | Finding |
 |---|---|
-| `pnpm lint` / `typecheck` | 0 errors, 4 warnings (master baseline) / OK |
-| `pnpm test` | domain 29/29, application 22/22, web 228 pass, 42 opt-in skipped |
-| `pnpm build` | OK |
-| `login-security-browser.mjs` against the hotfix build | **all eight scenarios + log scan pass** (not hydrated, JS disabled, slow init, Enter, double-click, refresh, failed login, malformed redirects/deep link) |
-| `pos-browser.mjs` (TOKO POS regression) against the hotfix build | PASS |
-| `e2e-local.mjs` against the hotfix build | fails at step B (catalog category button). **Control:** the same test against **unmodified master** fails at the same step, so it is pre-existing drift between master's test and the current synthetic seed, not caused by the hotfix. Must be re-run with a seed matching master before release (prerequisite 3) |
+| Is the hotfix a clean descendant of `master`? | yes: merge-base = `master` HEAD `81dab9ed`; one commit `9ddb7cd2` |
+| Files | 5 (+129 / −3): `LoginForm.tsx`, new `use-hydrated.ts`, `redirect.ts`, two test files. No other source file |
+| Unrelated Unified Console changes? | **none** in `src/`: no console, KOSIPA, Warehouse, flag or `process.env` reference. The only "console" strings are `console.log` calls and a landing-URL pattern inside the new test file |
+| Dependencies | adds only `react`'s `useSyncExternalStore` (already a dependency) and the existing `@/*` alias (present on master); `package.json` and lockfile unchanged |
+| Behaviour change | submit disabled until hydrated; native fallback is `POST /api/auth/login` (refused by the JSON-only API) instead of `GET /login?…`; `/login…` redirect targets fall back (no loop) |
+
+### 3.2 Test evidence
+
+| Check | `master` (control) | Hotfix |
+|---|---|---|
+| `pnpm lint` / `typecheck` / `build` | baseline | 0 errors, 4 warnings (= baseline) / OK / OK |
+| `pnpm test` | — | domain 29/29, application 22/22, web 228 pass (+42 opt-in skipped) |
+| `login-security-browser.mjs` (8 scenarios + log scan) | not applicable (fails by design: the defect) | **all pass** |
+| `pos-browser.mjs` (TOKO POS regression) | — | PASS |
+| `e2e-local.mjs` **as committed on master** | fails at step B ("SYNTH MAKANAN" chip) | fails at step B, **identically** |
+| `e2e-local.mjs` **corrected** (the branch's version, category chips replaced by the API check), each tree with its **own** seed and build | **PASS A–H** (397 requests) | **PASS A–H** (396 requests) |
+
+Conclusion on the earlier failure: it is **baseline-only drift in master's own test**. `f3b8bad6` (3 Oct) removed the category chips from the POS UI on `master`, while `e2e-local.mjs` was last edited on 2 Oct. With the test corrected, the full suite (anonymous access, catalog, idle/absolute session expiry, throttle, CSRF, RBAC changes taking effect on the next request, database failures) passes on `master` and on the hotfix alike, so the hotfix introduces no authorisation, session or TOKO regression. The ±1 request-count difference is within the run-to-run variation seen on identical code (584–587 and 396–397 in repeated runs). The corrected test is **not** part of the hotfix commit; if the owner wants master's suite green it is a separate test-only change.
 
 ## 4. Deployment prerequisites
 
 1. Owner's written authorisation for a production release of `9ddb7cd2` (and nothing else).
 2. Code review of the 5-file diff (`git show 9ddb7cd2`).
-3. Re-run `e2e-local.mjs` on the hotfix with master's own synthetic seed (or record the owner's acceptance of the known pre-existing drift).
+3. ~~Re-run `e2e-local.mjs`~~ done (§3.2). Optional, separate: fix master's stale `e2e-local.mjs` (test-only).
+3b. **Pre-deployment backup check:** the hotfix changes no data, but the standard pre-release backup must be verified restorable as for any release (operator confirms the latest backup of the auth store and the legacy database and the image tag currently running).
 4. A deployment window, and the deploy procedure of `deploy/genesis` (image build with a new `GENESIS_WEB_TAG`, single container). No database change, no environment change.
 5. Operator ready to run the post-deployment checks (§6) and the exposure checklist (§7).
+
+## 4b. Feature-flag and configuration impact
+
+None. No flag, environment variable, database object or deployment setting is added or changed; behaviour is identical with or without `CONSOLE_ENABLED` (master has no console). The build needs no new secret.
 
 ## 5. Rollback
 
@@ -54,6 +73,11 @@ Redeploy the previous image tag. No data, schema or configuration was changed, s
 4. One normal sign-in by an authorised user: lands on the usual page; nginx access log for that request shows `POST /api/auth/login` (no query string).
 5. 24 h later the operator re-runs the count-only check from §7: **zero new** `GET /login?…password=` lines.
 
-## 7. Historical exposure
+## 7. Historical exposure and shared-password considerations
+
+* Run the restricted checklist below first; **do not wait for the release** to restrict log access (containment is independent of the code fix).
+* `db_users` passwords are shared with the legacy TOKONEW PHP application: rotating a password changes the legacy login at the same time, and a rotation is a production business-record change that needs the owner's explicit authorisation. Rotate only accounts the count-only check implicates, or all accounts that used the Next.js login in the exposure window if attribution is impossible.
+* Rotation must not coincide with the release window (a failed login after a rotation must not be confused with a regression).
+* The release itself neither reads nor changes any credential.
 
 Run `docs/migration/operator-credential-exposure-checklist.md` (restricted; counts only; containment and rotation steps; rotation needs owner authorisation because `db_users` passwords are shared with legacy TOKONEW).

@@ -81,3 +81,5 @@ Status: **F** = fungsional & tersedia · **B** = baca saja · **S** = pratinjau 
 ## F. Belum tersedia (bukan defect)
 
 Saldo resmi dan paritas keuangan (O1/O5), pemetaan kolom toko payroll (D5), penulis keuangan KOSIPA (D1–D4, D6), Warehouse nyata dan posting stok (skema Gudang, D7, W5), landing kasir eksplisit (R1).
+
+Tombol yang tampil tetapi **sengaja nonaktif / belum diimplementasikan** (ada sejak sebelum console, bukan defect baru): **Laporan Keuangan** (menu TOKO/POS), **Diskon / Promo** ("Belum tersedia") di panel pembayaran POS, kartu modul **Angsuran** ("Dalam pengembangan") di dashboard KOSIPA.

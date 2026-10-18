@@ -38,6 +38,10 @@ Tujuan: melanjutkan revamp Next.js setelah TOKO/POS dengan (1) console terpadu, 
 | 27 | [dev-local-guide.md](dev-local-guide.md) | Panduan DEV LOCAL: URL, perintah start/stop/reset, isolasi, flag, akun uji |
 | 28 | [owner-uat-checklist.md](owner-uat-checklist.md) | Checklist UAT manual owner (Lulus/Gagal per skenario) |
 | 29 | [login-hotfix-release-plan.md](login-hotfix-release-plan.md) | Rencana rilis hotfix login (cabang lokal `hotfix/login-credential-exposure`) |
+| 30 | [uat-findings-register.md](uat-findings-register.md) | Hasil UAT per skenario (mesin) + kolom owner (NOT TESTED sampai owner mengisi) |
+| 31 | [uat-defect-register.md](uat-defect-register.md) | Register defect, pengamatan, dan template defect owner |
+| 32 | [evidence-intake-runbook.md](evidence-intake-runbook.md) | Perintah validasi bukti operator (O1/O3/O4/O5/O6/O7/Gudang) |
+| 33 | [representative-staging-plan.md](representative-staging-plan.md) | Rancangan staging representatif (rencana saja) |
 | — | [`docs/migration/sql/legacy-schema-objects-readonly.sql`](../../../migration/sql/legacy-schema-objects-readonly.sql) | SQL **read-only** untuk operator: ambil definisi view/procedure yang tidak ada di dump |
 
 ## Temuan yang mengubah asumsi PRD/Baseline

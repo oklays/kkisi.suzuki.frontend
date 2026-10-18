@@ -34,3 +34,18 @@ test('scenarios used by the capacity analysis (numbers quoted in connection-capa
   assert.equal(s([...reads, ...WRITERS, ...W], { limitOverrides: { reader: 2, auth: 1 } }).used, 12, 'option A alone needs two verified reductions (reader 3->2, auth 2->1)');
   assert.throws(() => s(['reader'], { limitOverrides: { reader: 0 } }), /out of range/); assert.throws(() => s(['reader'], { limitOverrides: { reader: 5 } }), /out of range/); assert.throws(() => s(['nope']), /unknown pool/);
 });
+
+import { assessCapacityEvidence } from '../src/infrastructure/db/capacity-plan.ts';
+test('capacity evidence intake: never invents a missing number; hosting-wide counting includes the legacy PHP peak and the reserve; instances multiply every pool', () => {
+  const all = ['reader', 'auth', 'console', 'pos', 'register', 'inventory', 'products', 'returns', 'warehouseStore', 'stockApply'];   // 14
+  const ev = (o) => ({ scope: 'hosting-wide', limit: 20, legacyPhpPeak: 4, reserve: 2, instances: 1, ...o });
+  assert.equal(assessCapacityEvidence(all, ev({ legacyPhpPeak: null })).verdict, 'INSUFFICIENT_EVIDENCE');
+  assert.equal(assessCapacityEvidence(all, ev({ scope: 'unknown' })).verdict, 'INSUFFICIENT_EVIDENCE');
+  assert.equal(assessCapacityEvidence(all, ev({ reserve: -1 })).verdict, 'INSUFFICIENT_EVIDENCE');
+  const wide = assessCapacityEvidence(all, ev()); assert.deepEqual([wide.verdict, wide.totalUsed, wide.available, wide.margin], ['FITS', 14, 14, 0], '14 needed, 20 - 4 - 2 = 14 available: fits with zero margin');
+  assert.equal(assessCapacityEvidence(all, ev({ reserve: 3 })).verdict, 'DOES_NOT_FIT', 'one more reserve connection and it no longer fits');
+  assert.equal(assessCapacityEvidence(['reader', 'auth', 'console'], ev({ instances: 2 })).totalUsed, 12, 'a second instance doubles the footprint');
+  const per = assessCapacityEvidence(all, ev({ scope: 'per-account', limit: 5, legacyPhpPeak: null, reserve: 1 }));
+  assert.deepEqual([per.verdict, per.available, per.margin], ['FITS', 4, 1], 'per-account: the widest pool (3) of limit 5 - reserve 1 = 4');
+  assert.equal(assessCapacityEvidence(all, ev({ scope: 'per-account', limit: 5, legacyPhpPeak: null, reserve: 1, instances: 2 })).verdict, 'DOES_NOT_FIT', 'two instances: the reader needs 6 of 4');
+});

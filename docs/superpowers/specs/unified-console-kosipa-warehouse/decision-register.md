@@ -1,6 +1,6 @@
 # Decision & Blocker Register — `unified-console-kosipa-warehouse`
 
-Maintained by engineering; updated at each checkpoint (last: checkpoint 13, 18 Oct 2026). **Every "Recommended default" below is a PROPOSAL for owner review. None is approved, none is implemented as a default, and no code assumes it.** Where a decision is open the code exposes an interface or a pure rule, keeps the unsafe action disabled, and says so in the UI.
+Maintained by engineering; updated at each checkpoint (last: checkpoint 15, 18 Oct 2026). **Every "Recommended default" below is a PROPOSAL for owner review. None is approved, none is implemented as a default, and no code assumes it.** Where a decision is open the code exposes an interface or a pure rule, keeps the unsafe action disabled, and says so in the UI.
 Columns: *Read-only dev* = can read-side/engineering work continue; *Writes* = whether financial / stock writes must stay disabled until the decision (and the writer-readiness gate) is met.
 
 ## A. Owner decisions
@@ -83,6 +83,15 @@ Unchanged and still **open** (no default chosen): D1 salary deduction policy, D2
 | S1 | Login credential exposure | Fixed locally (hydration gate + POST fallback + redirect-loop refusal), eight-scenario closeout; **not released** | Authorise a release containing commits `87e2ee8f` and `861b234b`; run the operator exposure checklist; decide rotation | Owner + operator |
 
 Decision sheet with options, proposals and evidence for every open item: `owner-decision-sheet.md`.
+
+## B7. Checkpoint 15 updates (no new owner decision recorded)
+
+| # | Item | Update | Still needed |
+|---|---|---|---|
+| R1 | Cashier landing | **Trial evidence on DEV LOCAL**, synthetic roles: with management grants the cashier lands on `/console` without the mapping and on `/pos` with `4:pos,1:console`; the branch-bound cashier never sees identity-link administration; everything restored afterwards. Policy stays **inactive** (the owner-facing preflight refuses any mapping) | Owner approval of (c) + production role ids (O3) |
+| S1 | Login hotfix | **Review-ready**: 5-file diff, no console/flag/dependency change, full `e2e-local` suite passes on master and on the hotfix with the same corrected test (master's committed test is stale since `f3b8bad6`) | Release authorisation; operator exposure check |
+| B5/B8 | Capacity | Evidence intake is executable: `validate-capacity-evidence.mjs` (scope per-account vs hosting-wide, legacy PHP peak, reserve, instances); with everything enabled the pools need 14 | Hosting statement and PHP peak (O4) |
+| — | Manual UAT | 44 UI scenarios pass by machine on DEV LOCAL; 0 application defects; **owner acceptance not given** | Owner results in the checklist |
 
 ## C. Engineering conventions that look like decisions but are not owner policy
 

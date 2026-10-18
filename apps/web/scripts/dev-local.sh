@@ -6,6 +6,8 @@
 #   scripts/dev-local.sh reset              stop, reseed the synthetic schema, rebuild kkisi_devlocal_staging, start prod
 #   scripts/dev-local.sh accounts           test accounts and roles (passwords stay in apps/web/.env.dev-local-accounts.json; never printed)
 #   scripts/dev-local.sh links              (re)create the KOSIPA identity links through the app (also done by start)
+#   scripts/dev-local.sh r1-trial           R1 landing policy trial on a THROW-AWAY instance (:3202): synthetic cashier role gets management grants temporarily, checks landing
+#                                           without and with the mapping 4:pos,1:console, then restores everything. The owner-facing server never carries the mapping.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 PROD_PORT=3200; DEV_PORT=3201
@@ -26,7 +28,27 @@ launch() { # $1 mode, $2 port
   node scripts/lib/dev-local-links.mjs "http://127.0.0.1:$2" || echo "WARNING: identity links not created (see above)"
   echo "DEV LOCAL ($1) running: http://127.0.0.1:$2/login   (log /tmp/kkisi-devlocal-$2.log)"
 }
+r1_trial() {
+  need; local port=3202 slugs="sales_view sales_payment_view sales_return_view sales_return_add items_view items_add items_edit inventory_so inventory_view users_edit" rc=0
+  [ -z "$(pid_on "$port")" ] || die "port $port is in use"
+  set -a; . ./.env.local; . ./.env.staging; set +a
+  root() { docker exec -i -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" kkisi-staging mariadb -uroot -N -B "$@"; }
+  local s; for s in $slugs; do root -e "INSERT INTO kkisi_devlocal_staging.db_permissions (role_id, permissions) SELECT 4, '$s' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM kkisi_devlocal_staging.db_permissions WHERE role_id=4 AND permissions='$s')"; done
+  trial_cleanup() { local p; p="$(pid_on "$port")"; [ -n "$p" ] && kill "$p" 2>/dev/null; for s in $slugs; do root -e "DELETE FROM kkisi_devlocal_staging.db_permissions WHERE role_id=4 AND permissions='$s'"; done; }
+  trap trial_cleanup EXIT
+  for mode in derived policy; do
+    local roles=""; [ "$mode" = policy ] && roles="4:pos,1:console"
+    CONSOLE_LANDING_ROLES="$roles" node scripts/lib/dev-local-preflight.mjs $([ "$mode" = policy ] && echo --r1-trial) >/dev/null || die "preflight refused the trial ($mode)"
+    ( set -a; . ./.env.dev-local; set +a; export APP_ORIGIN="http://127.0.0.1:$port" CONSOLE_LANDING_ROLES="$roles"; nohup pnpm exec next start -H 127.0.0.1 -p "$port" > "/tmp/kkisi-devlocal-$port.log" 2>&1 & )
+    for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$port/login" && break; sleep 0.5; done
+    node scripts/lib/dev-local-r1-trial.mjs "http://127.0.0.1:$port" "$mode" || rc=1
+    local p; p="$(pid_on "$port")"; [ -n "$p" ] && kill "$p"; sleep 1
+  done
+  trap - EXIT; trial_cleanup
+  echo "R1 trial finished; synthetic cashier grants removed; owner-facing server untouched. Result: $([ $rc = 0 ] && echo PASS || echo FAIL)"; return $rc
+}
 case "${1:-}" in
+  r1-trial) r1_trial ;;
   start) case "${2:-prod}" in prod) launch prod "$PROD_PORT";; dev) launch dev "$DEV_PORT";; *) die "start prod|dev";; esac ;;
   stop) for p in $PROD_PORT $DEV_PORT; do pid="$(pid_on "$p")"; [ -n "$pid" ] && kill "$pid" && echo "stopped :$p (pid $pid)"; done; true ;;
   status) for p in $PROD_PORT $DEV_PORT; do pid="$(pid_on "$p")"; if [ -n "$pid" ]; then echo ":$p running (pid $pid) http=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$p/login") -> http://127.0.0.1:$p/login"; else echo ":$p stopped"; fi; done ;;
