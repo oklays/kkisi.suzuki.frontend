@@ -49,6 +49,6 @@ try {
   report.console = consoleStore ? { linksRevoked: await revokeSyntheticConsoleLinks(consoleStore) } : 'skipped (no local console store configured)';
   console.log('E3a done:', JSON.stringify(report));
 } catch (e) {
-  console.error(e instanceof Abort ? `E3a ABORTED (nothing changed): ${e.message}` : `E3a FAILED (nothing changed): ${String(e.message).split('\n')[0].slice(0, 160)}`);
+  console.error(e instanceof Abort ? `E3a ABORTED (nothing changed): ${e.message}` : `E3a FAILED (nothing changed): ${String(e.message).split("\n").filter(Boolean).pop().slice(0, 200)}`);
   process.exitCode = 1;
 } finally { await Promise.all([seed.$disconnect(), auth.$disconnect(), real.$disconnect(), consoleStore?.$disconnect()]); }

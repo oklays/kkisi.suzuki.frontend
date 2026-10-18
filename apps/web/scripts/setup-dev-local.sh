@@ -16,7 +16,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 DL_DB="kkisi_devlocal_staging"; SRC_STRUCTURE="kkisi_staging"; SRC_ROWS="kkisi_e2e_legacy"
 # bash 3.2 (macOS): no associative arrays
 copy_source() { case "$1" in devlocal_pos) echo kkisi_pos_runtime;; devlocal_register) echo kkisi_pos_register;; devlocal_return) echo kkisi_pos_return;; devlocal_product) echo kkisi_product_write;; esac; }
-ACCOUNTS="devlocal_read devlocal_pos devlocal_register devlocal_return devlocal_product devlocal_inventory"
+ACCOUNTS="devlocal_read devlocal_pos devlocal_register devlocal_return devlocal_product devlocal_inventory devlocal_console"
 pw_of() { eval "printf '%s' \"\${PW_$1}\""; }
 
 main() {
@@ -77,6 +77,10 @@ main() {
     root_sql -e "CREATE USER IF NOT EXISTS '${acct}'@'${AUTH_HOST}' IDENTIFIED BY '${pw}' WITH MAX_USER_CONNECTIONS 10; ALTER USER '${acct}'@'${AUTH_HOST}' IDENTIFIED BY '${pw}' WITH MAX_USER_CONNECTIONS 10; REVOKE ALL PRIVILEGES, GRANT OPTION FROM '${acct}'@'${AUTH_HOST}'"
   done
   root_sql -e "GRANT SELECT ON \`${DL_DB}\`.* TO 'devlocal_read'@'${AUTH_HOST}'"
+  # console store: a DEV LOCAL account with the SAME grants as the local console account, so DEV LOCAL never competes for kkisi_console's small connection cap
+  local chost clines; chost="$(root_sql -e "SELECT Host FROM mysql.global_priv WHERE User='kkisi_console' LIMIT 1")"; [ -n "$chost" ] || die "kkisi_console account not found (run scripts/setup-console-store.sh)"
+  clines="$(root_sql -e "SHOW GRANTS FOR 'kkisi_console'@'${chost}'" | grep -v '^GRANT USAGE' | grep '`kkisi_console_staging`')"
+  printf '%s\n' "$clines" | sed -e "s/ TO \`kkisi_console\`@\`[^\`]*\`/ TO 'devlocal_console'@'${AUTH_HOST}'/" -e 's/$/;/' | root_sql
   for acct in devlocal_pos devlocal_register devlocal_return devlocal_product; do
     src="$(copy_source "$acct")"
     local host; host="$(root_sql -e "SELECT Host FROM mysql.global_priv WHERE User='${src}' LIMIT 1")"; [ -n "$host" ] || die "source grant account ${src} not found"
@@ -101,7 +105,7 @@ main() {
     echo "AUTH_SECRETS=\"${AUTH_SECRETS}\""
     echo "DATABASE_URL=\"$(dsn devlocal_read 3)\""
     echo "DATABASE_URL_AUTH=\"${DATABASE_URL_AUTH%%\?*}?connection_limit=2\""
-    echo "DATABASE_URL_CONSOLE=\"${DATABASE_URL_CONSOLE%%\?*}?connection_limit=1\""
+    echo "DATABASE_URL_CONSOLE=\"mysql://devlocal_console:$(pw_of devlocal_console)@${hp}/kkisi_console_staging?connection_limit=1\""
     echo "POS_WRITE_DATABASE=\"${DL_DB}\""
     echo "POS_WRITES_ENABLED=1"
     echo "DATABASE_URL_WRITE=\"$(dsn devlocal_pos 2)\""
