@@ -2,7 +2,7 @@
 // Idempotent: an existing active link is reported and kept. Synthetic accounts only; passwords come from the ignored fixture and are never printed.
 import { readFileSync } from 'node:fs';
 const base = process.argv[2]; if (new URL(base).hostname !== '127.0.0.1') throw new Error('local only');
-const pw = JSON.parse(readFileSync('.e2e-fixture.json', 'utf8'));
+const pw = JSON.parse(readFileSync('.env.dev-local-accounts.json', 'utf8'));
 const r = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base }, body: JSON.stringify({ username: 'synth_admin', password: pw.admin }) });
 if (r.status !== 200) { console.error(`administrator sign-in failed (${r.status})`); process.exit(1); }
 const { csrfToken } = await r.json(); const cookie = r.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');

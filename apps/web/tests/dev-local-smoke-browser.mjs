@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const base = process.env.DEV_LOCAL_URL || 'http://127.0.0.1:3200';
 const shots = process.env.DEV_LOCAL_SCREENSHOTS || '/private/tmp/kkisi-devlocal-screens';
 assert.equal(new URL(base).hostname, '127.0.0.1');
-const pw = JSON.parse(readFileSync(new URL('../.e2e-fixture.json', import.meta.url), 'utf8'));
+const pw = JSON.parse(readFileSync(new URL('../.env.dev-local-accounts.json', import.meta.url), 'utf8'));
 await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const errors = []; const results = [];

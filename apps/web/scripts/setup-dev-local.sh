@@ -54,6 +54,9 @@ main() {
     root_sql -e "SET SESSION sql_mode=''; INSERT INTO \`${DL_DB}\`.\`${t}\` (${cols}) SELECT ${cols} FROM \`${SRC_ROWS}\`.\`${t}\`"; copied=$((copied + n))
   done
   info "synthetic rows copied: ${copied}"
+  # the copied users carry the hashes of THIS seed's passwords: snapshot them for DEV LOCAL, because every later e2e seed (e.g. scripts/uat-run.sh) writes NEW ones
+  [ -f .e2e-fixture.json ] || die ".e2e-fixture.json missing: run the e2e seed first"
+  cp .e2e-fixture.json .env.dev-local-accounts.json && chmod 600 .env.dev-local-accounts.json
   # 4. TEST-ONLY persona grants (synthetic roles in this database only; NOT production permissions)
   root_sql -e "SET SESSION sql_mode=''; USE \`${DL_DB}\`;
     INSERT INTO db_permissions (role_id, permissions) SELECT r, p FROM (
@@ -62,7 +65,9 @@ main() {
       UNION ALL SELECT 2,'sales_view' UNION ALL SELECT 2,'items_view'
       UNION ALL SELECT 3,'sales_view' UNION ALL SELECT 3,'sales_payment_view' UNION ALL SELECT 3,'sales_return_view' UNION ALL SELECT 3,'sales_return_add' UNION ALL SELECT 3,'items_view' UNION ALL SELECT 3,'items_edit' UNION ALL SELECT 3,'inventory_so'
     ) g WHERE NOT EXISTS (SELECT 1 FROM db_permissions x WHERE x.role_id = g.r AND x.permissions = g.p);
-    UPDATE db_roles SET status = 1 WHERE id = 3;   -- the synthetic seed keeps role 3 INACTIVE as a negative case; DEV LOCAL activates it for the TOKO supervisor persona
+    UPDATE db_roles SET status = 1 WHERE id = 3;
+    UPDATE db_company SET sales_return_init = CONCAT('RS', id) WHERE id BETWEEN 9001 AND 9004 AND COALESCE(sales_return_init, '') = '';   -- return numbering prefix for the synthetic branches
+    INSERT IGNORE INTO db_kasir (id, company_id, no_kasir, status, cd, cd_usr, description) VALUES (9003, 9001, 'KRS02', 1, 0, '', 'SYNTH kasir kedua (DEV LOCAL): supervisor membuka sesi untuk retur');   -- the synthetic seed keeps role 3 INACTIVE as a negative case; DEV LOCAL activates it for the TOKO supervisor persona
     INSERT IGNORE INTO ref_menu (id, nama_menu, url, status, parent_id, jenis_menu, akses_menu) VALUES (9005,'SYNTH Payroll','payroll/matrix_c',1,0,'WEB','PRIVATE');
     INSERT IGNORE INTO ref_menu_akses (id, id_menu, id_group, status, tambah, edit, hapus, posting, approved) VALUES (9005,9005,9001,1,0,0,0,0,0);
     INSERT IGNORE INTO ref_users (id_ref_user, username, nama_lengkap, status, password, email, otp, token) VALUES (9004,'synth_ksp_staff','SYNTH STAF KOSIPA (BACA)',1,'x','',0,'');

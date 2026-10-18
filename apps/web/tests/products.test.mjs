@@ -59,3 +59,11 @@ test('master repository keeps empty/inactive/SO rows, uses scoped parameters and
   assert.ok(statements[1].values.includes("%\\%'\\_%")); assert.equal(statements[1].values[0], 2);
   assert.deepEqual(statements[2].values, [2]); assert.deepEqual(statements[3].values, [2]);
 });
+
+import { validateProductWriteConfig as checkProductWriter } from '../src/infrastructure/db/prisma-product-write.ts';
+test('checkpoint 14: the product writer accepts locally only the two EXACT databases (legacy copy, synthetic DEV LOCAL), nothing else', () => {
+  const env = (db, user = 'devlocal_product') => ({ PRODUCTS_WRITES_ENABLED: '1', POS_WRITE_DATABASE: db, DATABASE_URL: `mysql://r:p@127.0.0.1:3307/${db}`, DATABASE_URL_PRODUCT_WRITE: `mysql://${user}:p@127.0.0.1:3307/${db}` });
+  assert.match(checkProductWriter(env('kkisi_devlocal_staging')), /devlocal_product/);
+  assert.match(checkProductWriter(env('kkisi_staging', 'kkisi_product_write')), /kkisi_product_write/);
+  for (const db of ['kkisi_other_staging', 'kkisi_devlocal_staging2']) assert.throws(() => checkProductWriter(env(db)), { code: 'WRITE_NOT_CONFIGURED' }, db);
+});

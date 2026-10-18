@@ -8,11 +8,13 @@ import { isProduction } from './deployment-guard.ts';
  * grant set in scripts/setup-return-write.mjs. It never shares the checkout, register, inventory, product or auth
  * account, so the existing checkout privileges stay unchanged.
  */
+const LOCAL_RETURN_DATABASES = new Set(['/kkisi_staging', '/kkisi_devlocal_staging']);
 export function validateReturnWriteConfig(env: Record<string, string | undefined> = process.env): string {
   try {
     const url = validatePosWriteConfig({ ...env, POS_WRITES_ENABLED: env.SALES_RETURN_WRITES_ENABLED, DATABASE_URL_WRITE: env.DATABASE_URL_RETURN_WRITE });
     const target = new URL(url), user = decodeURIComponent(target.username);
-    if (!isProduction(env) && (target.port !== '3307' || target.pathname !== '/kkisi_staging')) throw new Error();
+    // Local: exact named databases only — the local legacy copy, or the synthetic DEV LOCAL database (checkpoint 14). Production uses the allowlist above.
+    if (!isProduction(env) && (target.port !== '3307' || !LOCAL_RETURN_DATABASES.has(target.pathname))) throw new Error();
     for (const other of [env.DATABASE_URL_WRITE, env.DATABASE_URL_REGISTER_WRITE, env.DATABASE_URL_INVENTORY_WRITE, env.DATABASE_URL_PRODUCT_WRITE, env.DATABASE_URL_AUTH]) {
       if (other && decodeURIComponent(new URL(other).username) === user) throw new Error();
     }

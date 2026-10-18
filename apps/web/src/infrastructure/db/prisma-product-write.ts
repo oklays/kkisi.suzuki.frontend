@@ -2,12 +2,13 @@ import { PrismaClient } from '@prisma/client';
 import { ProductEditError } from '@koperasi/domain/inventory';
 import { validatePosWriteConfig } from './prisma-pos-write.ts';
 import { isProduction } from './deployment-guard.ts';
+const LOCAL_PRODUCT_DATABASES = new Set(['/kkisi_staging', '/kkisi_devlocal_staging']);
 export function validateProductWriteConfig(env: Record<string,string|undefined> = process.env): string {
   try {
     const url = validatePosWriteConfig({ ...env, POS_WRITES_ENABLED: env.PRODUCTS_WRITES_ENABLED, DATABASE_URL_WRITE: env.DATABASE_URL_PRODUCT_WRITE });
     const target = new URL(url), user = decodeURIComponent(target.username);
-    // Local: pinned to the replicated Docker copy. Production: the allowlist already enforced by validatePosWriteConfig.
-    if (!isProduction(env) && (target.port !== '3307' || target.pathname !== '/kkisi_staging')) throw new Error();
+    // Local: exact named databases only — the replicated Docker copy, or the synthetic DEV LOCAL database (checkpoint 14). Production: the allowlist already enforced by validatePosWriteConfig.
+    if (!isProduction(env) && (target.port !== '3307' || !LOCAL_PRODUCT_DATABASES.has(target.pathname))) throw new Error();
     for (const other of [env.DATABASE_URL_WRITE,env.DATABASE_URL_REGISTER_WRITE,env.DATABASE_URL_INVENTORY_WRITE,env.DATABASE_URL_AUTH]) {
       if (other && decodeURIComponent(new URL(other).username) === user) throw new Error();
     }

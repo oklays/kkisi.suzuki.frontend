@@ -4,7 +4,7 @@
 #   scripts/dev-local.sh stop               stops both DEV LOCAL servers (never touches other processes, e.g. a server on :3000)
 #   scripts/dev-local.sh status             URL, process and health
 #   scripts/dev-local.sh reset              stop, reseed the synthetic schema, rebuild kkisi_devlocal_staging, start prod
-#   scripts/dev-local.sh accounts           test accounts and roles (passwords stay in apps/web/.e2e-fixture.json; never printed)
+#   scripts/dev-local.sh accounts           test accounts and roles (passwords stay in apps/web/.env.dev-local-accounts.json; never printed)
 #   scripts/dev-local.sh links              (re)create the KOSIPA identity links through the app (also done by start)
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
@@ -39,7 +39,7 @@ case "${1:-}" in
     bash scripts/setup-dev-local.sh --apply
     launch prod "$PROD_PORT" ;;
   accounts) cat <<'TXT'
-Akun uji DEV LOCAL (SINTETIS; password: apps/web/.e2e-fixture.json, kunci = nama setelah "synth_"; jangan disalin ke Git/chat)
+Akun uji DEV LOCAL (SINTETIS; password: apps/web/.env.dev-local-accounts.json, kunci = nama setelah "synth_"; jangan disalin ke Git/chat)
   synth_admin     role 1 (pemilih cabang)  Administrator console + pratinjau Warehouse (izin uji: users_edit, sales/items/inventory)
   synth_kepala    role 3 (cabang 9001)     Supervisor TOKO (izin uji: penjualan, pembayaran, retur, produk ubah, stock opname)
   synth_kasir1    role 4 (cabang 9001)     Kasir TOKO (sales_add saja) -> mendarat di /pos; juga dipakai untuk uji akses tanpa izin
