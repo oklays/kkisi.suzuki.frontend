@@ -59,3 +59,12 @@ test('checkpoint 15: only the explicit r1-trial mode accepts a landing mapping, 
   const inProfile = run({ ...goodProfile, CONSOLE_LANDING_ROLES: '4:pos,1:console' });   // ...but a mapping in the profile itself is refused
   assert.equal(inProfile.code, 1); assert.match(inProfile.out, /R1 not approved/);
 });
+
+test('seed-products copies ONLY the five catalog tables, only into the marked DEV LOCAL database, into the synthetic branch, with staff fields blanked — never members, sales or financial tables', () => {
+  const s = SH('dev-local.sh'); const a = s.indexOf('seed_products() {'); const body = s.slice(a, s.indexOf('r1_trial() {'));
+  assert.ok(a > 0 && body.length > 200);
+  assert.match(body, /_devlocal_marker/); assert.match(body, /DL=kkisi_devlocal_staging; local S=kkisi_staging|DL=kkisi_devlocal_staging/);
+  const readsFromSource = [...body.matchAll(/FROM \$S\.(\w+)/g)].map((m) => m[1]).sort(); assert.deepEqual([...new Set(readsFromSource)], ['db_brands', 'db_category', 'db_items', 'db_tax', 'db_units']);
+  assert.doesNotMatch(body, /m_anggota|db_sales|trans_|db_users|ref_users|db_salesitems|db_stockentry|DROP |TRUNCATE/i);
+  assert.match(body, /company_id\) sel="\$sel,9001"/); assert.match(body, /created_by\|added_by\|system_ip\|system_name\) sel="\$sel,''"/); assert.match(body, /\[\[ "\$src" =~ \^\[123\]\$ \]\]/);
+});

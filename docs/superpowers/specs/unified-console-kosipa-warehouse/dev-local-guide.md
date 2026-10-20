@@ -19,6 +19,7 @@ bash scripts/dev-local.sh start          # menjalankan lagi tanpa reset (mode pr
 bash scripts/dev-local.sh status         # cek URL dan proses
 bash scripts/dev-local.sh accounts       # daftar akun uji dan perannya
 bash scripts/dev-local.sh links          # pasang ulang tautan KOSIPA (perlu setelah scripts/uat-run.sh dijalankan)
+bash scripts/dev-local.sh seed-products   # OPSIONAL: salin katalog produk saja (5.125 barang cabang 1 salinan 30 Sep) ke SYNTH BRANCH 1; ulangi setelah setiap reset (atau: reset --with-products)
 bash scripts/dev-local.sh r1-trial       # uji kebijakan landing R1 di instance sementara :3202 (peran kasir sintetis diberi izin manajemen sementara, lalu dikembalikan); server utama tidak disentuh
 bash scripts/dev-local.sh stop           # menghentikan server DEV LOCAL (tidak menyentuh server lain)
 ```
@@ -74,3 +75,7 @@ Operator Warehouse **tidak punya peran sendiri** (keputusan W5 belum ada); prati
 3. Untuk setiap FAIL/BLOCKED, tambahkan entri `D-001`, `D-002`, … di `uat-defect-register.md` (template §3). Jangan menempelkan password pada tangkapan layar.
 4. Engineering menjalankan `node scripts/lib/render-uat-findings.mjs <results.json> <docs/…/uat-findings-register.md>`: ringkasan owner, daftar triase FAIL/BLOCKED dan penerimaan diperbarui. **Penerimaan owner hanya ada jika owner menyatakannya tertulis**; tidak ada alat yang menurunkannya dari hasil mesin.
 5. Setiap defect yang terkonfirmasi diproses: reproduksi di DEV LOCAL → akar masalah → perbaikan minimal → tes regresi → tes TOKO → register dan jurnal diperbarui.
+
+## 8. Mengapa data DEV LOCAL jauh lebih sedikit daripada `kkisi_staging`
+
+`kkisi_staging` adalah **salinan data nyata 30 Sep** (20.499 barang, 9.276 anggota, 230.863 penjualan). DEV LOCAL sengaja dibangun dari **struktur** tabelnya (tanpa baris) ditambah **data sintetis** (6 barang, 3 anggota, 6 penjualan), supaya data anggota dan keuangan nyata tidak dipakai untuk uji manual. Untuk uji produk yang realistis ada perintah opsional `seed-products`: hanya katalog (barang, kategori, merek, satuan, pajak) satu cabang nyata disalin ke cabang sintetis 1, dengan kolom nama staf/IP dikosongkan; **anggota, penjualan, dan tabel keuangan tidak disalin**. Harga dan stok hasil salinan adalah angka salinan lokal, bukan data operasional. Suite otomatis (`dev-local-smoke`, `walkthrough`, `uat-run`) mengandalkan katalog sintetis: jalankan `reset` **tanpa** produk sebelum menjalankannya.
