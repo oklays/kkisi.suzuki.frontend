@@ -68,3 +68,11 @@ test('seed-products copies ONLY the five catalog tables, only into the marked DE
   assert.doesNotMatch(body, /m_anggota|db_sales|trans_|db_users|ref_users|db_salesitems|db_stockentry|DROP |TRUNCATE/i);
   assert.match(body, /company_id\) sel="\$sel,9001"/); assert.match(body, /created_by\|added_by\|system_ip\|system_name\) sel="\$sel,''"/); assert.match(body, /\[\[ "\$src" =~ \^\[123\]\$ \]\]/);
 });
+
+test('flag-states runs only on a throw-away :3202 instance, after the preflight, and only switches flags off or breaks the LOCAL console-store password', () => {
+  const s = SH('dev-local.sh'); const a = s.indexOf('flag_states() {'); const body = s.slice(a, s.indexOf('case "${1:-}" in'));
+  assert.ok(a > 0 && body.length > 200);
+  assert.match(body, /port=3202/); assert.match(body, /dev-local-preflight\.mjs/); assert.ok(body.indexOf('dev-local-preflight.mjs') < body.indexOf('next start'));
+  assert.match(body, /KOSIPA_READ_ENABLED=false/); assert.match(body, /CONSOLE_ENABLED=false/); assert.match(body, /wrong-password-for-outage-test/);
+  assert.doesNotMatch(body, /mysql|MARIADB_ROOT|DROP |DELETE |INSERT |3200|3201|3000/, 'no database statement and no other server is touched');
+});

@@ -14,8 +14,8 @@ export function ownerStatus(cell) {
 export function parseChecklist(text) {
   const rows = []; let section = '';
   for (const line of text.split('\n')) {
-    const h = /^## ([A-F])\. (.+)$/.exec(line); if (h) { section = `${h[1]}. ${h[2]}`; continue; }
-    if (!/^\| [A-D]\d+ \|/.test(line)) continue;
+    const h = /^## ([A-G])\. (.+)$/.exec(line); if (h) { section = `${h[1]}. ${h[2]}`; continue; }
+    if (!/^\| [A-DG]\d+ \|/.test(line)) continue;
     const c = line.split('|').slice(1, -1).map((x) => x.trim());
     rows.push({ id: c[0], section, page: c[1], role: c[2], action: c[3], expected: c[4], kind: c[5], ownerCell: c[6] ?? '', ownerNote: c[7] ?? '' });
   }

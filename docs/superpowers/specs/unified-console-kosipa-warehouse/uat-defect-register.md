@@ -4,7 +4,7 @@ Hasil per skenario: lihat `uat-findings-register.md` (dihasilkan dari checklist 
 
 ## 1. Defect yang direproduksi
 
-**Belum ada defect aplikasi yang direproduksi.** Owner belum memberi hasil uji manual; sampai ada, tidak ada defect yang dapat dinyatakan terkonfirmasi atau tertutup oleh owner.
+**Belum ada defect fungsional yang direproduksi.** Satu temuan navigasi dilaporkan owner secara lisan (D-001, di bawah): akar masalahnya diverifikasi dan perbaikan diterapkan, tetapi **belum ada hasil uji manual tertulis dari owner**, sehingga tidak ada defect yang dapat dinyatakan tertutup oleh owner.
 
 Walkthrough otomatis (44 skenario UI pada data sintetis DEV LOCAL, tiga kali berturut-turut dari `reset` bersih) menemukan **0 defect aplikasi**. Pada run pertama 5 skenario gagal; semuanya diselidiki dan ternyata **asumsi uji yang salah**, bukan defect (aplikasi benar pada setiap kasus):
 
@@ -15,6 +15,14 @@ Walkthrough otomatis (44 skenario UI pada data sintetis DEV LOCAL, tiga kali ber
 | B10 tidak ada tautan penjualan | baris riwayat menaut ke `/sales/invoice/{id}`, bukan `/sales/{id}`; tombol "Tinjau retur" memang nonaktif sampai jumlah retur dipilih | tes mengikuti alur sebenarnya; retur penuh melalui UI terverifikasi |
 | C1 sesekali gagal | tes membaca halaman sebelum navigasi pencarian selesai (balapan di tes) | tes menunggu `?q=` |
 | C2, C7 | judul bagian "Potongan payroll" (huruf kecil) dan rute `/laporan/simpanan` (bukan `mutasi-simpanan`) | ekspektasi tes diperbaiki |
+
+### Temuan yang dilaporkan owner — checkpoint 16
+
+| ID | Skenario | Akun | Gejala | Klasifikasi | Prioritas | Status |
+|---|---|---|---|---|---|---|
+| D-001 | A9/A10, G1, G10 | akun DEV LOCAL pertama (`synth_admin`; akun mana yang dicoba owner belum dikonfirmasi) | "Menu KOSIPA tidak terlihat di console" | masalah UX/UI + izin dipahami salah (bukan kebocoran/cacat izin) | blokir (navigasi) | **perbaikan diterapkan, verifikasi mesin lulus, menunggu uji owner** |
+
+*Reproduksi:* masuk sebagai `synth_admin` → sidebar tanpa KOSIPA; kartu modul KOSIPA berlabel "Segera hadir". *Akar masalah (terverifikasi pada server yang berjalan):* sidebar adalah turunan kemampuan; kemampuan KOSIPA hanya diberikan oleh tautan identitas aktif. `synth_admin` tidak punya tautan (sengaja; `SELF_LINK` melarang administrator menautkan dirinya), sedangkan `synth_koperasi` dan `synth_kasir2` memang menampilkan KOSIPA. Registri navigasi, flag (`CONSOLE_ENABLED`, `KOSIPA_READ_ENABLED`), build, dan seed tidak bermasalah. Faktor yang memperburuk: kartu KOSIPA menampilkan "Segera hadir" untuk akun yang belum ditautkan, seolah modul belum dibangun, dan daftar menu datar tanpa pintu masuk KOSIPA. *Perbaikan:* keadaan akses KOSIPA yang jujur di dashboard, halaman Ringkasan KOSIPA, grup KOSIPA bertingkat (Laporan sebagai submenu), breadcrumb berjenjang, dokumentasi akun uji. *Tidak diubah:* seed, izin, dan tautan; tidak ada akses yang dilonggarkan. *Bukti:* `console-kosipa-nav-browser.mjs` 12/12, `uat-run.sh`, `flag-states`; tangkapan layar di `/private/tmp/kkisi-kosipa-nav/` (tanpa kredensial). Jika owner melihat KOSIPA hilang pada akun yang **seharusnya** tertaut (mis. `synth_koperasi`), laporkan sebagai defect baru dengan akun, URL, dan tangkapan layar.
 
 ## 2. Pengamatan (bukan defect; untuk diketahui owner)
 

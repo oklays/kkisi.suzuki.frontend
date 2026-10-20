@@ -20,6 +20,7 @@ bash scripts/dev-local.sh status         # cek URL dan proses
 bash scripts/dev-local.sh accounts       # daftar akun uji dan perannya
 bash scripts/dev-local.sh links          # pasang ulang tautan KOSIPA (perlu setelah scripts/uat-run.sh dijalankan)
 bash scripts/dev-local.sh seed-products   # OPSIONAL: salin katalog produk saja (5.125 barang cabang 1 salinan 30 Sep) ke SYNTH BRANCH 1; ulangi setelah setiap reset (atau: reset --with-products)
+bash scripts/dev-local.sh flag-states    # KOSIPA nonaktif / console nonaktif / store console mati, di instance sementara :3202 (server utama tidak disentuh)
 bash scripts/dev-local.sh r1-trial       # uji kebijakan landing R1 di instance sementara :3202 (peran kasir sintetis diberi izin manajemen sementara, lalu dikembalikan); server utama tidak disentuh
 bash scripts/dev-local.sh stop           # menghentikan server DEV LOCAL (tidak menyentuh server lain)
 ```
@@ -43,10 +44,10 @@ Password **tidak** dicetak di mana pun: buka `apps/web/.env.dev-local-accounts.j
 
 | Akun | Peran uji (HANYA lokal) | Catatan |
 |---|---|---|
-| `synth_admin` | Administrator console + pratinjau Warehouse | role 1 (pemilih cabang); izin uji: kelola tautan, penjualan, produk, inventory |
+| `synth_admin` | Administrator console + pratinjau Warehouse | role 1 (pemilih cabang); izin uji: kelola tautan, penjualan, produk, inventory. **Sengaja tidak ditautkan ke KOSIPA**: menu KOSIPA tidak tampil dan kartu KOSIPA menyatakan "Akun belum ditautkan" (peran administrator saja tidak membuka data keuangan; aplikasi juga menolak administrator menautkan akunnya sendiri, `SELF_LINK`) |
 | `synth_kepala` | Supervisor TOKO (cabang 9001) | role 3 diaktifkan khusus DEV LOCAL (seed sintetis menonaktifkannya sebagai kasus negatif) |
 | `synth_kasir1` | Kasir TOKO (cabang 9001) | hanya `sales_add` → langsung ke /pos; dipakai juga untuk uji akses tanpa izin |
-| `synth_koperasi` | Administrator KOSIPA | ditautkan ke `synth_ksp` (semua tampilan KOSIPA); satu-satunya pengguna ekspor CSV |
+| `synth_koperasi` | Administrator KOSIPA — **akun utama untuk menguji menu KOSIPA** | ditautkan ke `synth_ksp` (semua tampilan KOSIPA); satu-satunya pengguna ekspor CSV |
 | `synth_kasir2` | Staf KOSIPA baca-saja (cabang 9002) | ditautkan ke `synth_ksp_staff` (anggota, simpanan, pinjaman; tanpa payroll) |
 | `synth_off` / `synth_nobranch` | Pengguna terbatas | akun nonaktif / cabang nonaktif → tidak bisa masuk |
 
@@ -79,3 +80,23 @@ Operator Warehouse **tidak punya peran sendiri** (keputusan W5 belum ada); prati
 ## 8. Mengapa data DEV LOCAL jauh lebih sedikit daripada `kkisi_staging`
 
 `kkisi_staging` adalah **salinan data nyata 30 Sep** (20.499 barang, 9.276 anggota, 230.863 penjualan). DEV LOCAL sengaja dibangun dari **struktur** tabelnya (tanpa baris) ditambah **data sintetis** (6 barang, 3 anggota, 6 penjualan), supaya data anggota dan keuangan nyata tidak dipakai untuk uji manual. Untuk uji produk yang realistis ada perintah opsional `seed-products`: hanya katalog (barang, kategori, merek, satuan, pajak) satu cabang nyata disalin ke cabang sintetis 1, dengan kolom nama staf/IP dikosongkan; **anggota, penjualan, dan tabel keuangan tidak disalin**. Harga dan stok hasil salinan adalah angka salinan lokal, bukan data operasional. Suite otomatis (`dev-local-smoke`, `walkthrough`, `uat-run`) mengandalkan katalog sintetis: jalankan `reset` **tanpa** produk sebelum menjalankannya.
+
+## 9. Navigasi KOSIPA (checkpoint 16)
+
+**Mengapa menu KOSIPA tidak terlihat.** Menu KOSIPA berasal dari *tautan identitas* (akun console → akun KOSIPA), bukan dari peran. Akun yang paling dulu dicoba, `synth_admin`, sengaja tidak punya tautan, dan kartu KOSIPA di dashboard menampilkan "Segera hadir". Perbaikan: kartu kini menyatakan keadaan sebenarnya ("Akun belum ditautkan", "Belum diaktifkan", "Tidak tersedia sementara"); KOSIPA menjadi grup tersendiri dengan Ringkasan KOSIPA, dan Laporan (lima laporan) menjadi submenu di dalamnya. Tidak ada izin yang dilonggarkan. Untuk melihat KOSIPA, masuk sebagai `synth_koperasi` (semua tampilan) atau `synth_kasir2` (baca saja, tanpa payroll).
+
+Struktur menu KOSIPA (nyata, bukan rencana):
+
+| Menu | Rute | Izin |
+|---|---|---|
+| Ringkasan KOSIPA | /console/kosipa | salah satu izin lihat KOSIPA (tidak membaca data) |
+| Keanggotaan (Anggota 360) | /console/kosipa/anggota → /anggota/{id} | kosipa.member.view |
+| Simpanan | /console/kosipa/simpanan → /simpanan/{id} | kosipa.savings.view |
+| Pinjaman | /console/kosipa/pinjaman → /pinjaman/{dokumen} | kosipa.loan.view |
+| Payroll | /console/kosipa/payroll → batch → anggota, rekonsiliasi kredit TOKO | kosipa.payroll.view |
+| Laporan ▸ Keanggotaan, Mutasi simpanan, Pinjaman, Payroll, Kualitas data | /console/kosipa/laporan[/…] | izin lihat masing-masing; CSV perlu izin ekspor terpisah |
+| Angsuran | belum ada halaman | tidak ditampilkan sebagai tautan; tertulis "Dalam pengembangan" |
+
+Rekonsiliasi payroll dan detail anggota/pinjaman dicapai dari halaman induknya (butuh nomor dokumen/ID), bukan dari sidebar.
+
+Verifikasi otomatis di server yang berjalan (tanpa reset, tanpa mengubah data uji): `PLAYWRIGHT_MODULE=… node tests/console-kosipa-nav-browser.mjs` (12 pemeriksaan: sidebar nyata, submenu, setiap tujuan, status aktif, breadcrumb, refresh, tautan mati, laci ponsel, ekspor, akun lain, `SELF_LINK`) dan `bash scripts/dev-local.sh flag-states`. `OWNER_UAT_ONLY=A,C,D node tests/owner-uat-walkthrough-browser.mjs` menjalankan walkthrough hanya untuk bagian yang tidak menulis transaksi.

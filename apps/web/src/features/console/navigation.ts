@@ -1,7 +1,7 @@
 import type { NavEntry, NavSection } from '@koperasi/domain/console/navigation';
 
 /** Icon keys are resolved to lucide components by the UI; the registry itself stays serialisable. */
-export type ConsoleIcon = 'dashboard' | 'pos' | 'history' | 'returns' | 'products' | 'warehouse' | 'members' | 'savings' | 'loans'
+export type ConsoleIcon = 'quality' | 'dashboard' | 'pos' | 'history' | 'returns' | 'products' | 'warehouse' | 'members' | 'savings' | 'loans'
   | 'installments' | 'payroll' | 'distribution' | 'receiving' | 'identity' | 'reports';
 
 export type ConsoleNavEntry = NavEntry & { icon: ConsoleIcon; description?: string };
@@ -15,9 +15,12 @@ export const SECTION_LABELS: Record<NavSection, string> = {
   settings: 'Pengaturan',
 };
 
+/** Any read-only KOSIPA capability: enough to open the KOSIPA overview and the report index (each destination still checks its own capability). */
+const KOSIPA_VIEW = ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.view', 'kosipa.payroll.view'] as const;
+
 /**
  * The single navigation registry (spec REQ-011). Sidebar, breadcrumb, dashboard cards and quick links are all derived
- * from it. `planned` entries describe the roadmap and are never rendered as links; KOSIPA and full Warehouse entries
+ * from it. KOSIPA "Laporan" has nested report entries (`parent`). `planned` entries describe the roadmap and are never rendered as links; KOSIPA and full Warehouse entries
  * become `available` only when their pages, identity links and capability adapters ship (spec P1/P2).
  * /inventory sits under Warehouse but is the existing TOKO subset (global warehouse master + stock opname), not the
  * separate Gudang application.
@@ -25,11 +28,18 @@ export const SECTION_LABELS: Record<NavSection, string> = {
 export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'dashboard', section: 'dashboard', label: 'Dashboard', href: '/console', order: 0, anyOf: [], readiness: 'available', icon: 'dashboard' },
 
+  { id: 'kosipa-overview', section: 'kosipa', label: 'Ringkasan KOSIPA', href: '/console/kosipa', order: 0, anyOf: KOSIPA_VIEW, readiness: 'available', icon: 'dashboard', description: 'Pintu masuk modul KOSIPA: menu yang diizinkan, status, dan batasan data' },
   { id: 'kosipa-members', section: 'kosipa', label: 'Keanggotaan', href: '/console/kosipa/anggota', order: 1, anyOf: ['kosipa.member.view'], readiness: 'available', icon: 'members', description: 'Cari anggota dan lihat Anggota 360 (baca saja)' },
   { id: 'kosipa-savings', section: 'kosipa', label: 'Simpanan', href: '/console/kosipa/simpanan', order: 2, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'savings', description: 'Buku simpanan per anggota (baca saja)' },
   { id: 'kosipa-loans', section: 'kosipa', label: 'Pinjaman', href: '/console/kosipa/pinjaman', order: 3, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loans', description: 'Dokumen dan jadwal pinjaman (baca saja)' },
   { id: 'kosipa-installments', section: 'kosipa', label: 'Angsuran', href: '/console/kosipa/angsuran', order: 4, anyOf: [], readiness: 'planned', icon: 'installments' },
-  { id: 'kosipa-payroll', section: 'kosipa', label: 'Payroll', href: '/console/kosipa/payroll', order: 5, anyOf: ['kosipa.payroll.view'], readiness: 'available', icon: 'payroll', description: 'Batch potongan bulanan (baca saja)' },
+  { id: 'kosipa-payroll', section: 'kosipa', label: 'Payroll', href: '/console/kosipa/payroll', order: 5, anyOf: ['kosipa.payroll.view'], readiness: 'available', icon: 'payroll', description: 'Batch potongan bulanan, rekonsiliasi kredit TOKO untuk ditinjau (baca saja)' },
+  { id: 'kosipa-reports', section: 'kosipa', label: 'Laporan', href: '/console/kosipa/laporan', order: 6, anyOf: KOSIPA_VIEW, readiness: 'available', icon: 'reports', description: 'Laporan pinjaman, payroll, keanggotaan, simpanan dan kualitas data (baca saja)' },
+  { id: 'kosipa-report-members', section: 'kosipa', parent: 'kosipa-reports', label: 'Keanggotaan', href: '/console/kosipa/laporan/keanggotaan', order: 7, anyOf: ['kosipa.member.view'], readiness: 'available', icon: 'members' },
+  { id: 'kosipa-report-savings', section: 'kosipa', parent: 'kosipa-reports', label: 'Mutasi simpanan', href: '/console/kosipa/laporan/simpanan', order: 8, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'savings' },
+  { id: 'kosipa-report-loans', section: 'kosipa', parent: 'kosipa-reports', label: 'Pinjaman', href: '/console/kosipa/laporan/pinjaman', order: 9, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loans' },
+  { id: 'kosipa-report-payroll', section: 'kosipa', parent: 'kosipa-reports', label: 'Payroll', href: '/console/kosipa/laporan/payroll', order: 10, anyOf: ['kosipa.payroll.view'], readiness: 'available', icon: 'payroll' },
+  { id: 'kosipa-report-quality', section: 'kosipa', parent: 'kosipa-reports', label: 'Kualitas data', href: '/console/kosipa/laporan/kualitas-data', order: 11, anyOf: ['kosipa.loan.view', 'kosipa.payroll.view'], readiness: 'available', icon: 'quality' },
 
   { id: 'toko-pos', section: 'toko', label: 'POS / Kasir', href: '/pos', order: 1, anyOf: ['toko.pos.checkout'], readiness: 'available', icon: 'pos', description: 'Transaksi penjualan di konter' },
   { id: 'toko-sales', section: 'toko', label: 'Riwayat Transaksi', href: '/sales', order: 2, anyOf: ['toko.sales.view'], readiness: 'available', icon: 'history', excludePrefix: '/sales/returns', description: 'Cari transaksi dan cetak ulang struk' },
@@ -42,7 +52,6 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'warehouse-mapping', section: 'warehouse', label: 'Pemetaan Barang', href: '/console/warehouse/pemetaan', order: 4, anyOf: ['warehouse.preview.view'], readiness: 'available', icon: 'products', description: 'Pemetaan barang Gudang ke TOKO (pratinjau sintetis, baca saja)' },
   { id: 'warehouse-receiving', section: 'warehouse', label: 'Penerimaan & Selisih', href: '/console/warehouse/penerimaan', order: 5, anyOf: ['warehouse.preview.view'], readiness: 'available', icon: 'receiving', description: 'Penerimaan dan rekonsiliasi (pratinjau sintetis, baca saja)' },
 
-  { id: 'reports-kosipa', section: 'reports', label: 'Laporan KOSIPA', href: '/console/kosipa/laporan', order: 1, anyOf: ['kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.member.view', 'kosipa.savings.view'], readiness: 'available', icon: 'reports', description: 'Laporan pinjaman, payroll, keanggotaan, simpanan dan kualitas data (baca saja)' },
   { id: 'settings-identity', section: 'settings', label: 'Tautan Akun KOSIPA', href: '/console/settings/identitas', order: 1, anyOf: ['iam.link.manage'], readiness: 'available', icon: 'identity', description: 'Tautkan akun console ke akun KOSIPA' },
 ];
 

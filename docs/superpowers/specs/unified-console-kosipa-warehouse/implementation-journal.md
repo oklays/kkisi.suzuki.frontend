@@ -801,3 +801,41 @@ Done: verified DEV LOCAL (running on :3200, credential files mode 600, container
 Verification: lint 0 errors / 4 warnings (baseline), typecheck OK, `pnpm test` domain 141, application 139, web 332 pass (+76 opt-in). Not re-run: the browser/UAT suites (no application or UI code changed since the last full pass).
 
 Waiting on: the owner's manual results; hotfix release authorisation; operator evidence O1/O3/O4/O5/O6/O7/Gudang/exposure counts; decisions R1, D5, D7, B9, B4, D1–D4, D6, D8–D10, W1/W5.
+
+---
+
+## Checkpoint 16 — KOSIPA navigation integration (owner-reported "KOSIPA menu not visible")
+
+### Root cause (verified on the running DEV LOCAL server, not assumed)
+
+The sidebar is derived from capabilities, and KOSIPA capabilities exist only for a user with an **active identity link** to a KOSIPA account. Signing in to the real server showed: `synth_koperasi` and `synth_kasir2` rendered the full KOSIPA menu; `synth_admin` (the first account in `.env.dev-local-accounts.json`) rendered no KOSIPA, **by design** (administrator role alone must not open member financial data; `SELF_LINK` forbids an administrator linking their own account). Ruled out: the registry (KOSIPA entries were already `available`), `CONSOLE_ENABLED` / `KOSIPA_READ_ENABLED`, the build, the seed, the capability resolver. Which account the owner used is not confirmed; the finding is recorded as D-001. Contributing UX faults, now fixed: the dashboard showed the KOSIPA card as **"Segera hadir"** for an unlinked user (as if the module were unbuilt), the KOSIPA menu was flat with no entry page, and Laporan was a separate section.
+
+### Delivered
+
+* Navigation model: optional `parent` on `NavEntry`, `nestNavigation()` (one level; an authorised child is never hidden because its parent is not visible). KOSIPA section = Ringkasan KOSIPA, Keanggotaan, Simpanan, Pinjaman, Payroll, Laporan ▸ (Keanggotaan, Mutasi simpanan, Pinjaman, Payroll, Kualitas data). The old separate "Laporan" section entry was removed; `Angsuran` stays `planned` (no page, never a link).
+* `ConsoleFrame`: collapsible submenus (`aria-expanded`, `aria-controls`, open while the current page is inside, reset on navigation), hierarchical breadcrumb (`KKISI TB2 / KOSIPA / Laporan / Pinjaman`; deeper pages show the registered page as a link and a final "Detail"). No second sidebar implementation.
+* New `/console/kosipa` (Ringkasan KOSIPA): shortcuts from the same registry and capabilities, report links, export status, data limitations. It reads **no** KOSIPA data and runs no query.
+* Dashboard module state now tells the truth: "Akun belum ditautkan" / "Belum diaktifkan" / "Tidak tersedia sementara" instead of "Segera hadir".
+* DEV LOCAL: `scripts/dev-local.sh flag-states` (KOSIPA off / console off / console store down on a throw-away :3202 instance). Seeds, roles and links are unchanged; `synth_admin` stays unlinked and the guide now says so and names `synth_koperasi` as the KOSIPA test account. A first attempt at an opt-in admin link was discarded when the application correctly refused it (`SELF_LINK`); nothing was written around that rule.
+* Tests: `console-kosipa-nav-browser.mjs` (12 checks on the rendered sidebar of the running server), route-to-navigation matrix and registry invariants in `console-shell.test.mjs`, `nestNavigation` domain test, persona oracle updated by hand (and the staging matrix document regenerated), static guards for `flag-states`, `OWNER_UAT_ONLY` filter for the walkthrough (read-only sections only; DEV LOCAL was **not** reset).
+
+### Verification (actual, 20 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` / `typecheck` / `build` | 0 errors, 4 warnings (baseline) / OK / OK |
+| `pnpm test` | domain 142, application 139, web 339 pass (+76 opt-in skipped), 0 fail |
+| `console-kosipa-nav-browser.mjs` on DEV LOCAL | 12/12: group, submenu, 11 destinations (one active item + breadcrumb), refresh/direct URL, detail pages, 15 links answer 200, mobile drawer, CSV export separate grant, `synth_kasir2`, `synth_kasir1`, `synth_admin`, `SELF_LINK` refused |
+| `dev-local.sh flag-states` | PASS: KOSIPA off, console off, console store down (fail closed, TOKO continues) |
+| Walkthrough, read-only sections A, C, D | 32 PASS / 0 FAIL |
+| Integrated `scripts/uat-run.sh` (8 phases: flags on, reader outage, console store down, flags off, export on/off, Warehouse preview on/off, R1, rehearsal and isolation) | PASS after the two fixes below; TOKO regression 585 / 397 requests |
+
+Two findings during verification: (1) the store-down phase caught that my dashboard card repeated the sentence "Akses KOSIPA sementara tidak dapat diperiksa" next to the existing banner: card text reworded. (2) `e2e-local.mjs` step B fails **identically on the unmodified base commit** (`8fbf5402`, built in a separate worktree) when the console flag is on: Next.js prefetches `GET /console?_rsc=` from the POS shell link, which the test did not allow. That is baseline test drift, not a regression of this work; the assertion now allows that read-only prefetch (the test still forbids any non-GET and any other path). An earlier checkpoint-15 pass of the same file was not reproduced and the reason is not established.
+
+### Not claimed
+
+Owner acceptance (checklist section G is empty on the owner side), staging or production readiness, official financial figures, any financial writer, R1 approval, hotfix release. No push, merge or deployment was done. `dev-local.sh stop` stopped both DEV LOCAL servers once; :3201 was restarted immediately.
+
+### Remaining blockers (unchanged)
+
+O1/O5 official balances and parity, O3 real roles, O4 connection evidence, D5 payroll branch mapping, D1–D4/D6 business rules, Gudang schema and D7/W5, B4/B9 writer ownership and cutover.

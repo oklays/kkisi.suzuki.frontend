@@ -18,6 +18,15 @@
 .console-nav-group ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
 .console-nav-label { color:#a5afc0; text-transform:uppercase; font-size:10px; letter-spacing:.08em!important; padding:4px 10px 6px; }
 .console-sidebar nav a { display:flex; align-items:center; gap:10px; min-height:44px; padding:10px; border-radius:10px; color:#c3cad6; text-decoration:none; font-size:13px; }
+.console-nav-row { display:flex; align-items:center; gap:4px; }
+.console-nav-row > a { flex:1; min-width:0; }
+.console-nav-toggle { flex-shrink:0; width:44px; min-height:44px; display:grid; place-items:center; border:0; border-radius:10px; background:none; color:#c3cad6; cursor:pointer; }
+.console-nav-toggle:hover { background:#1e293b; color:white; }
+.console-nav-toggle svg { transition:transform .15s ease; }
+.console-nav-toggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+.console-nav-group ul.console-nav-sub { margin:2px 0 4px 20px; padding-left:8px; border-left:1px solid #344054; gap:2px; }
+.console-nav-group ul.console-nav-sub[hidden] { display:none; }
+.console-nav-sub a { min-height:40px; padding:8px 10px; }
 .console-sidebar nav a:hover { background:#1e293b; color:white; }
 .console-sidebar nav a[aria-current="page"] { background:var(--c-blue); color:white; font-weight:700; }
 .console-sidebar-bottom { border-top:1px solid #344054; padding-top:14px; display:flex; flex-direction:column; gap:12px; }
@@ -69,6 +78,8 @@
 .console-badge[data-state="available"] { background:#e7f6ec; color:#05603a; }
 .console-badge[data-state="partial"] { background:#fff4e5; color:#93370d; }
 .console-badge[data-state="planned"] { background:#f2f4f7; color:#475467; }
+.console-badge[data-state="unlinked"], .console-badge[data-state="disabled"], .console-badge[data-state="unavailable"] { background:#fff4e5; color:#93370d; }
+.console-limits { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; color:#475467; line-height:1.55; }
 .console-notice { display:flex; align-items:flex-start; gap:8px; color:var(--c-muted); font-size:13px; line-height:1.5; }
 .console-panel { max-width:560px; padding:22px; border:1px solid var(--c-border); border-radius:14px; background:white; display:flex; flex-direction:column; gap:10px; }
 .console-panel h1, .console-panel h2 { font-size:18px; font-weight:750; }

@@ -82,3 +82,16 @@ test('current entry: longest prefix wins and exclusions hold', () => {
   assert.equal(currentEntryId(entries, '/console'), 'dash');
   assert.equal(currentEntryId(entries, '/salesman'), null, 'prefix match respects path segments');
 });
+
+test('nestNavigation nests children under a visible parent, promotes a child whose parent is not visible, and keeps one level', async () => {
+  const { nestNavigation } = await import('../src/console/navigation.ts');
+  const e = (id, parent) => ({ id, parent, section: 'kosipa', label: id, href: `/${id}`, order: 0, anyOf: [], readiness: 'available' });
+  const nested = nestNavigation([e('rep'), e('rep-a', 'rep'), e('rep-b', 'rep'), e('other')]);
+  assert.deepEqual(nested.map((n) => [n.entry.id, n.children.map((c) => c.id)]), [['rep', ['rep-a', 'rep-b']], ['other', []]]);
+  const orphan = nestNavigation([e('rep-a', 'rep'), e('other')]);
+  assert.deepEqual(orphan.map((n) => n.entry.id), ['rep-a', 'other'], 'an authorised destination is never hidden because its parent is not visible');
+  const deep = nestNavigation([e('a'), e('b', 'a'), e('c', 'b')]);
+  assert.deepEqual(deep.find((n) => n.entry.id === 'a').children.map((c) => c.id), ['b']);
+  assert.ok(deep.some((n) => n.entry.id === 'c'), 'a grandchild is promoted instead of lost');
+  assert.deepEqual(nestNavigation([e('self', 'self')]).map((n) => n.entry.id), ['self']);
+});

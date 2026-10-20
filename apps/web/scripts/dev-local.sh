@@ -5,6 +5,7 @@
 #   scripts/dev-local.sh status             URL, process and health
 #   scripts/dev-local.sh reset [--with-products]   stop, reseed the synthetic schema, rebuild kkisi_devlocal_staging, (optionally seed the product catalog), start prod
 #   scripts/dev-local.sh accounts           test accounts and roles (passwords stay in apps/web/.env.dev-local-accounts.json; never printed)
+#   scripts/dev-local.sh flag-states        run the KOSIPA-off / console-off / console-store-down checks on a throw-away :3202 instance (owner-facing server untouched)
 #   scripts/dev-local.sh links              (re)create the KOSIPA identity links through the app (also done by start)
 #   scripts/dev-local.sh seed-products [1|2|3]  OPTIONAL: copy the PRODUCT CATALOG ONLY (items, categories, brands, units, taxes; no members, sales or any personal/financial table) of one real branch
 #                                           of the local 30 Sep copy into DEV LOCAL branch 1 (SYNTH BRANCH 1) for realistic product testing; staff-name fields are blanked. Re-run after every reset.
@@ -66,8 +67,24 @@ r1_trial() {
   trap - EXIT; trial_cleanup
   echo "R1 trial finished; synthetic cashier grants removed; owner-facing server untouched. Result: $([ $rc = 0 ] && echo PASS || echo FAIL)"; return $rc
 }
+flag_states() {
+  need; local port=3202 rc=0 state
+  [ -z "$(pid_on "$port")" ] || die "port $port is in use"
+  node scripts/lib/dev-local-preflight.mjs >/dev/null || die "preflight refused the DEV LOCAL profile"
+  for state in kosipa-off console-off store-down; do
+    # Overrides are applied AFTER the preflight on purpose: they only switch a flag off or make the LOCAL console-store login fail (wrong password); no new target is introduced.
+    ( set -a; . ./.env.dev-local; set +a; export APP_ORIGIN="http://127.0.0.1:$port"
+      case "$state" in kosipa-off) export KOSIPA_READ_ENABLED=false;; console-off) export CONSOLE_ENABLED=false;; store-down) export DATABASE_URL_CONSOLE="$(printf '%s' "$DATABASE_URL_CONSOLE" | sed -E 's#(//[^:]+):[^@]*@#\1:wrong-password-for-outage-test@#')";; esac
+      nohup pnpm exec next start -H 127.0.0.1 -p "$port" > "/tmp/kkisi-devlocal-$port.log" 2>&1 & )
+    for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$port/login" && break; sleep 0.5; done
+    node scripts/lib/dev-local-flag-states.mjs "http://127.0.0.1:$port" "$state" || rc=1
+    local p; p="$(pid_on "$port")"; [ -n "$p" ] && kill "$p"; sleep 1
+  done
+  echo "flag-state checks finished; owner-facing server untouched. Result: $([ $rc = 0 ] && echo PASS || echo FAIL)"; return $rc
+}
 case "${1:-}" in
   r1-trial) r1_trial ;;
+  flag-states) flag_states ;;
   seed-products) seed_products "${2:-1}" ;;
   start) case "${2:-prod}" in prod) launch prod "$PROD_PORT";; dev) launch dev "$DEV_PORT";; *) die "start prod|dev";; esac ;;
   stop) for p in $PROD_PORT $DEV_PORT; do pid="$(pid_on "$p")"; [ -n "$pid" ] && kill "$pid" && echo "stopped :$p (pid $pid)"; done; true ;;

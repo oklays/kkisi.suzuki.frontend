@@ -1,6 +1,6 @@
 import {
   ArrowLeftRight, Boxes, CalendarClock, ClipboardList, HandCoins, LayoutDashboard, PackageCheck, PiggyBank, ShoppingBag, Undo2,
-  Users, Wallet, Warehouse, Link2, BarChart3, type LucideIcon,
+  Users, Wallet, Warehouse, Link2, BarChart3, ShieldCheck, type LucideIcon,
 } from 'lucide-react';
 import type { ConsoleIcon } from '@/features/console/navigation';
 
@@ -8,5 +8,5 @@ import type { ConsoleIcon } from '@/features/console/navigation';
 export const CONSOLE_ICONS: Record<ConsoleIcon, LucideIcon> = {
   dashboard: LayoutDashboard, pos: ShoppingBag, history: ClipboardList, returns: Undo2, products: Boxes, warehouse: Warehouse,
   members: Users, savings: PiggyBank, loans: HandCoins, installments: CalendarClock, payroll: Wallet, distribution: ArrowLeftRight,
-  receiving: PackageCheck, identity: Link2, reports: BarChart3,
+  receiving: PackageCheck, identity: Link2, reports: BarChart3, quality: ShieldCheck,
 };

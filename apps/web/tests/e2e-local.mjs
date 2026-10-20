@@ -89,7 +89,7 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Proses Pembayaran', exact: true }).isDisabled(), true, 'checkout stays disabled');
     await page.screenshot({ path: `${output}/e2e-catalog.png` });
     const mine = allRequests.slice(before).filter((r) => !r.url.includes('/_next/'));
-    const odd = mine.filter((r) => !(r.method === 'GET' && (/\/api\/pos\/(products|register)/.test(r.url) || /\/pos(\?|$)/.test(r.url) || /\/login(\?|$)/.test(r.url) || /\.(png|svg|ico|css|js|woff2?)(\?|$)/.test(r.url) || /^\/(pos|login)?$/.test(new URL(r.url).pathname) && new URL(r.url).search.startsWith('?_rsc='))));   // Next.js link prefetch of a public page
+    const odd = mine.filter((r) => !(r.method === 'GET' && (/\/api\/pos\/(products|register)/.test(r.url) || /\/pos(\?|$)/.test(r.url) || /\/login(\?|$)/.test(r.url) || /\.(png|svg|ico|css|js|woff2?)(\?|$)/.test(r.url) || /^\/(pos|login|console)?$/.test(new URL(r.url).pathname) && new URL(r.url).search.startsWith('?_rsc='))));   // Next.js link prefetch (GET only): public pages and, with the console flag on, the POS shell's link to /console
     assert.deepEqual(odd.map((r) => `${r.method} ${new URL(r.url).pathname}${new URL(r.url).search}`), [], 'while browsing the catalog and filling the cart only GETs to the catalog/register/static files were made');
     await context.close(); }
 

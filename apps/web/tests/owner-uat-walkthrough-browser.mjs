@@ -13,7 +13,10 @@ const out = process.env.OWNER_UAT_OUT || '/private/tmp/kkisi-owner-uat'; await m
 const browser = await chromium.launch({ headless: true });
 const results = {}; const errors = [];
 const secrets = Object.values(pw);
+// OWNER_UAT_ONLY=A,C runs only the sections that do not write transactions (use it on a DEV LOCAL the owner is already testing; never reset it blindly).
+const only = (process.env.OWNER_UAT_ONLY ?? '').split(',').filter(Boolean);
 async function step(id, role, fn) {
+  if (only.length && !only.some((p) => id.startsWith(p) && /^\d/.test(id.slice(p.length)))) return;
   try { const note = await fn(); results[id] = { role, status: 'PASS', note: note ?? '' }; }
   catch (e) { results[id] = { role, status: 'FAIL', note: String(e.message).split('\n')[0].slice(0, 300) }; }
   console.log(`RESULT ${id} ${results[id].status}${results[id].note ? ' — ' + results[id].note : ''}`);

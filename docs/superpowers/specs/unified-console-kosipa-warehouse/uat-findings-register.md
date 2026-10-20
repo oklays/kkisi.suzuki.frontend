@@ -2,14 +2,14 @@
 
 Kolom **Mesin** = hasil walkthrough otomatis (`tests/owner-uat-walkthrough-browser.mjs`) pada data sintetis DEV LOCAL; ini **bukan** penerimaan owner. Kolom **Owner** diambil apa adanya dari sel *Lulus/Gagal* di `owner-uat-checklist.md` yang diisi owner (PASS / FAIL / BLOCKED); sel kosong = NOT TESTED; isian yang tidak dikenali dilaporkan sebagai INVALID dan dihitung NOT TESTED.
 
-Dihasilkan: 2026-10-18 dari checklist + results.json. Jenis: F fungsional · B baca saja · S pratinjau sintetis · N nonaktif sengaja · E terblokir eksternal.
+Dihasilkan: 2026-10-20 dari checklist + results.json. Jenis: F fungsional · B baca saja · S pratinjau sintetis · N nonaktif sengaja · E terblokir eksternal.
 
 ## Ringkasan
 
 | | PASS | FAIL | BLOCKED | NOT TESTED / belum otomatis |
 |---|---|---|---|---|
-| **Owner** (46 baris) | 0 | 0 | 0 | 46 |
-| Mesin | 44 | 0 | — | 2 |
+| **Owner** (56 baris) | 0 | 0 | 0 | 56 |
+| Mesin | 54 | 0 | — | 2 |
 
 **Penerimaan owner: BELUM ADA** — status ini tidak pernah diturunkan dari hasil mesin.
 
@@ -78,3 +78,18 @@ Dihasilkan: 2026-10-18 dari checklist + results.json. Jenis: F fungsional · B b
 | D5 | synth_admin | cari tombol kirim/terima/posting | tidak ada | N | PASS |  | NOT TESTED |  |
 | D6 | synth_koperasi | buka /console/warehouse | ditolak | S | PASS |  | NOT TESTED |  |
 | D7 | — | — | belum terhubung (skema Gudang, D7) | E | NOT AUTOMATED |  | NOT TESTED |  |
+
+## G. Navigasi KOSIPA di console (checkpoint 16)
+
+| ID | Peran | Langkah (ringkas) | Hasil yang diharapkan | Jenis | Mesin | Catatan mesin | Owner | Catatan owner |
+|---|---|---|---|---|---|---|---|---|
+| G1 | synth_koperasi | masuk, lihat sidebar | grup **KOSIPA**: Ringkasan KOSIPA, Keanggotaan, Simpanan, Pinjaman, Payroll, Laporan | F | PASS | KOSIPA group + 6 top-level entries; Laporan expands/collapses with 5 report entries | NOT TESTED |  |
+| G2 | synth_koperasi | klik panah di samping "Laporan" | submenu lima laporan (Keanggotaan, Mutasi simpanan, Pinjaman, Payroll, Kualitas data) terbuka dan tertutup | F | PASS | KOSIPA group + 6 top-level entries; Laporan expands/collapses with 5 report entries | NOT TESTED |  |
+| G3 | synth_koperasi | buka satu per satu, termasuk kelima laporan | halaman terbuka; tepat satu menu aktif; breadcrumb "KKISI TB2 / KOSIPA / …" | B | PASS | 11 destinations | NOT TESTED |  |
+| G4 | synth_koperasi | cari `S9001` → profil → buku simpanan; Pinjaman → detail; Payroll → batch → rekonsiliasi | semua terbuka; menu induk tetap aktif; breadcrumb berakhir "Detail"; rekonsiliasi berlabel "hanya untuk ditinjau" | B | PASS | Anggota 360, buku simpanan, detail pinjaman, batch payroll, rekonsiliasi | NOT TESTED |  |
+| G5 | synth_koperasi | refresh di halaman laporan; ketik URL KOSIPA langsung | tetap masuk; menu, status aktif, dan submenu Laporan benar | F | PASS | reload + direct URL | NOT TESTED |  |
+| G6 | synth_koperasi | tombol menu → buka "Laporan" → "Kualitas data" | laci menampilkan KOSIPA; menutup setelah pindah halaman; tidak ada scroll horizontal | F | PASS | drawer + Laporan submenu + navigation | NOT TESTED |  |
+| G7 | synth_koperasi lalu synth_kasir2 | cari tautan "Unduh CSV" di laporan pinjaman | koperasi: ada dan file terunduh; kasir2: tidak ada (izin ekspor terpisah) | B | PASS | koperasi 200 text/csv; kasir2 no link and API refused | NOT TESTED |  |
+| G8 | synth_kasir2 | lihat sidebar; buka /console/kosipa/payroll | tanpa Payroll dan Laporan payroll; payroll "Akses ditolak" | B | PASS | menu = page guard = API | NOT TESTED |  |
+| G9 | synth_kasir1 | masuk; buka /console/kosipa | mendarat di /pos; tidak ada menu KOSIPA; halaman KOSIPA ditolak | F | PASS | POS only | NOT TESTED |  |
+| G10 | synth_admin | lihat sidebar dan kartu KOSIPA | tidak ada menu KOSIPA; kartu "Akun belum ditautkan" (bukan "Segera hadir"); administrator tidak dapat menautkan akunnya sendiri | F | PASS | administrator role alone never opens KOSIPA; SELF_LINK refused; KOSIPA still 403 | NOT TESTED |  |

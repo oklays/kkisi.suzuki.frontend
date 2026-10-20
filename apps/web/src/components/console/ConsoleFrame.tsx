@@ -4,8 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Menu, Store, X } from 'lucide-react';
-import { currentEntryId } from '@koperasi/domain/console/navigation';
+import { ChevronDown, Menu, Store, X } from 'lucide-react';
+import { currentEntryId, nestNavigation } from '@koperasi/domain/console/navigation';
 import type { ConsoleNavEntry } from '@/features/console/navigation';
 import { CONSOLE_ICONS } from './icons';
 import type { PosSession } from '@/features/pos/types';
@@ -22,10 +22,15 @@ export function ConsoleFrame({ groups, viewer, children }: { groups: ConsoleNavG
   const entries = groups.flatMap((g) => g.items);
   const current = entries.find((e) => e.id === currentEntryId(entries, pathname)) ?? null;
   const currentGroup = current ? groups.find((g) => g.items.includes(current)) : undefined;
+  // Deeper than the registered page (e.g. a member or loan detail): the registered page becomes a link and the last crumb is the detail itself.
+  const deeper = current !== null && pathname.replace(/\/$/, '') !== current.href.split('?')[0];
+  const currentParent = current?.parent ? entries.find((e) => e.id === current.parent) ?? null : null;
+  // A submenu is open while it holds the current page; a manual toggle only lasts until the next navigation.
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
   // Close the drawer on navigation.
   const [seenPath, setSeenPath] = useState(pathname);
-  if (seenPath !== pathname) { setSeenPath(pathname); setOpen(false); }
+  if (seenPath !== pathname) { setSeenPath(pathname); setOpen(false); setToggled({}); }
 
   useEffect(() => {
     if (!open) return;
@@ -53,9 +58,23 @@ export function ConsoleFrame({ groups, viewer, children }: { groups: ConsoleNavG
             <div key={group.section} className="console-nav-group">
               {group.section !== 'dashboard' && <p className="console-nav-label" id={`nav-${group.section}`}>{group.label}</p>}
               <ul aria-labelledby={group.section !== 'dashboard' ? `nav-${group.section}` : undefined}>
-                {group.items.map((item) => {
+                {nestNavigation(group.items).map(({ entry: item, children }) => {
                   const Icon = CONSOLE_ICONS[item.icon];
-                  return <li key={item.id}><Link href={item.href} aria-current={current?.id === item.id ? 'page' : undefined}><Icon size={18} aria-hidden="true" />{item.label}</Link></li>;
+                  const submenu = `nav-sub-${item.id}`;
+                  const expanded = toggled[item.id] ?? (current?.id === item.id || children.some((c) => c.id === current?.id));
+                  return (
+                    <li key={item.id}>
+                      <div className="console-nav-row">
+                        <Link href={item.href} aria-current={current?.id === item.id ? 'page' : undefined}><Icon size={18} aria-hidden="true" />{item.label}</Link>
+                        {children.length > 0 && <button type="button" className="console-nav-toggle" aria-expanded={expanded} aria-controls={submenu} aria-label={`Submenu ${item.label}`} onClick={() => setToggled((t) => ({ ...t, [item.id]: !expanded }))}><ChevronDown size={16} aria-hidden="true" /></button>}
+                      </div>
+                      {children.length > 0 && (
+                        <ul id={submenu} className="console-nav-sub" hidden={!expanded} aria-label={`Submenu ${item.label}`}>
+                          {children.map((child) => <li key={child.id}><Link href={child.href} aria-current={current?.id === child.id ? 'page' : undefined}>{child.label}</Link></li>)}
+                        </ul>
+                      )}
+                    </li>
+                  );
                 })}
               </ul>
             </div>
@@ -74,7 +93,10 @@ export function ConsoleFrame({ groups, viewer, children }: { groups: ConsoleNavG
             <ol>
               <li><Link href="/console">KKISI TB2</Link></li>
               {currentGroup && currentGroup.section !== 'dashboard' && <li>{currentGroup.label}</li>}
-              {current && current.id !== 'dashboard' && <li aria-current="page">{current.label}</li>}
+              {currentParent && <li><Link href={currentParent.href}>{currentParent.label}</Link></li>}
+              {current && current.id !== 'dashboard' && (deeper
+                ? <><li><Link href={current.href}>{current.label}</Link></li><li aria-current="page">Detail</li></>
+                : <li aria-current="page">{current.label}</li>)}
             </ol>
           </nav>
           <div className="console-user">

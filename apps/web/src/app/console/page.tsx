@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowRight, Info } from 'lucide-react';
 import { resolvePostLoginLanding } from '@koperasi/domain/console/landing-policy';
-import { visibleNavigation } from '@koperasi/domain/console/navigation';
+import { nestNavigation, visibleNavigation } from '@koperasi/domain/console/navigation';
 import { CONSOLE_ICONS } from '@/components/console/icons';
 import { CONSOLE_MODULES, CONSOLE_NAVIGATION } from '@/features/console/navigation';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
@@ -10,8 +10,13 @@ import { consoleEnabled, landingPolicy } from '@/infrastructure/console/flags';
 
 export const dynamic = 'force-dynamic';
 
-type ModuleState = 'available' | 'partial' | 'planned' | 'restricted';
-const STATE_LABEL: Record<ModuleState, string> = { available: 'Tersedia', partial: 'Tersedia sebagian', planned: 'Segera hadir', restricted: 'Tidak ada akses' };
+type ModuleState = 'available' | 'partial' | 'planned' | 'restricted' | 'unlinked' | 'disabled' | 'unavailable';
+const STATE_LABEL: Record<ModuleState, string> = { available: 'Tersedia', partial: 'Tersedia sebagian', planned: 'Segera hadir', restricted: 'Tidak ada akses', unlinked: 'Akun belum ditautkan', disabled: 'Belum diaktifkan', unavailable: 'Tidak tersedia sementara' };
+const KOSIPA_STATE_NOTE: Partial<Record<ModuleState, string>> = {
+  unlinked: 'Modul ini sudah berfungsi, tetapi akun Anda belum ditautkan ke akun KOSIPA. Minta administrator menautkannya lewat Pengaturan › Tautan Akun KOSIPA.',
+  disabled: 'Integrasi KOSIPA (baca saja) belum diaktifkan di lingkungan ini.',
+  unavailable: 'Layanan KOSIPA sedang tidak dapat dihubungi, sehingga modul ini disembunyikan sampai pulih.',
+};
 
 export default async function ConsoleDashboard({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (!consoleEnabled()) notFound();
@@ -24,12 +29,15 @@ export default async function ConsoleDashboard({ searchParams }: { searchParams:
   if ((await searchParams).entry === 'login' && resolvePostLoginLanding({ roleId: ctx.roleId, capabilities, consoleEnabled: true, policy: landingPolicy() }).target === '/pos') redirect('/pos');
 
   const visible = visibleNavigation(CONSOLE_NAVIGATION, capabilities);
-  const linksFor = (section: string) => visible.find((g) => g.section === section)?.items ?? [];
+  // Top-level destinations only: nested entries (e.g. the individual reports) are reached through their parent.
+  const linksFor = (section: string) => nestNavigation(visible.find((g) => g.section === section)?.items ?? []).map((n) => n.entry);
   const modules = CONSOLE_MODULES.map((m) => {
     const links = linksFor(m.section);
     const planned = CONSOLE_NAVIGATION.filter((e) => e.section === m.section && e.readiness === 'planned');
-    const state: ModuleState = links.length === 0 ? (planned.length > 0 && m.section !== 'toko' ? 'planned' : 'restricted') : planned.length > 0 ? 'partial' : 'available';
-    return { ...m, links, planned, state };
+    // KOSIPA without any visible destination is explained by its real access state, never shown as "coming soon": the module is built.
+    const kosipaReason: ModuleState | null = m.section === 'kosipa' && links.length === 0 ? (auth.kosipa === 'linked' ? 'restricted' : auth.kosipa) : null;
+    const state: ModuleState = kosipaReason ?? (links.length === 0 ? (planned.length > 0 && m.section !== 'toko' ? 'planned' : 'restricted') : planned.length > 0 ? 'partial' : 'available');
+    return { ...m, links, planned: links.length === 0 ? [] : planned, state };
   }).filter((m) => m.state !== 'restricted');
   const quick = [...linksFor('toko'), ...linksFor('kosipa'), ...linksFor('warehouse'), ...linksFor('settings')];
 
@@ -59,6 +67,7 @@ export default async function ConsoleDashboard({ searchParams }: { searchParams:
             <li key={m.section} className="console-module" data-state={m.state}>
               <div className="console-module-head"><h3>{m.title}</h3><span className="console-badge" data-state={m.state}>{STATE_LABEL[m.state]}</span></div>
               <p>{m.summary}</p>
+              {KOSIPA_STATE_NOTE[m.state] && <p className="console-module-planned" role="status">{KOSIPA_STATE_NOTE[m.state]}</p>}
               {m.links.length > 0 && <ul className="console-module-links">{m.links.map((l) => <li key={l.id}><Link href={l.href}>{l.label}</Link></li>)}</ul>}
               {m.planned.length > 0 && <p className="console-module-planned">Dalam pengembangan: {m.planned.map((p) => p.label).join(', ')}.</p>}
             </li>

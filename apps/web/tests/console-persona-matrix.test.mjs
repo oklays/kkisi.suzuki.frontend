@@ -11,9 +11,9 @@ const EXPECT = {
   'console-admin': { caps: ['iam.link.manage', 'toko.inventory.so', 'toko.inventory.view', 'toko.inventory.warehouse', 'toko.pos.checkout', 'toko.products.create', 'toko.products.edit', 'toko.products.view', 'toko.returns.create', 'toko.returns.view', 'toko.sales.payments', 'toko.sales.view', 'warehouse.preview.view'], kosipa: 'unlinked', landing: '/console',
     nav: ['dashboard', 'toko-pos', 'toko-sales', 'toko-returns', 'toko-products', 'warehouse-inventory', 'warehouse-preview', 'warehouse-distribution', 'warehouse-mapping', 'warehouse-receiving', 'settings-identity'], api: [403, 403, 403, 403, 403, 403] },
   'kosipa-admin': { caps: [...KOSIPA_VIEWS, 'kosipa.report.export', 'toko.products.view', 'toko.sales.view'].sort(), kosipa: 'linked', landing: '/console',
-    nav: ['dashboard', 'kosipa-members', 'kosipa-savings', 'kosipa-loans', 'kosipa-payroll', 'toko-sales', 'toko-products', 'reports-kosipa'], api: [200, 200, 200, 200, 200, 200] },
+    nav: ['dashboard', 'kosipa-overview', 'kosipa-members', 'kosipa-savings', 'kosipa-loans', 'kosipa-payroll', 'kosipa-reports', 'kosipa-report-members', 'kosipa-report-savings', 'kosipa-report-loans', 'kosipa-report-payroll', 'kosipa-report-quality', 'toko-sales', 'toko-products'], api: [200, 200, 200, 200, 200, 200] },
   'kosipa-staff': { caps: ['kosipa.loan.view', 'kosipa.member.view', 'kosipa.savings.view', 'kosipa.store-credit.view'].filter((c) => c !== 'kosipa.store-credit.view'), kosipa: 'linked', landing: '/console',
-    nav: ['dashboard', 'kosipa-members', 'kosipa-savings', 'kosipa-loans', 'reports-kosipa'], api: [200, 403, 200, 200, 403, 403] },
+    nav: ['dashboard', 'kosipa-overview', 'kosipa-members', 'kosipa-savings', 'kosipa-loans', 'kosipa-reports', 'kosipa-report-members', 'kosipa-report-savings', 'kosipa-report-loans', 'kosipa-report-quality'], api: [200, 403, 200, 200, 403, 403] },
   'toko-cashier': { caps: ['toko.pos.checkout'], kosipa: 'unlinked', landing: '/pos', nav: ['dashboard', 'toko-pos'], api: [403, 403, 403, 403, 403, 403] },
   'toko-supervisor': { caps: ['toko.inventory.so', 'toko.inventory.view', 'toko.pos.checkout', 'toko.products.edit', 'toko.products.view', 'toko.returns.create', 'toko.returns.view', 'toko.sales.payments', 'toko.sales.view'], kosipa: 'unlinked', landing: '/console',
     nav: ['dashboard', 'toko-pos', 'toko-sales', 'toko-returns', 'toko-products', 'warehouse-inventory'], api: [403, 403, 403, 403, 403, 403] },
@@ -21,7 +21,7 @@ const EXPECT = {
   'warehouse-supervisor': { caps: ['toko.inventory.so', 'toko.inventory.view', 'toko.inventory.warehouse', 'warehouse.preview.view'], kosipa: 'unlinked', landing: '/console',
     nav: ['dashboard', 'warehouse-inventory', 'warehouse-preview', 'warehouse-distribution', 'warehouse-mapping', 'warehouse-receiving'], api: [403, 403, 403, 403, 403, 403] },
   auditor: { caps: [...KOSIPA_VIEWS, 'toko.inventory.view', 'toko.inventory.warehouse', 'toko.products.view', 'toko.returns.view', 'toko.sales.view', 'warehouse.preview.view'].sort(), kosipa: 'linked', landing: '/console',
-    nav: ['dashboard', 'kosipa-members', 'kosipa-savings', 'kosipa-loans', 'kosipa-payroll', 'toko-sales', 'toko-returns', 'toko-products', 'warehouse-inventory', 'warehouse-preview', 'warehouse-distribution', 'warehouse-mapping', 'warehouse-receiving', 'reports-kosipa'], api: [200, 200, 200, 200, 403, 403] },
+    nav: ['dashboard', 'kosipa-overview', 'kosipa-members', 'kosipa-savings', 'kosipa-loans', 'kosipa-payroll', 'kosipa-reports', 'kosipa-report-members', 'kosipa-report-savings', 'kosipa-report-loans', 'kosipa-report-payroll', 'kosipa-report-quality', 'toko-sales', 'toko-returns', 'toko-products', 'warehouse-inventory', 'warehouse-preview', 'warehouse-distribution', 'warehouse-mapping', 'warehouse-receiving'], api: [200, 200, 200, 200, 403, 403] },
 };
 // kosipa-staff's controllers include trans_simpanan + trans_pinjaman + anggota but NOT trans_toko_c, so store-credit is absent (explicit above).
 

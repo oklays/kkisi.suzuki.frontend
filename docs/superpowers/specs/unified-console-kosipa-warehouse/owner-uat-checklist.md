@@ -70,6 +70,23 @@ Status: **F** = fungsional & tersedia · **B** = baca saja · **S** = pratinjau 
 | D6 | Warehouse | synth_koperasi | buka /console/warehouse | ditolak | S | | |
 | D7 | Gudang nyata, posting stok TOKO | — | — | belum terhubung (skema Gudang, D7) | E | | |
 
+## G. Navigasi KOSIPA di console (checkpoint 16)
+
+Laporan pemilik: menu KOSIPA tidak terlihat. Penyebab terverifikasi: menu KOSIPA hanya muncul untuk akun yang **ditautkan** ke akun KOSIPA; `synth_admin` (akun pertama di `.env.dev-local-accounts.json`) sengaja tidak ditautkan, sedangkan dashboard menampilkan KOSIPA sebagai "Segera hadir". Uji KOSIPA dengan **`synth_koperasi`** (semua tampilan) dan **`synth_kasir2`** (staf baca-saja).
+
+| # | Halaman | Akun | Aksi | Hasil yang diharapkan | Status | Lulus/Gagal | Catatan |
+|---|---|---|---|---|---|---|---|
+| G1 | /login lalu /console | synth_koperasi | masuk, lihat sidebar | grup **KOSIPA**: Ringkasan KOSIPA, Keanggotaan, Simpanan, Pinjaman, Payroll, Laporan | F | | |
+| G2 | sidebar | synth_koperasi | klik panah di samping "Laporan" | submenu lima laporan (Keanggotaan, Mutasi simpanan, Pinjaman, Payroll, Kualitas data) terbuka dan tertutup | F | | |
+| G3 | semua menu KOSIPA | synth_koperasi | buka satu per satu, termasuk kelima laporan | halaman terbuka; tepat satu menu aktif; breadcrumb "KKISI TB2 / KOSIPA / …" | B | | |
+| G4 | Anggota 360 dan turunannya | synth_koperasi | cari `S9001` → profil → buku simpanan; Pinjaman → detail; Payroll → batch → rekonsiliasi | semua terbuka; menu induk tetap aktif; breadcrumb berakhir "Detail"; rekonsiliasi berlabel "hanya untuk ditinjau" | B | | |
+| G5 | muat ulang / URL langsung | synth_koperasi | refresh di halaman laporan; ketik URL KOSIPA langsung | tetap masuk; menu, status aktif, dan submenu Laporan benar | F | | |
+| G6 | lebar ponsel (375 px) | synth_koperasi | tombol menu → buka "Laporan" → "Kualitas data" | laci menampilkan KOSIPA; menutup setelah pindah halaman; tidak ada scroll horizontal | F | | |
+| G7 | Laporan | synth_koperasi lalu synth_kasir2 | cari tautan "Unduh CSV" di laporan pinjaman | koperasi: ada dan file terunduh; kasir2: tidak ada (izin ekspor terpisah) | B | | |
+| G8 | menu dan URL | synth_kasir2 | lihat sidebar; buka /console/kosipa/payroll | tanpa Payroll dan Laporan payroll; payroll "Akses ditolak" | B | | |
+| G9 | /login | synth_kasir1 | masuk; buka /console/kosipa | mendarat di /pos; tidak ada menu KOSIPA; halaman KOSIPA ditolak | F | | |
+| G10 | /console | synth_admin | lihat sidebar dan kartu KOSIPA | tidak ada menu KOSIPA; kartu "Akun belum ditautkan" (bukan "Segera hadir"); administrator tidak dapat menautkan akunnya sendiri | F | | |
+
 ## E. Tampilan (375, 390, 768, 1024, 1440 px)
 
 | # | Aksi | Hasil yang diharapkan | Lulus/Gagal | Catatan |

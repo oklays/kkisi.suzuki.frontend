@@ -100,3 +100,50 @@ test('KOSIPA reads are SELECT-only and time-capped; no member mutation exists at
     assert.doesNotMatch(text, /trans_pinjaman_dtl|trans_potongan_matrix/, 'large unindexed tables stay unread until indexes exist');
   }
 });
+
+// ---- KOSIPA navigation integration (owner-reported "KOSIPA menu not visible") -----------------------------------------------------------
+const kosipaPages = () => walk(join(ROOT, 'src/app/console/kosipa')).filter((p) => p.endsWith('/page.tsx')).map((p) => p.slice(join(ROOT, 'src/app').length, -'/page.tsx'.length));
+
+test('route-to-navigation matrix: every static KOSIPA page is a registered, available entry; dynamic pages are reached from a registered parent page', () => {
+  const registered = new Map(CONSOLE_NAVIGATION.map((e) => [e.href, e]));
+  const reachedFrom = { '/console/kosipa/anggota/[id]': '/console/kosipa/anggota', '/console/kosipa/simpanan/[id]': '/console/kosipa/simpanan', '/console/kosipa/pinjaman/[docNo]': '/console/kosipa/pinjaman',
+    '/console/kosipa/payroll/[docNo]': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/rekonsiliasi': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/anggota/[nik]': '/console/kosipa/payroll' };
+  for (const route of kosipaPages()) {
+    if (route.includes('[')) { assert.ok(route in reachedFrom, `${route}: dynamic page with no declared parent`); assert.equal(registered.get(reachedFrom[route])?.readiness, 'available', `${route}: parent ${reachedFrom[route]} is not an available entry`); continue; }
+    const entry = registered.get(route);
+    assert.ok(entry, `${route} exists as a page but is not in the navigation registry (the owner would never find it)`);
+    assert.equal(entry.readiness, 'available', `${route} is implemented but still marked ${entry.readiness}`);
+    assert.equal(entry.section, 'kosipa', `${route} must live in the KOSIPA section`);
+  }
+});
+
+test('the only planned KOSIPA entry is one without a page; nothing implemented is hidden behind "Segera hadir"', () => {
+  const planned = CONSOLE_NAVIGATION.filter((e) => e.section === 'kosipa' && e.readiness === 'planned');
+  assert.deepEqual(planned.map((e) => e.id), ['kosipa-installments']);
+  assert.ok(!kosipaPages().includes(planned[0].href));
+});
+
+test('nested entries: the parent exists in the same section, is itself top level, lives above the child path and is visible whenever the child is', () => {
+  const byId = new Map(CONSOLE_NAVIGATION.map((e) => [e.id, e]));
+  for (const e of CONSOLE_NAVIGATION.filter((x) => x.parent)) {
+    const parent = byId.get(e.parent);
+    assert.ok(parent, `${e.id}: unknown parent ${e.parent}`); assert.equal(parent.section, e.section); assert.equal(parent.parent, undefined, `${e.id}: nesting is one level deep`);
+    assert.ok(e.href.startsWith(`${parent.href}/`), `${e.id}: a child lives under its parent's path`);
+    assert.ok(e.anyOf.every((c) => parent.anyOf.includes(c)), `${e.id}: parent must be visible whenever the child is`);
+  }
+});
+
+test('the dashboard explains KOSIPA access states instead of "Segera hadir", and the KOSIPA overview reads no KOSIPA data', () => {
+  const dash = read('src/app/console/page.tsx');
+  assert.match(dash, /unlinked: 'Akun belum ditautkan'/); assert.match(dash, /auth\.kosipa === 'linked' \? 'restricted' : auth\.kosipa/);
+  const overview = read('src/app/console/kosipa/page.tsx');
+  assert.doesNotMatch(overview.replace(/\/\*[\s\S]*?\*\//g, ''), /searchMembers|\.deps\.|Rp\s?\d|prisma|\$queryRaw/);
+  assert.match(overview, /requireConsoleSession\(\{ next: '\/console\/kosipa' \}\)/);
+});
+
+test('a console administrator is not given KOSIPA access by the dev-local seed, which links only the two KOSIPA personas', () => {
+  const links = read('scripts/lib/dev-local-links.mjs');
+  assert.doesNotMatch(links, /900001/, 'synth_admin (900001) must never be linked by the seed');
+  assert.match(links, /\[900002, 9001,/); assert.match(links, /\[900005, 9004,/);
+  assert.doesNotMatch(read('scripts/setup-dev-local.sh'), /synth_ksp_uat/);
+});

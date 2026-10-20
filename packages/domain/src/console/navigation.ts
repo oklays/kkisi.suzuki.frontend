@@ -19,6 +19,8 @@ export type NavEntry = {
   matchPrefix?: string;
   /** Pathname prefix that must NOT mark it current (e.g. /sales vs /sales/returns). */
   excludePrefix?: string;
+  /** Id of the entry this one is nested under in the sidebar. Presentation only: visibility is always decided per entry by `anyOf`. */
+  parent?: string;
 };
 
 export type NavGroup<T extends NavEntry> = { section: NavSection; items: T[] };
@@ -41,4 +43,16 @@ export function currentEntryId(entries: readonly NavEntry[], pathname: string): 
     if (!best || prefix.length > best.length) best = { id: e.id, length: prefix.length };
   }
   return best?.id ?? null;
+}
+
+export type NavNode<T extends NavEntry> = { entry: T; children: T[] };
+
+/**
+ * Nests the visible entries of one section under their parent. A child whose parent the user cannot see is promoted to the top level
+ * (so an authorised destination is never hidden), and nesting is one level deep.
+ */
+export function nestNavigation<T extends NavEntry>(items: readonly T[]): NavNode<T>[] {
+  const ids = new Set(items.map((i) => i.id));
+  const isChild = (i: T) => i.parent !== undefined && i.parent !== i.id && ids.has(i.parent) && !items.find((p) => p.id === i.parent)?.parent;
+  return items.filter((i) => !isChild(i)).map((entry) => ({ entry, children: items.filter((c) => isChild(c) && c.parent === entry.id) }));
 }

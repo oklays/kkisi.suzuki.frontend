@@ -85,7 +85,9 @@ try {
       await login(page, 'admin'); await page.waitForURL(/\/console(\?entry=login)?$/);
       assert.deepEqual(await sidebarLinks(page), ['/console', '/pos', '/sales', '/sales/returns', '/products', '/inventory']);
       assert.equal(await page.locator('#console-nav a[aria-current="page"]').innerText(), 'Dashboard');
-      await page.getByText('Segera hadir').first().waitFor();
+      // An unlinked administrator is told the truth about KOSIPA (not linked), never "coming soon" for a module that exists.
+      await page.getByText('Akun belum ditautkan').first().waitFor();
+      assert.equal(await page.getByText('Segera hadir').count(), 0, 'no stale coming-soon state for KOSIPA');
       assert.equal(await page.getByText(/Rp\s?\d/).count(), 0, 'no fabricated money figures');
       const caps = await (await context.request.get(`${base}/api/console/capabilities`)).json();
       assert.ok(caps.capabilities.includes('toko.inventory.warehouse'), 'role 1 is a branch chooser with inventory_view');
