@@ -1,3 +1,6 @@
+import { KosipaPageHeader, FeedbackState, FinancialTable } from '@/components/console/kosipa/KosipaUI';
+import { PrivatePagination } from '@/components/console/kosipa/PrivateWorkspace';
+import { maskIdentifier } from '@/components/console/kosipa/presentation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Search } from 'lucide-react';
@@ -33,9 +36,9 @@ export default async function PayrollBatchPage({ params, searchParams }: { param
 
   return (
     <div className="console-page">
-      <Link className="console-back" href="/console/kosipa/payroll"><ArrowLeft size={16} aria-hidden="true" />Kembali ke daftar batch</Link>
-      <header className="console-page-head"><h1>Batch {docNo}</h1><p>Data payroll KOSIPA, baca saja.</p></header>
-      {failed && <section className="console-panel" role="alert"><h2>Batch tidak dapat dibaca</h2><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></section>}
+      <Link prefetch={false} className="console-back" href={`/console/kosipa/payroll${qs({ periode: one(sp.periode), status: one(sp.status), grup: one(sp.grup) })}`}><ArrowLeft size={16} aria-hidden="true" />Kembali ke daftar batch</Link>
+      <KosipaPageHeader title={<> Batch {docNo} </>}><p>Data payroll KOSIPA, baca saja.</p></KosipaPageHeader>
+      {failed && <FeedbackState kind="error" title={<> Batch tidak dapat dibaca </>} reset={base}><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {batch && (<>
         <section className="console-card" aria-labelledby="sec-ringkasan">
           <h2 id="sec-ringkasan">Ringkasan (nilai tercatat)</h2>
@@ -56,42 +59,41 @@ export default async function PayrollBatchPage({ params, searchParams }: { param
             </div>
           )}
           <p className="console-notice">Gaji anggota tidak ditampilkan. Tidak ada tombol persetujuan, posting, atau pembuatan matriks di halaman ini.</p>
-          {canReconcile && <p><Link className="console-more" href={`${base}/rekonsiliasi`}>Lihat rekonsiliasi kredit toko (hanya tinjauan)</Link></p>}
+          {canReconcile && <p><Link prefetch={false} className="console-more" href={`${base}/rekonsiliasi`}>Lihat rekonsiliasi kredit toko (hanya tinjauan)</Link></p>}
         </section>
 
         <section className="console-card" aria-labelledby="sec-komponen">
           <h2 id="sec-komponen">Rincian per kelompok komponen (jumlah tercatat)</h2>
-          <table className="console-table">
-            <thead><tr><th scope="col">Kelompok</th><th scope="col">Jumlah</th></tr></thead>
+          <FinancialTable label="Kelompok komponen payroll" columns={[{ label: "Kelompok" }, { label: "Jumlah", numeric: true }]}>
             <tbody>
               {batch.totals.groups.map((g) => <tr key={g.group}><td>{g.label}</td><td className="num">{formatAmount4(g.amount4)}</td></tr>)}
               <tr><th scope="row">Jumlah komponen</th><td className="num">{formatAmount4(batch.totals.componentSum4)}</td></tr>
               <tr><th scope="row">Total potongan tercatat</th><td className="num">{formatAmount4(batch.totals.recordedTotal4)}</td></tr>
             </tbody>
-          </table>
+          </FinancialTable>
           {!batch.totals.sumMatchesTotal && <p className="console-notice">Jumlah komponen berbeda dari total tercatat sebesar {formatAmount4(batch.totals.differenceFromTotal4)}; nilai tercatat tidak diubah.</p>}
           {batch.totals.tokoSubtotalMatches === false && <p className="console-notice">Subtotal toko yang tercatat tidak sama dengan jumlah kolom TOKO_*.</p>}
         </section>
 
         <section className="console-section" aria-labelledby="sec-anggota">
           <h2 id="sec-anggota">Anggota dalam batch</h2>
-          <form className="console-search" action={base} method="get" role="search">
+          <form className="console-search" action={base} method="post" data-kosipa-private role="search">
             <label htmlFor="payroll-q">NIK atau nama anggota</label>
-            <div><input id="payroll-q" name="q" defaultValue={q} maxLength={50} autoComplete="off" /><button type="submit"><Search size={16} aria-hidden="true" />Cari</button></div>
+            <div><input id="payroll-q" name="q" minLength={2} placeholder="NIK atau nama anggota" defaultValue={q} maxLength={50} autoComplete="off" /><button type="submit"><Search size={16} aria-hidden="true" />Cari anggota</button><button type="submit" name="_reset" value="1" formNoValidate>Reset filter</button></div>
           </form>
-          {batch.rows.length === 0 ? <section className="console-panel" role="status"><h3>Tidak ada baris</h3><p>{batch.filterActive ? 'Tidak ada anggota yang cocok dengan pencarian ini.' : 'Batch ini tidak memiliki baris anggota.'}</p></section> : (
-            <table className="console-table">
-              <thead><tr><th scope="col">NIK</th><th scope="col">Nama</th><th scope="col">Toko Tambun</th><th scope="col">Toko MJ</th><th scope="col">Toko GIIC</th><th scope="col">PPOB</th><th scope="col">Total potongan</th></tr></thead>
+          {batch.rows.length === 0 ? <FeedbackState kind="empty" title={<> Tidak ada baris </>} level={3} reset={base}><p>{batch.filterActive ? 'Tidak ada anggota yang cocok dengan pencarian ini.' : 'Batch ini tidak memiliki baris anggota.'}</p></FeedbackState> : (
+            <FinancialTable label="Anggota dalam batch payroll" columns={[{ label: "NIK tersamar", type: "text" }, { label: "Nama" }, { label: "Toko Tambun", numeric: true }, { label: "Toko MJ", numeric: true }, { label: "Toko GIIC", numeric: true }, { label: "PPOB", numeric: true }, { label: "Total potongan", numeric: true }]}>
               <tbody>{batch.rows.map((r) => (
                 <tr key={r.id}>
-                  <td><Link href={`${base}/anggota/${encodeURIComponent(r.nik)}`}>{r.nik}</Link></td><td>{r.name || '—'}</td>
+                  <td><Link prefetch={false} href={`${base}/anggota/${encodeURIComponent(r.nik)}`} aria-label={`${maskIdentifier(r.nik)} — Lihat potongan ${r.name || 'anggota'}`}>{maskIdentifier(r.nik)}</Link></td><td>{r.name || '—'}</td>
                   <td className="num">{formatAmount4(r.toko4.TOKO_TAMBUN)}</td><td className="num">{formatAmount4(r.toko4.TOKO_MJ)}</td><td className="num">{formatAmount4(r.toko4.TOKO_GIIC)}</td>
                   <td className="num">{formatAmount4(r.ppob4)}</td><td className="num">{formatAmount4(r.total4)}</td>
                 </tr>
               ))}</tbody>
-            </table>
+            </FinancialTable>
           )}
-          {batch.nextCursor !== null && <p><Link className="console-more" href={`${base}${qs({ q, after: String(batch.nextCursor) })}`}>Muat anggota berikutnya</Link></p>}
+          <p className="console-notice">Menampilkan {batch.rows.length} baris{batch.filterActive ? ' yang cocok dengan pencarian' : ''}. Total batch: {batch.rowCount} baris.</p>
+          {batch.nextCursor !== null && <PrivatePagination path={base} params={{ q, after: String(batch.nextCursor) }}>Muat anggota berikutnya</PrivatePagination>}
         </section>
       </>)}
     </div>

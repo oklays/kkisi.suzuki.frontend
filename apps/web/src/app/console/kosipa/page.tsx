@@ -1,6 +1,7 @@
+import { KosipaPageHeader, ContextNotice } from '@/components/console/kosipa/KosipaUI';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowRight, Info } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { nestNavigation, visibleNavigation } from '@koperasi/domain/console/navigation';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { CONSOLE_ICONS } from '@/components/console/icons';
@@ -29,17 +30,16 @@ export default async function KosipaOverviewPage() {
 
   return (
     <div className="console-page">
-      <header className="console-page-head">
-        <h1>Ringkasan KOSIPA</h1>
-        <p>Pintu masuk modul koperasi. Semua halaman bersifat baca saja dan menampilkan nilai yang tercatat di KOSIPA; menu mengikuti izin akun KOSIPA yang ditautkan.</p>
-      </header>
+      <KosipaPageHeader title={<> Ringkasan KOSIPA </>}>
+        <p>Ruang kerja administrasi koperasi. Pilih layanan untuk meninjau data yang tersedia bagi akun Anda.</p>
+      </KosipaPageHeader>
 
       <section aria-labelledby="kosipa-menu-title" className="console-section">
         <h2 id="kosipa-menu-title">Menu yang tersedia untuk akun ini</h2>
         <ul className="console-quick">
           {nodes.map(({ entry }) => {
             const Icon = CONSOLE_ICONS[entry.icon];
-            return <li key={entry.id}><Link href={entry.href}><Icon size={20} aria-hidden="true" /><span><strong>{entry.label}</strong>{entry.description && <small>{entry.description}</small>}</span><ArrowRight size={16} aria-hidden="true" /></Link></li>;
+            return <li key={entry.id}><Link prefetch={false} href={entry.href}><Icon size={20} aria-hidden="true" /><span><strong>{entry.label}</strong>{entry.description && <small>{entry.description}</small>}</span><ArrowRight size={16} aria-hidden="true" /></Link></li>;
           })}
         </ul>
       </section>
@@ -47,22 +47,22 @@ export default async function KosipaOverviewPage() {
       {reports.length > 0 && (
         <section aria-labelledby="kosipa-reports-title" className="console-section">
           <h2 id="kosipa-reports-title">Laporan</h2>
-          <ul className="console-module-links">{reports.map((r) => <li key={r.id}><Link href={r.href}>{r.label}</Link></li>)}</ul>
+          <ul className="console-module-links">{reports.map((r) => <li key={r.id}><Link prefetch={false} href={r.href}>{r.label}</Link></li>)}</ul>
           <p className="console-notice">{canExport ? 'Akun ini diizinkan mengunduh CSV dari halaman laporan.' : 'Akun ini dapat melihat laporan, tetapi tidak diizinkan mengunduh CSV (izin ekspor terpisah).'}</p>
         </section>
       )}
 
-      <section aria-labelledby="kosipa-limits-title" className="console-section">
-        <h2 id="kosipa-limits-title">Batasan data</h2>
+      <ContextNotice title="Informasi data" expandable>
+        <p>Nilai yang ditampilkan adalah data tercatat. Saldo resmi belum tersedia; perbandingan payroll hanya untuk tinjauan.</p>
         <ul className="console-limits">
           <li><strong>Dicatat, bukan resmi.</strong> Simpanan dan pinjaman menampilkan mutasi dan dokumen yang tercatat. Saldo simpanan resmi dan outstanding pinjaman resmi belum tersedia dan tidak pernah ditampilkan sebagai nol.</li>
           <li><strong>Payroll ditinjau saja.</strong> Perbandingan kredit TOKO hanya untuk ditinjau (pemetaan kolom toko belum diputuskan); tidak ada pembuatan, persetujuan, atau posting payroll.</li>
           <li><strong>Tanpa aksi keuangan.</strong> Tidak ada persetujuan pinjaman, pencairan, penarikan simpanan, atau SHU di console ini.</li>
           {planned.length > 0 && <li><strong>Dalam pengembangan:</strong> {planned.map((p) => p.label).join(', ')}.</li>}
         </ul>
-      </section>
+      </ContextNotice>
 
-      <p className="console-notice"><Info size={16} aria-hidden="true" />Setiap pembukaan data anggota atau keuangan dicatat dalam jejak audit. Halaman ini tidak membaca data KOSIPA.</p>
+      <p className="console-notice">Pembukaan detail keuangan mengikuti jejak audit yang berlaku. Ringkasan ini hanya menampilkan navigasi, tanpa membaca data anggota atau keuangan.</p>
     </div>
   );
 }

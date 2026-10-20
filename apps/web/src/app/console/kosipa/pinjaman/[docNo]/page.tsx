@@ -1,3 +1,4 @@
+import { KosipaPageHeader, FeedbackState, CursorPagination, FinancialTable, ContextNotice } from '@/components/console/kosipa/KosipaUI';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -23,7 +24,8 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
   if (!auth.capabilities.has('kosipa.loan.view')) return <KosipaNotice state={auth.kosipa === 'linked' ? 'linked' : auth.kosipa} />;
   const services = kosipaServices();
   if (!services) return <KosipaNotice state="unavailable" />;
-  const after = one((await searchParams).after);
+  const sp = await searchParams; const after = one(sp.after);
+  const context = { periode: one(sp.periode), status: one(sp.status), cair: one(sp.cair), bayar: one(sp.bayar) };
   let detail: LoanDetail | null = null; let failed = false;
   try {
     detail = await readLoan({ reader: services.loans, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, { docNo, after });
@@ -34,9 +36,9 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
 
   return (
     <div className="console-page">
-      <Link className="console-back" href="/console/kosipa/pinjaman"><ArrowLeft size={16} aria-hidden="true" />Kembali ke daftar pinjaman</Link>
-      <header className="console-page-head"><h1>Pinjaman {docNo}</h1><p>Data pinjaman KOSIPA, baca saja. Nilai di bawah adalah nilai yang tercatat.</p></header>
-      {failed && <section className="console-panel" role="alert"><h2>Pinjaman tidak dapat dibaca</h2><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></section>}
+      <Link prefetch={false} className="console-back" href={`/console/kosipa/pinjaman${qs(context)}`}><ArrowLeft size={16} aria-hidden="true" />Kembali ke daftar pinjaman</Link>
+      <KosipaPageHeader title={<> Pinjaman {docNo} </>}><p>Data pinjaman KOSIPA, baca saja. Nilai di bawah adalah nilai yang tercatat.</p></KosipaPageHeader>
+      {failed && <FeedbackState kind="error" title={<> Pinjaman tidak dapat dibaca </>} reset={base}><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {detail && l && h && (<>
         <section className="console-card" aria-labelledby="sec-pinjaman">
           <h2 id="sec-pinjaman">Dokumen pinjaman (tercatat)</h2>
@@ -61,7 +63,7 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
               <ul>{detail.otherHeaders.map((o) => <li key={o.header.id}>id {o.header.id}: {[o.header.docStatus, o.header.disbursement, o.header.repayment].join(' / ')} · pokok {formatAmount4(o.planPrincipal4)}</li>)}</ul>
             </div>
           )}
-          <p className="console-notice" role="status">{LOAN_REASON_TEXT.OFFICIAL_BALANCE_UNVERIFIED}</p>
+          <ContextNotice title="Outstanding resmi belum tersedia" expandable><p>Angka pokok dan jumlah jadwal adalah nilai yang tercatat, bukan outstanding resmi. Definisi saldo resmi belum diverifikasi.</p></ContextNotice>
         </section>
 
         <section className="console-card" aria-labelledby="sec-jadwal">
@@ -77,12 +79,10 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
                 <div><dt>Σ pokok belum dibayar (jadwal)</dt><dd>{formatAmount4(i.recorded.unpaidPrincipal4)}</dd></div>
                 <div><dt>Σ angsuran belum dibayar (jadwal)</dt><dd>{formatAmount4(i.recorded.unpaidTotal4)}</dd></div>
               </dl>
-              <p className="console-notice">Σ pada jadwal bukan saldo resmi (lihat catatan di atas).</p>
               {i.issues.length > 0 && <div className="console-notice" role="status"><strong>Catatan integritas data</strong><ul>{i.issues.map((x) => <li key={x}>{SCHEDULE_ISSUE_TEXT[x] ?? x}{x === 'PRINCIPAL_SUM_DIFFERS_FROM_PLAN' ? ` Selisih: ${formatAmount4(i.principalDifference4)}.` : ''}{x === 'DUE_DATES_UNUSABLE' ? ` (${i.dueDates.zero} nol, ${i.dueDates.missing} kosong, ${i.dueDates.implausible} tidak wajar)` : ''}</li>)}</ul></div>}
               {i.paidRowsWithoutPaidDate > 0 && <p className="console-notice">{i.paidRowsWithoutPaidDate} angsuran berstatus Bayar tidak mencatat tanggal bayar (kolom tanggal bayar legacy memang tidak diisi).</p>}
               {s.rows.length === 0 ? <p>{after ? 'Tidak ada baris lagi.' : 'Pinjaman ini tidak memiliki jadwal angsuran.'}</p> : (
-                <table className="console-table">
-                  <thead><tr><th scope="col">Ke</th><th scope="col">Jatuh tempo</th><th scope="col">Pokok</th><th scope="col">Bunga</th><th scope="col">Angsuran</th><th scope="col">Status</th></tr></thead>
+                <FinancialTable label="Jadwal angsuran tercatat" columns={[{ label: "Ke", numeric: true }, { label: "Jatuh tempo" }, { label: "Pokok", numeric: true }, { label: "Bunga", numeric: true }, { label: "Angsuran", numeric: true }, { label: "Status" }]}>
                   <tbody>{s.rows.map((r) => (
                     <tr key={r.id}>
                       <td>{r.installmentNo ?? '—'}</td><td>{formatLegacyDate(r.due)}</td>
@@ -91,9 +91,9 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
                       <td>{[r.status, r.type].filter(Boolean).join(' · ') || '—'}{r.blocked ? ' · diblokir' : ''}{r.rollOver ? ' · roll-over' : ''}</td>
                     </tr>
                   ))}</tbody>
-                </table>
+                </FinancialTable>
               )}
-              {s.nextCursor !== null && <p><Link className="console-more" href={`${base}${qs({ after: s.nextCursor })}`}>Muat angsuran berikutnya</Link></p>}
+              {s.nextCursor !== null && <CursorPagination href={`${base}${qs({ ...context, after: s.nextCursor })}`}>Muat angsuran berikutnya</CursorPagination>}
             </>);
           })()}
         </section>

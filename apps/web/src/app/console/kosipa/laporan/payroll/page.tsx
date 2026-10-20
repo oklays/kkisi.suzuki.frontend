@@ -1,3 +1,5 @@
+import { KosipaPageHeader, FeedbackState, StatusBadge, FinancialTable, ReportYearFilter, ContextNotice } from '@/components/console/kosipa/KosipaUI';
+import { ExportControl } from '@/components/console/kosipa/ExportControl';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -13,7 +15,6 @@ import { kosipaServices } from '@/infrastructure/console/services';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Laporan Payroll · KOSIPA · KKISI TB2' };
-const COLUMN_LABEL = { TOKO_TAMBUN: 'Toko Tambun', TOKO_MJ: 'Toko MJ', TOKO_GIIC: 'Toko GIIC' } as const;
 
 export default async function PayrollReportPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (!consoleEnabled()) notFound();
@@ -31,15 +32,16 @@ export default async function PayrollReportPage({ searchParams }: { searchParams
 
   return (
     <div className="console-page">
-      <Link className="console-back" href="/console/kosipa/laporan"><ArrowLeft size={16} aria-hidden="true" />Kembali ke laporan</Link>
-      <header className="console-page-head"><h1>Laporan payroll</h1><p>Ringkasan batch dan komponen potongan <strong>sebagaimana tercatat</strong>. Periode diambil dari kolom bulan/tahun yang tercatat.</p></header>
-      {invalid && <section className="console-panel" role="alert"><h2>Tahun tidak valid</h2><p>Tahun harus empat digit antara 2000 dan 2100. Tidak ada data yang dibaca.</p></section>}
-      {failed && <section className="console-panel" role="alert"><h2>Laporan tidak dapat dibaca</h2><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></section>}
+      <Link prefetch={false} className="console-back" href="/console/kosipa/laporan"><ArrowLeft size={16} aria-hidden="true" />Kembali ke laporan</Link>
+      <KosipaPageHeader title={<> Laporan payroll </>}><p>Ringkasan batch dan komponen potongan <strong>sebagaimana tercatat</strong>. Periode diambil dari kolom bulan/tahun yang tercatat.</p></KosipaPageHeader>
+      {invalid && <FeedbackState kind="error" title={<> Tahun tidak valid </>} reset="/console/kosipa/laporan/payroll"><p>Tahun harus empat digit antara 2000 dan 2100. Tidak ada data yang dibaca.</p></FeedbackState>}
+      {failed && <FeedbackState kind="error" title={<> Laporan tidak dapat dibaca </>} reset="/console/kosipa/laporan/payroll"><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {r && (<>
-        {canExport && <p><a className="console-more" href={`/api/kosipa/reports/payroll/export${qs({ tahun: r.year === null ? '' : String(r.year) })}`} download>Unduh CSV laporan ini</a></p>}
+        <ContextNotice title="Nilai payroll tercatat" expandable><p>Total header dan jumlah baris dipertahankan apa adanya. Perbedaan ditampilkan untuk tinjauan; perbandingan kredit toko bukan penetapan kewajiban resmi.</p></ContextNotice>
+        {canExport && <ExportControl href={`/api/kosipa/reports/payroll/export${qs({ tahun: r.year === null ? '' : String(r.year) })}`} />}
         {canExport && <p className="console-notice">Ekspor berisi ringkasan agregat tanpa nama, NIK atau gaji anggota, dan setiap unduhan dicatat dalam audit.</p>}
-        {r.years.length > 0 && <nav aria-label="Pilih tahun"><ul className="console-year-list">{r.years.map((y) => <li key={y}>{y === r.year ? <strong aria-current="page">{y}</strong> : <Link href={`/console/kosipa/laporan/payroll${qs({ tahun: String(y) })}`}>{y}</Link>}</li>)}</ul></nav>}
-        {r.periods.length === 0 ? <section className="console-panel" role="status"><h2>Tidak ada batch</h2><p>Tidak ada batch payroll tercatat{r.year ? ` pada tahun ${r.year}` : ''}.</p></section> : r.periods.map((p) => (
+        <ReportYearFilter path="/console/kosipa/laporan/payroll" year={r.year} years={r.years} />
+        {r.periods.length === 0 ? <FeedbackState kind="empty" title={<> Tidak ada batch </>} reset="/console/kosipa/laporan/payroll"><p>Tidak ada batch payroll tercatat{r.year ? ` pada tahun ${r.year}` : ''}.</p></FeedbackState> : r.periods.map((p) => (
           <section className="console-card" key={p.period} aria-labelledby={`sec-${p.period}`}>
             <h2 id={`sec-${p.period}`}>{p.period === 'UNKNOWN' ? 'Periode tidak dapat dipastikan' : `Periode ${p.period}`}</h2>
             <dl className="console-dl">
@@ -48,28 +50,26 @@ export default async function PayrollReportPage({ searchParams }: { searchParams
               <div><dt>Σ total header (tercatat)</dt><dd>{formatAmount4(p.headerTotal4)}</dd></div>
               <div><dt>Batch belum APPROVED</dt><dd>{p.openBatches}</dd></div>
             </dl>
-            <table className="console-table">
-              <thead><tr><th scope="col">Batch</th><th scope="col">Grup</th><th scope="col">Status</th><th scope="col">Baris</th><th scope="col">Total header</th><th scope="col">Σ baris</th><th scope="col">Catatan</th></tr></thead>
+            <FinancialTable label="Batch payroll per periode" columns={[{ label: "Batch" }, { label: "Grup" }, { label: "Status" }, { label: "Baris", numeric: true }, { label: "Total header", numeric: true }, { label: "Σ baris", numeric: true }, { label: "Catatan" }]}>
               <tbody>{p.batches.map((b) => (
                 <tr key={b.header.docNo}>
-                  <td><Link href={`/console/kosipa/payroll/${encodeURIComponent(b.header.docNo)}`}>{b.header.docNo}</Link></td><td>{b.header.group ? (GROUP_LABEL[b.header.group] ?? b.header.group) : '—'}</td><td>{STATUS_LABEL[b.status]}</td>
-                  <td>{b.rows}</td><td className="num">{b.headerTotal4 === null ? '—' : formatAmount4(b.headerTotal4)}</td><td className="num">{formatAmount4(b.rowsTotal4)}</td>
+                  <td><Link prefetch={false} href={`/console/kosipa/payroll/${encodeURIComponent(b.header.docNo)}`}>{b.header.docNo}</Link></td><td>{b.header.group ? (GROUP_LABEL[b.header.group] ?? b.header.group) : '—'}</td><td><StatusBadge value={b.status} label={STATUS_LABEL[b.status]} /></td>
+                  <td>{b.rows}</td><td className="num">{b.headerTotal4 === null ? 'Tidak tersedia' : formatAmount4(b.headerTotal4)}</td><td className="num">{formatAmount4(b.rowsTotal4)}</td>
                   <td>{b.issues.length ? b.issues.map((i) => BATCH_ISSUE_SHORT[i] ?? i).join(', ') : '—'}</td>
                 </tr>
               ))}</tbody>
-            </table>
+            </FinancialTable>
             {p.groups.length > 0 && (
-              <table className="console-table" aria-label={`Komponen potongan ${p.period}`}>
-                <thead><tr><th scope="col">Kelompok komponen</th><th scope="col">Jumlah tercatat</th></tr></thead>
+              <FinancialTable label="Komponen potongan per periode" columns={[{ label: "Kelompok komponen" }, { label: "Jumlah tercatat", numeric: true }]}>
                 <tbody>{p.groups.map((g) => <tr key={g.group}><td>{g.label}</td><td className="num">{formatAmount4(g.amount4)}</td></tr>)}</tbody>
-              </table>
+              </FinancialTable>
             )}
-            {canCompare && p.reconcilable && p.batches.length > 0 && <p><Link className="console-more" href={`/console/kosipa/payroll/${encodeURIComponent(p.batches[0].header.docNo)}/rekonsiliasi`}>Bandingkan komponen TOKO dengan belanja Kredit (hanya tinjauan; {Object.entries(p.toko4).map(([c, v]) => `${COLUMN_LABEL[c as keyof typeof COLUMN_LABEL]} ${formatAmount4(v)}`).join(', ')})</Link></p>}
+            {canCompare && p.reconcilable && p.batches.length > 0 && <p><Link prefetch={false} className="console-more" href={`/console/kosipa/payroll/${encodeURIComponent(p.batches[0].header.docNo)}/rekonsiliasi`}>Bandingkan kredit toko — untuk tinjauan</Link></p>}
             {!p.reconcilable && <p className="console-notice">Periode tidak dapat dipastikan dari kolom bulan/tahun; perbandingan tidak ditawarkan dan bulan tidak ditebak.</p>}
           </section>
         ))}
         {r.headersWithoutRows > 0 && <p className="console-notice">{r.headersWithoutRows} header tidak memiliki baris potongan.</p>}
-        <p><Link className="console-more" href="/console/kosipa/laporan/kualitas-data">Lihat diagnostik kualitas data</Link></p>
+        <p><Link prefetch={false} className="console-more" href="/console/kosipa/laporan/kualitas-data">Lihat diagnostik kualitas data</Link></p>
       </>)}
     </div>
   );

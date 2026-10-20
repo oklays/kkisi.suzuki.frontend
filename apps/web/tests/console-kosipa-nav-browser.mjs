@@ -9,7 +9,7 @@ import { mkdir } from 'node:fs/promises';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.DEV_LOCAL_URL || 'http://127.0.0.1:3200';
 assert.equal(new URL(base).hostname, '127.0.0.1');
-assert.ok(['3200', '3201'].includes(new URL(base).port), 'DEV LOCAL only');
+assert.ok(['3200', '3201', '3203'].includes(new URL(base).port), 'DEV LOCAL only');
 const pw = JSON.parse(readFileSync(new URL('../.env.dev-local-accounts.json', import.meta.url), 'utf8'));
 const out = process.env.KOSIPA_NAV_OUT || '/private/tmp/kkisi-kosipa-nav'; await mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true });
@@ -33,7 +33,7 @@ async function open(user, viewport = { width: 1440, height: 900 }) {
 }
 const nav = (page) => page.locator('#console-nav');
 const hrefs = (page) => nav(page).locator('nav a').evaluateAll((as) => as.map((a) => new URL(a.href).pathname));
-const waitMain = async (page) => { await page.waitForFunction(() => { const m = document.querySelector('main'); return m && m.innerText.trim() !== '' && !/^Memuat/.test(m.innerText.trim()); }, null, { timeout: 20000 }); return page.locator('main').innerText(); };
+const waitMain = async (page) => { await page.waitForFunction(() => { const m = document.querySelector('main'); return m && m.innerText.trim() !== '' && !/^Memuat/.test(m.innerText.trim()) && !m.querySelector('[aria-busy="true"]'); }, null, { timeout: 20000 }); return page.locator('main').innerText(); };
 const shot = (page, name) => page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
 const KOSIPA_TOP = ['/console/kosipa', '/console/kosipa/anggota', '/console/kosipa/simpanan', '/console/kosipa/pinjaman', '/console/kosipa/payroll', '/console/kosipa/laporan'];
 const REPORTS = ['/console/kosipa/laporan/keanggotaan', '/console/kosipa/laporan/simpanan', '/console/kosipa/laporan/pinjaman', '/console/kosipa/laporan/payroll', '/console/kosipa/laporan/kualitas-data'];
@@ -99,7 +99,7 @@ await step('N4 detail pages: member, savings, loan, payroll batch and reconcilia
   await page.goto(`${base}/console/kosipa/payroll`); await waitMain(page);
   await page.locator('main table a[href^="/console/kosipa/payroll/"]').first().click(); await page.waitForURL(/\/console\/kosipa\/payroll\/[^/]+$/); await waitMain(page); seen.push('batch payroll');
   const recon = page.locator('main a[href$="/rekonsiliasi"]').first(); assert.ok(await recon.count(), 'the payroll batch links to the TOKO credit reconciliation');
-  await recon.click(); await page.waitForURL(/\/rekonsiliasi$/); const text = await waitMain(page); seen.push('rekonsiliasi'); assert.ok(/ditinjau|peninjauan|review/i.test(text), 'reconciliation is labelled review-only');
+  await recon.click(); await page.waitForURL(/\/rekonsiliasi$/); await page.getByRole('heading', { name: 'Rekonsiliasi kredit toko', exact: true }).waitFor(); const text = await waitMain(page); seen.push('rekonsiliasi'); assert.ok(/untuk tinjauan|ditinjau|peninjauan|review/i.test(text), 'reconciliation is labelled review-only');
   assert.deepEqual(await nav(page).locator('[aria-current="page"]').evaluateAll((as) => as.map((a) => a.textContent.trim())), ['Payroll']);
   await shot(page, 'N4-rekonsiliasi'); await context.close(); return seen.join(', ');
 });
@@ -129,11 +129,11 @@ await step('N6 mobile drawer lists KOSIPA and navigates (375 px)', async () => {
 
 await step('N7 export is a separate grant: the allow-listed user may download CSV; a viewer of the same report may not', async () => {
   const k = await open('koperasi'); await k.page.goto(`${base}/console/kosipa/laporan/pinjaman`); await waitMain(k.page);
-  assert.ok(await k.page.getByRole('link', { name: /Unduh CSV/ }).count(), 'export link shown to the allow-listed user');
+  assert.ok(await k.page.getByRole('button', { name: /Unduh CSV/ }).count(), 'export link shown to the allow-listed user');
   const csv = await k.context.request.get(`${base}/api/kosipa/reports/loans/export`); assert.equal(csv.status(), 200); assert.match(csv.headers()['content-type'] ?? '', /csv/i);
   const csvText = await csv.text(); assert.ok(!secrets.some((x) => csvText.includes(x)), 'no credential in the export'); await k.context.close();
   const s = await open('kasir2'); await s.page.goto(`${base}/console/kosipa/laporan/pinjaman`); await waitMain(s.page);
-  assert.equal(await s.page.getByRole('link', { name: /Unduh CSV/ }).count(), 0, 'no export link for a viewer');
+  assert.equal(await s.page.getByRole('button', { name: /Unduh CSV/ }).count(), 0, 'no export link for a viewer');
   assert.ok([401, 403].includes((await s.context.request.get(`${base}/api/kosipa/reports/loans/export`)).status()), 'export API refused for a viewer');
   await s.context.close(); return 'koperasi 200 text/csv; kasir2 no link and API refused';
 });

@@ -1,10 +1,13 @@
+import { KosipaPageHeader, FeedbackState, FinancialTable, ContextNotice, Provenance } from '@/components/console/kosipa/KosipaUI';
+import { PrivatePagination } from '@/components/console/kosipa/PrivateWorkspace';
+import { maskIdentifier } from '@/components/console/kosipa/presentation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { KosipaError } from '@koperasi/domain/kosipa';
 import { readStoreReconciliation, type ReconciliationResult } from '@koperasi/application/kosipa/payroll';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
-import { ANOMALY_LABEL, COMPARABILITY_LABEL, DIFFERENCE_LABEL, formatAmount4, qs, REASON_TEXT } from '@/components/console/kosipa/payroll-format';
+import { ANOMALY_LABEL, COMPARABILITY_LABEL, DIFFERENCE_LABEL, formatAmount4, REASON_TEXT } from '@/components/console/kosipa/payroll-format';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import { kosipaServices } from '@/infrastructure/console/services';
@@ -33,32 +36,32 @@ export default async function PayrollReconciliationPage({ params, searchParams }
 
   return (
     <div className="console-page">
-      <Link className="console-back" href={base}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
-      <header className="console-page-head">
-        <h1>Rekonsiliasi kredit toko</h1>
-        <p>Tinjauan saja. Tiga angka dipisahkan: <strong>A</strong> nilai payroll yang tercatat, <strong>B</strong> kewajiban Kredit toko turunan (belanja Kredit bulan sumber dikurangi retur), dan <strong>C</strong> selisih informasi A−B. Perbandingan dilakukan per komponen (hanya kolom TOKO_* payroll terhadap belanja Kredit toko), bukan terhadap total potongan. <strong>Selisih bukan otomatis kesalahan</strong>: payroll bisa mencatat nilai yang berbeda karena alasan yang belum dapat dibuktikan dari data ini. Nilai tercatat tidak pernah diubah.</p>
-      </header>
-      {failed && <section className="console-panel" role="alert"><h2>Rekonsiliasi tidak dapat dibaca</h2><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></section>}
-      {result?.state === 'unavailable' && <section className="console-panel" role="status"><h2>Rekonsiliasi tidak tersedia</h2><p>{REASON_TEXT[result.reason] ?? 'Tidak tersedia.'}</p></section>}
+      <Link prefetch={false} className="console-back" href={base}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
+      <KosipaPageHeader title={<> Rekonsiliasi kredit toko </>} review>
+        <p>Bandingkan komponen kredit toko pada payroll dengan belanja bersih retur. Selisih adalah informasi untuk tinjauan, bukan keputusan akuntansi.</p>
+      </KosipaPageHeader>
+      {failed && <FeedbackState kind="error" title={<> Rekonsiliasi tidak dapat dibaca </>}><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
+      {result?.state === 'unavailable' && <FeedbackState kind="empty" title={<> Rekonsiliasi tidak tersedia </>}><p>{REASON_TEXT[result.reason] ?? 'Tidak tersedia.'}</p></FeedbackState>}
       {result?.state === 'ok' && (() => {
         const d = result.data;
         return (<>
+          <ContextNotice title="Perbandingan untuk tinjauan" tone="warning" expandable>
+            <p><strong>A · Tercatat</strong> adalah komponen toko pada payroll. <strong>B · Hasil perhitungan</strong> adalah belanja Kredit bulan sumber dikurangi retur. <strong>C · Selisih informasi</strong> adalah A−B, bukan otomatis kesalahan.</p>
+            <ul>{d.comparability.reasons.map((r) => <li key={r}>{COMPARABILITY_LABEL[r] ?? r}</li>)}</ul>
+          </ContextNotice>
           <section className="console-card" aria-labelledby="sec-konteks">
             <h2 id="sec-konteks">Periode {d.period}</h2>
             <p>Belanja Kredit dibaca dari {d.window.from} sampai sebelum {d.window.toExclusive} (bulan sebelum periode payroll). Batch pada periode ini: {d.batches.map((b) => `${b.docNo} (${b.status})`).join(', ')}.</p>
-            <div className="console-notice" role="status"><strong>Hanya untuk ditinjau.</strong> Alasan:
-              <ul>{d.comparability.reasons.map((r) => <li key={r}>{COMPARABILITY_LABEL[r] ?? r}</li>)}</ul>
-            </div>
+            <Provenance kind="review" />
           </section>
           <section className="console-card" aria-labelledby="sec-ringkasan">
             <h2 id="sec-ringkasan">Ringkasan per toko</h2>
-            <table className="console-table">
-              <thead><tr><th scope="col">Kolom toko</th><th scope="col">A · Tercatat di payroll</th><th scope="col">B · Turunan (bersih retur)</th><th scope="col">C · Selisih informasi (A−B)</th></tr></thead>
+            <FinancialTable label="Perbandingan komponen per toko" columns={[{ label: "Kolom toko" }, { label: "A · Tercatat di payroll", numeric: true }, { label: "B · Turunan (bersih retur)", numeric: true }, { label: "C · Selisih informasi (A−B)", numeric: true }]}>
               <tbody>{(Object.keys(COLUMN_LABEL) as (keyof typeof COLUMN_LABEL)[]).map((c) => {
                 const a = d.summary.recordedTotal4[c as 'TOKO_TAMBUN']; const b = d.summary.derivedTotal4[c as 'TOKO_TAMBUN'];
                 return <tr key={c}><td>{COLUMN_LABEL[c]}</td><td className="num">{formatAmount4(a)}</td><td className="num">{formatAmount4(b)}</td><td className="num">{formatAmount4(a - b)}</td></tr>;
               })}</tbody>
-            </table>
+            </FinancialTable>
             <p>{d.summary.compared} pasangan anggota–toko dibandingkan · {d.summary.counts.MATCH} sama · {d.summary.compared - d.summary.counts.MATCH} berbeda atau tidak dapat dibandingkan.</p>
           </section>
           {d.anomalies.length > 0 && (
@@ -69,20 +72,19 @@ export default async function PayrollReconciliationPage({ params, searchParams }
           )}
           <section className="console-section" aria-labelledby="sec-selisih">
             <h2 id="sec-selisih">{d.differencesOnly ? 'Selisih per anggota' : 'Semua pasangan anggota–toko'}</h2>
-            <p><Link className="console-more" href={`${base}/rekonsiliasi${d.differencesOnly ? '?all=1' : ''}`}>{d.differencesOnly ? 'Tampilkan juga yang sama' : 'Tampilkan hanya selisih'}</Link></p>
-            {d.rows.length === 0 ? <section className="console-panel" role="status"><h3>Tidak ada selisih</h3><p>Semua pasangan yang dapat dibandingkan sama.</p></section> : (
-              <table className="console-table">
-                <thead><tr><th scope="col">NIK</th><th scope="col">Toko</th><th scope="col">A · Payroll</th><th scope="col">Belanja Kredit</th><th scope="col">Retur</th><th scope="col">B · Turunan</th><th scope="col">C · Selisih informasi</th><th scope="col">Keterangan</th></tr></thead>
+            <p><Link prefetch={false} className="console-more" href={`${base}/rekonsiliasi${d.differencesOnly ? '?all=1' : ''}`}>{d.differencesOnly ? 'Tampilkan juga yang sama' : 'Tampilkan hanya selisih'}</Link></p>
+            {d.rows.length === 0 ? <FeedbackState kind="empty" title={<> Tidak ada selisih </>} level={3}><p>Semua pasangan yang dapat dibandingkan sama.</p></FeedbackState> : (
+              <FinancialTable label="Perbandingan per anggota dan toko" columns={[{ label: "NIK tersamar", type: "text" }, { label: "Toko" }, { label: "A · Payroll", numeric: true }, { label: "Belanja Kredit", numeric: true }, { label: "Retur", numeric: true }, { label: "B · Turunan", numeric: true }, { label: "C · Selisih informasi", numeric: true }, { label: "Keterangan" }]}>
                 <tbody>{d.rows.map((r) => (
                   <tr key={`${r.nik}|${r.column}`}>
-                    <td>{r.nik}{r.recordedRows > 1 ? ` (${r.recordedRows} baris)` : ''}</td><td>{COLUMN_LABEL[r.column]}</td>
+                    <td>{maskIdentifier(r.nik)}{r.recordedRows > 1 ? ` (${r.recordedRows} baris)` : ''}</td><td>{COLUMN_LABEL[r.column]}</td>
                     <td className="num">{formatAmount4(r.recorded4)}</td><td className="num">{formatAmount4(r.sales4)}</td><td className="num">{formatAmount4(r.returns4)}</td><td className="num">{formatAmount4(r.derivedNet4)}</td><td className="num">{formatAmount4(r.difference4)}</td>
                     <td>{DIFFERENCE_LABEL[r.status]}{r.likelyCause === 'RETURN_NOT_DEDUCTED' ? '. Nilai payroll sama dengan belanja Kredit; retur tampaknya tidak ikut dipotong.' : ''}</td>
                   </tr>
                 ))}</tbody>
-              </table>
+              </FinancialTable>
             )}
-            {d.nextCursor && <p><Link className="console-more" href={`${base}/rekonsiliasi${qs({ all: all ? '1' : '', after: d.nextCursor })}`}>Muat selisih berikutnya</Link></p>}
+            {d.nextCursor && <PrivatePagination path={`${base}/rekonsiliasi`} params={{ all: all ? '1' : '', after: d.nextCursor }}>Muat selisih berikutnya</PrivatePagination>}
           </section>
         </>);
       })()}

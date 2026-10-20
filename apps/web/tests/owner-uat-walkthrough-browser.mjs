@@ -7,7 +7,9 @@ import { mkdir } from 'node:fs/promises';
 //   node tests/owner-uat-walkthrough-browser.mjs   -> prints RESULT lines and writes /private/tmp/kkisi-owner-uat/results.json
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.DEV_LOCAL_URL || 'http://127.0.0.1:3200';
-assert.equal(new URL(base).hostname, '127.0.0.1'); assert.equal(new URL(base).port, '3200', 'DEV LOCAL only');
+const readOnlySections = /^(A|C|D)(,(A|C|D))*$/.test(process.env.OWNER_UAT_ONLY ?? '');
+assert.equal(new URL(base).hostname, '127.0.0.1');
+assert.ok(new URL(base).port === '3200' || (['3201', '3202', '3203'].includes(new URL(base).port) && readOnlySections), 'DEV LOCAL only; :3201/:3202/:3203 require explicitly read-only sections');
 const pw = JSON.parse(readFileSync(new URL('../.env.dev-local-accounts.json', import.meta.url), 'utf8'));
 const out = process.env.OWNER_UAT_OUT || '/private/tmp/kkisi-owner-uat'; await mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true });
@@ -29,7 +31,7 @@ async function open(user, opts = {}) {
   return { context, page };
 }
 const shot = (page, name) => page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
-const main = async (page) => { await page.waitForFunction(() => { const m = document.querySelector('main'); return m && m.innerText.trim() !== '' && !/^Memuat/.test(m.innerText.trim()); }, null, { timeout: 20000 }); return page.locator('main').innerText(); };
+const main = async (page) => { await page.waitForFunction(() => { const m = document.querySelector('main'); return m && m.innerText.trim() !== '' && !/^Memuat/.test(m.innerText.trim()) && !m.querySelector('[aria-busy="true"]'); }, null, { timeout: 20000 }); return page.locator('main').innerText(); };
 const sidebarLinks = (page) => page.locator('#console-nav nav a').evaluateAll((as) => as.map((a) => new URL(a.href).pathname));
 
 // ------------------------------------------------------------------------------------------------- A. login and console
@@ -88,14 +90,14 @@ await s.context.close();
 
 // ------------------------------------------------------------------------------------------------- C. KOSIPA
 const c = await open('koperasi');
-await step('C1', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/anggota`); await c.page.locator('input[name="q"], input[type="search"]').first().fill('S9001'); await c.page.keyboard.press('Enter'); await c.page.waitForURL((u) => u.searchParams.get('q') === 'S9001'); const t = await main(c.page); assert.match(t, /SYNTH ANGGOTA SATU/); });
+await step('C1', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/anggota`); await c.page.locator('input[name="q"], input[type="search"]').first().fill('S9001'); await c.page.keyboard.press('Enter'); await c.page.getByRole('cell', { name: 'SYNTH ANGGOTA SATU', exact: true }).waitFor(); assert.equal(new URL(c.page.url()).search, '', 'private search must not put NIK in the URL'); const t = await main(c.page); assert.match(t, /SYNTH ANGGOTA SATU/); });
 await step('C2', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/anggota/9001`); const t = await main(c.page); for (const h of ['Simpanan', 'Pinjaman', 'Potongan payroll']) assert.match(t, new RegExp(h)); assert.doesNotMatch(t, /gaji_payroll|\b\d{16}\b/); await shot(c.page, 'C2-anggota360'); return 'profile, savings, loans, payroll sections; no 16-digit identifiers'; });
 await step('C3', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/simpanan/9001`); const t = await main(c.page); assert.match(t, /Saldo resmi belum tersedia/); assert.match(t, /SIMPANAN WAJIB/); assert.match(t, /SIMPANAN SUKARELA/); await shot(c.page, 'C3-simpanan'); });
 await step('C4', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/pinjaman`); assert.match(await main(c.page), /PINSYN9001/); await c.page.goto(`${base}/console/kosipa/pinjaman/PINSYN9001`); const t = await main(c.page); assert.match(t, /angsuran|Angsuran|Jadwal/); assert.match(t, /tidak tersedia|belum tersedia|Tidak tersedia/i); await shot(c.page, 'C4-pinjaman-detail'); });
 await step('C5', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/payroll`); assert.match(await main(c.page), /POTSYN202608A/); for (const p of ['', '/anggota/S9001', '/rekonsiliasi']) { await c.page.goto(`${base}/console/kosipa/payroll/POTSYN202608A${p}`); await main(c.page); } assert.match(await c.page.locator('main').innerText(), /ditinjau|tinjau/i); await shot(c.page, 'C5-rekonsiliasi'); });
 await step('C6', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/payroll?periode=2026-13`); assert.match(await main(c.page), /Filter tidak valid/); });
 await step('C7', 'synth_koperasi', async () => { for (const p of ['pinjaman', 'payroll', 'keanggotaan', 'simpanan', 'kualitas-data']) { await c.page.goto(`${base}/console/kosipa/laporan/${p}`); const t = await main(c.page); assert.ok(t.length > 80 && !/Application error/.test(t), p); } await shot(c.page, 'C7-laporan'); });
-await step('C8', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/laporan/pinjaman`); await main(c.page); const [d] = await Promise.all([c.page.waitForEvent('download'), c.page.getByRole('link', { name: /Unduh CSV/ }).first().click()]); assert.match(d.suggestedFilename(), /\.csv$/); });
+await step('C8', 'synth_koperasi', async () => { await c.page.goto(`${base}/console/kosipa/laporan/pinjaman`); await main(c.page); const [d] = await Promise.all([c.page.waitForEvent('download'), c.page.getByRole('button', { name: /Unduh CSV/ }).first().click()]); assert.match(d.suggestedFilename(), /\.csv$/); });
 await c.context.close();
 await step('C9', 'synth_kasir2', async () => { const { context, page } = await open('kasir2'); for (const p of ['/console/kosipa/simpanan/9001', '/console/kosipa/pinjaman']) { await page.goto(`${base}${p}`); assert.ok((await main(page)).length > 80); } await context.close(); });
 await step('C10', 'synth_kasir2', async () => { const { context, page } = await open('kasir2'); await page.goto(`${base}/console/kosipa/payroll`); assert.match(await page.locator('body').innerText(), /Akses ditolak|tidak memiliki akses/i); assert.equal((await context.request.get(`${base}/api/kosipa/reports/loans/export`)).status(), 403); await context.close(); });

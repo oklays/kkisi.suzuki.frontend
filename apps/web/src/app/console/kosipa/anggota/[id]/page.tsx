@@ -1,10 +1,12 @@
+import { KosipaPageHeader, FinancialTable, ContextNotice } from '@/components/console/kosipa/KosipaUI';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { classifyLegacyDate } from '@koperasi/domain/kosipa';
 import { readMember360, type Member360, type Section } from '@koperasi/application/kosipa/member-360';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { formatRupiah } from '@/components/pos/preview';
-import { formatAmount4, STATUS_LABEL } from '@/components/console/kosipa/payroll-format';
+import { formatAmount4, formatLegacyDate, STATUS_LABEL } from '@/components/console/kosipa/payroll-format';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import { kosipaServices } from '@/infrastructure/console/services';
@@ -21,8 +23,8 @@ const REASON: Record<string, string> = {
 function SectionBlock<T>({ title, section, children }: { title: string; section: Section<T>; children: (data: T) => React.ReactNode }) {
   if (section.state === 'restricted') return null;
   return (
-    <section className="console-card" aria-labelledby={`sec-${title}`}>
-      <h2 id={`sec-${title}`}>{title}</h2>
+    <section className="console-card" aria-labelledby={`sec-${title.toLowerCase().replaceAll(" ", "-")}`}>
+      <h2 id={`sec-${title.toLowerCase().replaceAll(" ", "-")}`}>{title}</h2>
       {section.state === 'ok' ? children(section.data) : <p className="console-unavailable" role="status">{REASON[section.reason]}</p>}
     </section>
   );
@@ -48,18 +50,24 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
 
   return (
     <div className="console-page">
-      <Link className="console-back" href="/console/kosipa/anggota"><ArrowLeft size={16} aria-hidden="true" />Kembali ke pencarian</Link>
-      <header className="console-page-head">
-        <h1>{p.name || 'Anggota'}</h1>
+      <Link prefetch={false} className="console-back" href="/console/kosipa/anggota"><ArrowLeft size={16} aria-hidden="true" />Kembali ke pencarian</Link>
+      <KosipaPageHeader title={<> {p.name || 'Anggota'} </>}>
         <p>NIK {p.nik || '—'} · {p.group ?? 'Grup tidak tercatat'} · Data KOSIPA, baca saja</p>
-      </header>
+      </KosipaPageHeader>
 
+      <nav className="kosipa-profile-nav" aria-label="Bagian profil anggota">
+        <a href="#sec-profil">Profil</a>
+        {member.savings.state !== 'restricted' && <a href="#sec-simpanan">Simpanan</a>}
+        {member.loans.state !== 'restricted' && <a href="#sec-pinjaman">Pinjaman</a>}
+        {member.payroll.state !== 'restricted' && <a href="#sec-potongan-payroll">Payroll</a>}
+        {member.storeCredit.state !== 'restricted' && <a href="#sec-kredit-toko-bulan-berjalan">Kredit TOKO</a>}
+      </nav>
       <section className="console-card" aria-labelledby="sec-profil">
         <h2 id="sec-profil">Profil</h2>
         <dl className="console-dl">
           <div><dt>Status anggota</dt><dd>{p.status ?? '—'}</dd></div>
           <div><dt>Status karyawan</dt><dd>{p.employment ?? '—'}{p.exitOn ? ` · berakhir ${p.exitOn}` : ''}</dd></div>
-          <div><dt>Tanggal daftar</dt><dd>{p.joinedOn ?? '—'}</dd></div>
+          <div><dt>Tanggal daftar</dt><dd>{formatLegacyDate(classifyLegacyDate(p.joinedOn))}</dd></div>
           <div><dt>Divisi / Bagian</dt><dd>{[p.division, p.section].filter(Boolean).join(' / ') || '—'}</dd></div>
           <div><dt>Telepon</dt><dd>{p.phone ?? '—'}</dd></div>
           <div><dt>E-mail</dt><dd>{p.email ?? '—'}</dd></div>
@@ -71,37 +79,34 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
 
       <SectionBlock title="Simpanan" section={member.savings}>{(rows) => rows.length === 0 ? <p>Belum ada mutasi simpanan tercatat.</p> : (
         <>
-          <p><Link className="console-more" href={`/console/kosipa/simpanan/${p.id}`}>Lihat buku simpanan lengkap</Link></p>
-          <table className="console-table">
-            <thead><tr><th scope="col">Jenis</th><th scope="col">Mutasi bersih disetujui</th><th scope="col">Penarikan menunggu</th><th scope="col">Setoran menunggu</th></tr></thead>
+          <p><Link prefetch={false} className="console-more" href={`/console/kosipa/simpanan/${p.id}`}>Lihat buku simpanan lengkap</Link></p>
+          <FinancialTable label="Mutasi simpanan anggota" columns={[{ label: "Jenis" }, { label: "Mutasi bersih disetujui", numeric: true }, { label: "Penarikan menunggu", numeric: true }, { label: "Setoran menunggu", numeric: true }]}>
             <tbody>{rows.map((r) => <tr key={r.type}><td>{r.type}</td><td className="num">{formatRupiah(r.postedSen)}</td><td className="num">{formatRupiah(r.pendingDebitSen)}</td><td className="num">{formatRupiah(r.pendingCreditSen)}</td></tr>)}</tbody>
-          </table>
-          <p className="console-notice">Ini jumlah mutasi yang tercatat, <strong>bukan saldo resmi</strong>: definisi saldo awal KOSIPA belum diverifikasi.</p>
+          </FinancialTable>
+          <ContextNotice title="Mutasi tercatat, bukan saldo resmi" expandable><p>Saldo resmi belum tersedia. Nilai berikut berasal dari mutasi yang dicatat; definisi saldo awal belum diverifikasi.</p></ContextNotice>
         </>
       )}</SectionBlock>
 
       <SectionBlock title="Pinjaman" section={member.loans}>{(rows) => rows.length === 0 ? <p>Tidak ada pinjaman tercatat.</p> : (
-        <table className="console-table">
-          <thead><tr><th scope="col">Dokumen</th><th scope="col">Tanggal</th><th scope="col">Jenis</th><th scope="col">Pokok</th><th scope="col">Tenor</th><th scope="col">Angsuran rencana</th><th scope="col">Status</th></tr></thead>
-          <tbody>{rows.map((l) => <tr key={l.docNo}><td><Link href={`/console/kosipa/pinjaman/${encodeURIComponent(l.docNo)}`}>{l.docNo}</Link></td><td>{l.docDate ?? '—'}</td><td>{[l.type, l.method].filter(Boolean).join(' · ') || '—'}</td><td className="num">{formatRupiah(l.principalSen)}</td><td>{l.months ? `${l.months} bln` : '—'}</td><td className="num">{formatRupiah(l.installmentSen)}</td><td>{[l.docStatus, l.disbursement, l.repayment].filter(Boolean).join(' · ') || '—'}</td></tr>)}</tbody>
-        </table>
+        <FinancialTable label="Pinjaman anggota" columns={[{ label: "Dokumen" }, { label: "Tanggal" }, { label: "Jenis" }, { label: "Pokok", numeric: true }, { label: "Tenor", numeric: true }, { label: "Angsuran rencana", numeric: true }, { label: "Status" }]}>
+          <tbody>{rows.map((l, index) => <tr key={`${l.docNo}-${index}`}><td><Link prefetch={false} href={`/console/kosipa/pinjaman/${encodeURIComponent(l.docNo)}`}>{l.docNo}</Link></td><td>{formatLegacyDate(classifyLegacyDate(l.docDate))}</td><td>{[l.type, l.method].filter(Boolean).join(' · ') || '—'}</td><td className="num">{formatRupiah(l.principalSen)}</td><td>{l.months ? `${l.months} bln` : '—'}</td><td className="num">{formatRupiah(l.installmentSen)}</td><td>{[l.docStatus, l.disbursement, l.repayment].filter(Boolean).join(' · ') || '—'}</td></tr>)}</tbody>
+        </FinancialTable>
       )}</SectionBlock>
 
       <SectionBlock title="Rincian angsuran" section={member.installments}>{() => null}</SectionBlock>
       <SectionBlock title="Potongan payroll" section={member.payroll}>{(rows) => rows.length === 0 ? <p>Belum ada potongan payroll tercatat.</p> : (
         <>
-          <table className="console-table">
-            <thead><tr><th scope="col">Batch</th><th scope="col">Periode</th><th scope="col">Status</th><th scope="col">Toko (Kredit)</th><th scope="col">Total potongan tercatat</th></tr></thead>
+          <FinancialTable label="Riwayat potongan payroll anggota" columns={[{ label: "Batch" }, { label: "Periode" }, { label: "Status" }, { label: "Toko (Kredit)", numeric: true }, { label: "Total potongan tercatat", numeric: true }]}>
             <tbody>{rows.map((r) => (
               <tr key={r.id}>
-                <td>{r.header.state === 'OK' ? <Link href={`/console/kosipa/payroll/${encodeURIComponent(r.docNo)}/anggota/${encodeURIComponent(p.nik)}`}>{r.docNo}</Link> : r.docNo}</td>
+                <td>{r.header.state === 'OK' ? <Link prefetch={false} href={`/console/kosipa/payroll/${encodeURIComponent(r.docNo)}/anggota/${encodeURIComponent(p.nik)}`}>{r.docNo}</Link> : r.docNo}</td>
                 <td>{r.header.state === 'OK' ? (r.header.period ?? '—') : '—'}</td>
                 <td>{r.header.state === 'OK' ? STATUS_LABEL[r.header.status] : r.header.state === 'MISSING' ? 'Header batch tidak ditemukan' : 'Header ganda: status tidak dapat dipastikan'}</td>
                 <td className="num">{formatAmount4(r.toko4.TOKO_TAMBUN + r.toko4.TOKO_MJ + r.toko4.TOKO_GIIC)}</td>
                 <td className="num">{formatAmount4(r.total4)}</td>
               </tr>
             ))}</tbody>
-          </table>
+          </FinancialTable>
           <p className="console-notice">Menampilkan paling banyak 24 baris terbaru, sebagai nilai yang tercatat di KOSIPA. Bukan perhitungan ulang.</p>
         </>
       )}</SectionBlock>

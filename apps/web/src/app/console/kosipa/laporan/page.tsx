@@ -1,3 +1,4 @@
+import { KosipaPageHeader } from '@/components/console/kosipa/KosipaUI';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
@@ -24,9 +25,9 @@ export default async function ReportsHubPage() {
   ].filter(Boolean) as { href: string; title: string; text: string }[];
   return (
     <div className="console-page">
-      <header className="console-page-head"><h1>Laporan KOSIPA</h1><p>Semua laporan hanya membaca nilai yang tercatat di KOSIPA. Tidak ada perbaikan data otomatis dan tidak ada saldo resmi.</p></header>
+      <KosipaPageHeader title={<> Laporan KOSIPA </>}><p>Semua laporan hanya membaca nilai yang tercatat di KOSIPA. Tidak ada perbaikan data otomatis dan tidak ada saldo resmi.</p></KosipaPageHeader>
       <section className="console-modules" aria-label="Daftar laporan">
-        {cards.map((c) => <article className="console-module" key={c.href}><h2><Link href={c.href}>{c.title}</Link></h2><p>{c.text}</p></article>)}
+        {cards.map((c) => <article className="console-module" key={c.href}><h2><Link prefetch={false} href={c.href}>{c.title}</Link></h2><p>{c.text}</p></article>)}
       </section>
     </div>
   );

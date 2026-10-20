@@ -1,3 +1,5 @@
+import { KosipaPageHeader, FeedbackState, StatusBadge, FinancialTable, SearchGuidance } from '@/components/console/kosipa/KosipaUI';
+import { maskIdentifier } from '@/components/console/kosipa/presentation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Search } from 'lucide-react';
@@ -24,23 +26,24 @@ export default async function SavingsSearchPage({ searchParams }: { searchParams
 
   return (
     <div className="console-page">
-      <header className="console-page-head">
-        <h1>Simpanan</h1>
-        <p>Buku simpanan per anggota, hanya membaca. Pilih anggota untuk melihat mutasi tercatat; saldo resmi belum ditampilkan karena definisinya belum diverifikasi.</p>
-      </header>
-      <form className="console-search" action="/console/kosipa/simpanan" method="get" role="search">
+      <KosipaPageHeader title={<> Simpanan </>}>
+        <p>Pilih anggota untuk melihat mutasi simpanan tercatat. Saldo resmi belum tersedia.</p>
+      </KosipaPageHeader>
+      <form className="console-search" action="/console/kosipa/simpanan" method="post" data-kosipa-private role="search">
         <label htmlFor="savings-q">NIK atau nama anggota</label>
-        <div><input id="savings-q" name="q" defaultValue={q} minLength={2} maxLength={50} autoComplete="off" required /><button type="submit"><Search size={16} aria-hidden="true" />Cari</button></div>
+        <div><input id="savings-q" name="q" placeholder="NIK atau nama anggota" defaultValue={q} minLength={2} maxLength={50} autoComplete="off" required /><button type="submit"><Search size={16} aria-hidden="true" />Cari anggota</button><button type="submit" name="_reset" value="1" formNoValidate>Reset filter</button></div>
       </form>
-      {failed && <section className="console-panel" role="alert"><h2>Pencarian gagal</h2><p>Data anggota tidak dapat dibaca saat ini. Coba lagi beberapa saat lagi.</p></section>}
+      {!q && !failed && <SearchGuidance />}
+      {failed && <FeedbackState kind="error" title={<> Pencarian gagal </>} reset="/console/kosipa/simpanan"><p>Data anggota tidak dapat dibaca saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {!failed && q && results === null && <p className="console-notice">Masukkan minimal 2 karakter.</p>}
-      {!failed && results && results.length === 0 && <section className="console-panel" role="status"><h2>Anggota tidak ditemukan</h2><p>Tidak ada anggota yang cocok dengan “{q}”.</p></section>}
+      {!failed && results && results.length === 0 && <FeedbackState kind="empty" title={<> Anggota tidak ditemukan </>} reset="/console/kosipa/simpanan"><p>Tidak ada anggota yang cocok dengan “{q}”.</p></FeedbackState>}
       {!failed && results && results.length > 0 && (
         <section aria-label="Hasil pencarian" className="console-section">
-          <table className="console-table">
-            <thead><tr><th scope="col">NIK</th><th scope="col">Nama</th><th scope="col">Grup</th><th scope="col">Status</th></tr></thead>
-            <tbody>{results.map((m) => <tr key={m.id}><td><Link href={`/console/kosipa/simpanan/${m.id}`}>{m.nik || '—'}</Link></td><td>{m.name || '—'}</td><td>{m.group ?? '—'}</td><td>{m.status ?? '—'}</td></tr>)}</tbody>
-          </table>
+          <h2>Hasil pencarian <span className="kosipa-result-count">{results.length} anggota{results.length >= 25 ? ' pertama' : ''}</span></h2>
+          <FinancialTable label="Hasil pencarian untuk buku simpanan" columns={[{ label: "NIK tersamar" }, { label: "Nama" }, { label: "Grup" }, { label: "Status" }, { label: "Buku simpanan" }]}>
+            <tbody>{results.map((m) => <tr key={m.id}><td>{maskIdentifier(m.nik)}</td><td>{m.name || '—'}</td><td>{m.group ?? '—'}</td><td><StatusBadge value={m.status} /></td><td><Link prefetch={false} href={`/console/kosipa/simpanan/${m.id}`}>Lihat mutasi<span className="console-visually-hidden"> {m.name}</span></Link></td></tr>)}</tbody>
+          </FinancialTable>
+          {results.length >= 25 && <p className="console-notice">Menampilkan 25 hasil pertama. Perjelas pencarian untuk hasil yang lebih spesifik.</p>}
         </section>
       )}
     </div>

@@ -14,9 +14,9 @@ export function formatAmount4(units: number): string {
 export function formatLegacyDate(date: LegacyDate): string {
   switch (date.kind) {
     case 'date': return date.iso;
-    case 'zero': return '0000-00-00 (kosong)';
-    case 'missing': return '—';
-    default: return `${date.raw} (tidak valid)`;
+    case 'zero': return 'Tanggal tidak tersedia · kosong (0000-00-00)';
+    case 'missing': return 'Tanggal tidak tersedia';
+    default: return `Tanggal tidak tersedia · ${date.raw} (tidak valid)`;
   }
 }
 

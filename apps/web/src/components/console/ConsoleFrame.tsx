@@ -65,12 +65,12 @@ export function ConsoleFrame({ groups, viewer, children }: { groups: ConsoleNavG
                   return (
                     <li key={item.id}>
                       <div className="console-nav-row">
-                        <Link href={item.href} aria-current={current?.id === item.id ? 'page' : undefined}><Icon size={18} aria-hidden="true" />{item.label}</Link>
+                        <Link href={item.href} prefetch={item.href.startsWith('/console/kosipa') ? false : undefined} aria-current={current?.id === item.id ? 'page' : undefined}><Icon size={18} aria-hidden="true" />{item.label}</Link>
                         {children.length > 0 && <button type="button" className="console-nav-toggle" aria-expanded={expanded} aria-controls={submenu} aria-label={`Submenu ${item.label}`} onClick={() => setToggled((t) => ({ ...t, [item.id]: !expanded }))}><ChevronDown size={16} aria-hidden="true" /></button>}
                       </div>
                       {children.length > 0 && (
                         <ul id={submenu} className="console-nav-sub" hidden={!expanded} aria-label={`Submenu ${item.label}`}>
-                          {children.map((child) => <li key={child.id}><Link href={child.href} aria-current={current?.id === child.id ? 'page' : undefined}>{child.label}</Link></li>)}
+                          {children.map((child) => <li key={child.id}><Link href={child.href} prefetch={child.href.startsWith('/console/kosipa') ? false : undefined} aria-current={current?.id === child.id ? 'page' : undefined}>{child.label}</Link></li>)}
                         </ul>
                       )}
                     </li>
@@ -93,9 +93,9 @@ export function ConsoleFrame({ groups, viewer, children }: { groups: ConsoleNavG
             <ol>
               <li><Link href="/console">KKISI TB2</Link></li>
               {currentGroup && currentGroup.section !== 'dashboard' && <li>{currentGroup.label}</li>}
-              {currentParent && <li><Link href={currentParent.href}>{currentParent.label}</Link></li>}
+              {currentParent && <li><Link href={currentParent.href} prefetch={currentParent.href.startsWith('/console/kosipa') ? false : undefined}>{currentParent.label}</Link></li>}
               {current && current.id !== 'dashboard' && (deeper
-                ? <><li><Link href={current.href}>{current.label}</Link></li><li aria-current="page">Detail</li></>
+                ? <><li><Link href={current.href} prefetch={current.href.startsWith('/console/kosipa') ? false : undefined}>{current.label}</Link></li><li aria-current="page">Detail</li></>
                 : <li aria-current="page">{current.label}</li>)}
             </ol>
           </nav>

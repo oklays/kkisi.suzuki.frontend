@@ -1,3 +1,6 @@
+import { KosipaPageHeader, FeedbackState, StatusBadge, FinancialTable, FilterContext } from '@/components/console/kosipa/KosipaUI';
+import { PrivatePagination } from '@/components/console/kosipa/PrivateWorkspace';
+import { maskIdentifier } from '@/components/console/kosipa/presentation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Search } from 'lucide-react';
@@ -24,6 +27,7 @@ export default async function LoanListPage({ searchParams }: { searchParams: Pro
   if (!services) return <KosipaNotice state="unavailable" />;
   const params = await searchParams;
   const q = one(params.q).slice(0, 50); const status = one(params.status); const cair = one(params.cair); const bayar = one(params.bayar);
+  const periode = one(params.periode);
   let page: LoanListPage | null = null; let failed = false; let invalid = false;
   try {
     page = await listLoans({ reader: services.loans, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, params);
@@ -31,38 +35,39 @@ export default async function LoanListPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="console-page">
-      <header className="console-page-head">
-        <h1>Pinjaman</h1>
-        <p>Dokumen pinjaman KOSIPA beserta status tercatat. Halaman ini <strong>hanya membaca</strong>; saldo resmi belum ditampilkan karena definisinya belum diverifikasi.</p>
-      </header>
-      <form className="console-search console-search-wide" action="/console/kosipa/pinjaman" method="get" role="search" aria-label="Filter pinjaman">
+      <KosipaPageHeader title={<> Pinjaman </>}>
+        <p>Telusuri dokumen dan jadwal angsuran berdasarkan nilai tercatat. Outstanding resmi belum tersedia.</p>
+      </KosipaPageHeader>
+      <form className="console-search console-search-wide" action="/console/kosipa/pinjaman" method="post" data-kosipa-private role="search" aria-label="Filter pinjaman">
         <div className="console-filter-row console-filter-row-4">
-          <label>NIK, nomor dokumen atau nama<input name="q" defaultValue={q} maxLength={50} autoComplete="off" /></label>
+          <label>NIK, nomor dokumen atau nama<input name="q" minLength={2} placeholder="NIK, nama, atau nomor dokumen" defaultValue={q} maxLength={50} autoComplete="off" /></label>
           <label>Status dokumen<select name="status" defaultValue={status}><option value="">Semua</option>{LOAN_DOC_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
           <label>Pencairan<select name="cair" defaultValue={cair}><option value="">Semua</option>{LOAN_DISBURSEMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
           <label>Pelunasan<select name="bayar" defaultValue={bayar}><option value="">Semua</option>{LOAN_REPAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
-          <button type="submit"><Search size={16} aria-hidden="true" />Cari</button>
+          <label>Periode dokumen<input name="periode" type="month" min="2000-01" max="2100-12" defaultValue={periode} /></label>
+          <button type="submit"><Search size={16} aria-hidden="true" />Terapkan filter</button><button type="submit" name="_reset" value="1" formNoValidate>Reset filter</button>
         </div>
       </form>
-      {invalid && <section className="console-panel" role="alert"><h2>Filter tidak valid</h2><p>Status harus salah satu dari daftar. Tidak ada data yang dibaca.</p></section>}
-      {failed && <section className="console-panel" role="alert"><h2>Daftar pinjaman tidak dapat dibaca</h2><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></section>}
-      {page && page.items.length === 0 && <section className="console-panel" role="status"><h2>Tidak ada pinjaman</h2><p>Tidak ada pinjaman yang cocok dengan filter ini.</p></section>}
+      <FilterContext privateReset reset="/console/kosipa/pinjaman" filters={[{ label: 'Status', value: status }, { label: 'Pencairan', value: cair }, { label: 'Pelunasan', value: bayar }, { label: 'Periode', value: periode }, { label: 'Pencarian', value: q ? 'Aktif' : '' }]} />
+      {invalid && <FeedbackState kind="error" title={<> Filter tidak valid </>} reset="/console/kosipa/pinjaman"><p>Periksa status dan periode dokumen. Gunakan pilihan yang tersedia dan periode yang valid. Tidak ada data yang dibaca.</p></FeedbackState>}
+      {failed && <FeedbackState kind="error" title={<> Daftar pinjaman tidak dapat dibaca </>} reset="/console/kosipa/pinjaman"><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
+      {page && page.items.length === 0 && <FeedbackState kind="empty" title={<> Tidak ada pinjaman </>} reset="/console/kosipa/pinjaman"><p>Tidak ada pinjaman yang cocok dengan filter ini.</p></FeedbackState>}
       {page && page.items.length > 0 && (
         <section aria-label="Daftar pinjaman" className="console-section">
-          <table className="console-table">
-            <thead><tr><th scope="col">Dokumen</th><th scope="col">NIK</th><th scope="col">Nama</th><th scope="col">Jenis</th><th scope="col">Pokok (rencana)</th><th scope="col">Tenor</th><th scope="col">Tgl. pencairan</th><th scope="col">Status</th></tr></thead>
+          <FinancialTable label="Daftar dokumen pinjaman" columns={[{ label: "Dokumen" }, { label: "NIK tersamar", type: "text" }, { label: "Nama" }, { label: "Jenis" }, { label: "Pokok (rencana)", numeric: true }, { label: "Tenor", numeric: true }, { label: "Tgl. pencairan" }, { label: "Status" }]}>
             <tbody>{page.items.map((l) => (
               <tr key={l.header.id}>
-                <td><Link href={`/console/kosipa/pinjaman/${encodeURIComponent(l.header.docNo)}`}>{l.header.docNo}</Link></td>
-                <td>{l.header.nik || '—'}</td><td>{l.header.name || '—'}</td>
+                <td><Link prefetch={false} href={`/console/kosipa/pinjaman/${encodeURIComponent(l.header.docNo)}${qs({ periode, status, cair, bayar })}`}>{l.header.docNo}</Link>{page!.items.some((other) => other.header.docNo === l.header.docNo && other.header.id !== l.header.id) && <span className="console-badge" data-state="partial">Nomor ganda pada halaman ini</span>}</td>
+                <td>{maskIdentifier(l.header.nik)}</td><td>{l.header.name || '—'}</td>
                 <td>{[l.header.type, l.header.method].filter(Boolean).join(' · ') || '—'}</td>
                 <td className="num">{formatAmount4(l.planPrincipal4)}</td><td>{l.header.planMonths ? `${l.header.planMonths} bln` : '—'}</td>
                 <td>{formatLegacyDate(l.disbursedDate)}</td>
-                <td>{[l.header.docStatus, l.header.disbursement, l.header.repayment].filter(Boolean).join(' · ') || '—'}{l.statusFlags.map((f) => <span key={f} className="console-badge" data-state="partial"> {STATUS_FLAG_TEXT[f]}</span>)}</td>
+                <td><div className="kosipa-status-stack"><StatusBadge value={l.header.docStatus} /><small>Pencairan: {l.header.disbursement || 'Tidak tercatat'}</small><small>Pelunasan: {l.header.repayment || 'Tidak tercatat'}</small></div>{l.statusFlags.map((f) => <span key={f} className="console-badge" data-state="partial"> {STATUS_FLAG_TEXT[f]}</span>)}</td>
               </tr>
             ))}</tbody>
-          </table>
-          {page.nextCursor !== null && <p><Link className="console-more" href={`/console/kosipa/pinjaman${qs({ q, status, cair, bayar, after: String(page.nextCursor) })}`}>Muat pinjaman lebih lama</Link></p>}
+          </FinancialTable>
+          <p className="console-notice">Menampilkan {page.items.length} dokumen pada halaman ini. Jumlah seluruh dokumen tidak dihitung.</p>
+          {page.nextCursor !== null && <PrivatePagination path="/console/kosipa/pinjaman" params={{ q, status, cair, bayar, periode, after: String(page.nextCursor) }}>Muat pinjaman lebih lama</PrivatePagination>}
           <p className="console-notice">Status ditampilkan sebagaimana tercatat; kombinasi yang saling bertentangan ditandai, tidak diperbaiki.</p>
         </section>
       )}

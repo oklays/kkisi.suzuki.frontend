@@ -1,3 +1,4 @@
+import { KosipaPageHeader, FeedbackState, FinancialTable } from '@/components/console/kosipa/KosipaUI';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -29,22 +30,21 @@ export default async function PayrollMemberPage({ params }: { params: Promise<{ 
 
   return (
     <div className="console-page">
-      <Link className="console-back" href={back}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
-      <header className="console-page-head"><h1>Potongan anggota</h1><p>{member ? `NIK ${member.nik} · ${STATUS_LABEL[member.header.status]}` : 'Data payroll KOSIPA, baca saja.'}</p></header>
-      {failed && <section className="console-panel" role="alert"><h2>Data tidak dapat dibaca</h2><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></section>}
+      <Link prefetch={false} className="console-back" href={back}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
+      <KosipaPageHeader title={<> Potongan anggota </>}><p>{member ? `NIK ${member.nik} · ${STATUS_LABEL[member.header.status]}` : 'Data payroll KOSIPA, baca saja.'}</p></KosipaPageHeader>
+      {failed && <FeedbackState kind="error" title={<> Data tidak dapat dibaca </>}><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {member && (<>
         {member.duplicateRows && <p className="console-notice" role="status">Anggota ini memiliki lebih dari satu baris di batch yang sama. Setiap baris ditampilkan terpisah, tidak digabung.</p>}
         {member.rows.map((row, index) => (
           <section className="console-card" key={row.id} aria-labelledby={`sec-row-${row.id}`}>
             <h2 id={`sec-row-${row.id}`}>{member!.duplicateRows ? `Baris ${index + 1}: ` : ''}{row.name || 'Anggota'} · total tercatat {formatAmount4(row.breakdown.recordedTotal4)}</h2>
-            <table className="console-table">
-              <thead><tr><th scope="col">Komponen</th><th scope="col">Kelompok</th><th scope="col">Jumlah tercatat</th></tr></thead>
+            <FinancialTable label="Komponen potongan anggota" columns={[{ label: "Komponen" }, { label: "Kelompok" }, { label: "Jumlah tercatat", numeric: true }]}>
               <tbody>
                 {row.breakdown.components.length === 0 ? <tr><td colSpan={3}>Tidak ada komponen bernilai.</td></tr> : row.breakdown.components.map((c) => <tr key={c.column}><td>{c.label}</td><td>{row.breakdown.groups.find((g) => g.group === c.group)?.label ?? c.group}</td><td className="num">{formatAmount4(c.amount4)}</td></tr>)}
                 <tr><th scope="row" colSpan={2}>Jumlah komponen</th><td className="num">{formatAmount4(row.breakdown.componentSum4)}</td></tr>
                 <tr><th scope="row" colSpan={2}>Total potongan tercatat</th><td className="num">{formatAmount4(row.breakdown.recordedTotal4)}</td></tr>
               </tbody>
-            </table>
+            </FinancialTable>
             {!row.breakdown.sumMatchesTotal && <p className="console-notice">Jumlah komponen berbeda dari total tercatat sebesar {formatAmount4(row.breakdown.differenceFromTotal4)}; nilai tercatat tidak diubah.</p>}
           </section>
         ))}
@@ -55,8 +55,7 @@ export default async function PayrollMemberPage({ params }: { params: Promise<{ 
             {member.installments.state === 'unavailable' ? <p className="console-unavailable" role="status">{REASON_TEXT[member.installments.reason] ?? 'Tidak tersedia.'}</p> : (<>
               <p className="console-notice">Angsuran yang jatuh tempo {member.installments.data.window.from} s/d sebelum {member.installments.data.window.toExclusive}. Ini referensi, bukan perhitungan ulang potongan.</p>
               {member.installments.data.items.length === 0 ? <p>Tidak ada angsuran jatuh tempo pada bulan ini.</p> : (
-                <table className="console-table">
-                  <thead><tr><th scope="col">Pinjaman</th><th scope="col">Ke</th><th scope="col">Jatuh tempo</th><th scope="col">Pokok</th><th scope="col">Bunga</th><th scope="col">Angsuran</th><th scope="col">Status</th></tr></thead>
+                <FinancialTable label="Referensi angsuran anggota" columns={[{ label: "Pinjaman" }, { label: "Ke", numeric: true }, { label: "Jatuh tempo" }, { label: "Pokok", numeric: true }, { label: "Bunga", numeric: true }, { label: "Angsuran", numeric: true }, { label: "Status" }]}>
                   <tbody>{member.installments.data.items.map((i) => (
                     <tr key={i.id}>
                       <td>{i.loanDocNo}{i.parent === 'MISSING' && <span className="console-badge" data-state="partial"> induk pinjaman tidak ditemukan</span>}</td>
@@ -65,7 +64,7 @@ export default async function PayrollMemberPage({ params }: { params: Promise<{ 
                       <td>{[i.status, i.type].filter(Boolean).join(' · ') || '—'}</td>
                     </tr>
                   ))}</tbody>
-                </table>
+                </FinancialTable>
               )}
               {member.installments.data.truncated && <p className="console-notice">Hanya 50 angsuran pertama yang ditampilkan.</p>}
               {member.installments.data.orphanParents > 0 && <p className="console-notice">{member.installments.data.orphanParents} angsuran merujuk pinjaman induk yang tidak ada. Dicatat, tidak dihapus dari tampilan.</p>}

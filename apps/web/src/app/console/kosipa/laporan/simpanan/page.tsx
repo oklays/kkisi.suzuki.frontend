@@ -1,3 +1,5 @@
+import { KosipaPageHeader, FeedbackState, FinancialTable, ReportYearFilter, ContextNotice } from '@/components/console/kosipa/KosipaUI';
+import { ExportControl } from '@/components/console/kosipa/ExportControl';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -30,31 +32,30 @@ export default async function SavingsMovementReportPage({ searchParams }: { sear
 
   return (
     <div className="console-page">
-      <Link className="console-back" href="/console/kosipa/laporan"><ArrowLeft size={16} aria-hidden="true" />Kembali ke laporan</Link>
-      <header className="console-page-head"><h1>Ringkasan mutasi simpanan</h1><p>Jumlah <strong>mutasi tercatat</strong> per bulan dan jenis. Ini bukan saldo: definisi saldo awal belum diverifikasi, dan kolom saldo pada baris mutasi tidak pernah diisi.</p></header>
-      {invalid && <section className="console-panel" role="alert"><h2>Tahun tidak valid</h2><p>Tahun harus empat digit antara 2000 dan 2100. Tidak ada data yang dibaca.</p></section>}
-      {failed && <section className="console-panel" role="alert"><h2>Ringkasan tidak dapat dibaca</h2><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></section>}
-      {part?.state === 'unavailable' && <section className="console-panel" role="status"><h2>Ringkasan tidak tersedia</h2><p>{REPORT_REASON[part.reason]}</p></section>}
+      <Link prefetch={false} className="console-back" href="/console/kosipa/laporan"><ArrowLeft size={16} aria-hidden="true" />Kembali ke laporan</Link>
+      <KosipaPageHeader title={<> Ringkasan mutasi simpanan </>}><p>Jumlah <strong>mutasi tercatat</strong> per bulan dan jenis. Ini bukan saldo: definisi saldo awal belum diverifikasi, dan kolom saldo pada baris mutasi tidak pernah diisi.</p></KosipaPageHeader>
+      {invalid && <FeedbackState kind="error" title={<> Tahun tidak valid </>} reset="/console/kosipa/laporan/simpanan"><p>Tahun harus empat digit antara 2000 dan 2100. Tidak ada data yang dibaca.</p></FeedbackState>}
+      {failed && <FeedbackState kind="error" title={<> Ringkasan tidak dapat dibaca </>} reset="/console/kosipa/laporan/simpanan"><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></FeedbackState>}
+      {part?.state === 'unavailable' && <FeedbackState kind="empty" title={<> Ringkasan tidak tersedia </>} reset="/console/kosipa/laporan/simpanan"><p>{REPORT_REASON[part.reason]}</p></FeedbackState>}
       {r && (<>
-        <p className="console-notice" role="status"><strong>Saldo resmi belum tersedia.</strong> Status dokumen (header) menentukan: APPROVED disetujui, OPEN menunggu, status lain tidak berlaku.</p>
-        {canExport && <p><a className="console-more" href={`/api/kosipa/reports/savings-movements/export${qs({ tahun: r.year === null ? '' : String(r.year) })}`} download>Unduh CSV laporan ini</a></p>}
-        {r.years.length > 0 && <nav aria-label="Pilih tahun"><ul className="console-year-list">{r.years.map((y) => <li key={y}>{y === r.year ? <strong aria-current="page">{y}</strong> : <Link href={`/console/kosipa/laporan/simpanan${qs({ tahun: String(y) })}`}>{y}</Link>}</li>)}</ul></nav>}
+        <ContextNotice title="Mutasi tercatat, bukan saldo resmi" expandable><p>Saldo resmi belum tersedia. Status dokumen menentukan: APPROVED disetujui, OPEN menunggu, status lain tidak berlaku.</p></ContextNotice>
+        {canExport && <ExportControl href={`/api/kosipa/reports/savings-movements/export${qs({ tahun: r.year === null ? '' : String(r.year) })}`} />}
+        <ReportYearFilter path="/console/kosipa/laporan/simpanan" year={r.year} years={r.years} />
         <section className="console-card" aria-labelledby="sec-bulan">
           <h2 id="sec-bulan">Tahun {r.year ?? '—'}</h2>
           {r.lines.length === 0 ? <p>Tidak ada mutasi bertanggal pada tahun ini.</p> : (
-            <table className="console-table">
-              <thead><tr><th scope="col">Bulan</th><th scope="col">Jenis</th><th scope="col">Mutasi</th><th scope="col">Kredit disetujui</th><th scope="col">Debit disetujui</th><th scope="col">Jasa disetujui</th><th scope="col">Kredit menunggu</th><th scope="col">Debit menunggu</th><th scope="col">Status lain</th></tr></thead>
+            <FinancialTable label="Mutasi simpanan per bulan" columns={[{ label: "Bulan" }, { label: "Jenis" }, { label: "Mutasi", numeric: true }, { label: "Kredit disetujui", numeric: true }, { label: "Debit disetujui", numeric: true }, { label: "Jasa disetujui", numeric: true }, { label: "Kredit menunggu", numeric: true }, { label: "Debit menunggu", numeric: true }, { label: "Status lain", numeric: true }]}>
               <tbody>{r.lines.map((l) => (
                 <tr key={`${l.bucket}|${l.type}`}><td>{l.bucket}</td><td>{l.type}</td><td className="num">{l.rows}</td><td className="num">{formatAmount4(l.posted4.credit)}</td><td className="num">{formatAmount4(l.posted4.debit)}</td><td className="num">{formatAmount4(l.posted4.interest)}</td><td className="num">{formatAmount4(l.pending4.credit)}</td><td className="num">{formatAmount4(l.pending4.debit)}</td><td className="num">{l.voidRows}</td></tr>
               ))}</tbody>
-            </table>
+            </FinancialTable>
           )}
         </section>
         {r.unplaced.length > 0 && (
           <section className="console-card" aria-labelledby="sec-tak">
             <h2 id="sec-tak">Mutasi yang tidak dapat ditempatkan pada bulan (semua tahun)</h2>
-            <table className="console-table"><thead><tr><th scope="col">Kondisi</th><th scope="col">Jenis</th><th scope="col">Mutasi</th></tr></thead>
-              <tbody>{r.unplaced.map((u) => <tr key={`${u.kind}|${u.type}`}><td>{UNPLACED[u.kind]}</td><td>{u.type}</td><td className="num">{u.rows}</td></tr>)}</tbody></table>
+            <FinancialTable label="Mutasi yang belum dapat ditempatkan" columns={[{ label: "Kondisi" }, { label: "Jenis" }, { label: "Mutasi", numeric: true }]}>
+              <tbody>{r.unplaced.map((u) => <tr key={`${u.kind}|${u.type}`}><td>{UNPLACED[u.kind]}</td><td>{u.type}</td><td className="num">{u.rows}</td></tr>)}</tbody></FinancialTable>
           </section>
         )}
       </>)}

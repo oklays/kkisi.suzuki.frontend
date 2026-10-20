@@ -1,3 +1,4 @@
+import { KosipaPageHeader, FeedbackState, CursorPagination, StatusBadge, FinancialTable, FilterContext } from '@/components/console/kosipa/KosipaUI';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { KosipaError, PAYROLL_GROUPS, PAYROLL_STATUSES } from '@koperasi/domain/kosipa';
@@ -29,37 +30,38 @@ export default async function PayrollListPage({ searchParams }: { searchParams: 
 
   return (
     <div className="console-page">
-      <header className="console-page-head">
-        <h1>Payroll</h1>
-        <p>Daftar batch potongan bulanan KOSIPA. Halaman ini <strong>hanya membaca</strong>: tidak ada persetujuan, posting, atau pembuatan matriks dari sini.</p>
-      </header>
+      <KosipaPageHeader title={<> Payroll </>}>
+        <p>Tinjau batch potongan bulanan menurut periode, grup, dan status yang tercatat.</p>
+      </KosipaPageHeader>
       <form className="console-search console-search-wide" action="/console/kosipa/payroll" method="get" role="search" aria-label="Filter batch payroll">
         <div className="console-filter-row">
-          <label>Periode<input name="periode" type="month" defaultValue={periode} /></label>
+          <label>Periode<input name="periode" type="month" min="2000-01" max="2100-12" defaultValue={periode} /></label>
           <label>Status<select name="status" defaultValue={status}><option value="">Semua</option>{PAYROLL_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
           <label>Grup<select name="grup" defaultValue={grup}><option value="">Semua</option>{PAYROLL_GROUPS.map((g) => <option key={g} value={g}>{GROUP_LABEL[g]}</option>)}</select></label>
-          <button type="submit">Terapkan</button>
+          <button type="submit">Terapkan filter</button>
+          <Link prefetch={false} className="kosipa-button-secondary" href="/console/kosipa/payroll">Reset filter</Link>
         </div>
       </form>
-      {invalid && <section className="console-panel" role="alert"><h2>Filter tidak valid</h2><p>Periode harus berformat YYYY-MM dan status/grup harus salah satu dari daftar. Tidak ada data yang dibaca.</p></section>}
-      {failed && <section className="console-panel" role="alert"><h2>Daftar payroll tidak dapat dibaca</h2><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></section>}
-      {page && page.items.length === 0 && <section className="console-panel" role="status"><h2>Tidak ada batch</h2><p>Tidak ada batch payroll yang cocok dengan filter ini.</p></section>}
+      <FilterContext reset="/console/kosipa/payroll" filters={[{ label: 'Periode', value: periode }, { label: 'Status', value: status }, { label: 'Grup', value: grup }]} />
+      {invalid && <FeedbackState kind="error" title={<> Filter tidak valid </>} reset="/console/kosipa/payroll"><p>Periode harus berformat YYYY-MM dan status/grup harus salah satu dari daftar. Tidak ada data yang dibaca.</p></FeedbackState>}
+      {failed && <FeedbackState kind="error" title={<> Daftar payroll tidak dapat dibaca </>} reset="/console/kosipa/payroll"><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
+      {page && page.items.length === 0 && <FeedbackState kind="empty" title={<> Tidak ada batch </>} reset="/console/kosipa/payroll"><p>Tidak ada batch payroll yang cocok dengan filter ini.</p></FeedbackState>}
       {page && page.items.length > 0 && (
         <section aria-label="Daftar batch payroll" className="console-section">
-          <table className="console-table">
-            <thead><tr><th scope="col">Dokumen</th><th scope="col">Periode</th><th scope="col">Grup</th><th scope="col">Status</th><th scope="col">Tgl. periode</th><th scope="col">Tgl. cair</th><th scope="col">Total header (tercatat)</th></tr></thead>
+          <FinancialTable label="Daftar batch payroll" columns={[{ label: "Dokumen" }, { label: "Periode" }, { label: "Grup" }, { label: "Status" }, { label: "Tgl. periode" }, { label: "Tgl. cair" }, { label: "Total header (tercatat)", numeric: true }]}>
             <tbody>{page.items.map((i) => (
               <tr key={i.header.id}>
-                <td><Link href={`/console/kosipa/payroll/${encodeURIComponent(i.header.docNo)}`}>{i.header.docNo}</Link></td>
+                <td><Link prefetch={false} href={`/console/kosipa/payroll/${encodeURIComponent(i.header.docNo)}${qs({ periode, status, grup })}`}>{i.header.docNo}</Link></td>
                 <td>{i.header.periodYear && i.header.periodMonth ? `${i.header.periodYear}-${i.header.periodMonth}` : '—'}</td>
                 <td>{i.header.group ? (GROUP_LABEL[i.header.group] ?? i.header.group) : '—'}</td>
-                <td><span className="console-badge" data-state={i.status === 'APPROVED' ? 'available' : i.status === 'OPEN' ? 'partial' : 'planned'}>{STATUS_LABEL[i.status]}</span></td>
+                <td><StatusBadge value={i.status} label={STATUS_LABEL[i.status]} /></td>
                 <td>{formatLegacyDate(i.periodDate)}</td><td>{formatLegacyDate(i.cashDate)}</td>
-                <td className="num">{i.headerTotal4 === null ? '—' : formatAmount4(i.headerTotal4)}</td>
+                <td className="num">{i.headerTotal4 === null ? 'Tidak tersedia' : formatAmount4(i.headerTotal4)}</td>
               </tr>
             ))}</tbody>
-          </table>
-          {page.nextCursor !== null && <p><Link className="console-more" href={`/console/kosipa/payroll${qs({ periode, status, grup, after: String(page.nextCursor) })}`}>Muat batch lebih lama</Link></p>}
+          </FinancialTable>
+          <p className="console-notice">Menampilkan {page.items.length} batch pada halaman ini.</p>
+          {page.nextCursor !== null && <CursorPagination href={`/console/kosipa/payroll${qs({ periode, status, grup, after: String(page.nextCursor) })}`}>Muat batch lebih lama</CursorPagination>}
           <p className="console-notice">Angka adalah nilai yang tercatat di KOSIPA (A). Total header dan jumlah baris dapat berbeda; perbedaan ditandai di halaman batch, tidak diperbaiki.</p>
         </section>
       )}
