@@ -43,6 +43,8 @@ Tujuan: melanjutkan revamp Next.js setelah TOKO/POS dengan (1) console terpadu, 
 | 32 | [evidence-intake-runbook.md](evidence-intake-runbook.md) | Perintah validasi bukti operator (O1/O3/O4/O5/O6/O7/Gudang) |
 | 33 | [representative-staging-plan.md](representative-staging-plan.md) | Rancangan staging representatif (rencana saja) |
 | 34 | [module-readiness-status.md](module-readiness-status.md) | Status kesiapan per modul: verifikasi lokal dipisah dari penerimaan owner |
+| 35 | [kosipa-owner-walkthrough.md](kosipa-owner-walkthrough.md) | Urutan uji manual KOSIPA untuk owner (± 30 menit) dan cara melaporkan defect |
+| 36 | [git-integration-readiness.md](git-integration-readiness.md) | Paket review integrasi Git: divergensi, flag, migrasi, hotfix login, urutan yang direkomendasikan (tanpa push/merge) |
 | — | [`docs/migration/sql/legacy-schema-objects-readonly.sql`](../../../migration/sql/legacy-schema-objects-readonly.sql) | SQL **read-only** untuk operator: ambil definisi view/procedure yang tidak ada di dump |
 
 ## Temuan yang mengubah asumsi PRD/Baseline

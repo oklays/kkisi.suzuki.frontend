@@ -12,3 +12,6 @@ staging/*.sql
 
 # Gate A synthetic-identity fixture (passwords of SYNTHETIC users only)
 .e2e-*
+
+# DEV LOCAL process-ownership records
+.dev-local-run/

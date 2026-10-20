@@ -184,8 +184,27 @@ await step('N12 a console administrator cannot grant themselves KOSIPA: the appl
   assert.equal((await a.request.get(`${base}/api/kosipa/loans`)).status(), 403, 'still no KOSIPA access'); await a.close(); return 'SELF_LINK refused; KOSIPA still 403';
 });
 
+await step('N13 framework prefetch is not an access bypass: anonymous prefetch is redirected to login; a cashier/staff prefetch of KOSIPA routes carries no member, loan or payroll data', async () => {
+  const RSC = { RSC: '1', 'Next-Router-Prefetch': '1', Accept: 'text/x-component' };
+  const anon = await browser.newContext();
+  for (const path of ['/console?_rsc=t', '/console/kosipa/payroll?_rsc=t', '/console/kosipa/anggota?q=S9001&_rsc=t', '/pos?_rsc=t']) {
+    const r = await anon.request.get(`${base}${path}`, { headers: RSC, maxRedirects: 0 }); assert.equal(r.status(), 307, `${path} anonymous`); assert.match(r.headers().location ?? '', /\/login/, `${path} redirects to login`);
+    assert.doesNotMatch(await r.text(), /POTSYN|SYNTH ANGGOTA|PINSYN/);
+  }
+  await anon.close(); const seen = [];
+  for (const user of ['kasir1', 'kasir2']) {
+    const { context } = await open(user);
+    for (const path of ['/console?_rsc=t', '/console/kosipa/payroll?_rsc=t', '/console/kosipa/laporan/pinjaman?_rsc=t', '/console/kosipa/anggota?q=S9001&_rsc=t']) {
+      const r = await context.request.get(`${base}${path}`, { headers: RSC }); const text = await r.text(); seen.push(`${user}${path.split('?')[0]}`);
+      assert.doesNotMatch(text, /POTSYN|SYNTH ANGGOTA|PINSYN/, `${user} ${path}: prefetch must not carry protected data`);
+    }
+    await context.close();
+  }
+  return `${seen.length} authenticated prefetches carry no protected data`;
+});
+
 // Machine evidence keyed by owner-uat-checklist.md section G (merged into the findings register; never an owner result).
-const G = { G1: ['N1'], G2: ['N1'], G3: ['N2'], G4: ['N4'], G5: ['N3'], G6: ['N6'], G7: ['N7'], G8: ['N8'], G9: ['N9'], G10: ['N10', 'N12'] };
+const G = { G1: ['N1'], G2: ['N1'], G3: ['N2'], G4: ['N4'], G5: ['N3'], G6: ['N6'], G7: ['N7'], G8: ['N8'], G9: ['N9', 'N13'], G10: ['N10', 'N12'] };
 const byStep = (key) => Object.entries(results).filter(([k]) => k.split(' ')[0] === key).map(([, r]) => r);
 const checklist = Object.fromEntries(Object.entries(G).map(([id, keys]) => { const rs = keys.flatMap(byStep); return [id, { role: 'machine', status: rs.length && rs.every((r) => r.status === 'PASS') ? 'PASS' : 'FAIL', note: rs.map((r) => r.note).filter(Boolean).join('; ').slice(0, 200) }]; }));
 const { writeFileSync } = await import('node:fs'); writeFileSync(`${out}/results.json`, JSON.stringify(checklist, null, 1));

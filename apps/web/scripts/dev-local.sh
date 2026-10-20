@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # DEV LOCAL launcher for owner testing (checkpoint 14). Synthetic data, local container, loopback only.
 #   scripts/dev-local.sh start [prod|dev]   prod = built app (next start) on http://127.0.0.1:3200 (default); dev = next dev on http://127.0.0.1:3201
-#   scripts/dev-local.sh stop               stops both DEV LOCAL servers (never touches other processes, e.g. a server on :3000)
+#   scripts/dev-local.sh stop [prod|dev]    stops ONLY servers this script started and recorded (pid + start time + directory verified); anything else on :3200/:3201, e.g. your own next dev, is left alone
+#   scripts/dev-local.sh restart [prod|dev] safe stop of the recorded server, then start
+#   scripts/dev-local.sh adopt prod|dev     explicit: record a server started by an older version of this script so that 'stop' may manage it
 #   scripts/dev-local.sh status             URL, process and health
 #   scripts/dev-local.sh reset [--with-products]   stop, reseed the synthetic schema, rebuild kkisi_devlocal_staging, (optionally seed the product catalog), start prod
 #   scripts/dev-local.sh accounts           test accounts and roles (passwords stay in apps/web/.env.dev-local-accounts.json; never printed)
@@ -15,19 +17,24 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 PROD_PORT=3200; DEV_PORT=3201
 die() { echo "ERROR: $*" >&2; exit 1; }
-pid_on() { lsof -nP -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -1 || true; }
+# shellcheck source=lib/dev-local-proc.sh
+. scripts/lib/dev-local-proc.sh   # process ownership: only servers this script started (or the user adopted) can be stopped
 need() { [ -f .env.dev-local ] || die "no DEV LOCAL profile: run scripts/dev-local.sh reset (or scripts/setup-dev-local.sh --apply)"; docker inspect -f '{{.State.Running}}' kkisi-staging 2>/dev/null | grep -q true || die "local container kkisi-staging is not running: docker start kkisi-staging"; }
 launch() { # $1 mode, $2 port
   need; node scripts/lib/dev-local-preflight.mjs || die "preflight refused: nothing started"
   [ -z "$(pid_on "$2")" ] || die "port $2 is already in use"
   set -a; . ./.env.dev-local; set +a; export APP_ORIGIN="http://127.0.0.1:$2"
+  local launcher
+  [ "$(server_state "$2")" != stale ] || rm -f "$(rec_file "$2")"
   if [ "$1" = prod ]; then [ -d .next ] || die "no production build: run pnpm build at the repository root"; nohup pnpm exec next start -H 127.0.0.1 -p "$2" > "/tmp/kkisi-devlocal-$2.log" 2>&1 &
   else nohup pnpm exec next dev -H 127.0.0.1 -p "$2" > "/tmp/kkisi-devlocal-$2.log" 2>&1 & fi
+  launcher=$!
   for _ in $(seq 1 120); do curl -s -o /dev/null "http://127.0.0.1:$2/login" && break; sleep 0.5; done
   if grep -q "Another next dev server is already running" "/tmp/kkisi-devlocal-$2.log" 2>/dev/null; then
     die "Next.js allows ONE 'next dev' per directory and another one is already running (see the log for its port/PID). Stop that server yourself, or use: scripts/dev-local.sh start prod"
   fi
   curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$2/login" | grep -q 200 || die "server did not answer on $2 (log: /tmp/kkisi-devlocal-$2.log)"
+  record_server "$2" "$launcher" || echo "WARNING: could not record ownership of :$2; it will be reported as not managed and 'stop' will leave it alone"
   node scripts/lib/dev-local-links.mjs "http://127.0.0.1:$2" || echo "WARNING: identity links not created (see above)"
   echo "DEV LOCAL ($1) running: http://127.0.0.1:$2/login   (log /tmp/kkisi-devlocal-$2.log)"
 }
@@ -54,7 +61,7 @@ r1_trial() {
   set -a; . ./.env.local; . ./.env.staging; set +a
   root() { docker exec -i -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" kkisi-staging mariadb -uroot -N -B "$@"; }
   local s; for s in $slugs; do root -e "INSERT INTO kkisi_devlocal_staging.db_permissions (role_id, permissions) SELECT 4, '$s' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM kkisi_devlocal_staging.db_permissions WHERE role_id=4 AND permissions='$s')"; done
-  trial_cleanup() { local p; p="$(pid_on "$port")"; [ -n "$p" ] && kill "$p" 2>/dev/null; for s in $slugs; do root -e "DELETE FROM kkisi_devlocal_staging.db_permissions WHERE role_id=4 AND permissions='$s'"; done; }
+  trial_cleanup() { stop_server "$port" >/dev/null 2>&1 || true; for s in $slugs; do root -e "DELETE FROM kkisi_devlocal_staging.db_permissions WHERE role_id=4 AND permissions='$s'"; done; }
   trap trial_cleanup EXIT
   for mode in derived policy; do
     local roles=""; [ "$mode" = policy ] && roles="4:pos,1:console"
@@ -62,7 +69,7 @@ r1_trial() {
     ( set -a; . ./.env.dev-local; set +a; export APP_ORIGIN="http://127.0.0.1:$port" CONSOLE_LANDING_ROLES="$roles"; nohup pnpm exec next start -H 127.0.0.1 -p "$port" > "/tmp/kkisi-devlocal-$port.log" 2>&1 & )
     for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$port/login" && break; sleep 0.5; done
     node scripts/lib/dev-local-r1-trial.mjs "http://127.0.0.1:$port" "$mode" || rc=1
-    local p; p="$(pid_on "$port")"; [ -n "$p" ] && kill "$p"; sleep 1
+    stop_server "$port" >/dev/null || true
   done
   trap - EXIT; trial_cleanup
   echo "R1 trial finished; synthetic cashier grants removed; owner-facing server untouched. Result: $([ $rc = 0 ] && echo PASS || echo FAIL)"; return $rc
@@ -77,8 +84,9 @@ flag_states() {
       case "$state" in kosipa-off) export KOSIPA_READ_ENABLED=false;; console-off) export CONSOLE_ENABLED=false;; store-down) export DATABASE_URL_CONSOLE="$(printf '%s' "$DATABASE_URL_CONSOLE" | sed -E 's#(//[^:]+):[^@]*@#\1:wrong-password-for-outage-test@#')";; esac
       nohup pnpm exec next start -H 127.0.0.1 -p "$port" > "/tmp/kkisi-devlocal-$port.log" 2>&1 & )
     for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$port/login" && break; sleep 0.5; done
+    record_server "$port" || die "could not record ownership of the throw-away server on :$port"
     node scripts/lib/dev-local-flag-states.mjs "http://127.0.0.1:$port" "$state" || rc=1
-    local p; p="$(pid_on "$port")"; [ -n "$p" ] && kill "$p"; sleep 1
+    stop_server "$port" >/dev/null || true
   done
   echo "flag-state checks finished; owner-facing server untouched. Result: $([ $rc = 0 ] && echo PASS || echo FAIL)"; return $rc
 }
@@ -87,11 +95,13 @@ case "${1:-}" in
   flag-states) flag_states ;;
   seed-products) seed_products "${2:-1}" ;;
   start) case "${2:-prod}" in prod) launch prod "$PROD_PORT";; dev) launch dev "$DEV_PORT";; *) die "start prod|dev";; esac ;;
-  stop) for p in $PROD_PORT $DEV_PORT; do pid="$(pid_on "$p")"; [ -n "$pid" ] && kill "$pid" && echo "stopped :$p (pid $pid)"; done; true ;;
-  status) for p in $PROD_PORT $DEV_PORT; do pid="$(pid_on "$p")"; if [ -n "$pid" ]; then echo ":$p running (pid $pid) http=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$p/login") -> http://127.0.0.1:$p/login"; else echo ":$p stopped"; fi; done ;;
+  stop) rc=0; case "${2:-all}" in all) for p in $PROD_PORT $DEV_PORT; do stop_server "$p" || { [ $? -eq 2 ] && [ "$(server_state "$p")" = foreign ] || rc=2; }; done;; prod) stop_server "$PROD_PORT" || rc=$?;; dev) stop_server "$DEV_PORT" || rc=$?;; *) die "stop [prod|dev]";; esac; exit $rc ;;
+  restart) m="${2:-prod}"; case "$m" in prod) p=$PROD_PORT;; dev) p=$DEV_PORT;; *) die "restart prod|dev";; esac; stop_server "$p" || die "not restarting: :$p could not be stopped safely"; launch "$m" "$p" ;;
+  adopt) case "${2:-}" in prod) adopt_server "$PROD_PORT";; dev) adopt_server "$DEV_PORT";; *) die "adopt prod|dev";; esac ;;
+  status) for p in $PROD_PORT $DEV_PORT; do status_line "$p"; done ;;
   links) need; port="$PROD_PORT"; [ -n "$(pid_on "$port")" ] || port="$DEV_PORT"; node scripts/lib/dev-local-links.mjs "http://127.0.0.1:$port" ;;
   reset)
-    "$0" stop || true
+    "$0" stop prod || true   # only the production-mode server this script owns; a next dev server (:3201) is never stopped by a reset
     export E2E_FIXTURE="$PWD/.e2e-fixture.json"
     node --experimental-strip-types --env-file=.env.local --env-file=.env.e2e scripts/e2e-cleanup.mjs >/dev/null
     node --experimental-strip-types --env-file=.env.e2e scripts/e2e-seed.mjs >/dev/null

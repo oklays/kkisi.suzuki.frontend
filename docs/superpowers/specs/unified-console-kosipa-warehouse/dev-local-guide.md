@@ -22,7 +22,9 @@ bash scripts/dev-local.sh links          # pasang ulang tautan KOSIPA (perlu set
 bash scripts/dev-local.sh seed-products   # OPSIONAL: salin katalog produk saja (5.125 barang cabang 1 salinan 30 Sep) ke SYNTH BRANCH 1; ulangi setelah setiap reset (atau: reset --with-products)
 bash scripts/dev-local.sh flag-states    # KOSIPA nonaktif / console nonaktif / store console mati, di instance sementara :3202 (server utama tidak disentuh)
 bash scripts/dev-local.sh r1-trial       # uji kebijakan landing R1 di instance sementara :3202 (peran kasir sintetis diberi izin manajemen sementara, lalu dikembalikan); server utama tidak disentuh
-bash scripts/dev-local.sh stop           # menghentikan server DEV LOCAL (tidak menyentuh server lain)
+bash scripts/dev-local.sh stop [prod|dev]  # menghentikan HANYA server yang dijalankan dan dicatat skrip ini (pid + waktu mulai + folder diverifikasi); server lain di :3200/:3201, mis. next dev Anda sendiri, tidak disentuh
+bash scripts/dev-local.sh restart [prod|dev]  # stop aman lalu start
+bash scripts/dev-local.sh adopt prod|dev   # eksplisit: catat server yang dijalankan versi lama skrip agar bisa dikelola
 ```
 
 Setelah ada perubahan kode: `pnpm build` di root repository, lalu `scripts/dev-local.sh stop && scripts/dev-local.sh start`.
@@ -100,3 +102,7 @@ Struktur menu KOSIPA (nyata, bukan rencana):
 Rekonsiliasi payroll dan detail anggota/pinjaman dicapai dari halaman induknya (butuh nomor dokumen/ID), bukan dari sidebar.
 
 Verifikasi otomatis di server yang berjalan (tanpa reset, tanpa mengubah data uji): `PLAYWRIGHT_MODULE=… node tests/console-kosipa-nav-browser.mjs` (12 pemeriksaan: sidebar nyata, submenu, setiap tujuan, status aktif, breadcrumb, refresh, tautan mati, laci ponsel, ekspor, akun lain, `SELF_LINK`) dan `bash scripts/dev-local.sh flag-states`. `OWNER_UAT_ONLY=A,C,D node tests/owner-uat-walkthrough-browser.mjs` menjalankan walkthrough hanya untuk bagian yang tidak menulis transaksi.
+
+## 10. Keamanan pengelolaan proses (checkpoint 16)
+
+Sebelumnya `stop` mematikan siapa pun yang mendengarkan :3200 dan :3201, sehingga `next dev` milik pengembang di :3201 ikut mati (terjadi sekali pada sesi checkpoint 16). Kini skrip hanya menghentikan server yang **ia sendiri jalankan** dan catat di `apps/web/.dev-local-run/<port>.rec` (diabaikan Git): pid, waktu mulai proses, dan folder aplikasi. Port, nama proses, atau file pid yang basi tidak pernah cukup untuk mematikan sesuatu; kasus yang meragukan dibiarkan dan dilaporkan. `status` menandai server yang tidak dikelola ("NOT managed"). `reset` hanya menghentikan server mode produksi yang dimilikinya. Server yang dijalankan versi lama skrip tidak punya catatan: gunakan `adopt prod` / `adopt dev` hanya jika memang Anda yang menjalankannya dari skrip ini. Diuji: `tests/dev-local-process.test.mjs` (server palsu pada port acak: server independen tetap hidup, catatan basi, pid dipakai ulang, folder/perintah berbeda, adopsi, penghentian tak terduga) dan pada proses nyata (restart :3200 dengan pid :3201 tidak berubah).

@@ -2,6 +2,8 @@
 
 **Not pushed, not deployed.** Release needs a separate written authorisation from the owner.
 
+> **Checkpoint 16 addendum (measured 20 Oct 2026).** Since this plan was written, `origin/master` and `origin/master-dev` were fast-forwarded to `da664297`, which already contains the login fix (`87e2ee8f`, `861b234b`) together with the whole flag-gated Unified Console. `git merge-tree master hotfix/login-credential-exposure` yields a tree **identical to master's**, i.e. merging the hotfix into current master is a no-op. The hotfix branch is still the correct, minimal artefact **if production runs the old master line** (image built before the console, base `81dab9ed`); if the next production image is built from current `master` the fix is already in it. **Decision needed: which commit/image tag does production run today?** Everything below (diff review, tests, post-deployment checks, rollback, exposure handling) remains valid. It is still not to be merged into the feature branch as a substitute for its own release path. See `git-integration-readiness.md` §6.
+
 ## 1. Why a separate hotfix
 
 The defect (credentials in the URL when the login form is submitted before hydration) exists in every deployed build that contains the Next.js login form. The fix lives on `feat/unified-console` in commits `87e2ee8f` and `861b234b`. **Neither commit can be cherry-picked as is:**

@@ -839,3 +839,30 @@ Owner acceptance (checklist section G is empty on the owner side), staging or pr
 ### Remaining blockers (unchanged)
 
 O1/O5 official balances and parity, O3 real roles, O4 connection evidence, D5 payroll branch mapping, D1–D4/D6 business rules, Gudang schema and D7/W5, B4/B9 writer ownership and cutover.
+
+---
+
+## Checkpoint 16b — DEV LOCAL stabilisation, prefetch review and integration readiness (20 Oct 2026)
+
+**Owner decision in force: no push, no merge.** Nothing was pushed, merged or deployed.
+
+### A. DEV LOCAL process safety
+*Root cause:* `stop` signalled whoever listened on :3200 and :3201 (`lsof` by port); a `next dev` on :3201 that the script had not started was killed once. *Fix:* `scripts/lib/dev-local-proc.sh`: a server is stoppable only if the tooling started it (or the user ran `adopt`) and its record (`.dev-local-run/<port>.rec`: pid, start time, directory) still matches pid + start time + a `next` command line + the application directory. Port, name or a stale pid file never authorise a kill; ambiguous cases are left alone and reported; SIGKILL only after re-verifying identity; `reset` stops only the production-mode server it owns; throw-away :3202 servers use the same mechanism. Commands: `stop [prod|dev]`, `restart [prod|dev]`, `adopt prod|dev`, `status` (marks unmanaged servers). *Evidence:* `tests/dev-local-process.test.mjs` (5 tests on fake servers at random ports: independent server survives, stale record, pid reuse, other directory / non-next process, adopt, no broad kill) and real processes: `restart prod` changed the :3200 pid while the :3201 pid stayed identical; `stop` stopped :3200 and reported :3201 as not managed.
+
+### B. POS / console prefetch review
+After a closer look the earlier test change is correct and narrow. With the console flag on, the POS shell links to `/console`; Next.js prefetches it (`GET /console?_rsc=…`). The assertion allows exactly that: GET, path exactly `/console`, `_rsc` query. Security impact verified on the running server (`console-kosipa-nav-browser` N13): an anonymous prefetch of `/console`, `/console/kosipa/payroll`, `/console/kosipa/anggota` and `/pos` answers 307 to `/login`; authenticated cashier and read-only staff prefetches of KOSIPA routes return the loading shell with no member, loan or payroll data (8 responses checked); pages are `force-dynamic` and data is read only on the real render behind the guard. No authentication or authorisation defect found; no security assertion was weakened. Unexplained: why the same file passed at checkpoint 15 (the unmodified base commit fails identically today).
+
+### C. KOSIPA navigation re-verified (production-mode DEV LOCAL, data not reset)
+`console-kosipa-nav-browser.mjs` 13/13; read-only walkthrough sections A, C, D 32/32; `dev-local.sh flag-states` PASS (KOSIPA off, console off, console store down). Accounts: `synth_koperasi`, `synth_kasir2`, `synth_admin`, `synth_kasir1` (`synth_off` refused). `synth_admin` unlinked and `SELF_LINK` intact.
+
+### D. Owner UAT package
+`kosipa-owner-walkthrough.md` (12-step order mapped to checklist rows) plus checklist section G (G1–G10) and defect register D-001. All owner cells remain empty; acceptance: none.
+
+### E. Git integration readiness
+`git-integration-readiness.md`. Key findings: origin/master and master-dev already contain the console (flags default off); only small commits are unpushed; the login fix is already inside current master and merging the hotfix is a no-op (tree identical) — the minimal hotfix is still the right artefact only if production runs the old master line, so the operator must say which image tag runs; two review items (tracked legacy security list, production hosting identifiers in an example env).
+
+### Verification
+lint 0 errors / 4 warnings (baseline), typecheck OK, build OK, domain 142, application 139, web 344 pass (+76 opt-in skipped), 0 fail. Browser/UAT: nav 13/13, walkthrough A/C/D 32/32, flag-states PASS. `scripts/uat-run.sh` (8 phases) last passed in full at checkpoint 16 before the process-tooling change; no application code changed since, so it was not repeated.
+
+### Not claimed
+Owner acceptance, staging or production readiness, official financial figures, any financial or Warehouse writer, R1/D5/D7 approvals, hotfix release.
