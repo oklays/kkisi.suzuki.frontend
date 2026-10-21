@@ -23,7 +23,7 @@ export function ConsolePreview() {
       <div className="lp-monitor-frame">
         <div className="lp-cp">
           <aside className="lp-cp-side">
-            <div className="lp-cp-brand"><Image className="lp-cp-logo" src="/illustrations/new-landscape-logo.jpeg" width={443} height={185} unoptimized alt="" /></div>
+            <div className="lp-cp-brand"><Image className="lp-cp-logo" src="/illustrations/new-landscape-logo.jpeg" width={1024} height={355} unoptimized alt="" /></div>
             <ul>
               {NAV.map(({ icon: Icon, label, active }) => (
                 <li key={label} className={active ? "is-active" : undefined}><Icon strokeWidth={2} /><span>{label}</span></li>

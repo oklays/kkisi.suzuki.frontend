@@ -8,8 +8,8 @@ export function LandingHeader({ linkHome = false }: { linkHome?: boolean }) {
       <Image
         className="lp-logo"
         src="/illustrations/new-landscape-logo.jpeg"
-        width={443}
-        height={185}
+        width={1024}
+        height={355}
         sizes="(min-width: 1440px) 176px, (min-width: 768px) 12vw, 84px"
         alt="SMART KKISI Tambun 2"
         unoptimized

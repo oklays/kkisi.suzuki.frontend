@@ -22,7 +22,7 @@ export default function LoginPage() {
       </section>
       <section className="login-panel" aria-label="Form masuk">
         <div className="login-panel-content">
-          <Image className="login-brand" src="/illustrations/new-landscape-logo.jpeg" width={443} height={185} unoptimized preload alt="SMART KKISI Tambun 2" />
+          <Image className="login-brand" src="/illustrations/new-landscape-logo.jpeg" width={1024} height={355} unoptimized preload alt="SMART KKISI Tambun 2" />
           {/* Without a valid `next`: console on -> /console decides (cashiers continue to /pos); console off -> /pos as before. */}
           <LoginForm fallback={consoleEnabled() ? "/console?entry=login" : "/pos"} />
         </div>
