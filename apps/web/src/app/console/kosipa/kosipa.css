@@ -153,3 +153,1082 @@
 .kosipa-feedback-state > svg { color:#7185a8; }
 .kosipa-feedback-state[role="alert"] > svg { color:#b33b30; }
 .kosipa-module .kosipa-feedback-state > .kosipa-button-secondary { background:white; color:var(--c-blue); border:1px solid #c9d5e8; font-size:12px; }
+
+/* ============================================================================
+   LAPORAN KOSIPA — COOPERATIVE REPORT CENTER (1599 x 984 REFERENCE FIDELITY)
+   ============================================================================ */
+.kosipa-module:has(.kosipa-rc) .kosipa-environment {
+  margin-bottom: 10px !important;
+  padding: 7px 12px;
+}
+
+.kosipa-module .console-page.kosipa-rc-page {
+  max-width: none;
+  gap: 0;
+}
+
+.kosipa-rc {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+/* 1. Hero Section */
+.kosipa-rc-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+}
+
+.kosipa-rc-hero-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.kosipa-rc-eyebrow {
+  margin: 0 0 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #155eef;
+  line-height: 1.3;
+}
+
+.kosipa-rc-eyebrow-sep {
+  color: #93c5fd;
+  font-weight: 500;
+}
+
+.kosipa-rc-hero-copy h1 {
+  margin: 0 0 5px;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+}
+
+.kosipa-rc-subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.48;
+  color: #64748b;
+  max-width: 74ch;
+}
+
+.kosipa-rc-hero-banner {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px 8px 8px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #e3eeff 0%, #f1f6ff 55%, #dbeafe 100%);
+  border: 1px solid #dbe7fe;
+  min-width: 356px;
+  max-width: 390px;
+  height: 102px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px -6px rgba(21, 94, 239, 0.12);
+}
+
+.kosipa-rc-hero-art {
+  width: 152px;
+  height: 92px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kosipa-rc-hero-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.kosipa-rc-hero-tagline {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.kosipa-rc-hero-tagline p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.kosipa-rc-hero-accent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kosipa-rc-hero-accent-main {
+  width: 34px;
+  height: 5px;
+  border-radius: 99px;
+  background: #2563eb;
+}
+
+.kosipa-rc-hero-accent-sub {
+  width: 12px;
+  height: 5px;
+  border-radius: 99px;
+  background: #bfdbfe;
+}
+
+/* 2. KPI Summary Grid */
+.kosipa-rc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+  min-width: 0;
+}
+
+.kosipa-rc-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e6ecf5;
+  border-radius: 14px;
+  padding: 13px 16px;
+  box-shadow: 0 2px 10px -4px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 7px;
+  min-width: 0;
+}
+
+.kosipa-rc-kpi-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.kosipa-rc-kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.kosipa-rc-kpi-icon.is-blue {
+  background: #edf4ff;
+  color: #155eef;
+}
+
+.kosipa-rc-kpi-icon.is-green {
+  background: #e6f8ef;
+  color: #0f9f5c;
+}
+
+.kosipa-rc-kpi-icon.is-red {
+  background: #ffedeb;
+  color: #e11d48;
+}
+
+.kosipa-rc-kpi-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.kosipa-rc-kpi-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  line-height: 1.3;
+}
+
+.kosipa-rc-kpi-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kosipa-rc-kpi-sub {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.kosipa-rc-kpi-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-left: 54px;
+  min-width: 0;
+}
+
+.kosipa-rc-trend {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.kosipa-rc-trend.is-up {
+  background: #e7f8ef;
+  color: #15803d;
+}
+
+.kosipa-rc-trend.is-warn {
+  background: #ffedeb;
+  color: #dc2626;
+}
+
+.kosipa-rc-trend-note {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 3. Main Two-Column Grid */
+.kosipa-rc-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 13px;
+  align-items: start;
+  min-width: 0;
+}
+
+.kosipa-rc-primary-col,
+.kosipa-rc-secondary-col {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  min-width: 0;
+}
+
+.kosipa-rc-panel {
+  background: #ffffff;
+  border: 1px solid #e6ecf5;
+  border-radius: 15px;
+  padding: 15px 17px;
+  box-shadow: 0 2px 10px -4px rgba(15, 23, 42, 0.05);
+  min-width: 0;
+}
+
+/* Akses Cepat Laporan */
+.kosipa-rc-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.kosipa-rc-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.kosipa-rc-section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #edf4ff;
+  color: #155eef;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.kosipa-rc-section-title-wrap h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.kosipa-rc-section-title-wrap p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.38;
+}
+
+.kosipa-rc-see-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #dbe7fe;
+  background: #f2f7ff;
+  color: #155eef;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.kosipa-rc-see-all-btn:hover {
+  background: #e5effe;
+  border-color: #bfd4fe;
+}
+
+.kosipa-rc-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+  min-width: 0;
+}
+
+.kosipa-rc-report-card {
+  border: 1px solid #e8eef7;
+  border-radius: 12px;
+  padding: 12px 13px;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.kosipa-rc-report-card:hover {
+  border-color: #bfd4fe;
+  box-shadow: 0 6px 16px -8px rgba(21, 94, 239, 0.14);
+}
+
+.kosipa-rc-report-card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  height: 100%;
+}
+
+.kosipa-rc-report-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.kosipa-rc-report-icon.is-blue {
+  background: #edf4ff;
+  color: #155eef;
+}
+
+.kosipa-rc-report-icon.is-green {
+  background: #e6f8ef;
+  color: #0f9f5c;
+}
+
+.kosipa-rc-report-icon.is-purple {
+  background: #f3eefe;
+  color: #7c3aed;
+}
+
+.kosipa-rc-report-icon.is-orange {
+  background: #fff4e5;
+  color: #ea580c;
+}
+
+.kosipa-rc-report-icon.is-red {
+  background: #ffedeb;
+  color: #e11d48;
+}
+
+.kosipa-rc-report-icon.is-teal {
+  background: #e6f7f5;
+  color: #0d9488;
+}
+
+.kosipa-rc-report-copy {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.kosipa-rc-report-copy h3 {
+  margin: 0 0 3px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.3;
+  color: #0f172a;
+}
+
+.kosipa-rc-report-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.kosipa-rc-report-title-link:hover {
+  color: #155eef;
+}
+
+.kosipa-rc-report-copy p {
+  margin: 0 0 9px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #64748b;
+  flex: 1;
+}
+
+.kosipa-rc-report-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 27px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: #edf4ff;
+  color: #155eef;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.kosipa-rc-report-cta:hover {
+  background: #dbeafe;
+  color: #0b46c4;
+}
+
+/* Bottom Analytics Row */
+.kosipa-rc-analytics-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.95fr) minmax(225px, 1fr);
+  gap: 13px;
+  min-width: 0;
+}
+
+.kosipa-rc-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.kosipa-rc-chart-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+}
+
+.kosipa-rc-chart-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #edf4ff;
+  color: #155eef;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.kosipa-rc-chart-title-group h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.kosipa-rc-chart-title-group p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.kosipa-rc-year-select-wrap {
+  flex-shrink: 0;
+}
+
+.kosipa-rc-year-select {
+  height: 30px;
+  padding: 0 26px 0 10px;
+  border-radius: 8px;
+  border: 1px solid #dbe3ef;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kosipa-rc-bar-chart {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 6px;
+  align-items: stretch;
+  padding-top: 4px;
+  min-width: 0;
+}
+
+.kosipa-rc-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  font-size: 10px;
+  color: #94a3b8;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  height: 138px;
+}
+
+.kosipa-rc-bars-stage {
+  position: relative;
+  height: 138px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kosipa-rc-gridlines {
+  position: absolute;
+  inset: 0 0 20px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.kosipa-rc-gridlines span {
+  display: block;
+  width: 100%;
+  border-bottom: 1px dashed #eef2f7;
+}
+
+.kosipa-rc-bars-columns {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  height: 100%;
+  min-width: 0;
+}
+
+.kosipa-rc-bar-col {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+}
+
+.kosipa-rc-bar-tooltip {
+  position: absolute;
+  bottom: calc(100% - 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+  pointer-events: none;
+}
+
+.kosipa-rc-bar-stack {
+  width: 100%;
+  max-width: 24px;
+  height: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 4px 4px 2px 2px;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.kosipa-rc-seg {
+  display: block;
+  width: 100%;
+  min-height: 3px;
+  transition: opacity 0.15s ease;
+}
+
+.kosipa-rc-seg.is-pinjaman {
+  background: #0b52ea;
+}
+
+.kosipa-rc-seg.is-payroll {
+  background: #2e74ff;
+}
+
+.kosipa-rc-seg.is-simpanan {
+  background: #60a5fa;
+}
+
+.kosipa-rc-seg.is-keanggotaan {
+  background: #bfdbfe;
+  border-radius: 3px 3px 0 0;
+}
+
+.kosipa-rc-bar-label {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.kosipa-rc-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+  padding-top: 6px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.kosipa-rc-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kosipa-rc-chart-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2.5px;
+  display: inline-block;
+}
+
+.kosipa-rc-chart-legend i.is-pinjaman {
+  background: #0b52ea;
+}
+
+.kosipa-rc-chart-legend i.is-payroll {
+  background: #2e74ff;
+}
+
+.kosipa-rc-chart-legend i.is-simpanan {
+  background: #60a5fa;
+}
+
+.kosipa-rc-chart-legend i.is-keanggotaan {
+  background: #bfdbfe;
+}
+
+/* Distribusi Laporan Donut */
+.kosipa-rc-donut-wrap {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  margin: 4px auto 10px;
+  display: grid;
+  place-items: center;
+}
+
+.kosipa-rc-donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-15deg);
+}
+
+.kosipa-rc-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.kosipa-rc-donut-center span {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.kosipa-rc-donut-center strong {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.kosipa-rc-dist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.kosipa-rc-dist-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.kosipa-rc-dist-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kosipa-rc-dist-name i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kosipa-rc-dist-pct {
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.kosipa-rc-dist-count {
+  color: #64748b;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Right Column: Filter Cepat & Laporan Terbaru */
+.kosipa-rc-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.kosipa-rc-side-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kosipa-rc-side-title h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.kosipa-rc-text-btn {
+  border: 0;
+  background: transparent;
+  color: #155eef;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.kosipa-rc-text-btn:hover {
+  text-decoration: underline;
+}
+
+.kosipa-rc-filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kosipa-rc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kosipa-rc-field-label {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #334155;
+}
+
+.kosipa-rc-select-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #dbe3ef;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #64748b;
+}
+
+.kosipa-rc-select-box:focus-within {
+  border-color: #155eef;
+  box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
+}
+
+.kosipa-rc-select-box select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.kosipa-rc-apply-btn {
+  margin-top: 2px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: #155eef;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px -4px rgba(21, 94, 239, 0.45);
+  transition: background 0.15s ease;
+}
+
+.kosipa-rc-apply-btn:hover {
+  background: #0b46c4;
+}
+
+/* Laporan Terbaru */
+.kosipa-rc-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.kosipa-rc-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  min-width: 0;
+}
+
+.kosipa-rc-recent-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.kosipa-rc-recent-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #edf4ff;
+  color: #155eef;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.kosipa-rc-recent-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kosipa-rc-recent-copy strong {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kosipa-rc-recent-copy small {
+  font-size: 10.5px;
+  color: #64748b;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kosipa-rc-format-badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+  flex-shrink: 0;
+}
+
+.kosipa-rc-format-badge.is-green {
+  background: #e6f8ef;
+  color: #0f9f5c;
+}
+
+.kosipa-rc-format-badge.is-red {
+  background: #ffedeb;
+  color: #e11d48;
+}
+
+.kosipa-rc-recent-more {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: #94a3b8;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.kosipa-rc-recent-more:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1280px) {
+  .kosipa-rc-main-grid {
+    grid-template-columns: minmax(0, 1fr) 268px;
+  }
+  .kosipa-rc-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kosipa-rc-analytics-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .kosipa-rc-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kosipa-rc-hero-banner {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+  .kosipa-rc-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kosipa-rc-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .kosipa-rc-hero-copy h1 {
+    font-size: 24px;
+  }
+  .kosipa-rc-hero-banner {
+    height: auto;
+    padding: 10px 14px;
+  }
+  .kosipa-rc-hero-art {
+    width: 112px;
+    height: 76px;
+  }
+  .kosipa-rc-kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kosipa-rc-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .kosipa-rc-cards-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kosipa-rc-bars-columns {
+    gap: 3px;
+  }
+  .kosipa-rc-bar-label {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kosipa-rc-report-card,
+  .kosipa-rc-report-cta,
+  .kosipa-rc-see-all-btn,
+  .kosipa-rc-apply-btn,
+  .kosipa-rc-seg {
+    transition: none;
+  }
+}
