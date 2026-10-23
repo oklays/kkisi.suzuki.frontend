@@ -20,6 +20,7 @@
     "./console/capabilities": "./src/console/capabilities.ts",
     "./console/navigation": "./src/console/navigation.ts",
     "./kosipa": "./src/kosipa/index.ts",
+    "./kosipa/savings-application": "./src/kosipa/savings-application.ts",
     "./console/kosipa-access": "./src/console/kosipa-access.ts",
     "./console/identity-link": "./src/console/identity-link.ts",
     "./console/role-config": "./src/console/role-config.ts",

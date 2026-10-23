@@ -25,6 +25,7 @@
     "./kosipa/payroll": "./src/kosipa/payroll.ts",
     "./kosipa/loans": "./src/kosipa/loans.ts",
     "./kosipa/savings": "./src/kosipa/savings.ts",
+    "./kosipa/public-savings": "./src/kosipa/public-savings.ts",
     "./kosipa/reports": "./src/kosipa/reports.ts",
     "./kosipa/report-export": "./src/kosipa/report-export.ts",
     "./kosipa/reports-ops": "./src/kosipa/reports-ops.ts"
