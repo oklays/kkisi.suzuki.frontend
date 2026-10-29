@@ -1,3 +1,4 @@
+import {publicSavingsStagingEnabled} from '../../features/public-savings/flags.ts';
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -18,7 +19,7 @@ export function validateStagingConfig(input: unknown): StagingConfig {
 }
 export const localDirectory=()=>path.resolve(process.env.PSS_LOCAL_DIRECTORY || (process.cwd().endsWith(`${path.sep}apps${path.sep}web`)?'../../.local/public-savings':'.local/public-savings'));
 export async function loadStagingConfig():Promise<StagingConfig> {
-  if(process.env.PSS_LOCAL_STAGING!=='1') throw new Error('ACTIVATION_BLOCKED');
+  if(!publicSavingsStagingEnabled()) throw new Error('ACTIVATION_BLOCKED');
   const file=path.join(localDirectory(),'config.json');
   if((await stat(file)).mode & 0o077) throw new Error('STAGING_CONFIGURATION_INVALID');
   return validateStagingConfig(JSON.parse(await readFile(file,'utf8')));

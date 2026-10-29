@@ -1679,7 +1679,7 @@
     },
     {
       "ordinal": 93,
-      "baselineTapNumber": 423,
+      "baselineTapNumber": 434,
       "name": "encrypted synthetic backup restores SQL rows, artifact bytes and key relationship into a sibling database",
       "file": "apps/web/tests/public-savings-recovery.test.mjs",
       "gates": [
@@ -1696,7 +1696,7 @@
     },
     {
       "ordinal": 94,
-      "baselineTapNumber": 501,
+      "baselineTapNumber": 512,
       "name": "SQL privilege compatibility: the least-privilege grants refuse everything but the contract; ON DUPLICATE KEY UPDATE is incompatible with them",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1714,7 +1714,7 @@
     },
     {
       "ordinal": 95,
-      "baselineTapNumber": 502,
+      "baselineTapNumber": 513,
       "name": "one transaction: idempotency row + legacy ledger row + stock cache; the posting SURVIVES the legacy recompute, a cache-only increment does not",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1732,7 +1732,7 @@
     },
     {
       "ordinal": 96,
-      "baselineTapNumber": 503,
+      "baselineTapNumber": 514,
       "name": "retry after a successful commit changes nothing; a reused event key with a different payload is rejected and changes nothing",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1750,7 +1750,7 @@
     },
     {
       "ordinal": 97,
-      "baselineTapNumber": 504,
+      "baselineTapNumber": 515,
       "name": "an item under stock opname (status_so = 1) or an unknown item/branch is refused and nothing is written; a failure before the posting row rolls everything back",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1768,7 +1768,7 @@
     },
     {
       "ordinal": 98,
-      "baselineTapNumber": 505,
+      "baselineTapNumber": 516,
       "name": "concurrency with the POS checkout statement: duplicate deliveries from three writers post once, concurrent sales and postings keep cache = ledger-derived stock",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1786,7 +1786,7 @@
     },
     {
       "ordinal": 99,
-      "baselineTapNumber": 514,
+      "baselineTapNumber": 525,
       "name": "database constraints refuse what the application would also refuse (and what a bug might attempt)",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1804,7 +1804,7 @@
     },
     {
       "ordinal": 100,
-      "baselineTapNumber": 515,
+      "baselineTapNumber": 526,
       "name": "repositories keep the port contracts: persisted aggregates round-trip, replays are idempotent, concurrent writers are serialised",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1822,7 +1822,7 @@
     },
     {
       "ordinal": 101,
-      "baselineTapNumber": 516,
+      "baselineTapNumber": 527,
       "name": "outbox + posting side: durable, idempotent, atomic; crash, duplicate delivery, conflict, concurrent consumers and dead letters behave as specified",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1840,7 +1840,7 @@
     },
     {
       "ordinal": 102,
-      "baselineTapNumber": 517,
+      "baselineTapNumber": 528,
       "name": "database outbox (rehearsal): StockOutbox contract — insert-if-absent, immutable content, deterministic bounded order, compare-and-set transitions",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1858,7 +1858,7 @@
     },
     {
       "ordinal": 103,
-      "baselineTapNumber": 518,
+      "baselineTapNumber": 529,
       "name": "database applier (rehearsal): StockApplier contract — idempotent by intent key, independent keys add up exactly, nothing is half-applied",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1876,7 +1876,7 @@
     },
     {
       "ordinal": 104,
-      "baselineTapNumber": 519,
+      "baselineTapNumber": 530,
       "name": "close the shared contract client",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1894,7 +1894,7 @@
     },
     {
       "ordinal": 105,
-      "baselineTapNumber": 520,
+      "baselineTapNumber": 531,
       "name": "outbox -> ledger-based TOKO applier: posted once, redelivery acknowledged, stock survives the legacy recompute, reconciliation consistent",
       "file": "apps/web/tests/warehouse-toko-applier-db.test.mjs",
       "gates": [
@@ -1913,7 +1913,7 @@
     },
     {
       "ordinal": 106,
-      "baselineTapNumber": 521,
+      "baselineTapNumber": 532,
       "name": "acknowledgement lost after the TOKO commit (TCP reply dropped): the retry is an acknowledgement, the ledger and stock move once",
       "file": "apps/web/tests/warehouse-toko-applier-db.test.mjs",
       "gates": [

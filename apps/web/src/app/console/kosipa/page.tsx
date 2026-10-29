@@ -5,7 +5,8 @@ import { ArrowRight } from 'lucide-react';
 import { nestNavigation, visibleNavigation } from '@koperasi/domain/console/navigation';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { CONSOLE_ICONS } from '@/components/console/icons';
-import { CONSOLE_NAVIGATION } from '@/features/console/navigation';
+import { CONSOLE_NAVIGATION, deployedNavigation } from '@/features/console/navigation';
+import { publicSavingsConsoleEnabled } from '@/features/public-savings/flags';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import { kosipaServices } from '@/infrastructure/console/services';
@@ -21,7 +22,7 @@ export default async function KosipaOverviewPage() {
   if (!consoleEnabled()) notFound();
   const auth = await requireConsoleSession({ next: '/console/kosipa' });
   if (auth.kind !== 'ok') return null;
-  const nodes = nestNavigation((visibleNavigation(CONSOLE_NAVIGATION, auth.capabilities).find((g) => g.section === 'kosipa')?.items ?? []).filter((i) => i.id !== 'kosipa-overview'));
+  const nodes = nestNavigation((visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled()), auth.capabilities).find((g) => g.section === 'kosipa')?.items ?? []).filter((i) => i.id !== 'kosipa-overview'));
   if (nodes.length === 0) return <KosipaNotice state={auth.kosipa === 'linked' ? 'linked' : auth.kosipa} />;
   if (!kosipaServices()) return <KosipaNotice state="unavailable" />;
   const reports = nodes.find((n) => n.entry.id === 'kosipa-reports')?.children ?? [];

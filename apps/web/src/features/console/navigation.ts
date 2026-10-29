@@ -56,6 +56,11 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'settings-identity', section: 'settings', label: 'Tautan Akun KOSIPA', href: '/console/settings/identitas', order: 1, anyOf: ['iam.link.manage'], readiness: 'available', icon: 'identity', description: 'Tautkan akun console ke akun KOSIPA' },
 ];
 
+/** Registry minus entries whose deployment flag is off. The flag is read by the caller (server side); every page still enforces its own gate. */
+export function deployedNavigation(publicSavingsConsole: boolean): readonly ConsoleNavEntry[] {
+  return publicSavingsConsole ? CONSOLE_NAVIGATION : CONSOLE_NAVIGATION.filter((e) => e.id !== 'kosipa-public-savings');
+}
+
 /** Dashboard module cards: which sections form a module and how it is described. */
 export const CONSOLE_MODULES: readonly { section: Extract<NavSection, 'toko' | 'kosipa' | 'warehouse'>; title: string; summary: string }[] = [
   { section: 'toko', title: 'TOKO & POS', summary: 'Kasir, riwayat penjualan, retur, dan katalog produk cabang.' },
