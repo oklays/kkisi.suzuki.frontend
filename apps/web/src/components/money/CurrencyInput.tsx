@@ -83,8 +83,15 @@ export function CurrencyInput({
   }
 
   function edit(raw: string, caretCount: number | null) {
-    setNote('');
     const draft = draftRupiahInput(raw, options);
+    // Never change what the user typed without saying so: a refused comma or a dropped digit must not read as a different amount.
+    const comma = raw.indexOf(',');
+    const typedDecimals = comma === -1 ? 0 : raw.slice(comma + 1).replace(/\D/g, '').length;
+    const typedInteger = (comma === -1 ? raw : raw.slice(0, comma)).replace(/\D/g, '').replace(/^0+/, '').length;
+    if (!allowDecimals && comma !== -1) setNote('Nominal harus rupiah bulat, tanpa desimal. Koma diabaikan.');
+    else if (allowDecimals && typedDecimals > maxFractionDigits) setNote(`Maksimal ${maxFractionDigits} angka di belakang koma.`);
+    else if (maxIntegerDigits !== undefined && typedInteger > maxIntegerDigits) setNote(`Maksimal ${maxIntegerDigits} digit.`);
+    else setNote('');
     commit(draft.text, draft.canonical, caretCount);
   }
 
@@ -114,10 +121,11 @@ export function CurrencyInput({
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const element = event.currentTarget;
-    if (event.key === '.') {
+    if (event.key === '.' || (event.key === ',' && !allowDecimals)) {
       // Dots are only ever added by the grouping; a typed dot is a decimal separator for people used to a US keypad.
       event.preventDefault();
       if (allowDecimals) replaceSelection(',', false);
+      else setNote('Nominal harus rupiah bulat, tanpa desimal.');
       return;
     }
     const at = element.selectionStart;
