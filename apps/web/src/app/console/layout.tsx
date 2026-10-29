@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { visibleNavigation } from '@koperasi/domain/console/navigation';
 import { ConsoleFrame, type ConsoleNavGroup } from '@/components/console/ConsoleFrame';
-import { CONSOLE_NAVIGATION, SECTION_LABELS } from '@/features/console/navigation';
+import { deployedNavigation, SECTION_LABELS } from '@/features/console/navigation';
+import { publicSavingsConsoleEnabled } from '@/features/public-savings/flags';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import './console.css';
@@ -28,7 +29,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     viewer = { userId: ctx.userId, userName: ctx.userName, branchName: company?.name ?? 'Cabang', companyId: ctx.companyId,
       canSwitchBranch: ctx.canSwitchBranch, companies, csrfToken: services.keys.csrfToken(ctx.sidHash) };
   } catch { return <Unavailable />; }
-  const groups: ConsoleNavGroup[] = visibleNavigation(CONSOLE_NAVIGATION, capabilities)
+  const groups: ConsoleNavGroup[] = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled()), capabilities)
     .map((g) => ({ section: g.section, label: SECTION_LABELS[g.section], items: g.items }));
   return <ConsoleFrame key={`${ctx.userId}:${ctx.companyId}`} groups={groups} viewer={viewer}>{children}</ConsoleFrame>;
 }

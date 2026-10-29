@@ -13,8 +13,29 @@ const rel = (p) => relative(ROOT, p);
 const PUBLIC_ROUTES = new Set(['src/app/api/auth/login/route.ts', 'src/app/api/auth/logout/route.ts']);
 // Public pages: the login form, the landing page and the member "Segera Hadir" page. The last two are static and
 // must never read data or sessions (enforced below).
-const PUBLIC_PAGES = new Set(['src/app/login/page.tsx', 'src/app/page.tsx', 'src/app/anggota/page.tsx']);
-const STATIC_PUBLIC = ['src/app/page.tsx', 'src/app/anggota/page.tsx'];
+const PUBLIC_PAGES = new Set(['src/app/login/page.tsx', 'src/app/page.tsx', 'src/app/anggota/page.tsx', 'src/app/simpanan-sukarela/page.tsx', 'src/app/simpanan-sukarela/operator/page.tsx']);
+const STATIC_PUBLIC = ['src/app/page.tsx', 'src/app/anggota/page.tsx', 'src/app/simpanan-sukarela/page.tsx', 'src/app/simpanan-sukarela/operator/page.tsx'];
+// Separate non-cookie authorization: public bearer+OTP proof, or a synthetic-local operator key.
+// Exact routes only; the dedicated adapter is checked below and its negative HTTP behavior has executable tests.
+const PSS_ROUTES = new Set([
+  'src/app/api/public/simpanan-sukarela/validate/route.ts','src/app/api/public/simpanan-sukarela/verification-challenges/route.ts',
+  'src/app/api/public/simpanan-sukarela/verification-challenges/verify/route.ts','src/app/api/public/simpanan-sukarela/submissions/route.ts',
+  'src/app/api/public/simpanan-sukarela/receipt/route.ts','src/app/api/public/simpanan-sukarela/pdf/route.ts',
+  'src/app/api/kosipa/public-savings-links/route.ts','src/app/api/kosipa/public-savings-links/members/route.ts',
+  'src/app/api/kosipa/public-savings-links/[id]/revoke/route.ts','src/app/api/kosipa/savings-applications/route.ts',
+  'src/app/api/kosipa/savings-applications/[id]/pdf/route.ts',
+]);
+function assertSavingsBoundary(source) {
+  assert.match(source,/handlePublicSavingsRequest/);
+  assert.match(source,/await loadStagingConfig\(/);
+  assert.match(source,/ORIGIN_REJECTED/);
+  assert.match(source,/sec-fetch-site/);
+  assert.match(source,/secretMatches\(/);
+  assert.match(source,/x-pss-staging-operator/);
+  assert.match(source,/authorization/);
+  assert.match(source,/x-public-proof/);
+  assert.doesNotMatch(source,/cookies\(|kkisi_sid/,'ambient management cookies cannot authorize savings requests');
+}
 
 function handlerSource(routeSource, method) {
   const out = [];
@@ -41,6 +62,7 @@ test('every API route is guarded (or explicitly public): the handler it delegate
     const src = readFileSync(file, 'utf8');
     if (PUBLIC_ROUTES.has(rel(file))) continue;
     const handlers = handlerSource(src);
+    if(PSS_ROUTES.has(rel(file))){assertSavingsBoundary(handlers);continue;}
     // `kosipaActor(` is the shared KOSIPA gate (flag -> guard() -> capabilities); its own body is verified in the next test.
     if (!/\bguard\(/.test(handlers) && !/\bguard\(/.test(src) && !/\bkosipaActor\(/.test(handlers)) unguarded.push(rel(file));
   }
@@ -66,6 +88,7 @@ test('every state-changing handler demands CSRF (guard csrf:true or its own orig
     }
   }
   for (const file of mutating) {
+    if(PSS_ROUTES.has(rel(file))){assertSavingsBoundary(handlerSource(readFileSync(file,'utf8')));continue;}
     if (PUBLIC_ROUTES.has(rel(file))) { const h = handlerSource(readFileSync(file, 'utf8')); assert.match(h, /checkOrigin\(/, `${rel(file)} must check the origin`); continue; }
     const src = readFileSync(file, 'utf8');
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {

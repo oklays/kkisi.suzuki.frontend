@@ -1,0 +1,7 @@
+# Exact observed PHP handler version, for isolated source characterization only.
+# NOT YET USED: laravel.php is not implemented. The Laravel writer is characterized only by replaying its exact
+# SQL column set (runtime.mjs, controls.test.mjs); Eloquent/controller code has not been executed.
+FROM php:8.1.34-cli
+RUN docker-php-ext-install pdo_mysql
+WORKDIR /harness
+ENTRYPOINT ["php", "-d", "display_errors=0", "-d", "log_errors=0", "/harness/laravel.php"]

@@ -40,6 +40,7 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'kosipa-report-loans', section: 'kosipa', parent: 'kosipa-reports', label: 'Pinjaman', href: '/console/kosipa/laporan/pinjaman', order: 9, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loans' },
   { id: 'kosipa-report-payroll', section: 'kosipa', parent: 'kosipa-reports', label: 'Payroll', href: '/console/kosipa/laporan/payroll', order: 10, anyOf: ['kosipa.payroll.view'], readiness: 'available', icon: 'payroll' },
   { id: 'kosipa-report-quality', section: 'kosipa', parent: 'kosipa-reports', label: 'Kualitas data', href: '/console/kosipa/laporan/kualitas-data', order: 11, anyOf: ['kosipa.loan.view', 'kosipa.payroll.view'], readiness: 'available', icon: 'quality' },
+  { id: 'kosipa-public-savings', section: 'kosipa', label: 'Pengajuan sukarela', href: '/console/kosipa/simpanan-sukarela', order: 12, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'savings', description: 'Tautan pengajuan potongan Simpanan Sukarela dan bukti PDF; pemrosesan tetap di KOSIPA CI2' },
 
   { id: 'toko-pos', section: 'toko', label: 'POS / Kasir', href: '/pos', order: 1, anyOf: ['toko.pos.checkout'], readiness: 'available', icon: 'pos', description: 'Transaksi penjualan di konter' },
   { id: 'toko-sales', section: 'toko', label: 'Riwayat Transaksi', href: '/sales', order: 2, anyOf: ['toko.sales.view'], readiness: 'available', icon: 'history', excludePrefix: '/sales/returns', description: 'Cari transaksi dan cetak ulang struk' },
@@ -54,6 +55,11 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
 
   { id: 'settings-identity', section: 'settings', label: 'Tautan Akun KOSIPA', href: '/console/settings/identitas', order: 1, anyOf: ['iam.link.manage'], readiness: 'available', icon: 'identity', description: 'Tautkan akun console ke akun KOSIPA' },
 ];
+
+/** Registry minus entries whose deployment flag is off. The flag is read by the caller (server side); every page still enforces its own gate. */
+export function deployedNavigation(publicSavingsConsole: boolean): readonly ConsoleNavEntry[] {
+  return publicSavingsConsole ? CONSOLE_NAVIGATION : CONSOLE_NAVIGATION.filter((e) => e.id !== 'kosipa-public-savings');
+}
 
 /** Dashboard module cards: which sections form a module and how it is described. */
 export const CONSOLE_MODULES: readonly { section: Extract<NavSection, 'toko' | 'kosipa' | 'warehouse'>; title: string; summary: string }[] = [

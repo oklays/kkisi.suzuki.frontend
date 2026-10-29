@@ -16,6 +16,7 @@ export default defineConfig([
       "**/*",
       "!apps/", "!apps/web/", "!apps/web/**",
       "!packages/", "!packages/**",
+      "!integration/", "!integration/public-savings/", "!integration/public-savings/**",
       "**/node_modules/**", "**/.next/**", "**/out/**", "**/build/**", "**/next-env.d.ts",
     ])],
   },
@@ -26,7 +27,7 @@ export default defineConfig([
   },
   {
     basePath: root,
-    files: ["packages/**/*.{ts,tsx,mjs}"],
+    files: ["packages/**/*.{ts,tsx,mjs}", "integration/public-savings/**/*.mjs"],
     extends: nextTs,
   },
   {
