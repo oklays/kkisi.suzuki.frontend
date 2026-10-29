@@ -6,14 +6,15 @@ import { isAbsolute, join, parse, resolve, sep } from 'node:path';
 import sharp from 'sharp';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { canonicalSnapshot, type SubmissionSnapshot } from '@koperasi/domain/kosipa/savings-snapshot';
+import { formatRupiahDocument } from '@koperasi/domain/money/rupiah';
+import { formatRupiahTerbilang } from '@koperasi/domain/money/terbilang';
+import { isPdfTemplate, LEGACY_PDF_TEMPLATE, PDF_TEMPLATES } from './pdf-templates.ts';
 
 const MAX_BYTES = 1_048_576;
 const MAX_PIXELS = MAX_BYTES / 4;
 const MAX_ARTIFACT_BYTES = 8 * MAX_BYTES;
 const MAGIC = Buffer.from('PSSART01');
 const PNG_MAGIC = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-const TEMPLATE_VERSION = 'kkisi-pss-a4/v1';
-const RENDERER_VERSION = 'pdf-lib-1.17.1/kkisi-pss-v1';
 const REF = /^pss-(signature|pdf)-[0-9a-f]{32}$/u;
 const digest = (bytes: Uint8Array | string) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 function fail(code: string): never { throw new Error(code); }
@@ -135,7 +136,11 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
   }
 
   async function renderSubmissionPdf(input: SubmissionPdfInput) {
-    if (input.templateVersion !== undefined && input.templateVersion !== TEMPLATE_VERSION) fail('PDF_TEMPLATE_UNSUPPORTED');
+    // The persisted envelope names the template; no version means the original layout. Unknown versions fail closed.
+    const templateVersion = input.templateVersion ?? LEGACY_PDF_TEMPLATE;
+    if (!isPdfTemplate(templateVersion)) fail('PDF_TEMPLATE_UNSUPPORTED');
+    const template = PDF_TEMPLATES[templateVersion];
+    const RENDERER_VERSION: string = template.renderer;
     // Copy synchronously before I/O so later caller mutations cannot change the evidence being rendered.
     const evidence = structuredClone(input);
     const { snapshot, member } = evidence;
@@ -195,8 +200,14 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
       field('Nama', member.name); field('Identitas anggota', member.maskedIdentifier); field('Bagian', member.departmentName);
       field('Jenis simpanan', snapshot.savingsType);
       section('02  PERUBAHAN POTONGAN YANG DIAJUKAN');
-      field('Potongan sebelumnya (Rp)', snapshot.originalDeduction ?? 'Belum terdaftar (pendaftaran pertama)');
-      field('Potongan yang diminta (Rp)', snapshot.requestedAmount);
+      if (template.amounts === 'raw') {
+        field('Potongan sebelumnya (Rp)', snapshot.originalDeduction ?? 'Belum terdaftar (pendaftaran pertama)');
+        field('Potongan yang diminta (Rp)', snapshot.requestedAmount);
+      } else {
+        field('Potongan sebelumnya', snapshot.originalDeduction === null ? 'Belum terdaftar (pendaftaran pertama)' : formatRupiahDocument(snapshot.originalDeduction));
+        field('Potongan yang diminta', formatRupiahDocument(snapshot.requestedAmount));
+        field('Terbilang', `${formatRupiahTerbilang(snapshot.requestedAmount)}.`);
+      }
       field('Periode yang diminta', `${String(snapshot.requestedPeriod.month).padStart(2, '0')}/${snapshot.requestedPeriod.year}`);
       wrapped('Berlaku pada siklus payroll pertama yang memenuhi syarat setelah persetujuan. Pengajuan ini belum mengubah potongan dan bukan bukti persetujuan.', 9, false, gray);
       section('03  PERSETUJUAN ANGGOTA');
@@ -213,7 +224,7 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
       page.drawImage(image, { x: margin + 10, y: y - 70, width: image.width * scale, height: image.height * scale }); y -= 90;
       section('05  VERSI DOKUMEN DAN INTEGRITAS');
       wrapped(`Kebijakan: ${snapshot.policyVersion} | Formulir: ${snapshot.formVersion} | Persetujuan: ${snapshot.consentTextVersion}`, 8);
-      wrapped(`Snapshot: ${snapshot.contractVersion} | Template: ${TEMPLATE_VERSION} | Renderer: ${RENDERER_VERSION}`, 8);
+      wrapped(`Snapshot: ${snapshot.contractVersion} | Template: ${templateVersion} | Renderer: ${RENDERER_VERSION}`, 8);
       wrapped(`SHA-256 snapshot: ${digest(canonicalSnapshot(snapshot)).slice(7)}`, 7);
       wrapped(`SHA-256 tanda tangan: ${snapshot.signature.contentDigest.slice(7)}`, 7);
       const pages = doc.getPages();
@@ -223,7 +234,7 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
       });
       pdfBytes = await doc.save({ useObjectStreams: false });
     } catch { fail('PDF_INPUT_INVALID'); }
-    return { storageRef: await store('pdf', pdfBytes), contentDigest: digest(pdfBytes), templateVersion: TEMPLATE_VERSION, rendererVersion: RENDERER_VERSION };
+    return { storageRef: await store('pdf', pdfBytes), contentDigest: digest(pdfBytes), templateVersion, rendererVersion: RENDERER_VERSION };
   }
 
   return { stageSignature, readPrivateArtifact, renderSubmissionPdf };

@@ -119,8 +119,13 @@ try{
   await screenshot(member,'member-draft-mobile.png');
   await member.getByRole('button',{name:'Tinjau pengajuan',exact:true}).click();
   await member.getByRole('heading',{name:'Tinjau pengajuan',exact:true}).waitFor();
+  // Review shows the standard Rupiah text and the amount in words, never the bare digits alone.
+  const reviewText=await member.locator('main').innerText();
+  assert.match(reviewText,new RegExp('Rp'+amount.replace(/\B(?=(\d{3})+(?!\d))/g,'\\.')+'(?![\\d.,])'));
+  assert.match(reviewText,/Terbilang: .+ rupiah/);
   await member.getByRole('button',{name:'Ubah isian',exact:true}).click();
-  assert.equal(await member.getByLabel('Nominal potongan baru (rupiah)',{exact:false}).inputValue(),amount);
+  // The field shows the grouped Indonesian text; the canonical digits (`amount`) are what the submission carries.
+  assert.equal(await member.getByLabel('Nominal potongan baru (rupiah)',{exact:false}).inputValue(),amount.replace(/\B(?=(\d{3})+(?!\d))/g,'.'));
   assert.equal(await member.getByLabel(form.consentText,{exact:true}).isChecked(),true);
   await member.getByRole('button',{name:'Tinjau pengajuan',exact:true}).click();
   await member.setViewportSize({width:1440,height:1000});
