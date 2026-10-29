@@ -60,6 +60,25 @@ test('maxFractionDigits reports unsupported precision instead of rounding or tru
   assert.throws(() => formatRupiah('10.505', { maxFractionDigits: 2 }), /not rounded/);
 });
 
+test('overflow "truncate" is an explicit 2-decimal display policy: cut toward zero, never rounded, never zero for a non-zero amount', () => {
+  const policy = { maxFractionDigits: 2, overflow: 'truncate' };
+  assert.equal(formatRupiah('2581645259.9063', policy), 'Rp2.581.645.259,90');
+  assert.equal(formatRupiah('2581645259.9099', policy), 'Rp2.581.645.259,90');
+  assert.equal(formatRupiah('50000.6666', policy), 'Rp50.000,66');
+  assert.equal(formatRupiah('-50000.6666', policy), '-Rp50.000,66');
+  assert.equal(formatRupiah('150000.0000', policy), 'Rp150.000');
+  assert.equal(formatRupiah('150000.5000', policy), 'Rp150.000,50');
+  assert.equal(formatRupiah('150000.0063', policy), 'Rp150.000');
+  assert.equal(formatRupiah('0.0063', policy), 'Rp0,0063');
+  assert.equal(formatRupiah('-0.0063', policy), '-Rp0,0063');
+  assert.equal(formatRupiah('0.0100', policy), 'Rp0,01');
+  assert.equal(formatRupiahDocument('2581645259.9063', policy), 'Rp2.581.645.259,90');
+  assert.equal(formatRupiahNumberOnly('2581645259.9063', policy), '2.581.645.259,90');
+  // Default stays strict: no silent cutting.
+  assert.throws(() => formatRupiah('2581645259.9063', { maxFractionDigits: 2 }), /not rounded/);
+  assert.equal(formatRupiah('2581645259.9063'), 'Rp2.581.645.259,9063');
+});
+
 test('number-only format is the same grouping without the symbol', () => {
   assert.equal(formatRupiahNumberOnly(125000), '125.000');
   assert.equal(formatRupiahNumberOnly('1250000.75'), '1.250.000,75');

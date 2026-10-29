@@ -21,9 +21,15 @@ export interface FormatRupiahOptions {
   minFractionDigits?: number;
   /**
    * Most decimals the workflow supports. Default: unlimited, so nothing is ever rounded or truncated.
-   * A value carrying more significant decimals than this throws a RangeError instead of being cut.
+   * A value carrying more significant decimals than this throws a RangeError instead of being cut, unless `overflow` says otherwise.
    */
   maxFractionDigits?: number;
+  /**
+   * What to do with decimals beyond `maxFractionDigits`. `'throw'` (default) refuses; `'truncate'` cuts them off toward zero
+   * (`2581645259.9063` with max 2 shows `Rp2.581.645.259,90`), an explicit display policy a workflow opts into. Truncation never
+   * turns a non-zero amount into zero: such an amount keeps its exact digits (`0.0063` stays `Rp0,0063`, never `Rp0`).
+   */
+  overflow?: 'throw' | 'truncate';
 }
 
 interface Decimal { negative: boolean; int: string; frac: string }
@@ -53,10 +59,15 @@ function parseDecimal(value: string | number | bigint): Decimal {
 const pow10 = (n: number): bigint => BigInt(`1${'0'.repeat(n)}`);
 const group = (int: string) => int.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-function fractionText(frac: string, options: FormatRupiahOptions): string {
-  const significant = frac.replace(/0+$/, '');
+function fractionText(frac: string, wholeIsZero: boolean, options: FormatRupiahOptions): string {
+  let significant = frac.replace(/0+$/, '');
   if (options.maxFractionDigits !== undefined && significant.length > options.maxFractionDigits) {
-    throw new RangeError(`Rupiah amount has more than ${options.maxFractionDigits} decimals and is not rounded`);
+    if (options.overflow !== 'truncate') {
+      throw new RangeError(`Rupiah amount has more than ${options.maxFractionDigits} decimals and is not rounded`);
+    }
+    const cut = significant.slice(0, options.maxFractionDigits).replace(/0+$/, '');
+    // Never display a non-zero amount as zero: keep the exact digits instead.
+    if (!(wholeIsZero && cut === '')) significant = cut;
   }
   // A real fraction reads as sen at least (",50", never ",5"); a longer exact fraction (",6666") is kept whole.
   return significant.padEnd(significant ? Math.max(2, options.minFractionDigits ?? 0) : options.minFractionDigits ?? 0, '0');
@@ -65,7 +76,7 @@ function fractionText(frac: string, options: FormatRupiahOptions): string {
 function render(value: MoneyInput, options: FormatRupiahOptions, symbol: boolean, negative: 'minus' | 'parentheses'): string {
   if (value === null || value === undefined) return options.placeholder ?? MONEY_PLACEHOLDER;
   const decimal = parseDecimal(value);
-  const fraction = fractionText(decimal.frac, options);
+  const fraction = fractionText(decimal.frac, /^0*$/.test(decimal.int), options);
   const body = `${symbol ? RUPIAH_SYMBOL : ''}${group(decimal.int)}${fraction ? `,${fraction}` : ''}`;
   if (!decimal.negative) return body;
   return negative === 'parentheses' ? `(${body})` : `-${body}`;

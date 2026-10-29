@@ -1,7 +1,19 @@
 import type { LegacyDate } from '@koperasi/domain/kosipa';
 
-/** amount4 = integer in 1/10,000 rupiah (exact; 14% of recorded payroll totals carry fractions of a sen). Shown without rounding, in the shared KKISI Rupiah format. */
-export { formatAmount4 } from '../../money/format.ts';
+import { formatAmount4 as formatExactAmount4, formatRupiah } from '../../money/format.ts';
+
+/**
+ * Payroll display policy: at most 2 decimals (sen). The recorded amount4 keeps its 1/10,000 precision in the data, the CSV
+ * export and the reconciliation maths; only the on-screen text is cut at the sen (`Rp2.581.645.259,9063` shows `Rp2.581.645.259,90`).
+ * The cut is toward zero, never a rounding, and a non-zero amount is never shown as zero (`Rp0,0063` stays exact).
+ */
+export const PAYROLL_DISPLAY = { maxFractionDigits: 2, overflow: 'truncate' } as const;
+
+/** amount4 = integer in 1/10,000 rupiah (exact; 14% of recorded payroll totals carry fractions of a sen), shown in the payroll display policy. */
+export const formatAmount4 = (units: number | bigint | null | undefined): string => formatExactAmount4(units, PAYROLL_DISPLAY);
+
+/** Same policy for a source decimal string (payroll totals read straight from the legacy table). */
+export const formatPayrollDecimal = (value: string | null): string => formatRupiah(value, { ...PAYROLL_DISPLAY, placeholder: 'Tidak tersedia' });
 
 /** Legacy dates are shown as stored; zero/implausible values are labelled, never replaced by a guess. */
 export function formatLegacyDate(date: LegacyDate): string {

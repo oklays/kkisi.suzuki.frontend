@@ -75,12 +75,29 @@ test('existing module adapters now emit the one standard format', () => {
   assert.equal(preview.formatRupiah(400010), 'Rp4.000,10');
   assert.equal(payroll.formatAmount4(0), 'Rp0');
   assert.equal(payroll.formatAmount4(1500000000), 'Rp150.000');
-  assert.equal(payroll.formatAmount4(500006666), 'Rp50.000,6666');
+  assert.equal(payroll.formatAmount4(500006666), 'Rp50.000,66');
   assert.equal(payroll.formatAmount4(-12500), '-Rp1,25');
   assert.equal(presentation.formatExactRupiah('1000.2300'), 'Rp1.000,23');
   assert.equal(presentation.formatExactRupiah(null), 'Tidak tersedia');
   assert.equal(money.formatSenDocument(125000), 'Rp1.250,00');
   assert.equal(money.formatSen(null), '—');
+});
+
+test('payroll shows at most two decimals: Rp2.581.645.259,9063 is displayed as Rp2.581.645.259,90', () => {
+  assert.equal(payroll.formatAmount4(25816452599063), 'Rp2.581.645.259,90');
+  assert.equal(payroll.formatPayrollDecimal('2581645259.9063'), 'Rp2.581.645.259,90');
+  assert.equal(payroll.formatAmount4(500006666), 'Rp50.000,66');
+  assert.equal(payroll.formatAmount4(-500006666), '-Rp50.000,66');
+  assert.equal(payroll.formatAmount4(1500000000), 'Rp150.000');
+  assert.equal(payroll.formatAmount4(1500005000), 'Rp150.000,50');
+  assert.equal(payroll.formatAmount4(0), 'Rp0');
+  assert.equal(payroll.formatPayrollDecimal(null), 'Tidak tersedia');
+  // A sub-sen difference (reconciliation, header mismatch) must never read as zero.
+  assert.equal(payroll.formatAmount4(63), 'Rp0,0063');
+  assert.equal(payroll.formatAmount4(-63), '-Rp0,0063');
+  // Display-only: the recorded value keeps its full 1/10,000 precision for data, export and reconciliation.
+  assert.equal(money.formatAmount4(25816452599063), 'Rp2.581.645.259,9063');
+  assert.equal(money.rupiahFromAmount4(25816452599063), '2581645259.9063');
 });
 
 test('financial integrity: formatting is display-only and the shown text parses back to the exact stored amount', () => {

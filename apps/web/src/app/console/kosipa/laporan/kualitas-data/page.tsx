@@ -1,5 +1,5 @@
 import { KosipaPageHeader, FeedbackState, FinancialTable, ContextNotice, Provenance } from '@/components/console/kosipa/KosipaUI';
-import { formatExactRupiah, maskIdentifier } from '@/components/console/kosipa/presentation';
+import { maskIdentifier } from '@/components/console/kosipa/presentation';
 import { ExportControl } from '@/components/console/kosipa/ExportControl';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { DIAGNOSTIC_KIND, KosipaError, type DiagnosticKind } from '@koperasi/domain/kosipa';
 import { readDataQuality, type DataQualityReport, type Part } from '@koperasi/application/kosipa/reports';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
-import { formatAmount4 } from '@/components/console/kosipa/payroll-format';
+import { formatAmount4, formatPayrollDecimal } from '@/components/console/kosipa/payroll-format';
 import { BATCH_ISSUE_SHORT, REPORT_REASON } from '@/components/console/kosipa/report-format';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
@@ -103,7 +103,7 @@ export default async function DataQualityPage() {
             <>
               <p>Dari {d.rows} baris: <strong>{d.totalDiffersFromComponents}</strong> berbeda pada tingkat sub-sen, <strong>{d.totalDiffersByHalfSenOrMore}</strong> berbeda setengah sen atau lebih (selisih terbesar {d.maxDifference}); <strong>{d.totalWithoutComponents}</strong> memiliki total tetapi tanpa komponen. <strong>{d.totalDiffersFromComponents - d.totalDiffersByHalfSenOrMore}</strong> di antaranya hanya selisih sub-sen: presisi desimal pada data lama (wajar, tidak dianggap material).</p>
               {d.sample.length > 0 && <FinancialTable label="Sampel presisi total potongan" columns={[{ label: "Batch" }, { label: "NIK tersamar", type: "text" }, { label: "Total tercatat", numeric: true }, { label: "Σ komponen", numeric: true }]}>
-                <tbody>{d.sample.map((x, i) => <tr key={`${x.docNo}-${x.nik}-${i}`}><td>{x.docNo}</td><td>{maskIdentifier(x.nik)}</td><td className="num">{formatExactRupiah(x.total)}</td><td className="num">{formatExactRupiah(x.componentSum)}</td></tr>)}</tbody></FinancialTable>}
+                <tbody>{d.sample.map((x, i) => <tr key={`${x.docNo}-${x.nik}-${i}`}><td>{x.docNo}</td><td>{maskIdentifier(x.nik)}</td><td className="num">{formatPayrollDecimal(x.total)}</td><td className="num">{formatPayrollDecimal(x.componentSum)}</td></tr>)}</tbody></FinancialTable>}
             </>
           )}</Block>
           <Block id="nik-ganda" kind="duplicateBatchNik" title="Anggota dengan lebih dari satu baris dalam satu batch" source="trans_potongan_matrix (dikelompokkan per batch dan NIK)" part={q.payroll.duplicateBatchNik}>{(d) => (
