@@ -195,3 +195,9 @@ During any transitional window, add a **database trigger or check constraint** (
 | All tables | 🟦 100% Legacy-Owned |
 
 This is the starting state. No Next.js write access exists until Stage 1 of the cutover sequence begins. Next.js development against a **separate test/staging database** (seeded copy) is expected throughout the Implementation phase (`IMPLEMENTATION_BACKLOG.md`), with production cutover only happening per the staged plan above, after parity tests pass.
+
+## Scoped public-savings command ownership —29 October2026
+
+Owner MASTER EXECUTION PROMPT approves isolated integration engineering. In the **LOCAL_SYNTHETIC** implementation, financial transition ownership is enforced per command: Next owns PUBLIC OPEN creation; source-contract MOBILE fixture owns its own create/edit/cancel; CI2 fixture owns approve/reject/cancel; payroll posting remains external. Every enrolled command uses the same member lock/reservation. Public INSERT and legacy command UPDATE on `trans_simpanan_pengajuan` are a bounded command-level exception to the earlier per-table wording, not unrestricted dual writes. Public cannot execute processing commands or mutate `m_anggota`/`m_simpanan_aktif`; legacy executor cannot directly DML protected headers/configuration. Snapshot/header guards are defense in depth; whole-command transactions prevent partial side effects. APPROVED does not imply POSTED_CONFIRMED and does not release the active reservation.
+
+This local exception has **not** changed any production ownership or credentials. Existing production remains legacy-owned until current PHP writers, deployed grants/schema and private-proof handoff are verified and enrolled. See [local writer boundary and remaining prerequisites](../../integration/public-savings/legacy/README.md). No native Next approval engine, payroll calculation change or savings-ledger posting is added.
