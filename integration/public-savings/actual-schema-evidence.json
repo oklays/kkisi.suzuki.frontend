@@ -1,0 +1,39 @@
+{
+  "mode": "LOCAL_SYNTHETIC",
+  "host": "127.0.0.1",
+  "port": 3321,
+  "database": "kkisi_public_savings_actual",
+  "image": "mariadb:10.11.19",
+  "observedVersion": "10.11.19-MariaDB-ubu2204",
+  "sqlMode": "NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION",
+  "sourceRuntime": {
+    "version": "10.11.19-MariaDB-cll-lve",
+    "sql_mode": "NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION",
+    "time_zone": "SYSTEM",
+    "tx_read_only": "1"
+  },
+  "sourceTableCount": 10,
+  "legacyDdlPreserved": true,
+  "legacySignatures": {
+    "m_anggota": "978a4c9eb6365ebef772164d6df967770a376c08a75a269225458e109bd5205c",
+    "m_bagian": "2f1a398154fe5aec002a2c3f2afa1a6e47b4e74b5d4cf52c01236f184fe87d7b",
+    "m_simpanan_mobile": "7333892bad6e28449c67405892ee4290e9a2598af988ea932310d72288de04ea",
+    "m_simpanan_aktif": "ce8bae22715cf680a0e03ed2c9d9ea401d0c625ac2a2850c0f149a1ccdf35d13",
+    "trans_simpanan_pengajuan": "92b53af558885a70f54132639748d06a10f9c48f71be3f746ab71ca16b11ed72",
+    "db_notifikasi": "9cc24c7f2f0bf2d7b1383ca9bfc6a18a65d2f098a8aa46426626320c826be41a",
+    "m_jenis_simpanan": "96d0a373b7ac5e55aa4e013c4da7eea2f5fe9526d6d70556f73fceee97d5391f",
+    "ref_menu": "86cf39a4383d9a0fe2b305375f0b198b8d8c3ecd4fc598fb793241839a7b7296",
+    "users": "abb8d96a4431585c62fc3ee4f140615f755d6dbfa9e3d264b963271253d59420",
+    "trans_simpanan_dtl": "5bd3ed20ad5e2ee86e77af4d88bea84e8e1895d11d4bcc273d2b944502258e7c"
+  },
+  "productionDataCopied": false,
+  "actualProductionMigrationPerformed": false,
+  "duplicateHeaderGuardVerified": true,
+  "compatibilityStatus": "LOCAL_SQL_GUARDS_VERIFIED",
+  "mobileRaceWinners": 1,
+  "publicMobileRaceWinners": 1,
+  "approvalVerified": true,
+  "duplicatePreflightVerified": true,
+  "legacyUniqueBusinessIndexesAdded": false,
+  "actualPhpExecution": false
+}

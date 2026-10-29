@@ -17,27 +17,76 @@ CREATE TABLE IF NOT EXISTS pss_proof(id CHAR(32) PRIMARY KEY,link_id CHAR(32) NO
 CREATE TABLE IF NOT EXISTS pss_application(reference VARCHAR(50) PRIMARY KEY,member_id BIGINT NOT NULL,link_id CHAR(32) NOT NULL UNIQUE,idempotency_key VARCHAR(128) NOT NULL,request_hash CHAR(64) NOT NULL,payload_hash CHAR(64) NOT NULL,snapshot_cipher LONGTEXT NOT NULL,snapshot_hash CHAR(64) NOT NULL,pdf_ref VARCHAR(100) NULL,pdf_digest CHAR(64) NULL,proof_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',created_ms BIGINT NOT NULL,verified_ms BIGINT NOT NULL,UNIQUE(member_id,idempotency_key)) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS pss_outbox(id BIGINT AUTO_INCREMENT PRIMARY KEY,reference VARCHAR(50) NOT NULL,kind VARCHAR(30) NOT NULL,status VARCHAR(20) NOT NULL DEFAULT 'PENDING',attempts INT NOT NULL DEFAULT 0,last_error VARCHAR(100) NULL,next_attempt_ms BIGINT NOT NULL DEFAULT 0,UNIQUE(reference,kind)) ENGINE=InnoDB;
 ALTER TABLE pss_outbox ADD COLUMN IF NOT EXISTS next_attempt_ms BIGINT NOT NULL DEFAULT 0;
-CREATE TABLE IF NOT EXISTS pss_audit(id BIGINT AUTO_INCREMENT PRIMARY KEY,member_id BIGINT NOT NULL,event VARCHAR(50) NOT NULL,reference VARCHAR(50) NULL,created_ms BIGINT NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS pss_audit(id BIGINT AUTO_INCREMENT PRIMARY KEY,member_id BIGINT NOT NULL,event VARCHAR(50) NOT NULL,reference VARCHAR(50) NULL,created_ms BIGINT NOT NULL,actor_ref VARCHAR(64) NULL,reason VARCHAR(200) NULL) ENGINE=InnoDB;
+ALTER TABLE pss_audit ADD COLUMN IF NOT EXISTS actor_ref VARCHAR(64) NULL,ADD COLUMN IF NOT EXISTS reason VARCHAR(200) NULL;
 CREATE TABLE IF NOT EXISTS pss_command_guard(connection_id BIGINT PRIMARY KEY,reference VARCHAR(50) NOT NULL,action VARCHAR(20) NOT NULL) ENGINE=InnoDB;
 DELIMITER $$
+-- Actual deployed CI2 (PHP 5.6) and Laravel (PHP 8.1) write these tables directly through a broad
+-- DML account. PUBLIC references are writable only inside a controlled command on this connection;
+-- unenrolled legacy rows keep their existing behaviour, enrolled SUKARELA rows share the B-05 reservation.
 CREATE OR REPLACE TRIGGER pss_header_insert BEFORE INSERT ON trans_simpanan_pengajuan FOR EACH ROW
-BEGIN
- IF NOT EXISTS(SELECT 1 FROM pss_command_guard WHERE connection_id=CONNECTION_ID() AND reference=NEW.doc_no AND action='CREATE_MOBILE') THEN
+main:BEGIN
+ DECLARE v_member BIGINT DEFAULT NULL; DECLARE v_reserved VARCHAR(50) DEFAULT NULL; DECLARE v_count INT DEFAULT 0;
+ -- The deployed table has no UNIQUE(doc_no); a reused reference would alias two requests.
+ IF NEW.doc_no IS NOT NULL AND EXISTS(SELECT 1 FROM trans_simpanan_pengajuan WHERE doc_no=NEW.doc_no) THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='DUPLICATE_HEADER_REFERENCE';
+ END IF;
+ IF EXISTS(SELECT 1 FROM pss_command_guard WHERE connection_id=CONNECTION_ID() AND reference=NEW.doc_no AND action='CREATE_MOBILE') THEN LEAVE main; END IF;
+ IF EXISTS(SELECT 1 FROM pss_application WHERE reference=NEW.doc_no) OR NEW.doc_no REGEXP '^PSS[0-9a-f]{32}00000$' THEN
   IF NOT EXISTS(SELECT 1 FROM pss_application a JOIN pss_member_control c ON c.member_id=a.member_id JOIN m_anggota m ON m.id=a.member_id WHERE a.reference=NEW.doc_no AND c.active_reference=NEW.doc_no AND BINARY m.nik_kar=BINARY NEW.nik_kar)
    OR NOT(NEW.doc_status<=>'OPEN') OR NOT(NEW.jenis_simpanan<=>'SIMPANAN SUKARELA') OR NOT(NEW.is_mobile<=>0) THEN
    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PUBLIC_INSERT_BOUNDARY';
   END IF;
+  LEAVE main;
+ END IF;
+ IF NOT(NEW.jenis_simpanan<=>'SIMPANAN SUKARELA') THEN LEAVE main; END IF;
+ SELECT COUNT(*) INTO v_count FROM m_anggota m JOIN pss_member_control c ON c.member_id=m.id WHERE BINARY m.nik_kar=BINARY NEW.nik_kar;
+ IF v_count=0 THEN LEAVE main; END IF;
+ IF v_count>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='AMBIGUOUS_MEMBER'; END IF;
+ SELECT c.member_id,c.active_reference INTO v_member,v_reserved FROM m_anggota m JOIN pss_member_control c ON c.member_id=m.id WHERE BINARY m.nik_kar=BINARY NEW.nik_kar FOR UPDATE;
+ IF v_reserved IS NOT NULL THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PENDING_CONFLICT'; END IF;
+ IF NEW.doc_status<=>'OPEN' THEN
+  UPDATE pss_member_control SET active_reference=NEW.doc_no WHERE member_id=v_member;
+  INSERT INTO pss_audit(member_id,event,reference,created_ms,actor_ref) VALUES(v_member,'LEGACY_RESERVED',NEW.doc_no,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED),LEFT(NEW.cd_usr,64));
  END IF;
 END$$
 CREATE OR REPLACE TRIGGER pss_header_update BEFORE UPDATE ON trans_simpanan_pengajuan FOR EACH ROW
-BEGIN
- IF NOT EXISTS(SELECT 1 FROM pss_command_guard WHERE connection_id=CONNECTION_ID() AND reference=OLD.doc_no) THEN
+main:BEGIN
+ IF EXISTS(SELECT 1 FROM pss_command_guard WHERE connection_id=CONNECTION_ID() AND reference=OLD.doc_no) THEN LEAVE main; END IF;
+ IF EXISTS(SELECT 1 FROM pss_application WHERE reference=OLD.doc_no OR reference=NEW.doc_no) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CONTROLLED_LEGACY_COMMAND_REQUIRED';
+ END IF;
+ IF EXISTS(SELECT 1 FROM pss_member_control WHERE active_reference=OLD.doc_no) THEN
+  IF NOT(NEW.doc_no<=>OLD.doc_no) OR NOT(BINARY NEW.nik_kar<=>BINARY OLD.nik_kar) OR NOT(NEW.jenis_simpanan<=>OLD.jenis_simpanan) THEN
+   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='RESERVED_REQUEST_IDENTITY_IMMUTABLE';
+  END IF;
+  IF NEW.doc_status IN('REJECTED','CANCELLED') THEN
+   INSERT INTO pss_audit(member_id,event,reference,created_ms,actor_ref) SELECT member_id,'LEGACY_RELEASED',OLD.doc_no,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED),LEFT(NEW.ud_usr,64) FROM pss_member_control WHERE active_reference=OLD.doc_no;
+   UPDATE pss_member_control SET active_reference=NULL WHERE active_reference=OLD.doc_no;
+  END IF;
  END IF;
 END$$
 CREATE OR REPLACE TRIGGER pss_header_delete BEFORE DELETE ON trans_simpanan_pengajuan FOR EACH ROW
 BEGIN
- SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='NO_HEADER_DELETE';
+ IF EXISTS(SELECT 1 FROM pss_application WHERE reference=OLD.doc_no) THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='NO_HEADER_DELETE';
+ END IF;
+ UPDATE pss_member_control SET active_reference=NULL WHERE active_reference=OLD.doc_no;
+END$$
+-- CI2 approval writes the master before m_anggota and the header, all autocommit. Binding a master
+-- row to an unprocessed PUBLIC reference is the first effect, so it is refused before any money moves.
+CREATE OR REPLACE TRIGGER pss_master_insert BEFORE INSERT ON m_simpanan_aktif FOR EACH ROW
+BEGIN
+ IF EXISTS(SELECT 1 FROM pss_application WHERE reference=NEW.doc_no) AND NOT EXISTS(SELECT 1 FROM pss_command_guard WHERE connection_id=CONNECTION_ID() AND reference=NEW.doc_no) THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CONTROLLED_LEGACY_COMMAND_REQUIRED';
+ END IF;
+END$$
+CREATE OR REPLACE TRIGGER pss_master_update BEFORE UPDATE ON m_simpanan_aktif FOR EACH ROW
+BEGIN
+ IF EXISTS(SELECT 1 FROM pss_application a JOIN trans_simpanan_pengajuan h ON h.doc_no=a.reference WHERE a.reference=NEW.doc_no AND (NOT(NEW.doc_no<=>OLD.doc_no) OR h.doc_status<=>'OPEN'))
+  AND NOT EXISTS(SELECT 1 FROM pss_command_guard WHERE connection_id=CONNECTION_ID() AND reference=NEW.doc_no) THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CONTROLLED_LEGACY_COMMAND_REQUIRED';
+ END IF;
 END$$
 CREATE OR REPLACE TRIGGER pss_application_update BEFORE UPDATE ON pss_application FOR EACH ROW
 BEGIN
@@ -74,6 +123,8 @@ main:BEGIN
   SELECT COUNT(*) INTO v_ready FROM pss_application WHERE reference=p_reference AND proof_status='READY' AND pdf_ref IS NOT NULL AND pdf_digest IS NOT NULL;
   IF v_ready<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PROOF_NOT_READY'; END IF;
  END IF;
+ -- Guard first: the master triggers refuse PUBLIC bindings outside this command.
+ INSERT INTO pss_command_guard VALUES(CONNECTION_ID(),p_reference,p_action);
  IF p_action='APPROVE' THEN
   IF CHAR_LENGTH(v_nik)>10 OR v_amount IS NULL OR v_amount<10000 OR v_amount>5000000 OR MOD(v_amount,1000)<>0 OR v_month<1 OR v_month>12 OR v_year<1000 OR v_year>9999 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='LEGACY_INCOMPATIBLE'; END IF;
   SELECT COUNT(*) INTO v_count FROM m_simpanan_aktif WHERE BINARY nik_kar=BINARY v_nik AND jenis_simpanan=v_type;
@@ -86,11 +137,10 @@ main:BEGIN
   UPDATE m_anggota SET sim_sukarela=v_amount WHERE id=v_member AND BINARY nik_kar=BINARY v_nik;
   IF ROW_COUNT()<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MEMBER_WRITE_FAILED'; END IF;
  END IF;
- INSERT INTO pss_command_guard VALUES(CONNECTION_ID(),p_reference,p_action);
  UPDATE trans_simpanan_pengajuan SET doc_status=CASE p_action WHEN 'APPROVE' THEN 'APPROVED' ELSE 'REJECTED' END,updated_at=UTC_TIMESTAMP()+INTERVAL 7 HOUR,ud_usr=p_actor WHERE id=v_id AND doc_status='OPEN';
  IF ROW_COUNT()<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HEADER_WRITE_FAILED'; END IF;
  IF p_action<>'APPROVE' THEN UPDATE pss_member_control SET active_reference=NULL WHERE member_id=v_member AND active_reference=p_reference; END IF;
- INSERT INTO pss_audit(member_id,event,reference,created_ms) VALUES(v_member,CONCAT('LEGACY_',p_action),p_reference,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED));
+ INSERT INTO pss_audit(member_id,event,reference,created_ms,actor_ref) VALUES(v_member,CONCAT('LEGACY_',p_action),p_reference,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED),LEFT(p_actor,64));
  DELETE FROM pss_command_guard WHERE connection_id=CONNECTION_ID();
  COMMIT;
 END$$
@@ -109,7 +159,7 @@ BEGIN
  UPDATE pss_member_control SET active_reference=p_reference WHERE member_id=p_member;
  INSERT INTO pss_command_guard VALUES(CONNECTION_ID(),p_reference,'CREATE_MOBILE');
  INSERT INTO trans_simpanan_pengajuan(doc_no,doc_date,doc_status,jenis_simpanan,nik_kar,nama,bagian,potongan_old,potongan,awal_potong_bulan,awal_potong_tahun,created_at,cd_usr,updated_at,ud_usr,status_notif,is_mobile) VALUES(p_reference,DATE(UTC_TIMESTAMP()+INTERVAL 7 HOUR),'OPEN','SIMPANAN SUKARELA',v_nik,v_name,v_section,v_old,p_amount,LPAD(p_month,2,'0'),p_year,UTC_TIMESTAMP()+INTERVAL 7 HOUR,p_actor,UTC_TIMESTAMP()+INTERVAL 7 HOUR,p_actor,0,1);
- INSERT INTO pss_audit(member_id,event,reference,created_ms) VALUES(p_member,'MOBILE_CREATE',p_reference,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED));
+ INSERT INTO pss_audit(member_id,event,reference,created_ms,actor_ref) VALUES(p_member,'MOBILE_CREATE',p_reference,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED),LEFT(p_actor,64));
  DELETE FROM pss_command_guard WHERE connection_id=CONNECTION_ID();COMMIT;
 END$$
 CREATE OR REPLACE PROCEDURE pss_mobile_mutate(IN p_reference VARCHAR(50),IN p_action VARCHAR(20),IN p_amount BIGINT,IN p_actor VARCHAR(50)) SQL SECURITY DEFINER
@@ -130,7 +180,7 @@ BEGIN
  INSERT INTO pss_command_guard VALUES(CONNECTION_ID(),p_reference,p_action);
  IF p_action='EDIT' THEN UPDATE trans_simpanan_pengajuan SET potongan=p_amount,updated_at=UTC_TIMESTAMP()+INTERVAL 7 HOUR,ud_usr=p_actor WHERE doc_no=p_reference;
  ELSE UPDATE trans_simpanan_pengajuan SET doc_status='REJECTED',updated_at=UTC_TIMESTAMP()+INTERVAL 7 HOUR,ud_usr=p_actor WHERE doc_no=p_reference;UPDATE pss_member_control SET active_reference=NULL WHERE member_id=v_member; END IF;
- INSERT INTO pss_audit(member_id,event,reference,created_ms) VALUES(v_member,CONCAT('MOBILE_',p_action),p_reference,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED));
+ INSERT INTO pss_audit(member_id,event,reference,created_ms,actor_ref) VALUES(v_member,CONCAT('MOBILE_',p_action),p_reference,CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED),LEFT(p_actor,64));
  DELETE FROM pss_command_guard WHERE connection_id=CONNECTION_ID();COMMIT;
 END$$
 DELIMITER ;

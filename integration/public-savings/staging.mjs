@@ -83,7 +83,7 @@ export async function refreshCommands(){
  const config=await loadConfig();
  const schema=await readFile(resolve(root,'integration/public-savings/schema.sql'),'utf8');
  const commands=['pss_legacy_transition','pss_mobile_create','pss_mobile_mutate'];
- await adminSql(`USE ${database};${commands.map(name=>`DROP PROCEDURE IF EXISTS ${name};`).join('')}\nDELIMITER $$\n${schema.slice(schema.indexOf('CREATE PROCEDURE'),schema.lastIndexOf('DELIMITER ;'))}\nDELIMITER ;\n${commands.map(name=>`GRANT EXECUTE ON PROCEDURE ${database}.${name} TO ${quote(config.legacy.user)}@'%';`).join('')}`);
+ await adminSql(`USE ${database};${commands.map(name=>`DROP PROCEDURE IF EXISTS ${name};`).join('')}\nDELIMITER $$\n${schema.slice(schema.indexOf('CREATE OR REPLACE PROCEDURE'),schema.lastIndexOf('DELIMITER ;'))}\nDELIMITER ;\n${commands.map(name=>`GRANT EXECUTE ON PROCEDURE ${database}.${name} TO ${quote(config.legacy.user)}@'%';`).join('')}`);
 }
 export async function reset(){
  const config=await loadConfig();

@@ -57,3 +57,49 @@ integration('PUBLIC intake holding the member lock prevents a simultaneous MOBIL
   assert.equal((await facts(m,ref)).reservation[0].active_reference,ref);
  }finally{await app.rollback();if(mobile)await mobile;await app.end();await legacy.end();await admin.end();}
 });
+
+// The deployed legacy account holds broad DML, so these run as admin: only the triggers stand between it and the data.
+const legacyHeader=(db,ref,nik,type='SIMPANAN SUKARELA')=>db.execute("INSERT INTO trans_simpanan_pengajuan(doc_no,doc_date,doc_status,jenis_simpanan,nik_kar,nama,bagian,potongan_old,potongan,awal_potong_bulan,awal_potong_tahun,remarks,created_at,cd_usr,status_notif,ttd,is_mobile) VALUES(?,CURRENT_DATE(),'OPEN',?,?,'SYNTH CONTROL MEMBER','SYNTH',100000,150000,'11','2026','SYNTH',NOW(),?,0,'synthetic-ttd.png',1)",[ref,type,nik,nik]);
+const mobileRef=()=>`SIMMOB261029${String(++sequence).padStart(6,'0')}`;
+integration('unmodified Laravel-style insert for an enrolled member shares the B-05 reservation with PUBLIC intake and plain rejection releases it',async()=>{
+ const m=await member(),admin=await connect('admin'),ref=mobileRef();
+ try{
+  await legacyHeader(admin,ref,m.nik);assert.equal((await facts(m,ref)).reservation[0].active_reference,ref);
+  await assert.rejects(legacyHeader(admin,mobileRef(),m.nik),/PENDING_CONFLICT/);
+  await assert.rejects(publicRequest(m),/PENDING_CONFLICT|PUBLIC_INSERT_BOUNDARY/);
+  await admin.execute("UPDATE trans_simpanan_pengajuan SET potongan=200000 WHERE doc_no=?",[ref]);
+  await assert.rejects(admin.execute("UPDATE trans_simpanan_pengajuan SET nik_kar='OTHER' WHERE doc_no=?",[ref]),/RESERVED_REQUEST_IDENTITY_IMMUTABLE/);
+  await admin.execute("UPDATE trans_simpanan_pengajuan SET doc_status='REJECTED' WHERE doc_no=?",[ref]);assert.equal((await facts(m,ref)).reservation[0].active_reference,null);
+  const [events]=await admin.execute("SELECT event FROM pss_audit WHERE member_id=? AND reference=? ORDER BY id",[m.id,ref]);assert.deepEqual(events.map(e=>e.event),['LEGACY_RESERVED','LEGACY_RELEASED']);
+  assert.match(await publicRequest(m),/^PSS/);
+ }finally{await admin.end();}
+});
+integration('other savings types, unenrolled members and ordinary deletes keep existing legacy behaviour',async()=>{
+ const m=await member(),admin=await connect('admin');const id=++sequence,nik=`U${String(id).padStart(9,'0')}`;
+ try{
+  await admin.execute("INSERT INTO m_anggota(id,nik_kar,nama_kar,bagian,email,status_anggota,status_karyawan,sim_sukarela,kd_group) VALUES(?,?,'SYNTH UNENROLLED',1,'u@example.invalid','AKTIVE','AKTIVE',0,'SYNTH')",[id,nik]);
+  for(const ref of [mobileRef(),mobileRef()])await legacyHeader(admin,ref,nik);
+  const wajib=mobileRef();await legacyHeader(admin,wajib,m.nik,'SIMPANAN WAJIB');assert.equal((await facts(m,wajib)).reservation[0].active_reference,null);
+  await admin.execute("UPDATE trans_simpanan_pengajuan SET doc_status='APPROVED' WHERE doc_no=?",[wajib]);
+  const reserved=mobileRef();await legacyHeader(admin,reserved,m.nik);await admin.execute('DELETE FROM trans_simpanan_pengajuan WHERE doc_no=?',[reserved]);assert.equal((await facts(m,reserved)).reservation[0].active_reference,null);
+ }finally{await admin.end();}
+});
+integration('duplicate header references are refused because the deployed table has no UNIQUE(doc_no)',async()=>{
+ const m=await member(),admin=await connect('admin'),ref=mobileRef();
+ try{await legacyHeader(admin,ref,m.nik);await assert.rejects(legacyHeader(admin,ref,m.nik,'SIMPANAN WAJIB'),/DUPLICATE_HEADER_REFERENCE/);
+  const pub=await publicRequest(await member(),{ready:true});await assert.rejects(admin.execute("INSERT INTO trans_simpanan_pengajuan(doc_no,doc_status,jenis_simpanan,nik_kar,status_notif,is_mobile) VALUES(?,'OPEN','SIMPANAN SUKARELA','X',0,0)",[pub]),/DUPLICATE_HEADER_REFERENCE/);
+  await assert.rejects(admin.execute("INSERT INTO trans_simpanan_pengajuan(doc_no,doc_status,jenis_simpanan,nik_kar,status_notif,is_mobile) VALUES(?,'OPEN','SIMPANAN SUKARELA',?,0,1)",[`PSS${hex()}00000`,m.nik]),/PUBLIC_INSERT_BOUNDARY/);}
+ finally{await admin.end();}
+});
+integration('a broad principal cannot bind configuration to an unprocessed PUBLIC request or delete it; edits after controlled approval stay possible',async()=>{
+ const m=await member(),ref=await publicRequest(m,{ready:true}),admin=await connect('admin'),legacy=await connect('legacy');
+ try{
+  const before=await facts(m,ref);
+  await assert.rejects(admin.execute("INSERT INTO m_simpanan_aktif(doc_no,jenis_simpanan,nik_kar,nama_kar,kd_group,potongan_old,potongan_payroll,status,is_mobile) VALUES(?,'SIMPANAN SUKARELA',?,'X','SYNTH',100000,150000,1,0)",[ref,m.nik]),/CONTROLLED_LEGACY_COMMAND_REQUIRED/);
+  await assert.rejects(admin.execute('DELETE FROM trans_simpanan_pengajuan WHERE doc_no=?',[ref]),/NO_HEADER_DELETE/);
+  assert.deepEqual(await facts(m,ref),before);
+  await legacy.execute('CALL pss_legacy_transition(?,?,?)',[ref,'APPROVE','legacy-checker']);
+  await admin.execute("UPDATE m_simpanan_aktif SET potongan_payroll=175000 WHERE nik_kar=?",[m.nik]);assert.equal(Number((await facts(m,ref)).active[0].potongan_payroll),175000);
+  const [audit]=await admin.execute("SELECT actor_ref FROM pss_audit WHERE reference=? AND event='LEGACY_APPROVE'",[ref]);assert.equal(audit[0].actor_ref,'legacy-checker');
+ }finally{await admin.end();await legacy.end();}
+});
