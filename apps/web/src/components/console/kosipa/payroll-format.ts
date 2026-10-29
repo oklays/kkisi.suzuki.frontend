@@ -1,14 +1,7 @@
 import type { LegacyDate } from '@koperasi/domain/kosipa';
 
-/** amount4 = integer in 1/10,000 rupiah (exact; 14% of recorded payroll totals carry fractions of a sen). Shown without rounding. */
-export function formatAmount4(units: number): string {
-  const negative = units < 0;
-  const abs = Math.abs(units);
-  const whole = String(Math.floor(abs / 10000)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  let frac = String(abs % 10000).padStart(4, '0').replace(/0+$/, '');
-  if (frac.length === 1) frac += '0';
-  return `${negative ? '-' : ''}Rp ${whole}${frac ? `,${frac}` : ''}`;
-}
+/** amount4 = integer in 1/10,000 rupiah (exact; 14% of recorded payroll totals carry fractions of a sen). Shown without rounding, in the shared KKISI Rupiah format. */
+export { formatAmount4 } from '../../money/format.ts';
 
 /** Legacy dates are shown as stored; zero/implausible values are labelled, never replaced by a guess. */
 export function formatLegacyDate(date: LegacyDate): string {
@@ -39,7 +32,7 @@ export const DIFFERENCE_LABEL: Record<string, string> = {
   RECORDED_LOWER: 'Payroll lebih kecil dari turunan (informasi, belum tentu salah)',
   RECORDED_ONLY: 'Hanya ada di payroll',
   DERIVED_ONLY_MEMBER_ABSENT: 'Ada belanja Kredit, anggota tidak ada di payroll periode ini',
-  DERIVED_ONLY_RECORDED_ZERO: 'Ada belanja Kredit, payroll tercatat Rp 0',
+  DERIVED_ONLY_RECORDED_ZERO: 'Ada belanja Kredit, payroll tercatat Rp0',
   NOT_COMPARABLE_ANOMALY: 'Tidak dapat dibandingkan (anomali data)',
 };
 

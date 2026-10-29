@@ -6,6 +6,8 @@
   "exports": {
     "./inventory": "./src/inventory/index.ts",
     "./money": "./src/money/money.ts",
+    "./money/rupiah": "./src/money/rupiah.ts",
+    "./money/terbilang": "./src/money/terbilang.ts",
     "./auth/errors": "./src/auth/errors.ts",
     "./auth/session-policy": "./src/auth/session-policy.ts",
     "./auth/redirect": "./src/auth/redirect.ts",

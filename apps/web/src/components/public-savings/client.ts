@@ -1,3 +1,5 @@
+import { formatRupiah } from '@koperasi/domain/money/rupiah';
+
 export interface SavingsForm {
   memberName: string; maskedIdentifier: string; sectionId: string; sectionName: string; savingsType: string;
   originalDeduction: string|null; requestedPeriod: { year: number; month: number };
@@ -14,15 +16,13 @@ export function consumeFragmentToken(location: Pick<Location, 'hash' | 'pathname
 
 export function rupiah(value: string|null): string {
   if(value===null)return 'Belum ada potongan';
-  const parts=/^(\d{1,16})(?:\.(\d{1,8}))?$/.exec(value);
-  if(!parts)return 'Belum diisi';
-  const fraction=parts[2]?.replace(/0+$/,'');
-  return `Rp${BigInt(parts[1]).toLocaleString('id-ID')}${fraction?','+fraction:''}`;
+  if(!/^\d{1,16}(?:\.\d{1,8})?$/.test(value))return 'Belum diisi';
+  return formatRupiah(value);
 }
 
 export function validateDraft(amount: string, signature: boolean, consent: boolean, form: SavingsForm): string[] {
   const errors: string[] = [];
-  if (!/^[1-9]\d{0,15}$/.test(amount)) errors.push('Isi nominal dalam rupiah bulat tanpa pemisah.');
+  if (!/^[1-9]\d{0,15}$/.test(amount)) errors.push('Isi nominal dalam rupiah bulat, tanpa desimal.');
   else {
     const value = BigInt(amount);
     if (value < BigInt(form.policy.minAmount) || value > BigInt(form.policy.maxAmount) || value % BigInt(form.policy.increment) !== BigInt(0))

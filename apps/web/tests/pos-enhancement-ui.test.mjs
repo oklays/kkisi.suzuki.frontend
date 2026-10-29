@@ -52,7 +52,7 @@ test('confirmed checkout callback clears an outstanding barcode query', async ()
 for (const outcome of ['success', 'rejected', 'uncertain']) test(`member search resets only on confirmed checkout: ${outcome}`, async () => {
   const store = new Map(); let cleared = 0;
   const view = component('TransactionPanel', {
-    './preview': preview, './ProductCatalog': { ProductIllustration() {} },
+    './preview': preview, '../money/CurrencyInput': { CurrencyInput() { return null; } }, './ProductCatalog': { ProductIllustration() {} },
     '@/features/pos/checkout-state': state, './MemberKindPicker': { MemberKindPicker() {} },
   }, {
     localStorage: { getItem: key => store.get(key), setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) },
@@ -76,7 +76,7 @@ for (const outcome of ['success', 'rejected', 'uncertain']) test(`member search 
 test('unmounting member search invalidates a pending lookup', async () => {
   let resolve; const selected = [];
   const view = component('TransactionPanel', {
-    './preview': preview, './ProductCatalog': {}, '@/features/pos/checkout-state': state, './MemberKindPicker': {},
+    './preview': preview, '../money/CurrencyInput': { CurrencyInput() { return null; } }, './ProductCatalog': {}, '@/features/pos/checkout-state': state, './MemberKindPicker': {},
   }, { fetch: () => new Promise(r => { resolve = r; }) });
   const render = () => view.render('MemberSearch', { member: null, disabled: false, onMember: value => selected.push(value) });
   find(render(), node => node.type === 'input').props.onChange({ target: { value: '0007' } });

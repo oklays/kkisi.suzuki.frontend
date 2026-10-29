@@ -1,0 +1,14 @@
+/* Rupiah presentation primitives (CurrencyText / CurrencyInput). */
+.money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.money-compact { cursor: help; }
+.money-invalid { color: #b42318; font-style: italic; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.money-input { display: flex; align-items: stretch; min-width: 0; border: 1px solid #d6dce5; border-radius: 7px; overflow: hidden; background: #fff; }
+.money-input:focus-within { outline: 3px solid #527cdd; outline-offset: 2px; }
+.money-input[data-invalid="true"] { border-color: #b42318; }
+.money-input[data-disabled="true"] { background: #f2f4f7; color: #667085; }
+.money-input-prefix { display: inline-flex; align-items: center; padding: 0 10px; color: #667085; background: #f9fafc; border-right: 1px solid #e2e5ea; font-size: 12px; font-weight: 600; user-select: none; }
+.money-input > input { flex: 1; min-width: 0; border: 0; border-radius: 0; background: transparent; font-variant-numeric: tabular-nums; text-align: right; }
+.money-input > input:focus-visible { outline: 0; }
+.money-input-note { display: block; margin-top: 4px; color: #b42318; font-size: 12px; line-height: 1.4; font-weight: 500; }

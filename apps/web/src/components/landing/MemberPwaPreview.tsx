@@ -22,7 +22,7 @@ export function MemberPwaPreview() {
         </div>
         <div className="lp-pw-balance">
           <span>Saldo Simpanan</span>
-          <strong>Rp 2.500.000</strong>
+          <strong>Rp2.500.000</strong>
           <ArrowRight strokeWidth={2.4} />
         </div>
         <div className="lp-pw-grid">

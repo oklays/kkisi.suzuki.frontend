@@ -13,7 +13,7 @@ export const provisionalRules: ProvisionalRules = Object.freeze({
 export function validatePrototypeDraft(draft: PrototypeDraft, rules: ProvisionalRules): DraftErrors {
   const errors: DraftErrors = {};
   if (!/^(0|[1-9][0-9]{0,15})$/.test(draft.amountRupiah)) {
-    errors.amountRupiah = 'Isi angka rupiah bulat, tanpa titik, koma, atau spasi.';
+    errors.amountRupiah = 'Isi angka rupiah bulat, tanpa desimal.';
   } else if (BigInt(draft.amountRupiah) < BigInt(rules.minimumRupiah) || (rules.maximumRupiah !== null && BigInt(draft.amountRupiah) > BigInt(rules.maximumRupiah))) {
     errors.amountRupiah = 'Nominal di luar rentang contoh. Aturan bisnis belum disahkan.';
   }

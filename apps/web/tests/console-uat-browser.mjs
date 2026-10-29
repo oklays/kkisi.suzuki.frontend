@@ -103,11 +103,11 @@ try {
 
     console.log('UAT-6/8. payroll history and components; unverified branch mapping; informational (not error) comparison');
     { const { context, page } = await session(); await login(page, 'koperasi');
-      await page.goto(`${base}/console/kosipa/anggota/9001`); await page.getByRole('heading', { name: 'Potongan payroll' }).waitFor(); let t = await text(page); assert.match(t, /POTSYN202608A[\s\S]*Rp 150\.000/);
+      await page.goto(`${base}/console/kosipa/anggota/9001`); await page.getByRole('heading', { name: 'Potongan payroll' }).waitFor(); let t = await text(page); assert.match(t, /POTSYN202608A[\s\S]*Rp150\.000/);
       await page.goto(`${base}/console/kosipa/payroll`); await page.getByRole('heading', { name: 'Payroll', exact: true }).waitFor(); assert.match(await text(page), /POTSYN202608A/);   // A4: the list is audited
-      await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A`); await page.getByRole('heading', { name: 'Batch POTSYN202608A' }).waitFor(); assert.match(await text(page), /Belanja toko \(Kredit\)\s+Rp 200\.000/);
+      await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A`); await page.getByRole('heading', { name: 'Batch POTSYN202608A' }).waitFor(); assert.match(await text(page), /Belanja toko \(Kredit\)\s+Rp200\.000/);
       await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A/anggota/S9001`); await page.getByRole('heading', { name: 'Potongan anggota' }).waitFor(); t = await text(page);
-      assert.match(t, /TOKO TAMBUN\s+Belanja toko \(Kredit\)\s+Rp 100\.000/); assert.match(t, /PPOB\s+PPOB\s+Rp 50\.000/);
+      assert.match(t, /TOKO TAMBUN\s+Belanja toko \(Kredit\)\s+Rp100\.000/); assert.match(t, /PPOB\s+PPOB\s+Rp50\.000/);
       await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A/rekonsiliasi`); await page.getByRole('heading', { name: 'Rekonsiliasi kredit toko' }).waitFor(); t = await text(page);
       assert.match(t, /belum dikonfirmasi pemilik proses/); assert.match(t, /Selisih bukan otomatis kesalahan/); assert.match(t, /per komponen/);
       await page.goto(`${base}/console/kosipa/laporan/kualitas-data`); await page.getByRole('heading', { name: 'Kualitas data keuangan' }).waitFor(); t = await text(page);
@@ -119,8 +119,8 @@ try {
       await page.goto(`${base}/console/kosipa/laporan`); await page.getByRole('heading', { name: 'Laporan KOSIPA' }).waitFor();
       for (const name of ['Laporan pinjaman', 'Laporan payroll', 'Ringkasan keanggotaan', 'Ringkasan mutasi simpanan', 'Kualitas data keuangan']) await page.getByRole('link', { name }).waitFor();
       await page.getByRole('link', { name: 'Laporan pinjaman' }).click(); await page.getByRole('heading', { name: 'Laporan pinjaman' }).waitFor(); let t = await text(page);
-      assert.match(t, /2026-03\s+5\s+Rp 3\.400\.000/); assert.match(t, /2026-08\s+1\s+Rp 12\.000\.000/); assert.match(t, /Tanggal dokumen 0000-00-00 \(kosong\)\s+1\s+Rp 500\.000/);
-      assert.match(t, /APPROVED \/ BELUM LUNAS: 4 \(Rp 3\.100\.000\)/); assert.doesNotMatch(t, /77\.000\.000|9900770077/);
+      assert.match(t, /2026-03\s+5\s+Rp3\.400\.000/); assert.match(t, /2026-08\s+1\s+Rp12\.000\.000/); assert.match(t, /Tanggal dokumen 0000-00-00 \(kosong\)\s+1\s+Rp500\.000/);
+      assert.match(t, /APPROVED \/ BELUM LUNAS: 4 \(Rp3\.100\.000\)/); assert.doesNotMatch(t, /77\.000\.000|9900770077/);
       await page.getByRole('link', { name: '2026-03' }).click(); await page.waitForURL(/periode=2026-03/); await page.getByRole('link', { name: 'PINSYN9002' }).waitFor();
       assert.deepEqual((await page.locator('main tbody tr td:first-child').allInnerTexts()).sort(), ['PINSYN9002', 'PINSYN9003', 'PINSYN9005', 'PINSYN9005', 'PINSYN9007'], 'the report month drills into the list; the zero-dated loan is not in it');
       await page.goto(`${base}/console/kosipa/laporan/pinjaman?tahun=26`); await page.getByRole('heading', { name: 'Tahun tidak valid' }).waitFor();
@@ -167,9 +167,9 @@ try {
     try {
       const { context, page } = await session(); await login(page, 'koperasi');
       await page.goto(`${base}/console/kosipa/pinjaman/PINSYN9002`); await page.getByRole('heading', { name: 'Pinjaman PINSYN9002' }).waitFor(); let t = await text(page);
-      assert.match(t, /Pokok \(rencana\)\s+Rp 1\.200\.000/, 'the loan header (a table that is still readable) renders'); assert.match(t, /Jadwal angsuran tidak dapat dibaca saat ini/); assert.doesNotMatch(t, /Σ pokok jadwal/);
+      assert.match(t, /Pokok \(rencana\)\s+Rp1\.200\.000/, 'the loan header (a table that is still readable) renders'); assert.match(t, /Jadwal angsuran tidak dapat dibaca saat ini/); assert.doesNotMatch(t, /Σ pokok jadwal/);
       await page.goto(`${base}/console/kosipa/simpanan/9003`); await page.getByRole('heading', { name: 'Buku simpanan' }).waitFor(); t = await text(page);
-      assert.match(t, /Bagian ini|Data tidak dapat dibaca saat ini/); assert.match(t, /Saldo resmi belum tersedia/); assert.doesNotMatch(t, /Rp 250\.000/);
+      assert.match(t, /Bagian ini|Data tidak dapat dibaca saat ini/); assert.match(t, /Saldo resmi belum tersedia/); assert.doesNotMatch(t, /Rp250\.000/);
       await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A`); await page.getByRole('heading', { name: 'Batch tidak dapat dibaca' }).waitFor();
       await page.goto(`${base}/console/kosipa/laporan/kualitas-data`); await page.getByRole('heading', { name: 'Kualitas data keuangan' }).waitFor(); t = await text(page);
       assert.ok((t.match(/Bagian ini tidak dapat dibaca saat ini/g) ?? []).length >= 4, 'each failing diagnostic says so on its own'); assert.match(t, /Tanggal dokumen pinjaman tidak dapat dipakai[\s\S]*Dari 7 dokumen/, 'the diagnostics that can still be read are shown');
@@ -185,7 +185,7 @@ try {
     console.log('UAT-10. console store (identity + audit) unreachable: every KOSIPA read fails closed, TOKO keeps working');
     const { context, page } = await session(); await login(page, 'admin'); await page.waitForURL(/\/console(\?entry=login)?$/);
     await page.getByText('Akses KOSIPA sementara tidak dapat diperiksa').waitFor();
-    for (const path of ['/console/kosipa/anggota?q=S9001', '/console/kosipa/simpanan', '/console/kosipa/pinjaman', '/console/kosipa/payroll', '/console/kosipa/laporan', '/console/kosipa/laporan/kualitas-data']) { await page.goto(`${base}${path}`); await page.getByRole('heading', { name: /Layanan KOSIPA tidak tersedia|Akses ditolak|Akun belum ditautkan/ }).waitFor(); assert.doesNotMatch(await text(page), /PINSYN|POTSYN|Rp \d/, `${path} shows no data`); }
+    for (const path of ['/console/kosipa/anggota?q=S9001', '/console/kosipa/simpanan', '/console/kosipa/pinjaman', '/console/kosipa/payroll', '/console/kosipa/laporan', '/console/kosipa/laporan/kualitas-data']) { await page.goto(`${base}${path}`); await page.getByRole('heading', { name: /Layanan KOSIPA tidak tersedia|Akses ditolak|Akun belum ditautkan/ }).waitFor(); assert.doesNotMatch(await text(page), /PINSYN|POTSYN|Rp\d/, `${path} shows no data`); }
     for (const api of ['loans', 'savings/9003', 'payroll', 'reports/loans', 'reports/data-quality']) assert.ok([403, 503].includes((await context.request.get(`${base}/api/kosipa/${api}`)).status()), api);
     await page.goto(`${base}/sales`); await page.getByText('Telusuri transaksi').waitFor(); await context.close();
     const kasir = await session(); await login(kasir.page, 'kasir1'); await kasir.page.waitForURL(`${base}/pos`); await kasir.context.close();

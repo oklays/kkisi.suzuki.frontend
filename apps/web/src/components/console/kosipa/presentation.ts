@@ -1,9 +1,8 @@
+import { formatRupiah } from '../../money/format.ts';
+
 /** Format a source decimal as text; never route financial decimals through a floating-point number. */
 export function formatExactRupiah(value: string | null): string {
-  if (value === null) return 'Tidak tersedia';
-  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value);
-  if (!match) throw new Error('Invalid source decimal');
-  return `${match[1]}Rp ${match[2].replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${match[3] ? `,${match[3]}` : ''}`;
+  return formatRupiah(value, { placeholder: 'Tidak tersedia' });
 }
 
 export function maskIdentifier(value: string): string {

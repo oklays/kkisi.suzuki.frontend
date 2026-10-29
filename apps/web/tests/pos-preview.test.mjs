@@ -27,9 +27,12 @@ test('every fallback contains visible drawing content rather than an empty image
   }
 });
 
-test('rupiah display shows whole rupiah and only adds decimals when the price has a fraction', () => {
-  const plain = preview.formatRupiah(350000).replace(/\s/g, ' ');
-  assert.match(plain, /Rp\s?3\.500$/);
-  assert.match(preview.formatRupiah(400010).replace(/\s/g, ' '), /Rp\s?4\.000,10$/);
-  assert.match(preview.formatRupiah(0).replace(/\s/g, ' '), /Rp\s?0$/);
+test('rupiah display follows the KKISI standard: Rp glued to the number, decimals only for real fractions', () => {
+  assert.equal(preview.formatRupiah(350000), 'Rp3.500');
+  assert.equal(preview.formatRupiah(400010), 'Rp4.000,10');
+  assert.equal(preview.formatRupiah(0), 'Rp0');
+  assert.equal(preview.formatRupiah(125000000), 'Rp1.250.000');
+  assert.equal(preview.formatRupiah(125000075), 'Rp1.250.000,75');
+  assert.equal(preview.formatRupiah(-125000000), '-Rp1.250.000');
 });
+

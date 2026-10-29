@@ -1,4 +1,5 @@
 import type { PosProduct } from "@/features/pos/types";
+import { formatSen } from "../money/format.ts";
 export { changeQuantity, hasPrice, netPriceSen, previewSubtotal } from '@koperasi/domain/pos/preview';
 
 const families: Record<string, string> = {
@@ -20,9 +21,7 @@ export function productImage(product: PosProduct): string {
   return product.imageUrl || productIllustration(product);
 }
 
-const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
-const rupiahFraction = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-/** Display only: takes integer sen, shows whole rupiah unless there is a fraction (e.g. 4000.10). */
+/** Display only: takes integer sen and uses the shared KKISI Rupiah standard (`Rp3.500`, `Rp4.000,10`). */
 export function formatRupiah(sen: number): string {
-  return sen % 100 === 0 ? rupiah.format(sen / 100) : rupiahFraction.format(sen / 100);
+  return formatSen(sen);
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Banknote, Check, LoaderCircle, Minus, Percent, Plus, Printer, QrCode, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, X } from "lucide-react";
 import type { PosMember, PosProduct, PosSession, CheckoutResult, PreviewCartLine, PreviewPayment } from "@/features/pos/types";
 import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
+import { CurrencyInput } from "../money/CurrencyInput";
 import { ProductIllustration } from "./ProductCatalog";
 import { checkoutBlockingReasons } from "@/features/pos/checkout-state";
 import { MemberKindPicker } from "./MemberKindPicker";
@@ -19,7 +20,6 @@ const errors: Record<string, string> = {
   IDEMPOTENCY_CONFLICT: "Kunci pembayaran telah digunakan untuk transaksi berbeda.", CSRF: "Muat ulang halaman untuk memperbarui sesi pembayaran.", FORBIDDEN: "Akses POS ditolak.",
 };
 const errorText = (code: string) => errors[code] ?? "Permintaan belum dapat diproses. Coba lagi.";
-const rupiahInput = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
 
 function printReceipt(saleId: number | string) {
   if (typeof window === "undefined") return;
@@ -111,7 +111,7 @@ export function PromotionSection() {
 export function PriceSummary({ cart }: { cart: PreviewCartLine[] }) {
   const subtotal = previewSubtotal(cart);
   const quantity = cart.reduce((sum, line) => sum + line.quantity, 0);
-  return <div className="pos-price-summary"><div><span>Subtotal ({quantity} item)</span><strong>{formatRupiah(subtotal)}</strong></div><div><span>Pajak / penyesuaian</span><span>Rp 0</span></div><div className="pos-total"><span>Total Pembayaran<small>Harga setelah diskon produk</small></span><strong>{formatRupiah(subtotal)}</strong></div></div>;
+  return <div className="pos-price-summary"><div><span>Subtotal ({quantity} item)</span><strong>{formatRupiah(subtotal)}</strong></div><div><span>Pajak / penyesuaian</span><span>Rp0</span></div><div className="pos-total"><span>Total Pembayaran<small>Harga setelah diskon produk</small></span><strong>{formatRupiah(subtotal)}</strong></div></div>;
 }
 
 const payments = [
@@ -145,7 +145,6 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
   const [hydrated, setHydrated] = useState(false);
   const total = previewSubtotal(cart);
   const paidSen = /^\d{1,10}$/.test(paidAmount) ? Number(paidAmount) * 100 : 0;
-  const paidDisplay = paidAmount ? rupiahInput.format(Number(paidAmount)) : "";
   const locked = processing || uncertain;
   const blockers = checkoutBlockingReasons({ session, payment, itemCount: cart.length, totalSen: total, paidSen, remainingSen: member?.remainingSen ?? null });
   const ready = blockers.length === 0;
@@ -198,7 +197,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
       </div>
       <div className="pos-transaction-bottom">
         <PriceSummary cart={cart} /><PaymentMethodSelector selected={payment} onSelect={setPayment} disabled={locked} />
-        {payment === "Cash" && <div className="pos-cash-payment"><label htmlFor="pos-paid">Uang bayar (Rp)</label><input id="pos-paid" inputMode="numeric" pattern="[0-9]*" value={paidDisplay} disabled={locked} onChange={(event) => { const digits = event.target.value.replace(/\D/g, ""); if (/^\d{0,10}$/.test(digits)) setPaidAmount(digits); }} /><span>Kembalian <strong>{formatRupiah(Math.max(0, paidSen - total))}</strong></span></div>}
+        {payment === "Cash" && <div className="pos-cash-payment"><label htmlFor="pos-paid">Uang bayar</label><CurrencyInput id="pos-paid" value={paidAmount} onValueChange={setPaidAmount} allowDecimals={false} maxIntegerDigits={10} disabled={locked} placeholder="0" /><span className="pos-change">Kembalian <strong>{formatRupiah(Math.max(0, paidSen - total))}</strong></span></div>}
         {payment === "QRIS" && <div className="pos-qris-banner"><div className="pos-qris-banner-head"><QrCode size={16} /><span>Instruksi QRIS Statis</span></div><p>Pelanggan scan kode QRIS toko. Pastikan notifikasi dana masuk telah terverifikasi sebelum memproses transaksi.</p></div>}
         {payment === "Kredit" && <p className="pos-checkout-note">{member ? `Sisa setelah belanja: ${formatRupiah(member.remainingSen - total)}` : "Pilih anggota aktif terlebih dahulu."}</p>}
         {!uncertain && blockers.map((reason) => <p className="pos-checkout-note" key={reason}>{reason}</p>)}

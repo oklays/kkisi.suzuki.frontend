@@ -56,7 +56,7 @@ export function ConsolePreview() {
                     <span className="lp-cp-row-end"><span className="lp-sk lp-sk-xs" /><span className="lp-sk lp-sk-xs" /></span>
                   </div>
                 ))}
-                <div className="lp-cp-total"><span>Total</span><strong>Rp 756.000</strong></div>
+                <div className="lp-cp-total"><span>Total</span><strong>Rp756.000</strong></div>
                 <span className="lp-cp-pay">Proses Pembayaran</span>
               </section>
             </div>

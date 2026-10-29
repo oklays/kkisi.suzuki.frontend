@@ -11,9 +11,10 @@ import { ProductCreator } from './ProductCreator';
 import { productsCsv, stockState } from './product-view';
 import '../pos/pos.css';
 import './products.css';
+import { formatRupiah } from '../money/format';
 
 const number = (value: number) => new Intl.NumberFormat('id-ID').format(value);
-const rupiah = (value: string) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits: 2 }).format(Number(value));
+const rupiah = (value: string) => formatRupiah(value);
 const stockNames = { available: 'Tersedia', low: 'Stok menipis', empty: 'Stok habis' };
 type Filters = { q: string; category: string; brand: string; status: MasterProductQuery['status']; stock: MasterProductQuery['stock']; sort: MasterProductQuery['sort']; page: number; pageSize: number };
 const initialFilters: Filters = { q: '', category: '', brand: '', status: 'all', stock: 'all', sort: 'newest', page: 1, pageSize: 25 };

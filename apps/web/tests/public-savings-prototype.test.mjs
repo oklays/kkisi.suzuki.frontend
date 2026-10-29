@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
 registerHooks({ load(url, context, next) {
+  if (url.endsWith('.css')) return { format: 'module', shortCircuit: true, source: 'export {};' };
   if (url.endsWith('.tsx')) return { format: 'module', shortCircuit: true, source: ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), {compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText };
   return next(url, context);
 }});

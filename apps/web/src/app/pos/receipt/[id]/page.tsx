@@ -4,10 +4,12 @@ import { PosError } from '@koperasi/domain/pos/sale';
 import { requirePagePermission } from '@/infrastructure/auth/page-guard';
 import { PrismaReceiptRepository } from '@/infrastructure/repositories/prisma-receipt.repository';
 import { ReceiptPrintButton } from '@/components/pos/ReceiptPrintButton';
+import { formatSenDocument } from '@/components/money/format';
 import './receipt.css';
 
 export const dynamic = 'force-dynamic';
-const rupiah = (sen: number) => `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: sen % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(sen / 100)}`;
+// Official receipt: KKISI Rupiah standard at document precision (Rp25.000,00).
+const rupiah = (sen: number) => formatSenDocument(sen);
 
 export default async function ReceiptPage({
   params,

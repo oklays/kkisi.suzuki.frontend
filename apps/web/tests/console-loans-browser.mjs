@@ -90,7 +90,7 @@ try {
   { const { context, page } = await session(); await login(page, 'koperasi');
     await page.goto(`${base}/console/kosipa/pinjaman/PINSYN9002`); await page.getByRole('heading', { name: 'Pinjaman PINSYN9002' }).waitFor();
     let t = await text(page);
-    assert.match(t, /SYNTH ANGGOTA TIGA · NIK S9003/); assert.match(t, /Pokok \(rencana\)\s+Rp 1\.200\.000/); assert.match(t, /Σ pokok jadwal\s+Rp 1\.200\.000/); assert.match(t, /Σ pokok belum dibayar \(jadwal\)\s+Rp 1\.000\.000/);
+    assert.match(t, /SYNTH ANGGOTA TIGA · NIK S9003/); assert.match(t, /Pokok \(rencana\)\s+Rp1\.200\.000/); assert.match(t, /Σ pokok jadwal\s+Rp1\.200\.000/); assert.match(t, /Σ pokok belum dibayar \(jadwal\)\s+Rp1\.000\.000/);
     assert.match(t, /Sudah dibayar \/ belum\s+2 \/ 10/); assert.match(t, /saldo resmi|Saldo\/outstanding resmi belum tersedia/i); assert.doesNotMatch(t, /Catatan integritas data/);
     assert.match(t, /2 angsuran berstatus Bayar tidak mencatat tanggal bayar/);
     assert.equal(await page.locator('main section[aria-labelledby=sec-jadwal] tbody tr').count(), 12);
@@ -143,7 +143,7 @@ try {
     assert.ok(links.includes('/console/kosipa/anggota') && !links.includes('/console/kosipa/pinjaman'));
     await page.goto(`${base}/console/kosipa/pinjaman`); await page.getByRole('heading', { name: 'Akses ditolak' }).waitFor();
     await page.goto(`${base}/console/kosipa/pinjaman/PINSYN9002`); await page.getByRole('heading', { name: 'Akses ditolak' }).waitFor();
-    assert.doesNotMatch(await text(page), /Rp 1\.200\.000/);
+    assert.doesNotMatch(await text(page), /Rp1\.200\.000/);
     assert.equal((await context.request.get(`${base}/api/kosipa/loans`)).status(), 403); assert.equal((await context.request.get(`${base}/api/kosipa/loans/PINSYN9002`)).status(), 403);
     await page.goto(`${base}/console/kosipa/anggota/9001`); await page.getByRole('heading', { name: 'Profil' }).waitFor();
     assert.equal(await page.getByRole('heading', { name: 'Pinjaman', exact: true }).count(), 0, 'no loan section without the loan grant');
