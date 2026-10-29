@@ -135,3 +135,9 @@ test('operator transport includes cookies only when explicitly requested by cons
  globalThis.fetch=async(_url,init)=>{calls.push(init);return Response.json({ok:true});};
  try{await requestJson('/api/test',{method:'GET'});await requestJson('/api/test',{method:'GET',credentials:'include'});assert.equal(calls[0].credentials,'omit');assert.equal(calls[1].credentials,'include');}finally{globalThis.fetch=previous;}
 });
+test('console workbench renders compact search, filters, pagination and no staging key',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ const html=renderToStaticMarkup(React.createElement(loadComponent('ConsoleWorkbench.tsx').default,{csrfToken:'session-token'}));
+ assert.match(html,/role="tablist"/);assert.match(html,/type="search"/);assert.match(html,/aria-label="Halaman"/);assert.match(html,/aria-label="Filter status"/);
+ assert.match(html,/aria-live="polite"/);assert.doesNotMatch(html,/type="password"|LOCAL STAGING|session-token/);
+});

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import OperatorWorkbench from '@/components/public-savings/OperatorWorkbench';
-import '@/components/public-savings/public-savings.css';
+import ConsoleWorkbench from '@/components/public-savings/ConsoleWorkbench';
+import '@/components/public-savings/console-workbench.css';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import { publicSavingsConsoleEnabled } from '@/features/public-savings/flags';
@@ -26,5 +26,5 @@ export default async function PublicSavingsManagementPage() {
   } catch { unavailable = true; }
   if (unavailable) return <p role="alert">Konfigurasi akses pengajuan simpanan sukarela belum tersedia.</p>;
   if (!allowed) return <p role="alert">Akses pengajuan simpanan sukarela tidak tersedia untuk akun ini.</p>;
-  return <OperatorWorkbench authMode="CONSOLE" csrfToken={csrfToken} />;
+  return <ConsoleWorkbench csrfToken={csrfToken} />;
 }
