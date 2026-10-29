@@ -23,9 +23,9 @@ Owner MASTER EXECUTION PROMPT authorizes completion under approved Policy v1.0.0
 
 | Gate | Local result | Actual operational status / exact next prerequisite |
 |---|---|---|
-| O-02 | Explicit typed Latin1/NIK10/mandatory-column/status/period/signature translation; metadata preflight; representative real DB roundtrip; no inferred zero/first enrollment | PARTIAL: obtain current legacy PHP/schema and confirm actual section/contact/roster/calendar mappings. Historical09A is not production attestation |
-| O-05 | Shared member lock/reservation, distinct restricted principals, guarded whole-command processing, retry/idempotency/rollback/race tests | PARTIAL: enroll all actual CI2/Laravel/other writers and bind actor/branch/action to authenticated roles; no actual PHP checkout/runtime is available |
-| O-06 | Immutable encrypted v2 envelope/private PNG, READY hash-bound PDF, byte-identical historical reprint after master changes/approval | PARTIAL: actual CI2 private-proof print path must be wired/tested; current PHP print source/runtime unavailable |
+| O-02 | Explicit typed Latin1/NIK10/mandatory-column/status/period/signature translation; metadata preflight; recovered-DDL roundtrip; no inferred zero/first enrollment | PARTIAL: technical part verified on recovered production DDL ([20_CP2](20_CP2_LEGACY_INTEGRATION_AND_RELEASE.md)); owner L1/L4 confirmation and authoritative evidence/calendar sources remain |
+| O-05 | Shared member reservation for enrolled legacy writers, PUBLIC command-only header/master, duplicate-reference guard, retry/idempotency/rollback/race tests | PARTIAL: verified with real CI2 PHP on recovered DDL ([20_CP2](20_CP2_LEGACY_INTEGRATION_AND_RELEASE.md)); needs approved CI2 hook PHP scope, real Laravel execution, principal split |
+| O-06 | Immutable encrypted v2 envelope/private PNG, READY hash-bound PDF, byte-identical historical reprint after master changes/approval | PARTIAL: CI2 print defect characterized and hook tested on PHP 5.6 ([20_CP2](20_CP2_LEGACY_INTEGRATION_AND_RELEASE.md)); print route wiring and internal proof resolver remain |
 
 Evidence and commands: [verification](verification.md), [repeatable staging/manual guide](../../../../integration/public-savings/README.md), [legacy mapping/writer contract](../../../../integration/public-savings/legacy/README.md). All rows below this section retain dated historical decisions; they are not the current authorization gate.
 
