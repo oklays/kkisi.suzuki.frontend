@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false, "plugins": [] },
+  "include": ["src/prototypes/public-savings/**/*.ts", "src/prototypes/public-savings/**/*.tsx"],
+  "exclude": ["node_modules", ".next"]
+}
