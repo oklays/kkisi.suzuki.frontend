@@ -17,14 +17,14 @@ function fixture({denied=false,mode='LOCAL_SYNTHETIC'}={}) {
 async function consoleMode(run){const previous=process.env.PSS_OPERATOR_AUTH;process.env.PSS_OPERATOR_AUTH='CONSOLE';try{await run();}finally{if(previous===undefined)delete process.env.PSS_OPERATOR_AUTH;else process.env.PSS_OPERATOR_AUTH=previous;}}
 const req=(body)=>new Request('http://127.0.0.1:3489/api/kosipa/test',{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{})});
 test('console operator routes pass session branch and actor to every scoped service method',async()=>consoleMode(async()=>{
- for(const [operation,name,args,body,recordId,action] of [
-  ['members','listMembers',[''],undefined,undefined,'ISSUE_LINK'],['links-list','listLinks',[],undefined,undefined,'VIEW_SUBMISSIONS'],
+ for(const [operation,name,args,body,recordId,action,tail=[]] of [
+  ['members','listMembers',[''],undefined,undefined,'ISSUE_LINK'],['links-list','listLinks',[],undefined,undefined,'VIEW_SUBMISSIONS',[{page:1,pageSize:10}]],
   ['links-create','issueLink',['member-1'],{memberRef:'member-1'},undefined,'ISSUE_LINK'],['links-revoke','revokeLink',['link-1','Member request'],{reason:'Member request'},'link-1','REVOKE_LINK'],
-  ['applications','listApplications',[],undefined,undefined,'VIEW_SUBMISSIONS'],['application-pdf','operatorPdf',['app-1'],undefined,'app-1','VIEW_SUBMISSIONS'],
+  ['applications','listApplications',[],undefined,undefined,'VIEW_SUBMISSIONS',[{page:1,pageSize:10}]],['application-pdf','operatorPdf',['app-1'],undefined,'app-1','VIEW_SUBMISSIONS'],
  ]) {
   const f=fixture();assert.equal((await f.handle(req(body),operation,recordId)).status,200);
   assert.equal(f.calls[0].name,'authorize');assert.equal(f.calls[0].action,action);
-  const service=f.calls.find(call=>call.name===name);assert.deepEqual(service.args,[...args,{...f.actor,action}]);
+  const service=f.calls.find(call=>call.name===name);assert.deepEqual(service.args,[...args,{...f.actor,action},...tail]);
   if(operation==='links-revoke')assert.equal(f.calls[0].target.reason,'Member request');
  }
 }));

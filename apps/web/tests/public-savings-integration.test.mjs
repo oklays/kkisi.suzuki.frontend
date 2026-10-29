@@ -497,3 +497,23 @@ test('console operator scope is checked against persisted branch and issuance/re
  await f.service.revokeLink(issued.linkRef,'synthetic reason',{...actor,action:'REVOKE_LINK'});
  const[events]=await f.admin.execute("SELECT actor_ref,reason FROM pss_audit WHERE member_id=? AND event='LINK_REVOKED'",[f.id]);assert.equal(events[0].actor_ref,'console:77');assert.equal(events[0].reason,'synthetic reason');
 });
+test('operator lists are paginated server-side with search, status filter and branch-scoped counts', {skip:!enabled},async t=>{
+ const f=await fixture(t),actor={actorRef:'console:91',branch:'SYNTHETIC BRANCH',action:'VIEW_SUBMISSIONS'},other={...actor,branch:'OTHER BRANCH'};
+ const issued=[];for(let i=0;i<3;i++)issued.push(await f.service.issueLink(String(f.id),{...actor,action:'ISSUE_LINK'}));
+ const all=await f.service.listLinks(actor,{q:f.nik,pageSize:5});
+ assert.equal(all.total,3);assert.equal(all.links.length,3);assert.equal(all.pageSize,5);assert.deepEqual([all.counts.ACTIVE,all.counts.REVOKED],[1,2]);
+ assert.equal(all.links[0].linkRef,issued[2].linkRef);assert.equal(all.links[0].memberName,f.name);assert.equal(all.links[0].maskedIdentifier,'••••'+f.nik.slice(-4));
+ assert.equal(JSON.stringify(all).includes(f.nik),false,'list never exposes the full NIK');
+ const second=await f.service.listLinks(actor,{q:f.nik,pageSize:2,page:2});assert.equal(second.links.length,0,'page size is clamped to at least 5');
+ const one=await f.service.listLinks(actor,{q:f.nik,pageSize:5,status:'ACTIVE'});assert.equal(one.total,1);assert.equal(one.links[0].state,'ACTIVE');
+ assert.equal((await f.service.listLinks(actor,{q:f.name.slice(4)})).links.some(l=>l.linkRef===issued[0].linkRef),true,'name search is a contains match');
+ assert.equal((await f.service.listLinks(actor,{q:'%'})).total,0,'LIKE wildcards are literal');
+ assert.equal((await f.service.listLinks(other,{q:f.nik})).total,0,'other branch sees nothing');
+ for(const query of [{status:'DROP'},{q:'x'.repeat(51)}])await assert.rejects(()=>f.service.listLinks(actor,query),codeMatches(/INVALID_INPUT/));
+ const auth=await f.authorize(),good=await f.service.submit(auth.token,auth.proof,auth.command);
+ const apps=await f.service.listApplications(actor,{q:good.reference.slice(0,20),pageSize:5});
+ assert.equal(apps.total,1);assert.equal(apps.applications[0].reference,good.reference);assert.equal(apps.applications[0].status,'OPEN');assert.equal(apps.applications[0].originalAmount,'100000');
+ assert.equal((await f.service.listApplications(actor,{q:f.nik,status:'APPROVED'})).total,0);
+ assert.equal((await f.service.listApplications(other,{q:f.nik})).total,0);
+ assert.ok(apps.counts.OPEN>=1);await assert.rejects(()=>f.service.listApplications(actor,{status:'ASSISTED_REQUIRED'}),codeMatches(/INVALID_INPUT/));
+});

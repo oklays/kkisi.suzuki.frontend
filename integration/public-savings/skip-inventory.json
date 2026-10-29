@@ -1,10 +1,10 @@
 {
   "scope": "CP2 full web regression (.local/public-savings/cp2-regression.log); public-savings gates resolved by their own executed runs",
-  "total": 106,
+  "total": 107,
   "counts": {
     "intentional": 0,
     "irrelevant": 76,
-    "environment-dependent": 30,
+    "environment-dependent": 31,
     "remediation": 0
   },
   "tests": [
@@ -1196,7 +1196,7 @@
       "skipDeclarations": [
         "process.env.PSS_ACTUAL_SCHEMA_TEST!=='1'"
       ],
-      "resolution": "RESOLVED: PSS_ACTUAL_SCHEMA_TEST=1 node --test tests/public-savings-actual-schema.test.mjs executed with PSS_ACTUAL_SCHEMA_TEST=1; 5 passed, 0 failed, 0 skipped (.local/public-savings/cp2-gated.log)",
+      "resolution": "RESOLVED: PSS_ACTUAL_SCHEMA_TEST=1 node --test tests/public-savings-actual-schema.test.mjs executed with PSS_ACTUAL_SCHEMA_TEST=1; 4 passed, 0 failed, 0 skipped (.local/public-savings/cp2-gated.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_ACTUAL_SCHEMA_TEST=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run PSS_ACTUAL_SCHEMA_TEST=1 node --test tests/public-savings-actual-schema.test.mjs against the sentinel-verified local fixture."
@@ -1213,7 +1213,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1230,7 +1230,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1247,7 +1247,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1264,7 +1264,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1281,7 +1281,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1298,7 +1298,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1315,7 +1315,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1332,7 +1332,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1349,7 +1349,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1366,7 +1366,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1383,7 +1383,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1400,7 +1400,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1417,7 +1417,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1434,7 +1434,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1451,7 +1451,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1468,7 +1468,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1485,7 +1485,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1502,7 +1502,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1519,7 +1519,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1536,7 +1536,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1553,7 +1553,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1570,7 +1570,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1587,7 +1587,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1604,7 +1604,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1621,7 +1621,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1638,7 +1638,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1655,7 +1655,7 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
@@ -1672,14 +1672,31 @@
       "skipDeclarations": [
         "!enabled"
       ],
-      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
     },
     {
       "ordinal": 93,
-      "baselineTapNumber": 434,
+      "baselineTapNumber": 401,
+      "name": "operator lists are paginated server-side with search, status filter and branch-scoped counts",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 44 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 94,
+      "baselineTapNumber": 435,
       "name": "encrypted synthetic backup restores SQL rows, artifact bytes and key relationship into a sibling database",
       "file": "apps/web/tests/public-savings-recovery.test.mjs",
       "gates": [
@@ -1689,14 +1706,14 @@
       "skipDeclarations": [
         "process.env.PSS_RECOVERY_TEST!=='1'"
       ],
-      "resolution": "RESOLVED: PSS_RECOVERY_TEST=1 node --test tests/public-savings-recovery.test.mjs executed with PSS_RECOVERY_TEST=1; 5 passed, 0 failed, 0 skipped (.local/public-savings/cp2-gated.log)",
+      "resolution": "RESOLVED: PSS_RECOVERY_TEST=1 node --test tests/public-savings-recovery.test.mjs executed with PSS_RECOVERY_TEST=1; 4 passed, 0 failed, 0 skipped (.local/public-savings/cp2-gated.log)",
       "classification": "environment-dependent",
       "reason": "Dedicated disposable MariaDB gate PSS_RECOVERY_TEST=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
       "requiredAction": "Run PSS_RECOVERY_TEST=1 node --test tests/public-savings-recovery.test.mjs against the sentinel-verified local fixture."
     },
     {
-      "ordinal": 94,
-      "baselineTapNumber": 512,
+      "ordinal": 95,
+      "baselineTapNumber": 514,
       "name": "SQL privilege compatibility: the least-privilege grants refuse everything but the contract; ON DUPLICATE KEY UPDATE is incompatible with them",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1713,8 +1730,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 95,
-      "baselineTapNumber": 513,
+      "ordinal": 96,
+      "baselineTapNumber": 515,
       "name": "one transaction: idempotency row + legacy ledger row + stock cache; the posting SURVIVES the legacy recompute, a cache-only increment does not",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1731,8 +1748,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 96,
-      "baselineTapNumber": 514,
+      "ordinal": 97,
+      "baselineTapNumber": 516,
       "name": "retry after a successful commit changes nothing; a reused event key with a different payload is rejected and changes nothing",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1749,8 +1766,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 97,
-      "baselineTapNumber": 515,
+      "ordinal": 98,
+      "baselineTapNumber": 517,
       "name": "an item under stock opname (status_so = 1) or an unknown item/branch is refused and nothing is written; a failure before the posting row rolls everything back",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1767,8 +1784,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 98,
-      "baselineTapNumber": 516,
+      "ordinal": 99,
+      "baselineTapNumber": 518,
       "name": "concurrency with the POS checkout statement: duplicate deliveries from three writers post once, concurrent sales and postings keep cache = ledger-derived stock",
       "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
       "gates": [
@@ -1785,8 +1802,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 99,
-      "baselineTapNumber": 525,
+      "ordinal": 100,
+      "baselineTapNumber": 527,
       "name": "database constraints refuse what the application would also refuse (and what a bug might attempt)",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1803,8 +1820,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 100,
-      "baselineTapNumber": 526,
+      "ordinal": 101,
+      "baselineTapNumber": 528,
       "name": "repositories keep the port contracts: persisted aggregates round-trip, replays are idempotent, concurrent writers are serialised",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1821,8 +1838,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 101,
-      "baselineTapNumber": 527,
+      "ordinal": 102,
+      "baselineTapNumber": 529,
       "name": "outbox + posting side: durable, idempotent, atomic; crash, duplicate delivery, conflict, concurrent consumers and dead letters behave as specified",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1839,8 +1856,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 102,
-      "baselineTapNumber": 528,
+      "ordinal": 103,
+      "baselineTapNumber": 530,
       "name": "database outbox (rehearsal): StockOutbox contract — insert-if-absent, immutable content, deterministic bounded order, compare-and-set transitions",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1857,8 +1874,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 103,
-      "baselineTapNumber": 529,
+      "ordinal": 104,
+      "baselineTapNumber": 531,
       "name": "database applier (rehearsal): StockApplier contract — idempotent by intent key, independent keys add up exactly, nothing is half-applied",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1875,8 +1892,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 104,
-      "baselineTapNumber": 530,
+      "ordinal": 105,
+      "baselineTapNumber": 532,
       "name": "close the shared contract client",
       "file": "apps/web/tests/warehouse-store-db.test.mjs",
       "gates": [
@@ -1893,8 +1910,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 105,
-      "baselineTapNumber": 531,
+      "ordinal": 106,
+      "baselineTapNumber": 533,
       "name": "outbox -> ledger-based TOKO applier: posted once, redelivery acknowledged, stock survives the legacy recompute, reconciliation consistent",
       "file": "apps/web/tests/warehouse-toko-applier-db.test.mjs",
       "gates": [
@@ -1912,8 +1929,8 @@
       "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
     },
     {
-      "ordinal": 106,
-      "baselineTapNumber": 532,
+      "ordinal": 107,
+      "baselineTapNumber": 534,
       "name": "acknowledgement lost after the TOKO commit (TCP reply dropped): the retry is an acknowledgement, the ledger and stock move once",
       "file": "apps/web/tests/warehouse-toko-applier-db.test.mjs",
       "gates": [

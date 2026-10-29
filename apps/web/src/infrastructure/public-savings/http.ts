@@ -17,6 +17,7 @@ async function bounded(request:Request,max:number){
  const bytes=new Uint8Array(count);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
 }
 function strictObject(input:unknown,fields:string[]):Record<string,unknown>{if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length!==fields.length||!fields.every(k=>Object.hasOwn(input,k)))throw new PublicSavingsServiceError('INVALID_INPUT');return input as Record<string,unknown>;}
+const listQuery=(url:URL)=>{const p=url.searchParams,q=p.get('q'),status=p.get('status');return {...(q!==null?{q}:{}),...(status!==null?{status}:{}),page:Number(p.get('page')??1),pageSize:Number(p.get('pageSize')??10)};};
 const string=(value:unknown,max=128)=>{if(typeof value!=='string'||value.length===0||value.length>max)throw new PublicSavingsServiceError('INVALID_INPUT');return value;};
 /** All routes stay disabled outside explicitly configured loopback synthetic staging. No management cookie substitutes for public proof. */
 export async function handlePublicSavingsRequest(request:Request,operation:PublicSavingsOperation,recordId?:string):Promise<Response>{
@@ -62,10 +63,10 @@ export async function handlePublicSavingsRequest(request:Request,operation:Publi
    const pdf=operation==='pdf'?await service.pdf(token,proof):await service.operatorPdf(string(recordId,50),operator);
    return new Response(Buffer.from(pdf),{headers:{...common,'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="pengajuan-simpanan-sukarela.pdf"'}});
   }else if(operation==='members')result=await service.listMembers(url.searchParams.get('query')??'',operator);
-  else if(operation==='links-list')result=await service.listLinks(operator);
+  else if(operation==='links-list')result=await service.listLinks(operator,listQuery(url));
   else if(operation==='links-create'){const input=strictObject(JSON.parse(new TextDecoder().decode(bytes)),['memberRef']);result=await service.issueLink(string(input.memberRef),operator);}
   else if(operation==='links-revoke'){await service.revokeLink(string(recordId),revokeReason!,operator);result={state:'REVOKED'};}
-  else if(operation==='applications')result=await service.listApplications(operator);
+  else if(operation==='applications')result=await service.listApplications(operator,listQuery(url));
   else return fail('NOT_FOUND',404);
   return json(result);
  }catch(error){

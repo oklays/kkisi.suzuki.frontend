@@ -6,7 +6,7 @@ Scope: local synthetic functionality and release preparation. Policy 1.0.0 remai
 
 ## Regression skips
 
-Current run (29 Oct, CP2): **106 skips** — 76 irrelevant, 30 environment-dependent, each resolved by its own executed gated run (integration 43/43, recovery and actual-schema tests), 0 remediation; regenerate with `node integration/public-savings/skip-inventory.mjs` after a logged `pnpm test`. The CP1 baseline below is retained as history.
+Current run (29 Oct, CP2): **107 skips** — 76 irrelevant, 31 environment-dependent, each resolved by its own executed gated run (integration 44/44, recovery and actual-schema tests), 0 remediation; regenerate with `node integration/public-savings/skip-inventory.mjs` after a logged `pnpm test`. The CP1 baseline below is retained as history.
 
 [Individual inventory](skip-inventory.md) and [machine-readable evidence](skip-inventory.json) preserve every one of the **103 CP1 web skips**, with exact name, source, environment dependencies, source skip expressions and disposition. Categories: 76 irrelevant to public savings (auth/console/POS/KOSIPA/warehouse disposable fixtures); 27 environment-dependent public-savings SQL tests. No arbitrary test removal or unrelated subsystem remediation was performed. “Irrelevant” is a scope classification, not evidence that those other subsystems pass.
 

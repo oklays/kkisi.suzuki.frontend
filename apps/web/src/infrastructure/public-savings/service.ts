@@ -30,6 +30,16 @@ interface Envelope {contractVersion:'pss-evidence/v1';snapshot:SubmissionSnapsho
 export interface SubmissionInput {amountRupiah:string;sectionId:string;startMonth:string;startYear:string;consentVersion:string;formVersion:string;reviewFingerprint:string;consent:boolean;signature:Uint8Array;idempotencyKey:string}
 /** Server-derived console actor; absent only for the sentinel-verified LOCAL_SYNTHETIC staging key. */
 export interface OperatorScope {actorRef:string;branch:string;action?:string}
+/** Operator list query: bounded page size, optional search and status filter (validated against an allowlist). */
+export interface ListQuery {q?:string;status?:string;page?:number;pageSize?:number}
+const LINK_STATES=['ACTIVE','EXPIRED','CONSUMED','REVOKED'],APPLICATION_STATES=['OPEN','APPROVED','REJECTED'];
+function listWindow(query:ListQuery,states:readonly string[]){
+ const q=typeof query.q==='string'?query.q.trim():'';if(q.length>50)deny('INVALID_INPUT');
+ if(query.status!==undefined&&query.status!==''&&!states.includes(query.status))deny('INVALID_INPUT');
+ const pageSize=Math.min(50,Math.max(5,Math.trunc(Number(query.pageSize)||10))),page=Math.min(10000,Math.max(1,Math.trunc(Number(query.page)||1)));
+ return {q,status:query.status||'',page,pageSize,offset:(page-1)*pageSize};
+}
+const contains=(value:string)=>'%'+value.replace(/[\\%_]/g,m=>'\\'+m)+'%';
 export interface ServiceOptions {clock?:()=>number;provider?:PublicSavingsDeliveryProvider;directory?:string;intakeEnabled?:()=>boolean}
 
 /** Application-owned persistence adapter, explicitly restricted to the sentinel-verified synthetic local environment. */
@@ -208,8 +218,26 @@ export function createPublicSavingsService(rawConfig:StagingConfig,options:Servi
  }
  async function revokeLink(linkRef:string,reason:string,operator?:OperatorScope){if(!/^[0-9a-f]{32}$/.test(linkRef)||!text(reason,200))deny('INVALID_INPUT');await transaction(async c=>{const [links]=await c.execute<Row[]>('SELECT member_id FROM pss_link WHERE id=?',[linkRef]);if(!links.length)deny('LINK_INVALID');const m=await member(c,String(links[0].member_id),true);inScope(operator,m.branch);await c.execute("UPDATE pss_link SET state='REVOKED',revoked_ms=? WHERE id=?",[now(),linkRef]);await audit(c,String(links[0].member_id),'LINK_REVOKED',linkRef,operator,reason);});}
  async function listMembers(query:string,operator?:OperatorScope){if(query.length<2||query.length>50)deny('INVALID_INPUT');await ready();const scope=branchFilter(operator,'m.id');const [rows]=await pool.execute<Row[]>('SELECT m.id,m.nama_kar,m.nik_kar,b.name_bagian FROM m_anggota m JOIN m_bagian b ON (BINARY CAST(b.id AS CHAR)=BINARY m.bagian OR BINARY b.name_bagian=BINARY m.bagian) WHERE (BINARY m.nik_kar=BINARY ? OR CAST(m.id AS CHAR)=?)'+scope.sql+' LIMIT 20',[query,query,...scope.params]);return {members:rows.map(r=>({memberRef:String(r.id),name:r.nama_kar,maskedIdentifier:mask(String(r.nik_kar)),sectionName:r.name_bagian}))};}
- async function listLinks(operator?:OperatorScope){await ready();const scope=branchFilter(operator,'l.member_id');const [rows]=await pool.execute<Row[]>('SELECT l.id,l.member_id,l.state,l.expires_ms FROM pss_link l WHERE 1=1'+scope.sql+' ORDER BY l.created_ms DESC LIMIT 100',scope.params);return {links:rows.map(r=>({linkRef:r.id,memberRef:String(r.member_id),state:r.state,expiresAt:Number(r.expires_ms)}))};}
- async function listApplications(operator?:OperatorScope){await ready();const scope=branchFilter(operator,'a.member_id');const [rows]=await pool.execute<Row[]>('SELECT a.*,h.doc_status FROM pss_application a JOIN trans_simpanan_pengajuan h ON h.doc_no=a.reference WHERE 1=1'+scope.sql+' ORDER BY a.created_ms DESC LIMIT 100',scope.params);const applications=[];for(const row of rows){try{const env=await readEnvelope(row);applications.push({reference:row.reference,name:env.member.name,amount:env.snapshot.requestedAmount,requestedPeriod:env.snapshot.requestedPeriod,status:row.doc_status,artifactState:row.proof_status,integrityState:'VALID'});}catch{applications.push({reference:row.reference,name:'Bukti tidak tersedia',amount:'',requestedPeriod:'Perlu pemeriksaan',status:'ASSISTED_REQUIRED',artifactState:'FAILED',integrityState:'INVALID'});}}return {applications};}
+ async function listLinks(operator?:OperatorScope,query:ListQuery={}){await ready();const w=listWindow(query,LINK_STATES),current=now(),scope=branchFilter(operator,'l.member_id');
+  // EXPIRED is derived: the stored state stays ACTIVE until a writer touches the link.
+  const derived=`CASE WHEN l.state='ACTIVE' AND l.expires_ms<=${current} THEN 'EXPIRED' ELSE l.state END`;
+  const search=w.q?{sql:' AND (l.id LIKE ? OR m.nama_kar LIKE ? OR BINARY m.nik_kar=BINARY ? OR CAST(l.member_id AS CHAR)=?)',params:[contains(w.q),contains(w.q),w.q,w.q]}:{sql:'',params:[] as string[]};
+  const from=' FROM pss_link l JOIN m_anggota m ON m.id=l.member_id WHERE 1=1'+scope.sql+search.sql,params=[...scope.params,...search.params];
+  const filter=w.status?` AND ${derived}=?`:'',filtered=w.status?[...params,w.status]:params;
+  const [countRows]=await pool.execute<Row[]>(`SELECT ${derived} state,COUNT(*) n`+from+' GROUP BY 1',params);
+  const [totalRows]=await pool.execute<Row[]>('SELECT COUNT(*) n'+from+filter,filtered);
+  const [rows]=await pool.execute<Row[]>(`SELECT l.id,l.member_id,${derived} state,l.expires_ms,l.created_ms,m.nama_kar,m.nik_kar`+from+filter+` ORDER BY l.created_ms DESC LIMIT ${w.pageSize} OFFSET ${w.offset}`,filtered);
+  return {links:rows.map(r=>({linkRef:r.id,memberRef:String(r.member_id),memberName:String(r.nama_kar),maskedIdentifier:mask(String(r.nik_kar)),state:r.state,expiresAt:Number(r.expires_ms),createdAt:Number(r.created_ms)})),
+   total:Number(totalRows[0].n),page:w.page,pageSize:w.pageSize,counts:Object.fromEntries(LINK_STATES.map(k=>[k,Number(countRows.find(c=>c.state===k)?.n??0)]))};}
+ async function listApplications(operator?:OperatorScope,query:ListQuery={}){await ready();const w=listWindow(query,APPLICATION_STATES),scope=branchFilter(operator,'a.member_id');
+  const search=w.q?{sql:' AND (a.reference LIKE ? OR h.nama LIKE ? OR BINARY h.nik_kar=BINARY ?)',params:[contains(w.q),contains(w.q),w.q]}:{sql:'',params:[] as string[]};
+  const from=' FROM pss_application a JOIN trans_simpanan_pengajuan h ON h.doc_no=a.reference WHERE 1=1'+scope.sql+search.sql,params=[...scope.params,...search.params];
+  const filter=w.status?' AND h.doc_status=?':'',filtered=w.status?[...params,w.status]:params;
+  const [countRows]=await pool.execute<Row[]>('SELECT h.doc_status state,COUNT(*) n'+from+' GROUP BY h.doc_status',params);
+  const [totalRows]=await pool.execute<Row[]>('SELECT COUNT(*) n'+from+filter,filtered);
+  const [rows]=await pool.execute<Row[]>('SELECT a.*,h.doc_status'+from+filter+` ORDER BY a.created_ms DESC LIMIT ${w.pageSize} OFFSET ${w.offset}`,filtered);
+  const applications=[];for(const row of rows){try{const env=await readEnvelope(row);applications.push({reference:row.reference,name:env.member.name,maskedIdentifier:env.member.maskedIdentifier,amount:env.snapshot.requestedAmount,originalAmount:env.snapshot.originalDeduction,requestedPeriod:env.snapshot.requestedPeriod,status:row.doc_status,artifactState:row.proof_status,integrityState:'VALID',createdAt:Number(row.created_ms)});}catch{applications.push({reference:row.reference,name:'Bukti tidak tersedia',maskedIdentifier:'',amount:'',originalAmount:null,requestedPeriod:'Perlu pemeriksaan',status:'ASSISTED_REQUIRED',artifactState:'FAILED',integrityState:'INVALID',createdAt:Number(row.created_ms)});}}
+  return {applications,total:Number(totalRows[0].n),page:w.page,pageSize:w.pageSize,counts:Object.fromEntries(APPLICATION_STATES.map(k=>[k,Number(countRows.find(c=>c.state===k)?.n??0)]))};}
  async function operatorPdf(reference:string,operator?:OperatorScope){if(!/^PSS[0-9a-f]{32}00000$/.test(reference))deny('SUBMISSION_NOT_FOUND');await ready();const scope=branchFilter(operator,'a.member_id');const [rows]=await pool.execute<Row[]>('SELECT a.* FROM pss_application a WHERE a.reference=?'+scope.sql,[reference,...scope.params]);if(rows.length!==1||rows[0].proof_status!=='READY')deny('PDF_NOT_READY');await readEnvelope(rows[0]);const bytes=await artifacts.readPrivateArtifact(String(rows[0].pdf_ref));if(hash(bytes)!==rows[0].pdf_digest)deny('SNAPSHOT_INTEGRITY_INVALID');return bytes;}
  return {issueLink,validate,requestChallenge,verifyChallenge,submit,receipt,pdf,processOutbox,revokeLink,listMembers,listLinks,listApplications,operatorPdf,close:()=>pool.end()};
 }
