@@ -122,3 +122,13 @@ test('positively verified first enrollment is displayed as absent deduction rath
  assert.equal(rupiah(null),'Belum ada potongan');
  assert.deepEqual(validateDraft('150000',true,true,{...form,originalDeduction:null}),[]);
 });
+test('console operator renders session access without a staging secret field',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ const html=renderToStaticMarkup(React.createElement(loadComponent('OperatorWorkbench.tsx').default,{authMode:'CONSOLE',csrfToken:'session-token'}));
+ assert.match(html,/Sesi konsol/);assert.doesNotMatch(html,/type="password"|LOCAL STAGING ONLY|anggota sintetis|local staging/i);
+});
+test('operator transport includes cookies only when explicitly requested by console',async()=>{
+ const {requestJson}=await import('../src/components/public-savings/client.ts');const previous=globalThis.fetch,calls=[];
+ globalThis.fetch=async(_url,init)=>{calls.push(init);return Response.json({ok:true});};
+ try{await requestJson('/api/test',{method:'GET'});await requestJson('/api/test',{method:'GET',credentials:'include'});assert.equal(calls[0].credentials,'omit');assert.equal(calls[1].credentials,'include');}finally{globalThis.fetch=previous;}
+});

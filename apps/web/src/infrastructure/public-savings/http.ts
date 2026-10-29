@@ -1,5 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {createPublicSavingsService,PublicSavingsServiceError} from './service.ts';
+import {authorizePublicSavingsOperator,loadPublicSavingsOperatorPolicy,type PublicSavingsOperatorActor} from './operator-authorization.ts';
+import type { PssAction } from '@koperasi/domain/kosipa/savings-access';
 import {keyedDigest,secretMatches,loadStagingConfig} from './security.ts';
 
 export type PublicSavingsOperation='validate'|'challenge'|'verify'|'submit'|'receipt'|'pdf'|'members'|'links-list'|'links-create'|'links-revoke'|'applications'|'application-pdf';
@@ -26,12 +28,23 @@ export async function handlePublicSavingsRequest(request:Request,operation:Publi
   // Next may normalize request.url to localhost. Direct Host is validated above; forwarded host headers are never trusted.
   if(origin&&origin!==`${url.protocol}//${host}`||request.headers.get('sec-fetch-site')==='cross-site')return fail('ORIGIN_REJECTED',403);
   const bytes=await bounded(request,operation==='submit'?1150000:8192);
+  const staff=['members','links-list','links-create','links-revoke','applications','application-pdf'].includes(operation);
+  const actions:Partial<Record<PublicSavingsOperation,PssAction>>={members:'ISSUE_LINK','links-list':'VIEW_SUBMISSIONS','links-create':'ISSUE_LINK','links-revoke':'REVOKE_LINK',applications:'VIEW_SUBMISSIONS','application-pdf':'VIEW_SUBMISSIONS'};
+  const action=actions[operation];
+  const revokeInput=operation==='links-revoke'?strictObject(JSON.parse(new TextDecoder().decode(bytes)),['reason']):undefined;
+  const revokeReason=revokeInput?string(revokeInput.reason,200):undefined;
+  let operator:(PublicSavingsOperatorActor & {action:PssAction})|undefined;
+  if(staff&&process.env.PSS_OPERATOR_AUTH==='CONSOLE'){
+   let policy;try{policy=await loadPublicSavingsOperatorPolicy();}catch{return fail('OPERATOR_AUTHORIZATION_UNCONFIGURED',503);}
+   const authorized=await authorizePublicSavingsOperator(request,action!,{reason:revokeReason},policy);
+   if('response' in authorized)return authorized.response;
+   operator={...authorized.actor,action:action!};
+  }else if(staff&&process.env.PSS_OPERATOR_AUTH&&process.env.PSS_OPERATOR_AUTH!=='LOCAL_SYNTHETIC')return fail('OPERATOR_AUTHORIZATION_UNCONFIGURED',503);
   const config=await loadStagingConfig();
   const current=Date.now(),key=operation,bucket=budget.get(key);
   if(!bucket||bucket.until<current)budget.set(key,{until:current+60000,count:1});else if(++bucket.count>120)return fail('RATE_LIMITED',429);
   servicePromise??=Promise.resolve(createPublicSavingsService(config,{intakeEnabled:()=>process.env.PSS_INTAKE_ENABLED!=='0'}));const service=await servicePromise;
-  const staff=['members','links-list','links-create','links-revoke','applications','application-pdf'].includes(operation);
-  if(staff&&!secretMatches(keyedDigest(config.hashKey,'operator',config.operatorKey),keyedDigest(config.hashKey,'operator',request.headers.get('x-pss-staging-operator')??'')))return fail('FORBIDDEN',403);
+  if(staff&&!operator&&(config.mode!=='LOCAL_SYNTHETIC'||!secretMatches(keyedDigest(config.hashKey,'operator',config.operatorKey),keyedDigest(config.hashKey,'operator',request.headers.get('x-pss-staging-operator')??''))))return fail('FORBIDDEN',403);
   const token=request.headers.get('authorization')?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1]??'';
   const proof=request.headers.get('x-public-proof')??'';
   let result:unknown;
@@ -46,18 +59,18 @@ export async function handlePublicSavingsRequest(request:Request,operation:Publi
    result=await service.submit(token,proof,{amountRupiah:string(parsed.get('amountRupiah'),20),sectionId:string(parsed.get('sectionId')),startMonth:string(parsed.get('startMonth'),2),startYear:string(parsed.get('startYear'),4),consentVersion:string(parsed.get('consentVersion')),formVersion:string(parsed.get('formVersion')),reviewFingerprint:string(parsed.get('reviewFingerprint'),64),consent:parsed.get('consent')==='true',signature:new Uint8Array(await signature.arrayBuffer()),idempotencyKey:string(request.headers.get('idempotency-key'))});
   }else if(operation==='receipt')result=await service.receipt(token,proof);
   else if(operation==='pdf'||operation==='application-pdf'){
-   const pdf=operation==='pdf'?await service.pdf(token,proof):await service.operatorPdf(string(recordId,50));
+   const pdf=operation==='pdf'?await service.pdf(token,proof):await service.operatorPdf(string(recordId,50),operator);
    return new Response(Buffer.from(pdf),{headers:{...common,'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="pengajuan-simpanan-sukarela.pdf"'}});
-  }else if(operation==='members')result=await service.listMembers(url.searchParams.get('query')??'');
-  else if(operation==='links-list')result=await service.listLinks();
-  else if(operation==='links-create'){const input=strictObject(JSON.parse(new TextDecoder().decode(bytes)),['memberRef']);result=await service.issueLink(string(input.memberRef));}
-  else if(operation==='links-revoke'){const input=strictObject(JSON.parse(new TextDecoder().decode(bytes)),['reason']);await service.revokeLink(string(recordId),string(input.reason,200));result={state:'REVOKED'};}
-  else if(operation==='applications')result=await service.listApplications();
+  }else if(operation==='members')result=await service.listMembers(url.searchParams.get('query')??'',operator);
+  else if(operation==='links-list')result=await service.listLinks(operator);
+  else if(operation==='links-create'){const input=strictObject(JSON.parse(new TextDecoder().decode(bytes)),['memberRef']);result=await service.issueLink(string(input.memberRef),operator);}
+  else if(operation==='links-revoke'){await service.revokeLink(string(recordId),revokeReason!,operator);result={state:'REVOKED'};}
+  else if(operation==='applications')result=await service.listApplications(operator);
   else return fail('NOT_FOUND',404);
   return json(result);
  }catch(error){
   const code=error instanceof PublicSavingsServiceError?error.code:error instanceof Error&&error.message==='ACTIVATION_BLOCKED'?'ACTIVATION_BLOCKED':error instanceof SyntaxError?'INVALID_INPUT':'DEPENDENCY_UNAVAILABLE';
-  const status=code==='REQUEST_TOO_LARGE'?413:code==='ACTIVATION_BLOCKED'||code==='DEPENDENCY_UNAVAILABLE'||code==='DELIVERY_UNAVAILABLE'?503:/LIMIT|TOO_SOON|LOCKED/.test(code)?429:/EXPIRED|REVOKED/.test(code)?410:/INVALID_INPUT|CHALLENGE_INVALID/.test(code)?400:/FORM_CHANGED|CONFLICT|CONSUMED/.test(code)?409:/REQUIRED|PROOF|LINK_INVALID/.test(code)?403:422;
+  const status=code==='REQUEST_TOO_LARGE'?413:code==='ACTIVATION_BLOCKED'||code==='DEPENDENCY_UNAVAILABLE'||code==='DELIVERY_UNAVAILABLE'||code.startsWith('OPERATOR_AUTHORIZATION_')?503:/LIMIT|TOO_SOON|LOCKED/.test(code)?429:/EXPIRED|REVOKED/.test(code)?410:/INVALID_INPUT|CHALLENGE_INVALID/.test(code)?400:/FORM_CHANGED|CONFLICT|CONSUMED/.test(code)?409:/REQUIRED|PROOF|LINK_INVALID|FORBIDDEN/.test(code)?403:422;
   // No URL, token, OTP, contact, payload or database error is logged.
   console.info(JSON.stringify({feature:'public-savings',operation,correlation,code,status}));
   return fail(code,status);

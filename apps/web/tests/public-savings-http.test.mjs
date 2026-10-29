@@ -16,3 +16,10 @@ test('local Next request URL normalization uses validated direct Host for origin
   assert.equal(response.status,503);assert.equal((await response.json()).error.code,'ACTIVATION_BLOCKED');
  }finally{if(before!==undefined)process.env.PSS_LOCAL_STAGING=before;}
 });
+test('console operator auth cannot fall back to staging key when policy is missing',async()=>{
+ const previous=process.env.PSS_OPERATOR_AUTH;process.env.PSS_OPERATOR_AUTH='CONSOLE';
+ try {
+  const response=await handlePublicSavingsRequest(new Request('http://127.0.0.1:3489/api/kosipa/public-savings-links',{headers:{'x-pss-staging-operator':'synthetic'}}),'links-list');
+  assert.equal(response.status,503);assert.equal((await response.json()).error.code,'OPERATOR_AUTHORIZATION_UNCONFIGURED');
+ }finally{if(previous===undefined)delete process.env.PSS_OPERATOR_AUTH;else process.env.PSS_OPERATOR_AUTH=previous;}
+});

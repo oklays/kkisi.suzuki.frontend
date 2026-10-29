@@ -67,14 +67,14 @@ export class SavingsApiError extends Error {
   }
 }
 export async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(path, { ...init, cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error', signal: init.signal ?? AbortSignal.timeout(30000) });
+  const response = await fetch(path, { ...init, cache: 'no-store', credentials: init.credentials ?? 'omit', referrerPolicy: init.referrerPolicy ?? 'no-referrer', redirect: 'error', signal: init.signal ?? AbortSignal.timeout(30000) });
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new SavingsApiError(data?.error?.code || 'UNAVAILABLE', response.status, data?.error?.retryAfterSeconds);
   if (!data || typeof data !== 'object') throw new SavingsApiError('UNAVAILABLE', 503);
   return data as T;
 }
-export async function downloadPdf(path: string, headers: HeadersInit, filename: string): Promise<void> {
-  const response = await fetch(path, {headers, cache:'no-store', credentials:'omit', referrerPolicy:'no-referrer', redirect:'error', signal:AbortSignal.timeout(30000)});
+export async function downloadPdf(path: string, headers: HeadersInit, filename: string, credentials: RequestCredentials = 'omit'): Promise<void> {
+  const response = await fetch(path, {headers, cache:'no-store', credentials, referrerPolicy:'no-referrer', redirect:'error', signal:AbortSignal.timeout(30000)});
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new SavingsApiError(data?.error?.code || 'UNAVAILABLE', response.status, data?.error?.retryAfterSeconds);

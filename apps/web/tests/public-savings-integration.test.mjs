@@ -487,3 +487,13 @@ test('resend retains failed attempts, supersedes old codes, enforces per-link ca
   await assert.rejects(() => f.service.requestChallenge(tokenOf(sixth)), codeMatches(/RESEND_LIMIT/u));
   const [sends] = await f.admin.execute('SELECT COUNT(*) count FROM pss_challenge c JOIN pss_link l ON l.id=c.link_id WHERE l.member_id=?', [f.id]); assert.equal(Number(sends[0].count), 5);
 });
+test('console operator scope is checked against persisted branch and issuance/revocation retain actor and reason', {skip:!enabled},async t=>{
+ const f=await fixture(t),wrong={actorRef:'console:77',branch:'OTHER BRANCH',action:'ISSUE_LINK'};
+ await assert.rejects(()=>f.service.issueLink(String(f.id),wrong),codeMatches(/FORBIDDEN/));
+ const actor={...wrong,branch:'SYNTHETIC BRANCH'},issued=await f.service.issueLink(String(f.id),actor);
+ assert.equal((await f.service.listLinks({...wrong,action:'VIEW_SUBMISSIONS'})).links.some(x=>x.linkRef===issued.linkRef),false);
+ assert.equal((await f.service.listMembers(f.nik,wrong)).members.length,0);
+ await assert.rejects(()=>f.service.revokeLink(issued.linkRef,'synthetic reason',{...wrong,action:'REVOKE_LINK'}),codeMatches(/FORBIDDEN/));
+ await f.service.revokeLink(issued.linkRef,'synthetic reason',{...actor,action:'REVOKE_LINK'});
+ const[events]=await f.admin.execute("SELECT actor_ref,reason FROM pss_audit WHERE member_id=? AND event='LINK_REVOKED'",[f.id]);assert.equal(events[0].actor_ref,'console:77');assert.equal(events[0].reason,'synthetic reason');
+});
