@@ -30,7 +30,8 @@
     "pss:test:browser": "pnpm --filter @koperasi/web test:public-savings:browser",
     "pss:migration:verify": "node integration/public-savings/preflight.mjs validate-migration",
     "pss:worker": "node --experimental-strip-types integration/public-savings/worker.mjs",
-    "pss:start": "PSS_LOCAL_STAGING=1 pnpm --filter @koperasi/web exec next start -H 127.0.0.1 -p 3489"
+    "pss:start": "PSS_LOCAL_STAGING=1 pnpm --filter @koperasi/web exec next start -H 127.0.0.1 -p 3489",
+    "pss:console": "bash integration/public-savings/console-local.sh"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

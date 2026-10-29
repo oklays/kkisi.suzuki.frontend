@@ -60,7 +60,7 @@ None is closed. Each is narrowed to named external steps, with executable eviden
 |---|---|---|
 | Console authentication & RBAC | Real console session + CSRF + server capabilities; explicit 0600 owner-only policy file mapping roles→PSS roles, company→branch; unknown/missing mapping fails closed; `APPROVE_DEDUCTION` stays CI2-only | `public-savings-operator-authorization/-http` tests (synthetic session store) |
 | Operator branch scoping | Service now scopes member search, link list, issuance, revocation, application list and operator PDF to the actor's branch from **persisted** member evidence | integration test "console operator scope…" |
-| Console page | `/console/kosipa/simpanan-sukarela`, in KOSIPA navigation; shows "belum diaktifkan" unless `PSS_OPERATOR_AUTH=CONSOLE` | console-shell, persona-matrix tests |
+| Console page & isolation | `/console/kosipa/simpanan-sukarela`; menu entry, page and public pages exist only with `PSS_LOCAL_STAGING=1` (+ `PSS_OPERATOR_AUTH=CONSOLE` for the console); otherwise 404 / hidden, APIs 503 before any DB access | `public-savings-isolation.test.mjs`, console-shell, persona-matrix |
 | Console CSRF fix | Member lookup is a GET bound to `ISSUE_LINK`, which requires CSRF; client now sends same-origin Referer + JSON type in console mode (previously always 403) | ui test |
 | OTP / notification adapters | SMTP (Nodemailer, verified TLS, bounded timeouts, stable Message-ID, no retries inside the adapter) and HTTPS gateway adapter (fixed endpoint, no redirects, idempotency header) | provider tests incl. real SMTP wire to loopback capture. **Not wired**: runtime still uses local capture by design |
 | Signature/PDF storage | Encrypted local immutable artifacts, READY hash-bound | integration; production object store/key custody open |
@@ -84,7 +84,7 @@ All on loopback synthetic data. "Real PHP" = deployed CI2 source on PHP 5.6.40 a
 | U7 | Existing legacy workflow regression | Real PHP approve/reject ordinary requests, both variants; other savings types; unenrolled members; Laravel column-set insert | PASS (Laravel PHP not executed) |
 | U8 | PDF generation and reprint | integration (byte-identical reprint), browser download, hook PHP test | PASS; unchanged CI2 print FAIL as expected (F4) |
 | U9 | Duplicate, concurrency, rollback | recovered-DDL races, duplicate header, idempotency replay/conflict, two-process race, migration interrupted-apply rerun, backup restore | PASS |
-| U10 | Console operator access | HTTP/unit with synthetic session store | PASS; live console UAT against the real auth DB **NOT RUN** |
+| U10 | Console operator access | `pnpm pss:console` with DEV LOCAL console login (real session/CSRF/capabilities, synthetic accounts): operator lists/searches/issues/revokes with audited `console:<id>` actor; viewer of another branch sees nothing and cannot search; unlinked account refused; anonymous redirected/401; no-CSRF mutation 403 | PASS (29 Oct, local). Production auth DB **NOT RUN** |
 
 ## 7. Tests, skips and regressions
 

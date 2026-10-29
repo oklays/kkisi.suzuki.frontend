@@ -39,6 +39,20 @@ Secrets are generated locally in `.local/public-savings/config.json` and `admin.
 
 Only local synthetic links are usable here. Do not send them to actual members as an operational service. A phone on another network cannot reach a loopback URL; external activation requires the actual-runtime prerequisites below, not a development tunnel.
 
+## Console management (DEV LOCAL login)
+
+The same synthetic data can be managed from the real console UI with real console sessions, CSRF and capabilities:
+
+```sh
+docker start kkisi-staging            # DEV LOCAL auth/console/KOSIPA read databases (127.0.0.1:3307)
+pnpm build
+pnpm pss:console                      # http://127.0.0.1:3204/console/kosipa/simpanan-sukarela
+```
+
+`console-local.sh` reuses the main checkout's DEV LOCAL profile (`apps/web/.env.dev-local`, preflight-checked), adds `PSS_LOCAL_STAGING=1`, `PSS_OPERATOR_AUTH=CONSOLE` and a private synthetic policy `.local/public-savings/operator-policy.json` (0600). Sign in as `synth_koperasi` (password in the ignored `.env.dev-local-accounts.json`, key `koperasi`): role 2 is STAFF_OPERATOR for company 9001, which holds the synthetic members. `synth_kasir2` (role 4, company 9002) is STAFF_VIEWER of an empty branch: it sees the page but no applications and cannot search or issue. `synth_kasir1` has no KOSIPA link and is refused. Approval stays in KOSIPA CI2.
+
+With either flag unset the console entry is hidden and `/console/kosipa/simpanan-sukarela`, `/simpanan-sukarela` and `/simpanan-sukarela/operator` answer 404; all APIs answer 503 (`apps/web/tests/public-savings-isolation.test.mjs`).
+
 ## Persistence and migration
 
 `schema.sql` is a **disposable representative fixture**, never an upgrade script for existing legacy tables. It includes a deliberately stricter unique NIK/doc_no/active-master fixture boundary; these indexes are not asserted to exist in production. Known field contracts come from existing09A metadata, including varchar department, Latin1, nullable old deduction, `status_notif`, NIK10 active master and legacy DOUBLE persistence.
