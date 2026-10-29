@@ -1,0 +1,1934 @@
+{
+  "scope": "CP2 full web regression (.local/public-savings/cp2-regression.log); public-savings gates resolved by their own executed runs",
+  "total": 106,
+  "counts": {
+    "intentional": 0,
+    "irrelevant": 76,
+    "environment-dependent": 30,
+    "remediation": 0
+  },
+  "tests": [
+    {
+      "ordinal": 1,
+      "baselineTapNumber": 71,
+      "name": "REAL MariaDB session store contract: createAndFind",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 2,
+      "baselineTapNumber": 72,
+      "name": "REAL MariaDB session store contract: touchRevokeAndSetCompany",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 3,
+      "baselineTapNumber": 73,
+      "name": "REAL MariaDB session store contract: keepsFiveMostRecentlyActive",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 4,
+      "baselineTapNumber": 74,
+      "name": "REAL MariaDB session store contract: rowCapNeverDeletesAValidSession",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 5,
+      "baselineTapNumber": 75,
+      "name": "REAL MariaDB session store contract: otherUsersAreUntouched",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 6,
+      "baselineTapNumber": 76,
+      "name": "REAL MariaDB session store contract: purgeIsBoundedAndSparesLiveSessions",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 7,
+      "baselineTapNumber": 77,
+      "name": "REAL session store: 8 simultaneous logins by one user with a pool of 8 connections keep exactly 5 valid sessions, no failures",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 8,
+      "baselineTapNumber": 78,
+      "name": "REAL throttle store: threshold, fixed window restart, exact counting under 100 parallel failures, cleared by success, purge bounded",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 9,
+      "baselineTapNumber": 79,
+      "name": "REAL throttle store: an impossible lock (10 years ahead, e.g. after a clock jump) is ignored and removed",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 10,
+      "baselineTapNumber": 80,
+      "name": "REAL legacy repositories over the SELECT-only account: users, role/branch status, permissions, branches, registers, cash registers",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 11,
+      "baselineTapNumber": 81,
+      "name": "FULL STACK on a real MariaDB (synthetic identities): login, session, register, branch rules, logout persistence, lockout, generic failures",
+      "file": "apps/web/tests/auth-store-db.test.mjs",
+      "gates": [
+        "AUTH_TEST_DATABASE_URL",
+        "AUTH_TEST_FIXTURE",
+        "AUTH_TEST_LEGACY_URL",
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH"
+      ],
+      "baselineSkipReason": "set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)",
+      "skipDeclarations": [
+        "enabled ? false : 'set AUTH_TEST_DATABASE_URL/AUTH_TEST_LEGACY_URL/AUTH_TEST_FIXTURE (disposable DB)'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 12,
+      "baselineTapNumber": 157,
+      "name": "one ACTIVE link per console user and per KOSIPA user; history allowed after revocation",
+      "file": "apps/web/tests/console-store-db.test.mjs",
+      "gates": [
+        "CONSOLE_STORE_TEST_URL"
+      ],
+      "baselineSkipReason": "set CONSOLE_STORE_TEST_URL (local kkisi_console_staging, kkisi_console account)",
+      "skipDeclarations": [
+        "URL_ ? false : 'set CONSOLE_STORE_TEST_URL (local kkisi_console_staging"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 13,
+      "baselineTapNumber": 158,
+      "name": "database refuses self-links, identity rewrites and deletes, independently of the application",
+      "file": "apps/web/tests/console-store-db.test.mjs",
+      "gates": [
+        "CONSOLE_STORE_TEST_URL"
+      ],
+      "baselineSkipReason": "set CONSOLE_STORE_TEST_URL (local kkisi_console_staging, kkisi_console account)",
+      "skipDeclarations": [
+        "URL_ ? false : 'set CONSOLE_STORE_TEST_URL (local kkisi_console_staging"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 14,
+      "baselineTapNumber": 159,
+      "name": "audit events are append-only and their detail must be a small JSON object",
+      "file": "apps/web/tests/console-store-db.test.mjs",
+      "gates": [
+        "CONSOLE_STORE_TEST_URL"
+      ],
+      "baselineSkipReason": "set CONSOLE_STORE_TEST_URL (local kkisi_console_staging, kkisi_console account)",
+      "skipDeclarations": [
+        "URL_ ? false : 'set CONSOLE_STORE_TEST_URL (local kkisi_console_staging"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 15,
+      "baselineTapNumber": 170,
+      "name": "isolation: two separate stores and accounts; neither account can reach the other store",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 16,
+      "baselineTapNumber": 171,
+      "name": "durable intent and unique event identity: replays are idempotent, a changed payload under the same key is a conflict and is never stored",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 17,
+      "baselineTapNumber": 172,
+      "name": "happy path: the drain posts once, stock = posting, the outbox is acknowledged, cross-store reconciliation is CONSISTENT",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 18,
+      "baselineTapNumber": 173,
+      "name": "duplicate delivery: applying the same intent again (before or after the acknowledgement) changes nothing",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 19,
+      "baselineTapNumber": 174,
+      "name": "payload conflict: same event key with different content is refused on the target, never added to stock, and ends up DEAD for a human",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 20,
+      "baselineTapNumber": 175,
+      "name": "target atomicity: a failure after the posting row is written rolls BOTH the posting and the stock change back",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 21,
+      "baselineTapNumber": 176,
+      "name": "network failure: lost connection mid-transaction, before COMMIT, after COMMIT (reply lost) and target unreachable — each retried to exactly one posting",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 22,
+      "baselineTapNumber": 177,
+      "name": "process death: SIGKILL inside the TOKO transaction leaves nothing; SIGKILL after COMMIT leaves a posting without acknowledgement; restart repairs both without double posting",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 23,
+      "baselineTapNumber": 178,
+      "name": "concurrent consumers: three separate processes drain the same outbox at once; every intent is posted exactly once",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 24,
+      "baselineTapNumber": 179,
+      "name": "reconciliation detects an acknowledgement that TOKO never backed (critical), and does not call it repairable",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 25,
+      "baselineTapNumber": 180,
+      "name": "seeded chaos: 24 intents under random network faults and replayed drains converge to stock = sum of distinct postings",
+      "file": "apps/web/tests/cross-db-outbox.test.mjs",
+      "gates": [
+        "CROSS_DB_OUTBOX_TEST",
+        "TOKO_POSTING_TEST_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 26,
+      "baselineTapNumber": 209,
+      "name": "opt-in (local console store): a link left ACTIVE by an aborted run is revoked by the reset, so the next creation succeeds; any other database is refused",
+      "file": "apps/web/tests/e2e-isolation.test.mjs",
+      "gates": [
+        "CONSOLE_STORE_TEST_URL",
+        "E2E_ISOLATION_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!(process.env.E2E_ISOLATION_DB_TEST === '1' && URL_)"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 27,
+      "baselineTapNumber": 211,
+      "name": "draft creation replay, original snapshot, explicit zero, approval replay and physical valuation",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 28,
+      "baselineTapNumber": 212,
+      "name": "competing documents, foreign IDs, immutable legacy and revoked permission cannot mutate",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 29,
+      "baselineTapNumber": 213,
+      "name": "stock drift rejects whole approval and cancellation releases lock without replacing stock",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 30,
+      "baselineTapNumber": 214,
+      "name": "global warehouses authorize administrators and serialize duplicate names across branches",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 31,
+      "baselineTapNumber": 215,
+      "name": "20 simultaneous approvals append once and two competing drafts acquire only one product",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 32,
+      "baselineTapNumber": 216,
+      "name": "count, approval and cancel failures at every write roll back all state",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 33,
+      "baselineTapNumber": 217,
+      "name": "POS and stock opname share mutex: checkout cannot sell a counted item",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 34,
+      "baselineTapNumber": 218,
+      "name": "bounded search includes zero stock and excludes unsupported items, detail duplicate corruption rejects",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 35,
+      "baselineTapNumber": 219,
+      "name": "high DOUBLE valuations reject lossy cents before locking and permit exact stored values",
+      "file": "apps/web/tests/inventory-db.test.mjs",
+      "gates": [
+        "INVENTORY_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 36,
+      "baselineTapNumber": 240,
+      "name": "synthetic schema: loan list and detail over the real SQL adapter",
+      "file": "apps/web/tests/kosipa-loans-db.test.mjs",
+      "gates": [
+        "E2E_READ_URL",
+        "KOSIPA_LOANS_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 37,
+      "baselineTapNumber": 241,
+      "name": "synthetic schema: membership and savings movement reports over the real SQL adapter",
+      "file": "apps/web/tests/kosipa-ops-reports-db.test.mjs",
+      "gates": [
+        "E2E_READ_URL",
+        "KOSIPA_OPS_REPORTS_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 38,
+      "baselineTapNumber": 242,
+      "name": "synthetic schema: the full payroll read path over the real SQL adapter",
+      "file": "apps/web/tests/kosipa-payroll-db.test.mjs",
+      "gates": [
+        "E2E_READ_URL",
+        "KOSIPA_PAYROLL_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 39,
+      "baselineTapNumber": 243,
+      "name": "synthetic schema: the statement time cap is enforced by the server and a timeout becomes an explicit unavailable state",
+      "file": "apps/web/tests/kosipa-payroll-db.test.mjs",
+      "gates": [
+        "E2E_READ_URL",
+        "KOSIPA_PAYROLL_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 40,
+      "baselineTapNumber": 249,
+      "name": "synthetic schema: loan report, payroll report and every data-quality diagnostic over the real SQL adapter",
+      "file": "apps/web/tests/kosipa-reports-db.test.mjs",
+      "gates": [
+        "E2E_READ_URL",
+        "KOSIPA_REPORTS_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 41,
+      "baselineTapNumber": 250,
+      "name": "synthetic schema: member savings ledger over the real SQL adapters",
+      "file": "apps/web/tests/kosipa-savings-db.test.mjs",
+      "gates": [
+        "E2E_READ_URL",
+        "KOSIPA_SAVINGS_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 42,
+      "baselineTapNumber": 266,
+      "name": "Cash finalization persists legacy rows, exact prices/change, stock and only the owned cart atomically",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 43,
+      "baselineTapNumber": 267,
+      "name": "stock, opname, PPOB, inactive item, insufficient tender and cross-company products reject without writes",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 44,
+      "baselineTapNumber": 268,
+      "name": "closed, stale and multiple cashier sessions and revoked permission fail closed",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 45,
+      "baselineTapNumber": 269,
+      "name": "faults at each write and before commit roll back sales, items, payment, stock and cart",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 46,
+      "baselineTapNumber": 270,
+      "name": "20 parallel retries return one sale and a changed payload cannot reuse its key",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 47,
+      "baselineTapNumber": 271,
+      "name": "50 concurrent checkouts allocate unique invoices and decrement stock exactly once",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 48,
+      "baselineTapNumber": 272,
+      "name": "credit lookup sums Final current-month Kredit across branches, salary override and active contracts",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 49,
+      "baselineTapNumber": 273,
+      "name": "20 concurrent credit checkouts across two branches cannot exceed a shared member limit",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 50,
+      "baselineTapNumber": 274,
+      "name": "exact credit boundary passes; duplicate card and guest credit are rejected",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 51,
+      "baselineTapNumber": 275,
+      "name": "code-only cart rows are cleaned only for a uniquely owned draft, preserving other users and ambiguous codes",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 52,
+      "baselineTapNumber": 276,
+      "name": "transient conflict retries the entire transaction and never leaves partial rows or double decrements",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 53,
+      "baselineTapNumber": 277,
+      "name": "fractional Cash change is exact and fractional Credit is refused before a lossy DECIMAL(10,0) payment write",
+      "file": "apps/web/tests/pos-checkout-db.test.mjs",
+      "gates": [
+        "POS_CHECKOUT_DB_TEST",
+        "POS_TEST_DATABASE_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 54,
+      "baselineTapNumber": 296,
+      "name": "synthetic POS reader, writer and auth accounts enforce separate minimum privileges",
+      "file": "apps/web/tests/pos-privileges-db.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "DATABASE_URL_AUTH",
+        "DATABASE_URL_WRITE",
+        "POS_PRIVILEGES_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 55,
+      "baselineTapNumber": 313,
+      "name": "rollback-only staging recap includes other cashier sales, excludes drafts/other companies, and derives receipt change",
+      "file": "apps/web/tests/pos-register-recap-staging.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "DATABASE_URL_WRITE",
+        "POS_REGISTER_RECAP_STAGING_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 56,
+      "baselineTapNumber": 325,
+      "name": "staging: every branch only sees its own sellable products within one page",
+      "file": "apps/web/tests/pos-staging-catalog.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "POS_STAGING_DB_TEST"
+      ],
+      "baselineSkipReason": "set POS_STAGING_DB_TEST=1 to read the local staging database",
+      "skipDeclarations": [
+        "enabled ? false : 'set POS_STAGING_DB_TEST=1 to read the local staging database'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 57,
+      "baselineTapNumber": 326,
+      "name": "staging: barcode found in one branch resolves inside that branch only",
+      "file": "apps/web/tests/pos-staging-catalog.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "POS_STAGING_DB_TEST"
+      ],
+      "baselineSkipReason": "set POS_STAGING_DB_TEST=1 to read the local staging database",
+      "skipDeclarations": [
+        "enabled ? false : 'set POS_STAGING_DB_TEST=1 to read the local staging database'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 58,
+      "baselineTapNumber": 327,
+      "name": "staging: name search, empty result and wildcard characters behave",
+      "file": "apps/web/tests/pos-staging-catalog.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "POS_STAGING_DB_TEST"
+      ],
+      "baselineSkipReason": "set POS_STAGING_DB_TEST=1 to read the local staging database",
+      "skipDeclarations": [
+        "enabled ? false : 'set POS_STAGING_DB_TEST=1 to read the local staging database'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 59,
+      "baselineTapNumber": 328,
+      "name": "staging: fractional prices survive exactly (Rp 4.000,10 stays 400010 sen)",
+      "file": "apps/web/tests/pos-staging-catalog.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "POS_STAGING_DB_TEST"
+      ],
+      "baselineSkipReason": "set POS_STAGING_DB_TEST=1 to read the local staging database",
+      "skipDeclarations": [
+        "enabled ? false : 'set POS_STAGING_DB_TEST=1 to read the local staging database'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 60,
+      "baselineTapNumber": 329,
+      "name": "staging: categories come from the branch catalogue with real names",
+      "file": "apps/web/tests/pos-staging-catalog.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "POS_STAGING_DB_TEST"
+      ],
+      "baselineSkipReason": "set POS_STAGING_DB_TEST=1 to read the local staging database",
+      "skipDeclarations": [
+        "enabled ? false : 'set POS_STAGING_DB_TEST=1 to read the local staging database'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 61,
+      "baselineTapNumber": 331,
+      "name": "staging: NIK and member ID resolve the reported member despite a different member sharing its card value",
+      "file": "apps/web/tests/pos-staging-member.test.mjs",
+      "gates": [
+        "DATABASE_URL",
+        "POS_STAGING_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "process.env.POS_STAGING_DB_TEST !== '1'"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 62,
+      "baselineTapNumber": 347,
+      "name": "local product add inserts a legacy-compatible item and opening stock ledger, then rolls back",
+      "file": "apps/web/tests/product-add-db.test.mjs",
+      "gates": [
+        "PRODUCT_ADD_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 63,
+      "baselineTapNumber": 351,
+      "name": "local product edit transactions preserve audit, scope, locks and rollback",
+      "file": "apps/web/tests/product-edit-db.test.mjs",
+      "gates": [
+        "PRODUCT_EDIT_DB_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 64,
+      "baselineTapNumber": 362,
+      "name": "exact recovered actual DDL supports additive guarded commands and cross-writer serialization",
+      "file": "apps/web/tests/public-savings-actual-schema.test.mjs",
+      "gates": [
+        "PSS_ACTUAL_SCHEMA_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "process.env.PSS_ACTUAL_SCHEMA_TEST!=='1'"
+      ],
+      "resolution": "RESOLVED: PSS_ACTUAL_SCHEMA_TEST=1 node --test tests/public-savings-actual-schema.test.mjs executed with PSS_ACTUAL_SCHEMA_TEST=1; 5 passed, 0 failed, 0 skipped (.local/public-savings/cp2-gated.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_ACTUAL_SCHEMA_TEST=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run PSS_ACTUAL_SCHEMA_TEST=1 node --test tests/public-savings-actual-schema.test.mjs against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 65,
+      "baselineTapNumber": 373,
+      "name": "verified intake writes one OPEN legacy header, immutable encrypted evidence and a reproducible private PDF",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 66,
+      "baselineTapNumber": 374,
+      "name": "identical idempotency replay returns the original receipt; changed payload never adds a second application",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 67,
+      "baselineTapNumber": 375,
+      "name": "invalid consent, signature, version, amount and forged form fields roll back all submission writes",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 68,
+      "baselineTapNumber": 376,
+      "name": "contact-version and reviewed current-deduction drift invalidate submission under the final lock",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 69,
+      "baselineTapNumber": 377,
+      "name": "proofs bind to one link; OTP replay/resend/failed-attempt limits persist in the database",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 70,
+      "baselineTapNumber": 378,
+      "name": "revoked and expired links cannot submit or obtain fresh verification challenges",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 71,
+      "baselineTapNumber": 379,
+      "name": "concurrent public submits create one legacy header and retain one active member guard",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 72,
+      "baselineTapNumber": 380,
+      "name": "concurrent mobile/public intake shares the real database member guard with exactly one winning header",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 73,
+      "baselineTapNumber": 381,
+      "name": "OTP and proof expiry use persisted event time without extending the verification window",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 74,
+      "baselineTapNumber": 382,
+      "name": "failure on the final legacy header insert rolls back the application, reservation and token consumption",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 75,
+      "baselineTapNumber": 383,
+      "name": "failed notification keeps the committed application and recovers through a healthy outbox worker",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 76,
+      "baselineTapNumber": 384,
+      "name": "concurrent exact idempotency retries both return one original receipt",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 77,
+      "baselineTapNumber": 385,
+      "name": "a payroll calendar change after review requires a fresh review and commits no application",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 78,
+      "baselineTapNumber": 386,
+      "name": "member section and actual trusted destination changes invalidate an already reviewed submission",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 79,
+      "baselineTapNumber": 387,
+      "name": "missing, null or disagreeing active deduction configuration cannot be treated as zero or first enrollment",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 80,
+      "baselineTapNumber": 388,
+      "name": "first enrollment requires explicit verified-none evidence and preserves null previous deduction",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 81,
+      "baselineTapNumber": 389,
+      "name": "operator listing quarantines one corrupted evidence record while retaining valid immutable submissions",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 82,
+      "baselineTapNumber": 390,
+      "name": "twenty identical requests across two independent OS processes return one receipt and commit exactly three outbox intents",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 83,
+      "baselineTapNumber": 391,
+      "name": "trusted-contact evidence older than 180 days requires assisted verification before issuing another link",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 84,
+      "baselineTapNumber": 392,
+      "name": "intake OFF prevents new issuance and submissions while existing proof and historical receipts remain available",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 85,
+      "baselineTapNumber": 393,
+      "name": "a second form view cannot silently replace the immutable facts reviewed in another tab",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 86,
+      "baselineTapNumber": 394,
+      "name": "disabled authoritative savings-type reference cannot authorize an already reviewed form",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 87,
+      "baselineTapNumber": 395,
+      "name": "legacy varchar department references never use MySQL numeric-prefix coercion",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 88,
+      "baselineTapNumber": 396,
+      "name": "local maintenance preserves financial evidence while expiring OTP material and queues a deduplicated backup escalation",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 89,
+      "baselineTapNumber": 397,
+      "name": "missing branch operations recipient fails delivery without losing intake or silently using a hardcoded fallback",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 90,
+      "baselineTapNumber": 398,
+      "name": "a real TCP-dropped COMMIT acknowledgement reports unknown outcome and exact retry recovers the committed request",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 91,
+      "baselineTapNumber": 399,
+      "name": "resend retains failed attempts, supersedes old codes, enforces per-link cap and shares the member hourly cap across links",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 92,
+      "baselineTapNumber": 400,
+      "name": "console operator scope is checked against persisted branch and issuance/revocation retain actor and reason",
+      "file": "apps/web/tests/public-savings-integration.test.mjs",
+      "gates": [
+        "PSS_INTEGRATION"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!enabled"
+      ],
+      "resolution": "RESOLVED: pnpm pss:test:integration executed with PSS_INTEGRATION=1; 43 passed, 0 failed, 0 skipped (.local/public-savings/cp2-integration.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_INTEGRATION=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run pnpm pss:test:integration against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 93,
+      "baselineTapNumber": 423,
+      "name": "encrypted synthetic backup restores SQL rows, artifact bytes and key relationship into a sibling database",
+      "file": "apps/web/tests/public-savings-recovery.test.mjs",
+      "gates": [
+        "PSS_RECOVERY_TEST"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "process.env.PSS_RECOVERY_TEST!=='1'"
+      ],
+      "resolution": "RESOLVED: PSS_RECOVERY_TEST=1 node --test tests/public-savings-recovery.test.mjs executed with PSS_RECOVERY_TEST=1; 5 passed, 0 failed, 0 skipped (.local/public-savings/cp2-gated.log)",
+      "classification": "environment-dependent",
+      "reason": "Dedicated disposable MariaDB gate PSS_RECOVERY_TEST=1 is disabled in the broad regression command by design. This skip is not acceptance evidence; the separate gated run is.",
+      "requiredAction": "Run PSS_RECOVERY_TEST=1 node --test tests/public-savings-recovery.test.mjs against the sentinel-verified local fixture."
+    },
+    {
+      "ordinal": 94,
+      "baselineTapNumber": 501,
+      "name": "SQL privilege compatibility: the least-privilege grants refuse everything but the contract; ON DUPLICATE KEY UPDATE is incompatible with them",
+      "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
+      "gates": [
+        "TOKO_WRITER_CONTRACT_TEST",
+        "TOKO_WRITER_CONTRACT_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 95,
+      "baselineTapNumber": 502,
+      "name": "one transaction: idempotency row + legacy ledger row + stock cache; the posting SURVIVES the legacy recompute, a cache-only increment does not",
+      "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
+      "gates": [
+        "TOKO_WRITER_CONTRACT_TEST",
+        "TOKO_WRITER_CONTRACT_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 96,
+      "baselineTapNumber": 503,
+      "name": "retry after a successful commit changes nothing; a reused event key with a different payload is rejected and changes nothing",
+      "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
+      "gates": [
+        "TOKO_WRITER_CONTRACT_TEST",
+        "TOKO_WRITER_CONTRACT_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 97,
+      "baselineTapNumber": 504,
+      "name": "an item under stock opname (status_so = 1) or an unknown item/branch is refused and nothing is written; a failure before the posting row rolls everything back",
+      "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
+      "gates": [
+        "TOKO_WRITER_CONTRACT_TEST",
+        "TOKO_WRITER_CONTRACT_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 98,
+      "baselineTapNumber": 505,
+      "name": "concurrency with the POS checkout statement: duplicate deliveries from three writers post once, concurrent sales and postings keep cache = ledger-derived stock",
+      "file": "apps/web/tests/toko-writer-contract-db.test.mjs",
+      "gates": [
+        "TOKO_WRITER_CONTRACT_TEST",
+        "TOKO_WRITER_CONTRACT_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 99,
+      "baselineTapNumber": 514,
+      "name": "database constraints refuse what the application would also refuse (and what a bug might attempt)",
+      "file": "apps/web/tests/warehouse-store-db.test.mjs",
+      "gates": [
+        "WAREHOUSE_REHEARSAL_DB_TEST",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 100,
+      "baselineTapNumber": 515,
+      "name": "repositories keep the port contracts: persisted aggregates round-trip, replays are idempotent, concurrent writers are serialised",
+      "file": "apps/web/tests/warehouse-store-db.test.mjs",
+      "gates": [
+        "WAREHOUSE_REHEARSAL_DB_TEST",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 101,
+      "baselineTapNumber": 516,
+      "name": "outbox + posting side: durable, idempotent, atomic; crash, duplicate delivery, conflict, concurrent consumers and dead letters behave as specified",
+      "file": "apps/web/tests/warehouse-store-db.test.mjs",
+      "gates": [
+        "WAREHOUSE_REHEARSAL_DB_TEST",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 102,
+      "baselineTapNumber": 517,
+      "name": "database outbox (rehearsal): StockOutbox contract — insert-if-absent, immutable content, deterministic bounded order, compare-and-set transitions",
+      "file": "apps/web/tests/warehouse-store-db.test.mjs",
+      "gates": [
+        "WAREHOUSE_REHEARSAL_DB_TEST",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 103,
+      "baselineTapNumber": 518,
+      "name": "database applier (rehearsal): StockApplier contract — idempotent by intent key, independent keys add up exactly, nothing is half-applied",
+      "file": "apps/web/tests/warehouse-store-db.test.mjs",
+      "gates": [
+        "WAREHOUSE_REHEARSAL_DB_TEST",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 104,
+      "baselineTapNumber": 519,
+      "name": "close the shared contract client",
+      "file": "apps/web/tests/warehouse-store-db.test.mjs",
+      "gates": [
+        "WAREHOUSE_REHEARSAL_DB_TEST",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 105,
+      "baselineTapNumber": 520,
+      "name": "outbox -> ledger-based TOKO applier: posted once, redelivery acknowledged, stock survives the legacy recompute, reconciliation consistent",
+      "file": "apps/web/tests/warehouse-toko-applier-db.test.mjs",
+      "gates": [
+        "CROSS_STORE_APPLIER_TEST",
+        "TOKO_WRITER_CONTRACT_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    },
+    {
+      "ordinal": 106,
+      "baselineTapNumber": 521,
+      "name": "acknowledgement lost after the TOKO commit (TCP reply dropped): the retry is an acknowledgement, the ledger and stock move once",
+      "file": "apps/web/tests/warehouse-toko-applier-db.test.mjs",
+      "gates": [
+        "CROSS_STORE_APPLIER_TEST",
+        "TOKO_WRITER_CONTRACT_URL",
+        "WAREHOUSE_REHEARSAL_URL"
+      ],
+      "baselineSkipReason": "Boolean opt-in gate disabled",
+      "skipDeclarations": [
+        "!ON"
+      ],
+      "resolution": "Not executed: separate subsystem fixture outside this public-savings verification",
+      "classification": "irrelevant",
+      "reason": "Separate auth/console/POS/KOSIPA/warehouse integration fixture; outside public savings scope. Deliberate opt-in avoids connecting to unrelated databases. Remains required for release of that subsystem.",
+      "requiredAction": "Retain the opt-in gate. Run only with that suite’s own disposable allowlisted database and dedicated credentials; never repoint it at the public-savings database."
+    }
+  ]
+}

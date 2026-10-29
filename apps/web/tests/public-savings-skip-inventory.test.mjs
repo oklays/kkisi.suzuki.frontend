@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {inventorySkips} from '../../../integration/public-savings/skip-inventory.mjs';
+test('all web skips have individual source, gate and disposition',async()=>{const result=await inventorySkips();assert.ok([103,106].includes(result.total));assert.equal(new Set(result.tests.map(x=>x.ordinal)).size,result.total);assert.equal(result.tests.filter(x=>x.classification==='environment-dependent').every(x=>x.resolution.startsWith('RESOLVED')),true);for(const item of result.tests){assert.match(item.file,/apps\/web\/tests\/.*\.test\.mjs$/);assert.ok(item.gates.length);assert.ok(['intentional','irrelevant','environment-dependent','remediation'].includes(item.classification));assert.ok(item.reason);}});
