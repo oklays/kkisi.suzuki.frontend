@@ -12,6 +12,7 @@ docs/migration/_baseline/
 
 # Workspace dependencies and pnpm's local content store
 node_modules/
+.local/
 .pnpm-store/
 
 # Local compatibility symlink for an already-running pre-refactor dev server

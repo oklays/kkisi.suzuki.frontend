@@ -18,7 +18,19 @@
     "auth:unlock": "pnpm --filter @koperasi/web auth:unlock",
     "auth:status": "pnpm --filter @koperasi/web auth:status",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
-    "test:pos-db": "pnpm --filter @koperasi/web exec node --experimental-strip-types --test tests/pos-checkout-db.test.mjs"
+    "test:pos-db": "pnpm --filter @koperasi/web exec node --experimental-strip-types --test tests/pos-checkout-db.test.mjs",
+    "pss:setup": "node integration/public-savings/staging.mjs setup",
+    "pss:status": "node integration/public-savings/staging.mjs status",
+    "pss:seed": "node integration/public-savings/staging.mjs seed",
+    "pss:reset": "node integration/public-savings/staging.mjs reset",
+    "pss:stop": "node integration/public-savings/staging.mjs stop",
+    "pss:dev": "pnpm --filter @koperasi/web dev:public-savings",
+    "pss:ops": "node --experimental-strip-types integration/public-savings/operations.mjs",
+    "pss:test:integration": "PSS_INTEGRATION=1 node --experimental-strip-types --test apps/web/tests/public-savings-integration.test.mjs integration/public-savings/legacy/controls.test.mjs",
+    "pss:test:browser": "pnpm --filter @koperasi/web test:public-savings:browser",
+    "pss:migration:verify": "node integration/public-savings/preflight.mjs validate-migration",
+    "pss:worker": "node --experimental-strip-types integration/public-savings/worker.mjs",
+    "pss:start": "PSS_LOCAL_STAGING=1 pnpm --filter @koperasi/web exec next start -H 127.0.0.1 -p 3489"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
