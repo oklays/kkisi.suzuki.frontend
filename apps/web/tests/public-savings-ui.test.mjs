@@ -34,6 +34,9 @@ test('a frozen submission preserves exact body, signature bytes and idempotency 
 
 test('public errors give safe actionable text without echoing server or PII values', () => {
   assert.match(publicErrorMessage('RATE_LIMITED',30),/30/);
+  assert.match(publicErrorMessage('CHALLENGE_LOCKED'),/terkunci.*petugas koperasi/);assert.doesNotMatch(publicErrorMessage('CHALLENGE_LOCKED'),/minta kode baru/);
+  assert.match(publicErrorMessage('RESEND_TOO_SOON',45),/45 detik/);assert.match(publicErrorMessage('RESEND_LIMIT'),/Batas pengiriman/);
+  assert.match(publicErrorMessage('OTP_INVALID'),/belum cocok/);
   assert.match(publicErrorMessage('UNKNOWN_SECRET_MEMBER_IDENTIFIER'),/belum/);
   assert.doesNotMatch(publicErrorMessage('UNKNOWN_SECRET_MEMBER_IDENTIFIER'),/SECRET/);
 });

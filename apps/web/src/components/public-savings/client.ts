@@ -51,6 +51,10 @@ export function submissionBody(snapshot: SubmissionSnapshot): FormData {
 
 export function publicErrorMessage(code: string, retryAfterSeconds?: number): string {
   if (/RATE|THROTTL|TOO_MANY/.test(code)) return `Terlalu banyak percobaan. Coba lagi${retryAfterSeconds ? ` setelah ${retryAfterSeconds} detik` : ' beberapa saat lagi'}.`;
+  // Lock and resend caps must not tell the member to request a new code: that request is refused too.
+  if (code === 'CHALLENGE_LOCKED') return 'Tautan ini terkunci karena terlalu banyak percobaan kode yang salah. Hubungi petugas koperasi untuk menerbitkan tautan baru.';
+  if (code === 'RESEND_TOO_SOON') return `Kode baru baru saja dikirim. Tunggu${retryAfterSeconds ? ` ${retryAfterSeconds} detik` : ' sebentar'} sebelum meminta kode lagi.`;
+  if (code === 'RESEND_LIMIT') return 'Batas pengiriman kode verifikasi sudah tercapai. Coba lagi dalam satu jam atau hubungi petugas koperasi.';
   if (/OTP|CODE|CHALLENGE/.test(code)) return 'Kode verifikasi belum cocok atau telah kedaluwarsa. Periksa kode atau minta kode baru.';
   if (/PROOF|VERIFICATION/.test(code)) return 'Verifikasi Anda telah berakhir. Verifikasi kembali sebelum melanjutkan.';
   if (/DUPLICATE|ACTIVE_APPLICATION/.test(code)) return 'Masih ada pengajuan aktif. Hubungi petugas koperasi untuk pemeriksaan.';
