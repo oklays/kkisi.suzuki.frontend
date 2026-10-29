@@ -35,7 +35,7 @@ try{
  async function saved(){await waitFor("!document.querySelector('.products-editor') && !document.querySelector('.products-skeleton-row') && !!document.querySelector('.product-editor-success')");}
  await open();
  assert.equal(await evaluate("document.querySelector('.product-editor-form button[type=submit]').disabled"),false,'local writer activated');
- await set('input[name=sku]',`NXT-SKU-${id}-EDITED`);await set('input[name=name]','NXT PRODUCT EDIT TEST updated');await set('input[name=sellingPrice]','4500.25');await set('input[name=alertQty]','4');await select('select[name=active]','0');
+ await set('input[name=sku]',`NXT-SKU-${id}-EDITED`);await set('input[name=name]','NXT PRODUCT EDIT TEST updated');await set('input[data-field=sellingPrice]','4.500,25');await set('input[name=alertQty]','4');await select('select[name=active]','0');
  await evaluate("document.querySelector('.product-editor-form').requestSubmit()");await saved();
  const metadata=await prisma.$queryRaw`SELECT sku,item_name,sales_price,alert_qty,status,stock FROM db_items WHERE id=${id}`;assert.equal(metadata[0].sku,`NXT-SKU-${id}-EDITED`);assert.equal(metadata[0].item_name,'NXT PRODUCT EDIT TEST updated');assert.equal(metadata[0].sales_price,4500.25);assert.equal(metadata[0].status,0);assert.equal(metadata[0].stock,10);
  await open();assert.equal(await evaluate("document.querySelector('input[name=sku]').value"),`NXT-SKU-${id}-EDITED`);assert.equal(await evaluate("document.querySelector('select[name=active]').value"),'0');

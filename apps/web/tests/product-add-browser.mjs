@@ -48,7 +48,7 @@ try{
   await evaluate("document.querySelector('input[name=barcode]').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))");
   assert.equal(await evaluate("!!document.querySelector('.product-stock-confirm')"),false);
   await set('input[name=name]',testName);await choose('select[name=categoryId]','o=>true');await choose('select[name=unitId]','o=>true');await set('input[name=packQuantity]','6');
-  await set('input[name=basePrice]','3000');await choose('select[name=taxId]',"o=>o.textContent.includes('11%')");await choose('select[name=taxType]',"o=>o.value==='Exclusive'");
+  await set('input[data-field=basePrice]','3.000');await choose('select[name=taxId]',"o=>o.textContent.includes('11%')");await choose('select[name=taxType]',"o=>o.value==='Exclusive'");
   await set('input[name=margin]','20');await set('input[name=discountPercent]','5');await set('input[name=openingStock]',String(stock));await set('input[name=alertQty]','1');
   await choose('select[name=active]',"o=>o.value==='0'");
  }

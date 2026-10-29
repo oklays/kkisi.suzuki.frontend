@@ -140,7 +140,7 @@ export function CurrencyInput({
       <span className={`money-input${wrapperClassName ? ` ${wrapperClassName}` : ''}`} data-invalid={ariaInvalid || note ? 'true' : undefined} data-disabled={disabled ? 'true' : undefined}>
         <span className="money-input-prefix" aria-hidden="true">Rp</span>
         <input
-          ref={input} id={id} type="text" inputMode={allowDecimals ? 'decimal' : 'numeric'} enterKeyHint="done" autoComplete="off" spellCheck={false}
+          ref={input} id={id} data-field={name} type="text" inputMode={allowDecimals ? 'decimal' : 'numeric'} enterKeyHint="done" autoComplete="off" spellCheck={false}
           className={className} value={field.text} placeholder={placeholder} disabled={disabled} readOnly={readOnly} required={required} autoFocus={autoFocus}
           aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-describedby={describedBy} aria-invalid={ariaInvalid || note ? true : undefined} aria-required={ariaRequired}
           onChange={(event) => edit(event.target.value, event.target.selectionStart === null ? null : significant(event.target.value.slice(0, event.target.selectionStart)))}
