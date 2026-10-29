@@ -51,10 +51,12 @@ test('POS keeps its focused screen: no console chrome is rendered on /pos', () =
 });
 
 test('console styles are scoped and cannot restyle TOKO pages', () => {
-  const css = read('src/app/console/console.css').replace(/\/\*[\s\S]*?\*\//g, '');
-  for (const rule of css.split('}').map((r) => r.split('{')[0].trim()).filter(Boolean)) {
-    if (rule.startsWith('@') || /^(from|to)$/.test(rule)) continue;
-    for (const selector of rule.split(',')) assert.match(selector.trim(), /^\.console-/, `unscoped selector: ${selector.trim()}`);
+  for (const file of ['src/app/console/console.css', 'src/app/console/sidebar.css']) {
+    const css = read(file).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const rule of css.split('}').map((r) => r.split('{')[0].trim()).filter(Boolean)) {
+      if (rule.startsWith('@') || /^(from|to)$/.test(rule)) continue;
+      for (const selector of rule.split(',')) assert.match(selector.trim(), /^\.console-/, `${file}: unscoped selector: ${selector.trim()}`);
+    }
   }
 });
 

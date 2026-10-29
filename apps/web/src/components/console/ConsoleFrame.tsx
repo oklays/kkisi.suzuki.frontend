@@ -1,42 +1,38 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
   Bell,
   ChevronDown,
-  ChevronRight,
   CircleHelp,
   Menu,
   MessageSquare,
   Search,
   Settings,
-  Store,
   X,
 } from 'lucide-react';
-import { currentEntryId, nestNavigation } from '@koperasi/domain/console/navigation';
-import type { ConsoleNavEntry } from '@/features/console/navigation';
+import { currentEntryId } from '@koperasi/domain/console/navigation';
 import { CONSOLE_ICONS } from './icons';
-import type { PosSession } from '@/features/pos/types';
-import { SessionControls } from '@/components/pos/SessionControls';
 import { landingFont } from '@/components/landing/fonts';
+import { AppSidebar } from './sidebar/AppSidebar';
+import { SIDEBAR_COOKIE, SIDEBAR_THEME_COOKIE, writeSidebarCookie, type SidebarPrefs } from './sidebar/prefs';
+import { useMediaQuery } from './sidebar/use-media-query';
+import type { ConsoleNavGroup, ConsoleViewer } from './sidebar/types';
 
-export type ConsoleViewer = Pick<
-  PosSession,
-  'userId' | 'userName' | 'branchName' | 'companyId' | 'canSwitchBranch' | 'companies' | 'csrfToken'
->;
-export type ConsoleNavGroup = { section: string; label: string; items: ConsoleNavEntry[] };
+export type { ConsoleNavGroup, ConsoleViewer };
 
 /** Client chrome for /console: sidebar (drawer at <=767px), breadcrumb and session controls. Data arrives pre-authorised. */
 export function ConsoleFrame({
   groups,
   viewer,
+  prefs,
   children,
 }: {
   groups: ConsoleNavGroup[];
   viewer: ConsoleViewer;
+  prefs: SidebarPrefs;
   children: React.ReactNode;
 }) {
   const pathname = usePathname() ?? '/console';
@@ -45,7 +41,10 @@ export function ConsoleFrame({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [activePopover, setActivePopover] = useState<'notifications' | 'messages' | 'help' | 'user' | null>(null);
+  const [collapsedPref, setCollapsedPref] = useState(prefs.collapsed);
+  const [theme, setTheme] = useState(prefs.theme);
   const toggle = useRef<HTMLButtonElement>(null);
+  const drawerClose = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const entries = groups.flatMap((g) => g.items);
@@ -54,30 +53,50 @@ export function ConsoleFrame({
   // Deeper than the registered page (e.g. a member or loan detail): the registered page becomes a link and the last crumb is the detail itself.
   const deeper = current !== null && pathname.replace(/\/$/, '') !== current.href.split('?')[0];
   const currentParent = current?.parent ? entries.find((e) => e.id === current.parent) ?? null : null;
-  // A submenu is open while it holds the current page; a manual toggle only lasts until the next navigation.
-  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  // The rail is the user's saved choice on desktop and always on tablets; phones get the drawer, which is always the full sidebar.
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
+  const collapsed = !isMobile && (isTablet || collapsedPref);
+  const drawerOpen = open && isMobile;
+  // Focus goes back to the toggle only after the drawer has closed: the page behind it is inert until then and cannot take focus.
+  const restoreFocus = useRef(false);
+  const closeDrawer = () => {
+    restoreFocus.current = true;
+    setOpen(false);
+  };
 
   // Close the drawer and popovers on navigation.
   const [seenPath, setSeenPath] = useState(pathname);
   if (seenPath !== pathname) {
     setSeenPath(pathname);
     setOpen(false);
-    setToggled({});
     setSearchOpen(false);
     setActivePopover(null);
   }
 
+  // Open drawer: Escape closes it, the page behind it does not scroll, focus starts on the close control (the page itself is inert).
   useEffect(() => {
-    if (!open) return;
+    if (!drawerOpen) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        restoreFocus.current = true;
         setOpen(false);
-        toggle.current?.focus();
       }
     };
+    const returnTo = toggle.current;
+    const scroll = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    drawerClose.current?.focus();
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
+    return () => {
+      document.body.style.overflow = scroll;
+      document.removeEventListener('keydown', onKey);
+      if (restoreFocus.current) {
+        restoreFocus.current = false;
+        returnTo?.focus();
+      }
+    };
+  }, [drawerOpen]);
 
   useEffect(() => {
     const onGlobalKey = (event: KeyboardEvent) => {
@@ -101,13 +120,6 @@ export function ConsoleFrame({
     }
   });
 
-  // SessionControls only reads the session/branch fields; the POS-specific ones are inert here.
-  const session: PosSession = {
-    ...viewer,
-    checkoutAvailable: false,
-    register: { open: null, multiple: false },
-  };
-
   const isDashboardRoot = !current || current.id === 'dashboard';
   const settingsEntry = entries.find((e) => e.section === 'settings');
   const filteredEntries = searchQuery.trim()
@@ -119,130 +131,30 @@ export function ConsoleFrame({
     : entries.slice(0, 6);
 
   return (
-    <div className={`console-shell ${landingFont.variable}`} data-drawer={open ? 'open' : 'closed'}>
+    <div className={`console-shell ${landingFont.variable}`} data-drawer={drawerOpen ? 'open' : 'closed'} data-sidebar-theme={theme}>
       <a className="console-skip" href="#console-main">
         Langsung ke konten
       </a>
-      <aside id="console-nav" className="console-sidebar" aria-label="Navigasi console">
-        <div className="console-sidebar-top">
-          <Link href="/console" className="console-brand">
-            <Image
-              className="console-brand-image"
-              src="/illustrations/new-landscape-logo.jpeg"
-              width={1024}
-              height={355}
-              unoptimized
-              alt="SMART KKISI Tambun 2"
-            />
-          </Link>
-          <button
-            type="button"
-            className="console-icon-button console-drawer-close"
-            aria-label="Tutup menu"
-            onClick={() => {
-              setOpen(false);
-              toggle.current?.focus();
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="console-branch">
-          <span className="console-branch-icon" aria-hidden="true">
-            <Store size={17} />
-            <i className="console-branch-dot" />
-          </span>
-          <div className="console-branch-info">
-            <small>Cabang Aktif</small>
-            <strong>{viewer.branchName}</strong>
-          </div>
-          <ChevronDown size={15} className="console-branch-chevron" aria-hidden="true" />
-        </div>
-
-        <nav aria-label="Menu utama">
-          {groups.map((group) => (
-            <div key={group.section} className="console-nav-group">
-              {group.section !== 'dashboard' && (
-                <p className="console-nav-label" id={`nav-${group.section}`}>
-                  {group.label}
-                </p>
-              )}
-              <ul aria-labelledby={group.section !== 'dashboard' ? `nav-${group.section}` : undefined}>
-                {nestNavigation(group.items).map(({ entry: item, children }) => {
-                  const Icon = CONSOLE_ICONS[item.icon];
-                  const submenu = `nav-sub-${item.id}`;
-                  const expanded =
-                    toggled[item.id] ??
-                    (current?.id === item.id || children.some((c) => c.id === current?.id));
-                  const isCurrent = current?.id === item.id;
-                  return (
-                    <li key={item.id}>
-                      <div className="console-nav-row">
-                        <Link
-                          href={item.href}
-                          prefetch={item.href.startsWith('/console/kosipa') ? false : undefined}
-                          aria-current={isCurrent ? 'page' : undefined}
-                        >
-                          <Icon size={18} aria-hidden="true" />
-                          <span className="console-nav-item-text">{item.label}</span>
-                          {isCurrent && children.length === 0 && (
-                            <ChevronRight
-                              size={14}
-                              className="console-nav-active-chevron"
-                              aria-hidden="true"
-                            />
-                          )}
-                        </Link>
-                        {children.length > 0 && (
-                          <button
-                            type="button"
-                            className="console-nav-toggle"
-                            aria-expanded={expanded}
-                            aria-controls={submenu}
-                            aria-label={`Submenu ${item.label}`}
-                            onClick={() => setToggled((t) => ({ ...t, [item.id]: !expanded }))}
-                          >
-                            <ChevronDown size={16} aria-hidden="true" />
-                          </button>
-                        )}
-                      </div>
-                      {children.length > 0 && (
-                        <ul
-                          id={submenu}
-                          className="console-nav-sub"
-                          hidden={!expanded}
-                          aria-label={`Submenu ${item.label}`}
-                        >
-                          {children.map((child) => (
-                            <li key={child.id}>
-                              <Link
-                                href={child.href}
-                                prefetch={child.href.startsWith('/console/kosipa') ? false : undefined}
-                                aria-current={current?.id === child.id ? 'page' : undefined}
-                              >
-                                {child.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </nav>
-
-        <div className="console-sidebar-bottom">
-          <SessionControls session={session} />
-          <p className="console-sidebar-foot">
-            KKISI TB2 · Management Console
-            {process.env.APP_VERSION && <span>Versi {process.env.APP_VERSION}</span>}
-          </p>
-        </div>
-      </aside>
+      <AppSidebar
+        groups={groups}
+        viewer={viewer}
+        currentId={current?.id ?? null}
+        collapsed={collapsed}
+        theme={theme}
+        drawerOpen={drawerOpen}
+        onToggleCollapsed={() => {
+          const next = !collapsedPref;
+          setCollapsedPref(next);
+          writeSidebarCookie(SIDEBAR_COOKIE, next ? 'collapsed' : 'expanded');
+        }}
+        onToggleTheme={() => {
+          const next = theme === 'dark' ? 'light' : 'dark';
+          setTheme(next);
+          writeSidebarCookie(SIDEBAR_THEME_COOKIE, next);
+        }}
+        onCloseDrawer={closeDrawer}
+        closeRef={drawerClose}
+      />
 
       <button
         type="button"
@@ -252,7 +164,7 @@ export function ConsoleFrame({
         onClick={() => setOpen(false)}
       />
 
-      <div className="console-main">
+      <div className="console-main" inert={drawerOpen}>
         <header className="console-header">
           <div className="console-header-left">
             <button
@@ -261,7 +173,7 @@ export function ConsoleFrame({
               className="console-icon-button console-drawer-toggle"
               aria-label="Buka menu"
               aria-controls="console-nav"
-              aria-expanded={open}
+              aria-expanded={drawerOpen}
               onClick={() => setOpen(true)}
             >
               <Menu size={20} />

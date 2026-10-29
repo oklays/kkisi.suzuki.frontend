@@ -1,0 +1,102 @@
+/* Unified console sidebar. Tokens first: light by default, dark under data-sidebar-theme (the page content stays light). Every selector is scoped to console-*. */
+.console-sidebar { --sb-bg:#fafafa; --sb-surface:#fff; --sb-line:#e6e8ec; --sb-fg:#475467; --sb-fg-strong:#101828; --sb-muted:#667085; --sb-hover:rgba(16,24,40,.05); --sb-active:#eceef2; --sb-accent:#0754e8; --sb-guide:#dcdfe5; --sb-danger:#b42318; --sb-avatar-bg:#e6edff; --sb-avatar-fg:#0754e8; --sb-shadow:0 14px 34px -10px rgba(16,24,40,.22),0 2px 6px rgba(16,24,40,.06); --sb-row:38px; --sb-icon:20px; --sb-gap:10px; --sb-pad:10px; --sb-radius:8px; --sb-ease:.18s ease; color-scheme:light; }
+.console-shell[data-sidebar-theme="dark"] .console-sidebar { --sb-bg:#18181b; --sb-surface:#232327; --sb-line:#2c2c31; --sb-fg:#a1a1aa; --sb-fg-strong:#f4f4f5; --sb-muted:#8b8b94; --sb-hover:rgba(255,255,255,.06); --sb-active:rgba(255,255,255,.1); --sb-accent:#8fb2ff; --sb-guide:#34343a; --sb-danger:#fda29b; --sb-avatar-bg:rgba(143,178,255,.16); --sb-avatar-fg:#8fb2ff; --sb-shadow:0 14px 34px -8px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04); color-scheme:dark; }
+
+.console-sidebar { width:264px; flex-shrink:0; position:sticky; top:0; z-index:20; height:100dvh; display:flex; flex-direction:column; overflow:hidden; background:var(--sb-bg); color:var(--sb-fg); border-right:1px solid var(--sb-line); transition:width .2s ease; }
+.console-sidebar[data-collapsed="true"] { width:72px; }
+
+/* Header */
+.console-sidebar-top { flex-shrink:0; height:62px; padding:12px 14px; display:flex; align-items:center; gap:8px; }
+.console-brand { flex:0 1 auto; min-width:0; display:flex; align-items:center; padding:2px 4px; border-radius:10px; }
+.console-brand-image { display:block; height:34px; width:auto; max-width:100%; object-fit:contain; mix-blend-mode:multiply; }
+.console-brand-mark { display:block; width:44px; height:44px; }
+.console-shell[data-sidebar-theme="dark"] .console-brand { padding:2px 10px; background:#fff; }
+.console-shell[data-sidebar-theme="dark"] .console-brand-image { mix-blend-mode:normal; }
+.console-sidebar-collapse, .console-sidebar .console-drawer-close { margin-left:auto; }
+.console-sidebar-collapse { flex-shrink:0; width:28px; height:28px; display:grid; place-items:center; border:1px solid var(--sb-line); border-radius:8px; background:var(--sb-surface); color:var(--sb-muted); cursor:pointer; transition:color var(--sb-ease),background var(--sb-ease); }
+.console-sidebar-collapse:hover { color:var(--sb-fg-strong); background:var(--sb-hover); }
+.console-sidebar .console-drawer-close { width:34px; height:34px; border-color:var(--sb-line); background:var(--sb-surface); color:var(--sb-fg-strong); }
+
+/* Navigation body: scrolls on its own between the header and the pinned footer */
+.console-nav-body { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:6px 14px 12px; scrollbar-width:thin; scrollbar-color:var(--sb-line) transparent; }
+.console-nav-list, .console-flyout-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+
+/* One row for every level: [icon slot][label][chevron]. The icon slot is a fixed box so icons align at each depth whatever the label length. */
+.console-nav-row { position:relative; display:flex; align-items:center; }
+.console-nav-link { flex:1; min-width:0; min-height:var(--sb-row); display:flex; align-items:center; gap:var(--sb-gap); padding:0 var(--sb-pad); border:0; border-radius:var(--sb-radius); background:none; color:var(--sb-fg); font:inherit; font-size:13px; font-weight:500; line-height:1.3; text-align:left; text-decoration:none; cursor:pointer; transition:background var(--sb-ease),color var(--sb-ease); }
+.console-nav-icon { flex:0 0 var(--sb-icon); width:var(--sb-icon); height:var(--sb-icon); display:grid; place-items:center; color:var(--sb-muted); transition:color var(--sb-ease); }
+.console-nav-icon svg { display:block; flex-shrink:0; }
+.console-nav-text { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.console-nav-chevron { flex-shrink:0; color:var(--sb-muted); transition:transform var(--sb-ease); }
+.console-nav-section[aria-expanded="false"] .console-nav-chevron, .console-nav-toggle[aria-expanded="false"] .console-nav-chevron { transform:rotate(-90deg); }
+.console-nav-section { font-weight:600; color:var(--sb-fg-strong); }
+.console-nav-link:hover { background:var(--sb-hover); color:var(--sb-fg-strong); }
+.console-nav-link:hover .console-nav-icon { color:var(--sb-fg-strong); }
+.console-nav-link[data-trail="true"] { color:var(--sb-fg-strong); }
+.console-nav-link[data-trail="true"] .console-nav-icon, .console-nav-link[aria-current="page"] .console-nav-icon { color:var(--sb-accent); }
+.console-nav-link[aria-current="page"] { background:var(--sb-active); color:var(--sb-fg-strong); font-weight:600; }
+.console-sidebar .console-nav-link:focus-visible, .console-sidebar .console-nav-toggle:focus-visible, .console-sidebar .console-user-card:focus-visible, .console-sidebar .console-menu-item:focus-visible, .console-sidebar .console-sidebar-collapse:focus-visible { outline:2px solid var(--sb-accent); outline-offset:-2px; }
+/* Expand control of an entry that has children (Laporan): sits inside the row, the link still navigates */
+.console-nav-row:has(.console-nav-toggle) .console-nav-link { padding-right:34px; }
+.console-nav-toggle { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:28px; height:28px; display:grid; place-items:center; border:0; border-radius:6px; background:none; color:var(--sb-muted); cursor:pointer; }
+.console-nav-toggle:hover { background:var(--sb-hover); color:var(--sb-fg-strong); }
+
+/* Nested levels: the guide line runs under the parent's icon; the child icon starts 20px right of the parent icon, so the line never touches an icon. */
+.console-nav-collapse { display:grid; grid-template-rows:0fr; visibility:hidden; transition:grid-template-rows .2s ease,visibility 0s linear .2s; }
+.console-nav-collapse[data-open="true"] { grid-template-rows:1fr; visibility:visible; transition:grid-template-rows .2s ease,visibility 0s; }
+.console-nav-sub { list-style:none; min-height:0; overflow:hidden; margin:0 0 0 calc(var(--sb-pad) + var(--sb-icon) / 2); padding:0 0 0 2px; border-left:1px solid var(--sb-guide); display:flex; flex-direction:column; gap:2px; }
+.console-nav-sub > li:first-child { margin-top:2px; }
+.console-nav-sub > li:last-child { margin-bottom:2px; }
+.console-nav-sub .console-nav-sub { margin-left:calc(7px + var(--sb-icon) / 2); }
+.console-nav-sub .console-nav-link { padding-left:7px; }
+
+/* Collapsed rail: icons only (labels stay in the DOM for assistive tech); tooltips and flyouts carry the names and children. */
+.console-sidebar[data-collapsed="true"] .console-sidebar-top { flex-direction:column; height:auto; padding:10px 0 6px; gap:8px; }
+.console-sidebar[data-collapsed="true"] .console-brand { flex:none; justify-content:center; padding:0; }
+.console-sidebar[data-collapsed="true"] .console-sidebar-collapse { margin-left:0; }
+.console-sidebar[data-collapsed="true"] .console-rail-item > .console-nav-row .console-nav-link, .console-sidebar[data-collapsed="true"] .console-footer-item > .console-nav-row .console-nav-link { flex:none; width:44px; margin-inline:auto; padding:0; justify-content:center; }
+.console-sidebar[data-collapsed="true"] .console-rail-item > .console-nav-row .console-nav-text, .console-sidebar[data-collapsed="true"] .console-footer-item > .console-nav-row .console-nav-text { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.console-sidebar[data-collapsed="true"] .console-rail-item > .console-nav-row .console-nav-chevron { display:none; }
+
+/* Footer */
+.console-sidebar-footer { padding:8px 14px 14px; border-top:1px solid var(--sb-line); display:flex; flex-direction:column; gap:2px; }
+.console-footer-nav { display:contents; }
+.console-user-card { margin-top:8px; width:100%; display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--sb-line); border-radius:10px; background:var(--sb-surface); color:var(--sb-fg-strong); font:inherit; text-align:left; cursor:pointer; box-shadow:0 1px 2px rgba(16,24,40,.04); transition:background var(--sb-ease); }
+.console-user-card:hover { background:var(--sb-hover); }
+.console-avatar { flex:0 0 32px; width:32px; height:32px; display:grid; place-items:center; border-radius:8px; background:var(--sb-avatar-bg); color:var(--sb-avatar-fg); font-size:13px; font-weight:700; }
+.console-user-card-text { flex:1; min-width:0; display:flex; flex-direction:column; }
+.console-user-card-text strong, .console-user-card-text small { display:block; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.console-user-card-text strong { font-size:12.5px; font-weight:600; color:var(--sb-fg-strong); }
+.console-user-card-text small { font-size:11px; color:var(--sb-muted); }
+.console-user-card-chevron { flex-shrink:0; color:var(--sb-muted); }
+.console-sidebar[data-collapsed="true"] .console-user-card { width:44px; margin-inline:auto; padding:5px; justify-content:center; }
+.console-sidebar[data-collapsed="true"] .console-user-card > .console-user-card-text, .console-sidebar[data-collapsed="true"] .console-user-card > .console-user-card-chevron { display:none; }
+
+/* Floating panels (tooltip, flyout, menus): fixed so the sidebar's scroll area never clips them; the sidebar outranks the page header (z 15). */
+.console-floating { position:fixed; z-index:40; display:flex; flex-direction:column; }
+.console-floating-panel { min-height:0; min-width:200px; max-width:300px; overflow-y:auto; padding:6px; border:1px solid var(--sb-line); border-radius:12px; background:var(--sb-surface); color:var(--sb-fg); box-shadow:var(--sb-shadow); }
+.console-floating[data-placement="above"] .console-floating-panel { width:100%; max-width:none; }
+.console-tooltip { pointer-events:none; }
+.console-tooltip .console-floating-panel { min-width:0; padding:6px 10px; border:0; border-radius:8px; background:var(--sb-fg-strong); color:var(--sb-bg); font-size:12px; font-weight:600; white-space:nowrap; box-shadow:var(--sb-shadow); }
+.console-floating .console-flyout-title { padding:6px 10px 6px; color:var(--sb-muted); font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+.console-flyout .console-floating-panel { min-width:224px; }
+.console-menu .console-floating-panel { display:flex; flex-direction:column; gap:2px; }
+.console-menu-head { display:flex; align-items:center; gap:10px; padding:6px 6px 10px; margin-bottom:4px; border-bottom:1px solid var(--sb-line); }
+.console-floating .console-menu-title { padding:6px 8px 2px; color:var(--sb-fg-strong); font-size:13px; font-weight:600; }
+.console-floating .console-menu-body, .console-floating .console-menu-foot { padding:2px 8px 6px; color:var(--sb-fg); font-size:12.5px; line-height:1.5; }
+.console-floating .console-menu-foot { color:var(--sb-muted); font-size:11px; }
+.console-menu-item, .console-menu .pos-logout { width:100%; min-height:36px; display:flex; align-items:center; gap:10px; padding:0 8px; border:0; border-radius:8px; background:none; color:var(--sb-fg); font:inherit; font-size:13px; font-weight:500; text-align:left; cursor:pointer; transition:background var(--sb-ease),color var(--sb-ease); }
+.console-menu-item:hover, .console-menu .pos-logout:hover { background:var(--sb-hover); color:var(--sb-fg-strong); }
+.console-menu .pos-logout { color:var(--sb-danger); }
+.console-menu .pos-session { display:flex; flex-direction:column; gap:2px; }
+.console-menu .pos-branch-select { display:flex; flex-direction:column; gap:4px; padding:4px 8px 8px; color:var(--sb-muted); font-size:11px; font-weight:600; }
+.console-menu .pos-branch-select select { min-height:34px; padding:0 8px; border:1px solid var(--sb-line); border-radius:8px; background:var(--sb-bg); color:var(--sb-fg-strong); font-size:12.5px; font-weight:500; }
+.console-menu .pos-session-message { padding:2px 8px 6px; color:var(--sb-danger); font-size:11.5px; }
+
+@media (min-width:768px) and (max-width:1023px) { .console-sidebar-collapse { display:none; } }
+@media (max-width:767px) {
+  .console-sidebar, .console-sidebar[data-collapsed="true"] { position:fixed; inset:0 auto 0 0; z-index:30; width:min(300px,86vw); transform:translateX(-100%); transition:transform .2s ease; visibility:hidden; }
+  .console-shell[data-drawer="open"] .console-sidebar { transform:none; visibility:visible; }
+  .console-sidebar-collapse { display:none; }
+}
+@media (prefers-reduced-motion: reduce) { .console-sidebar, .console-nav-collapse, .console-nav-chevron, .console-nav-link, .console-nav-icon { transition:none; } }
