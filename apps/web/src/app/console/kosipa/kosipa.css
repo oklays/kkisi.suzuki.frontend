@@ -1232,3 +1232,17 @@
     transition: none;
   }
 }
+/* Reference masters (FA-01): text inputs share the console form control style. */
+.kosipa-module .console-form input { width:100%; min-width:0; min-height:44px; padding:0 12px; border:1px solid #cdd5e1; border-radius:7px; background:#fff; font:inherit; font-size:13px; }
+.kosipa-module .console-inline-form input { min-width:8rem; }
+.kosipa-module .console-card { max-width:100%; }
+.kosipa-master-scroll { width:100%; max-width:100%; min-width:0; overflow-x:auto; }
+.kosipa-module .kosipa-master-form { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
+.kosipa-module .kosipa-master-form button { justify-self:start; }
+@media (max-width: 640px) { .kosipa-module .kosipa-master-form { grid-template-columns:minmax(0,1fr); } }
+.kosipa-master-index { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+.kosipa-master-index a { display:flex; flex-direction:column; gap:6px; min-height:44px; padding:16px 18px; border:1px solid var(--c-border); border-radius:12px; background:white; color:var(--c-ink); text-decoration:none; }
+.kosipa-master-index a:hover, .kosipa-master-index a:focus-visible { border-color:var(--c-blue); }
+.kosipa-master-index strong { color:var(--c-blue); font-size:14px; }
+.kosipa-master-index span { color:var(--k-label); font-size:13px; line-height:1.5; }
+.kosipa-module .console-inline-form span { display:contents; }

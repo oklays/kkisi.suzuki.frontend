@@ -55,5 +55,8 @@ export function sanitizeAuditDetail(detail: Record<string, unknown> | undefined)
   return Object.keys(out).length ? out : null;
 }
 
-export const AUDIT_ACTIONS = ['identity_link.create', 'identity_link.revoke', 'identity_link.denied', 'kosipa.member.view', 'kosipa.payroll.list.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile', 'kosipa.loan.list.view', 'kosipa.loan.detail.view', 'kosipa.savings.view', 'kosipa.report.loan.view', 'kosipa.report.payroll.view', 'kosipa.report.quality.view', 'kosipa.report.export', 'kosipa.report.membership.view', 'kosipa.report.savings.view'] as const;
+export const AUDIT_ACTIONS = ['identity_link.create', 'identity_link.revoke', 'identity_link.denied', 'kosipa.member.view', 'kosipa.payroll.list.view', 'kosipa.payroll.batch.view', 'kosipa.payroll.member.view', 'kosipa.payroll.reconcile', 'kosipa.loan.list.view', 'kosipa.loan.detail.view', 'kosipa.savings.view', 'kosipa.report.loan.view', 'kosipa.report.payroll.view', 'kosipa.report.quality.view', 'kosipa.report.export', 'kosipa.report.membership.view', 'kosipa.report.savings.view',
+  // KOSIPA native writes (kosipa-full-access FA-01): committed commands, refusals, and write-capability grants.
+  'kosipa.master.create', 'kosipa.master.update', 'kosipa.master.deactivate', 'kosipa.master.reactivate', 'kosipa.command.denied', 'kosipa.command.failed',
+  'kosipa.grant.request', 'kosipa.grant.approve', 'kosipa.grant.reject', 'kosipa.grant.revoke', 'kosipa.grant.denied'] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

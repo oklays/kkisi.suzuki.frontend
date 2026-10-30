@@ -5,6 +5,7 @@ import { ConsoleFrame, type ConsoleNavGroup } from '@/components/console/Console
 import { SIDEBAR_COOKIE, SIDEBAR_THEME_COOKIE, parseSidebarPrefs } from '@/components/console/sidebar/prefs';
 import { deployedNavigation, SECTION_LABELS } from '@/features/console/navigation';
 import { publicSavingsConsoleEnabled } from '@/features/public-savings/flags';
+import { kosipaWriteGrantsEnabled } from '@/infrastructure/console/kosipa-ownership';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import './console.css';
@@ -32,7 +33,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     viewer = { userId: ctx.userId, userName: ctx.userName, branchName: company?.name ?? 'Cabang', companyId: ctx.companyId,
       canSwitchBranch: ctx.canSwitchBranch, companies, csrfToken: services.keys.csrfToken(ctx.sidHash) };
   } catch { return <Unavailable />; }
-  const groups: ConsoleNavGroup[] = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled()), capabilities)
+  const groups: ConsoleNavGroup[] = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled(), kosipaWriteGrantsEnabled()), capabilities)
     .map((g) => ({ section: g.section, label: SECTION_LABELS[g.section], items: g.items }));
   const jar = await cookies();
   const prefs = parseSidebarPrefs(jar.get(SIDEBAR_COOKIE)?.value, jar.get(SIDEBAR_THEME_COOKIE)?.value);

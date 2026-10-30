@@ -42,7 +42,7 @@ export async function requirePagePermission(permission: string | readonly string
 }
 
 export type ConsoleAuth =
-  | { kind: 'ok'; ctx: AuthContext; services: AuthServices; capabilities: CapabilitySet; kosipa: KosipaAccessState }
+  | { kind: 'ok'; ctx: AuthContext; services: AuthServices; capabilities: CapabilitySet; kosipa: KosipaAccessState; kosipaUserId: number | null }
   | { kind: 'unavailable' };
 
 /** One validation + capability resolution per request, shared by the console layout and its page. */
@@ -53,7 +53,7 @@ const loadConsoleSession = cache(async (): Promise<ConsoleAuth | 'login'> => {
     const ctx = await validateSession(container.services.deps, jar.get(container.services.config.cookieName)?.value ?? null);
     const kosipa = kosipaServices();
     const access = await resolveConsoleAccess({ permissions: container.capabilities, kosipa, features: { warehousePreview: warehousePreviewEnabled() } }, { userId: ctx.userId, roleId: ctx.roleId, canSwitchBranch: ctx.canSwitchBranch });
-    return { kind: 'ok', ctx, services: container.services, capabilities: access.capabilities, kosipa: access.kosipa };
+    return { kind: 'ok', ctx, services: container.services, capabilities: access.capabilities, kosipa: access.kosipa, kosipaUserId: access.kosipaUserId };
   } catch (error) {
     if (error instanceof AuthError && error.code === 'UNAUTHENTICATED') return 'login';
     return { kind: 'unavailable' };

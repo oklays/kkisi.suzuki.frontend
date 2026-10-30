@@ -1,9 +1,8 @@
+import { formatRupiah } from '../../money/format.ts';
+
 /** Format a source decimal as text; never route financial decimals through a floating-point number. */
 export function formatExactRupiah(value: string | null): string {
-  if (value === null) return 'Tidak tersedia';
-  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value);
-  if (!match) throw new Error('Invalid source decimal');
-  return `${match[1]}Rp ${match[2].replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${match[3] ? `,${match[3]}` : ''}`;
+  return formatRupiah(value, { placeholder: 'Tidak tersedia' });
 }
 
 export function maskIdentifier(value: string): string {
@@ -31,6 +30,16 @@ export function privateSearchTarget(path: string): { kind: 'members' | 'savings'
 export function syntheticKosipaEnvironment(env: Record<string, string | undefined>): boolean {
   try {
     const url = new URL(env.DATABASE_URL ?? '');
-    return url.protocol === 'mysql:' && url.hostname === '127.0.0.1' && url.port === '3307' && url.pathname === '/kkisi_devlocal_staging';
+    if (url.protocol !== 'mysql:' || url.hostname !== '127.0.0.1') return false;
+    // DEV LOCAL, or the isolated FA-01 write-foundation stack (integration/kosipa-full-access).
+    return (url.port === '3307' && url.pathname === '/kkisi_devlocal_staging') || (url.port === '3322' && url.pathname === '/kkisi_kfa_synthetic');
+  } catch { return false; }
+}
+
+/** Label sensitive production-derived UAT reads separately from synthetic write testing. */
+export function readOnlyKosipaUatEnvironment(env: Record<string, string | undefined>): boolean {
+  try {
+    const url = new URL(env.DATABASE_URL ?? '');
+    return env.KOSIPA_UAT_READ_ONLY === 'true' && url.protocol === 'mysql:' && url.hostname === '127.0.0.1' && url.port === '3307' && url.pathname === '/kkisi_kosipa_read_uat';
   } catch { return false; }
 }

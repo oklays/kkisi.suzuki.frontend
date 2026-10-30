@@ -4,6 +4,7 @@ import {useEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {ArrowRight,Check,ClipboardList,Package,Save,X} from 'lucide-react';
 import type {ProductAdjustmentInput,ProductEditSnapshot} from '@koperasi/domain/inventory';
+import {CurrencyInput} from '../money/CurrencyInput.tsx';
 
 const errors:Record<string,string>={INVALID_INPUT:'Periksa kolom wajib, format harga, dan jumlah stok. Beberapa karakter mungkin tidak didukung.',FORBIDDEN:'Akun Anda tidak memiliki izin mengedit produk.',STOCK_LOCKED:'Produk sedang stock opname. Selesaikan atau batalkan dokumen SO sebelum mengubah produk.',PRODUCT_CHANGED:'Produk atau stok berubah sejak form dibuka. Muat data terbaru dan periksa kembali perubahan Anda.',IDENTIFIER_EXISTS:'Kode barang, SKU, atau barcode tersebut sudah digunakan produk lain di cabang ini.',WRITE_NOT_CONFIGURED:'Penyimpanan produk belum diaktifkan. Hubungi pengelola.',NOT_FOUND:'Produk tidak ditemukan di cabang aktif.',PRODUCTS_UNAVAILABLE:'Produk belum dapat dimuat. Periksa koneksi dan coba lagi.'};
 const quantity=(n:number)=>new Intl.NumberFormat('id-ID').format(n);
@@ -84,10 +85,10 @@ export function ProductEditor({id,csrfToken,writes,onClose,onSaved}:{id:number;c
       const opts=options as ProductEditSnapshot['options']['units'],value=current as number|null;
       return <label key={String(name)}>{String(label)}<select name={String(name)} defaultValue={value??''}><option value="">{name==='brandId'?'Tanpa merek':'Belum diisi'}</option>{value!==null&&!opts.some(o=>o.id===value)&&<option value={value}>Data lama #{value}</option>}{opts.map(option=><option value={option.id} key={option.id}>{option.name}{option.active?'':' (nonaktif)'}</option>)}</select></label>;
      })}<label>Isi per kemasan<input name="packQuantity" type="number" min={1} max={2147483647} step={1} required defaultValue={p.packQuantity}/></label></div></section>
-     <section><h3>Harga &amp; ketersediaan</h3><p>Harga dalam Rupiah. Gunakan titik untuk desimal, misalnya 4000.50.</p><div className="product-editor-grid">
-      <label>Harga jual <span>*</span><div className="product-editor-money"><span>Rp</span><input name="sellingPrice" type="number" min={0} max="9999999999.99" step="0.01" required defaultValue={p.sellingPrice}/></div></label>
-      <label>Harga beli <span>*</span><div className="product-editor-money"><span>Rp</span><input name="purchasePrice" type="number" min={0} max="9999999999.99" step="0.01" required defaultValue={p.purchasePrice}/></div></label>
-      <label>Diskon per satuan<div className="product-editor-money"><span>Rp</span><input name="discount" type="number" min={0} max="9999999999.99" step="0.01" required defaultValue={p.discount}/></div></label>
+     <section><h3>Harga &amp; ketersediaan</h3><p>Harga dalam Rupiah. Gunakan titik untuk ribuan dan koma untuk desimal, misalnya 4.000,50.</p><div className="product-editor-grid">
+      <label>Harga jual <span>*</span><CurrencyInput name="sellingPrice" maxIntegerDigits={10} required defaultValue={String(p.sellingPrice)}/></label>
+      <label>Harga beli <span>*</span><CurrencyInput name="purchasePrice" maxIntegerDigits={10} required defaultValue={String(p.purchasePrice)}/></label>
+      <label>Diskon per satuan<CurrencyInput name="discount" maxIntegerDigits={10} required defaultValue={String(p.discount)}/></label>
       <label>Stok minimum<input name="alertQty" type="number" min={0} max={2147483647} step={1} required defaultValue={p.alertQty}/></label>
       <label>Status produk<select name="active" defaultValue={p.active?'1':'0'}><option value="1">Aktif</option><option value="0">Nonaktif</option></select></label>
       <label className="product-editor-full">Deskripsi<textarea name="description" rows={3} maxLength={5000} defaultValue={p.description}/></label>

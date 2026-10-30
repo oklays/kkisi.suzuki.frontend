@@ -23,6 +23,7 @@ export class PrismaKosipaDirectory implements KosipaDirectory, ConsoleUserDirect
   async allowedMenuUrls(kosipaUserId: number): Promise<string[]> {
     const rows = await this.db.$queryRaw<{ url: string }[]>`SET STATEMENT max_statement_time=5 FOR
       SELECT DISTINCT LOWER(TRIM(m.url)) AS url FROM ref_group_akses ga
+        JOIN ref_group g ON g.id = ga.id_group AND g.status = 1
         JOIN ref_menu_akses ma ON ma.id_group = ga.id_group JOIN ref_menu m ON m.id = ma.id_menu
       WHERE ga.id_user = ${kosipaUserId} AND ga.status = 1 AND ma.status = 1 AND m.status = 1 AND m.url IS NOT NULL`;
     return rows.map((r) => r.url);
@@ -30,10 +31,10 @@ export class PrismaKosipaDirectory implements KosipaDirectory, ConsoleUserDirect
 
   /** Same activity rule as validateSession: user, role and home branch active. */
   async consoleUser(id: number) {
-    const rows = await this.db.$queryRaw<{ id: Num; ok: Num }[]>`SET STATEMENT max_statement_time=5 FOR
-      SELECT u.id, (u.status = 1 AND r.status = 1 AND c.status = 1) AS ok FROM db_users u
+    const rows = await this.db.$queryRaw<{ id: Num; ok: Num; role_id: Num | null }[]>`SET STATEMENT max_statement_time=5 FOR
+      SELECT u.id, u.role_id, (u.status = 1 AND r.status = 1 AND c.status = 1) AS ok FROM db_users u
         LEFT JOIN db_roles r ON r.id = u.role_id LEFT JOIN db_company c ON c.id = u.company_id WHERE u.id = ${id} LIMIT 1`;
-    return rows[0] ? { id: n(rows[0].id), active: n(rows[0].ok) === 1 } : null;
+    return rows[0] ? { id: n(rows[0].id), active: n(rows[0].ok) === 1, roleId: rows[0].role_id === null ? undefined : n(rows[0].role_id) } : null;
   }
 
   async listKosipaUsers(): Promise<{ id: number; username: string; fullName: string; active: boolean }[]> {

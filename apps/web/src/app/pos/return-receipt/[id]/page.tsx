@@ -4,10 +4,11 @@ import { readReturnDocument } from '@koperasi/application/sales/returns';
 import { requirePagePermission } from '@/infrastructure/auth/page-guard';
 import { returnReadRepository } from '@/infrastructure/sales/return-handlers';
 import { ReceiptPrintButton } from '@/components/pos/ReceiptPrintButton';
+import { formatSenDocument } from '@/components/money/format';
 import '../../receipt/[id]/receipt.css';
 
 export const dynamic = 'force-dynamic';
-const rupiah = (sen: number | null) => sen === null ? '—' : `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: sen % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(sen / 100)}`;
+const rupiah = (sen: number | null) => formatSenDocument(sen);
 
 /** 75 mm sales return note (nota retur). Same paper layout as the sales receipt. */
 export default async function ReturnReceiptPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ returnTo?: string | string[]; autoprint?: string | string[] }> }) {

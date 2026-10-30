@@ -25,7 +25,7 @@ async function session(user, viewport = { width: 1440, height: 900 }) {
   return { context, page };
 }
 const nav = async (page) => { await page.locator('#console-nav').waitFor({ state: 'attached' }); return page.locator('#console-nav nav a').evaluateAll((as) => as.map((a) => new URL(a.href).pathname)); };
-const main = async (page) => { await page.waitForFunction(() => { const m = document.querySelector('main'); return m && m.innerText.trim() !== '' && !/^Memuat/.test(m.innerText.trim()); }, null, { timeout: 20000 }); return page.locator('main').innerText(); };
+const main = async (page) => { await page.waitForFunction(() => { const m = document.querySelector('main'); return m && m.innerText.trim() !== '' && !/(^|\n)Memuat/.test(m.innerText.trim()); }, null, { timeout: 20000 }); return page.locator('main').innerText(); };
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 const shot = (page, name) => page.screenshot({ path: `${shots}/${name}.png`, fullPage: true });
 
@@ -60,7 +60,7 @@ try {
   // ---------------------------------------------------------------- KOSIPA read pages (administrator)
   { const { context, page } = await session('koperasi');
     const pages = [['/console/kosipa/anggota?q=S9001', /S9001|SYNTH/], ['/console/kosipa/anggota/9001', /Simpanan|Pinjaman/], ['/console/kosipa/simpanan/9001', /Saldo resmi belum tersedia/], ['/console/kosipa/pinjaman', /PINSYN/], ['/console/kosipa/pinjaman/PINSYN9001', /Jadwal|angsuran/i],
-      ['/console/kosipa/payroll', /POTSYN202608A/], ['/console/kosipa/payroll/POTSYN202608A', /Batch POTSYN202608A/], ['/console/kosipa/payroll/POTSYN202608A/rekonsiliasi', /hanya untuk ditinjau|ditinjau/i], ['/console/kosipa/laporan', /Laporan/], ['/console/kosipa/laporan/kualitas-data', /kualitas|Kualitas/]];
+      ['/console/kosipa/payroll', /POTSYN202608A/], ['/console/kosipa/payroll/POTSYN202608A', /Batch POTSYN202608A/], ['/console/kosipa/payroll/POTSYN202608A/rekonsiliasi', /Rekonsiliasi kredit toko[\s\S]*Selisih adalah informasi untuk tinjauan, bukan keputusan akuntansi\./], ['/console/kosipa/laporan', /Laporan/], ['/console/kosipa/laporan/kualitas-data', /kualitas|Kualitas/]];
     for (const [i, [path, re]] of pages.entries()) { await page.goto(`${base}${path}`); assert.match(await main(page), re, path); await shot(page, `04-kosipa-${String(i + 1).padStart(2, '0')}`); }
     await page.goto(`${base}/console/kosipa/payroll?periode=2026-13`); assert.match(await main(page), /Filter tidak valid/);
     const csv = await context.request.get(`${base}/api/kosipa/reports/loans/export?tahun=2026`); assert.equal(csv.status(), 200); assert.match(csv.headers()['content-disposition'], /attachment/);

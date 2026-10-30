@@ -44,9 +44,10 @@ body { margin:0; }
 .ps-prototype label, .ps-field-label { display:block; font-size:13px; font-weight:650; margin-bottom:8px; }
 .ps-prototype input:not([type="checkbox"]) { min-height:48px; width:100%; min-width:0; font:inherit; color:var(--ps-ink); background:white; border:1px solid #aebbce; border-radius:7px; padding:10px 12px; }
 .ps-prototype input[aria-invalid="true"] { border-color:#af2c22; }
-.ps-amount-input { display:flex; align-items:center; gap:12px; padding-left:14px; border:1px solid #aebbce; border-radius:7px; }
-.ps-amount-input > span { font-size:16px; color:var(--ps-muted); }
-.ps-amount-input input { border:0!important; font-size:23px!important; font-weight:650!important; font-variant-numeric:tabular-nums; }
+.ps-prototype .money-input { min-height:48px; border-color:#aebbce; background:white; }
+.ps-prototype .money-input input:not([type="checkbox"]) { border:0; border-radius:0; min-height:0; font-size:23px; font-weight:650; }
+.ps-prototype .money-input-prefix { font-size:16px; padding:0 14px; }
+.ps-prototype .money-input[data-invalid="true"] { border-color:#af2c22; }
 .ps-help { color:var(--ps-muted); font-size:12px; line-height:1.6; }
 .ps-form .ps-help { margin-top:7px; }
 .ps-policy { padding:12px 14px; background:#fff9eb; border-left:3px solid #d3a545; border-radius:3px; font-size:12px; color:#704104; }

@@ -30,7 +30,11 @@
     "./kosipa/public-savings-submit": "./src/kosipa/public-savings-submit.ts",
     "./kosipa/reports": "./src/kosipa/reports.ts",
     "./kosipa/report-export": "./src/kosipa/report-export.ts",
-    "./kosipa/reports-ops": "./src/kosipa/reports-ops.ts"
+    "./kosipa/reports-ops": "./src/kosipa/reports-ops.ts",
+    "./console/kosipa-grants": "./src/console/kosipa-grants.ts",
+    "./kosipa/commands/pipeline": "./src/kosipa/commands/pipeline.ts",
+    "./kosipa/commands/master": "./src/kosipa/commands/master.ts",
+    "./kosipa/document-numbering": "./src/kosipa/document-numbering.ts"
   },
   "scripts": {
     "lint": "eslint .",

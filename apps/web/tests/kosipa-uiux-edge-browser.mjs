@@ -30,7 +30,7 @@ try {
     await page.getByRole('button', { name: 'Cari anggota', exact: true }).click();
     await page.getByRole('heading', { name: 'Akses ditolak', exact: true }).waitFor();
     assert.equal(await page.locator('main table').count(), 0);
-    assert.doesNotMatch(await page.locator('main').innerText(), /SYNTH ANGGOTA|Rp /);
+    assert.doesNotMatch(await page.locator('main').innerText(), /SYNTH ANGGOTA|Rp\d/);
     assert.equal((await context.request.get(base + '/api/kosipa/payroll')).status(), 403);
     await context.close();
   });

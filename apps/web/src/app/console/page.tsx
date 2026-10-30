@@ -35,6 +35,7 @@ import {
 import { CONSOLE_ICONS } from '@/components/console/icons';
 import { CONSOLE_MODULES, CONSOLE_NAVIGATION, deployedNavigation } from '@/features/console/navigation';
 import { publicSavingsConsoleEnabled } from '@/features/public-savings/flags';
+import { kosipaWriteGrantsEnabled } from '@/infrastructure/console/kosipa-ownership';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled, landingPolicy } from '@/infrastructure/console/flags';
 import { kosipaServices } from '@/infrastructure/console/services';
@@ -560,7 +561,7 @@ export default async function ConsoleDashboard({
   const now = services.deps.clock.now();
   const live = await loadDashboardLiveMetrics(ctx.companyId, capabilities, auth.kosipa, now);
 
-  const visible = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled()), capabilities);
+  const visible = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled(), kosipaWriteGrantsEnabled()), capabilities);
   const visibleHrefs = new Set(visible.flatMap((g) => g.items.map((i) => i.href)));
   // Top-level destinations only: nested entries (e.g. the individual reports) are reached through their parent.
   const linksFor = (section: string) =>

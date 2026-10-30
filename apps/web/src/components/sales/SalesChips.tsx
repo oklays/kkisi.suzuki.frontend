@@ -1,4 +1,5 @@
 import { Banknote, Check, CreditCard, QrCode } from 'lucide-react';
+import { formatSen } from '../money/format';
 
 export function PaymentMethodChip({ value }: { value: string }) {
   const kind = value.trim().toLowerCase();
@@ -13,7 +14,7 @@ export function StatusChip({ value, payment = false }: { value: string; payment?
   return <span className={`sales-chip sales-chip--${tone}`}>{success ? <Check size={12} aria-hidden="true" /> : <span className="sales-chip-dot" aria-hidden="true" />}{value || 'Tidak tersimpan'}</span>;
 }
 export function formatSalesMoney(amount: number | null) {
-  return amount === null ? '—' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: amount % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(amount / 100);
+  return formatSen(amount);
 }
 export function formatSalesDate(value: string) {
   const date = new Date(`${value}T00:00:00+07:00`);

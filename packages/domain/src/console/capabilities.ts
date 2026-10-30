@@ -18,9 +18,39 @@ export const TOKO_CAPABILITIES = [
 
 export type TokoCapability = (typeof TOKO_CAPABILITIES)[number];
 
-/** Read-only KOSIPA access, derived from an active identity link (spec REQ-020/021). No write capability exists yet. */
+/** Read-only KOSIPA access, derived from an active identity link (spec REQ-020/021). Write access is the separate list below. */
 export const KOSIPA_CAPABILITIES = ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.store-credit.view'] as const;
 export type KosipaCapability = (typeof KOSIPA_CAPABILITIES)[number];
+
+/**
+ * KOSIPA write vocabulary (kosipa-full-access 08 §3, TASK-110). NEVER derived from legacy menus or from an identity link: only an
+ * explicit console grant (console_kosipa_grant, FD-16) confers one, and each also needs its view capability (KOSIPA_WRITE_REQUIRES).
+ */
+export const KOSIPA_WRITE_CAPABILITIES = [
+  'kosipa.master.manage',
+  'kosipa.member.create', 'kosipa.member.update', 'kosipa.member.status', 'kosipa.member.limits', 'kosipa.member.pii',
+  'kosipa.deduction.manage', 'kosipa.request.decide',
+  'kosipa.savings.prepare', 'kosipa.savings.approve', 'kosipa.savings.reverse',
+  'kosipa.loan.prepare', 'kosipa.loan.approve', 'kosipa.loan.disburse', 'kosipa.loan.settle', 'kosipa.loan.reverse',
+  'kosipa.payroll.prepare', 'kosipa.payroll.approve',
+  'kosipa.exit.prepare', 'kosipa.exit.approve',
+  'kosipa.shu.prepare', 'kosipa.shu.approve',
+  'kosipa.config.manage',
+] as const;
+export type KosipaWriteCapability = (typeof KOSIPA_WRITE_CAPABILITIES)[number];
+
+const area = (prefix: string): KosipaCapability =>
+  prefix === 'savings' || prefix === 'deduction' || prefix === 'request' ? 'kosipa.savings.view'
+    : prefix === 'loan' ? 'kosipa.loan.view' : prefix === 'payroll' ? 'kosipa.payroll.view' : 'kosipa.member.view';
+/** The view capability every write capability additionally requires (08 §3 "Requires also"). */
+export const KOSIPA_WRITE_REQUIRES: Readonly<Record<KosipaWriteCapability, KosipaCapability>> =
+  Object.fromEntries(KOSIPA_WRITE_CAPABILITIES.map((cap) => [cap, area(cap.split('.')[1])])) as Record<KosipaWriteCapability, KosipaCapability>;
+
+/**
+ * Grantable today = capabilities whose native commands exist. FA-01 ships the reference-master commands only, so no financial
+ * capability can be granted ahead of its command, its decisions (FD-xx) and its cutover gates.
+ */
+export const GRANTABLE_KOSIPA_CAPABILITIES: readonly KosipaWriteCapability[] = ['kosipa.master.manage'];
 
 /**
  * Risky action, NOT derived from legacy menus: exporting aggregate KOSIPA reports. It is granted only by an explicit deployment policy
@@ -34,12 +64,15 @@ export type ExportCapability = (typeof EXPORT_CAPABILITIES)[number];
 export const WAREHOUSE_CAPABILITIES = ['warehouse.preview.view'] as const;
 export type WarehouseCapability = (typeof WAREHOUSE_CAPABILITIES)[number];
 
-/** Console administration. `iam.link.manage` = may create/revoke console<->KOSIPA identity links. */
-export const IAM_CAPABILITIES = ['iam.link.manage'] as const;
+/**
+ * Console administration. `iam.link.manage` = may create/revoke console<->KOSIPA identity links. `iam.kosipa.grant` = may grant/revoke
+ * KOSIPA write capabilities: iam.link.manage AND an explicit deployment allow-list (KOSIPA_GRANT_ADMIN_USER_IDS), never by role alone.
+ */
+export const IAM_CAPABILITIES = ['iam.link.manage', 'iam.kosipa.grant'] as const;
 export type IamCapability = (typeof IAM_CAPABILITIES)[number];
 
-export type Capability = TokoCapability | KosipaCapability | ExportCapability | WarehouseCapability | IamCapability;
-export const ALL_CAPABILITIES: readonly Capability[] = [...TOKO_CAPABILITIES, ...KOSIPA_CAPABILITIES, ...EXPORT_CAPABILITIES, ...WAREHOUSE_CAPABILITIES, ...IAM_CAPABILITIES];
+export type Capability = TokoCapability | KosipaCapability | KosipaWriteCapability | ExportCapability | WarehouseCapability | IamCapability;
+export const ALL_CAPABILITIES: readonly Capability[] = [...TOKO_CAPABILITIES, ...KOSIPA_CAPABILITIES, ...KOSIPA_WRITE_CAPABILITIES, ...EXPORT_CAPABILITIES, ...WAREHOUSE_CAPABILITIES, ...IAM_CAPABILITIES];
 export type CapabilitySet = ReadonlySet<Capability>;
 
 /** Every db_permissions slug the TOKO mapping reads; resolved in one batched query. */

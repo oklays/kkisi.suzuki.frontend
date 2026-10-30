@@ -71,7 +71,7 @@ try {
     await page.getByRole('heading', { name: 'Buku simpanan' }).waitFor();
     let t = await text(page);
     assert.match(t, /Saldo resmi belum tersedia/); assert.match(t, /SYNTH ANGGOTA TIGA · NIK S9003/);
-    assert.match(t, /SIMPANAN SUKARELA\s+61\s+Rp 59\.762,50\s+Rp 40\.000/); assert.match(t, /SIMPANAN WAJIB\s+4\s+Rp 100\.000/); assert.match(t, /SIMPANAN POKOK\s+1\s+Rp 250\.000/);
+    assert.match(t, /SIMPANAN SUKARELA\s+61\s+Rp59\.762,50\s+Rp40\.000/); assert.match(t, /SIMPANAN WAJIB\s+4\s+Rp100\.000/); assert.match(t, /SIMPANAN POKOK\s+1\s+Rp250\.000/);
     assert.doesNotMatch(t, /9900119003|6\.000\.000/, 'bank account and salary never shown');
     await assertReadOnly(page); await page.screenshot({ path: `${output}/savings-ledger-1440.png`, fullPage: true });
     const rows = page.locator('main section[aria-labelledby=sec-mutasi] tbody tr');
@@ -111,7 +111,7 @@ try {
     await page.goto(`${base}/console`); const links = await sidebar(page);
     assert.ok(links.includes('/console/kosipa/anggota') && !links.includes('/console/kosipa/simpanan'));
     await page.goto(`${base}/console/kosipa/simpanan`); await page.getByRole('heading', { name: 'Akses ditolak' }).waitFor();
-    await page.goto(`${base}/console/kosipa/simpanan/9003`); await page.getByRole('heading', { name: 'Akses ditolak' }).waitFor(); assert.doesNotMatch(await text(page), /Rp 250\.000/);
+    await page.goto(`${base}/console/kosipa/simpanan/9003`); await page.getByRole('heading', { name: 'Akses ditolak' }).waitFor(); assert.doesNotMatch(await text(page), /Rp250\.000/);
     assert.equal((await context.request.get(`${base}/api/kosipa/savings/9003`)).status(), 403);
     await page.goto(`${base}/console/kosipa/anggota/9003`); await page.getByRole('heading', { name: 'Profil' }).waitFor();
     assert.equal(await page.getByRole('heading', { name: 'Simpanan', exact: true }).count(), 0, 'no savings section without the savings grant');

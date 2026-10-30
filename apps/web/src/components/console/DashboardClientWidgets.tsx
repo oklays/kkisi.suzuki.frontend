@@ -14,6 +14,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
+import { formatRupiahCompact } from '../money/format';
 
 export interface DailyOpsPoint {
   dateKey: string;
@@ -178,7 +179,7 @@ export function OperationalSummaryCard({ summary }: { summary: OpsSummaryData })
   const totals = summary.points.map((p) => p.tokoCount + p.kosipaCount + p.loanSavingsCount);
   const maxTotal = Math.max(...totals, 1);
   const useReferenceScale = summary.totalTransactions === 0;
-  const yAxisLabels = useReferenceScale ? ['25 jt', '20 jt', '15 jt', '10 jt', '5 jt', '0'] : ['25', '20', '15', '10', '5', '0'];
+  const yAxisLabels = useReferenceScale ? [25, 20, 15, 10, 5].map((jt) => formatRupiahCompact(jt * 1_000_000, { compactFractionDigits: 0 })).concat('0') : ['25', '20', '15', '10', '5', '0'];
 
   return (
     <section aria-labelledby="ops-summary-title" className="console-card-surface console-ops-card">

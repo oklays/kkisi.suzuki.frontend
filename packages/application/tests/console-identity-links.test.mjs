@@ -65,11 +65,12 @@ test('revocation: reason required, only once, audited; list requires the capabil
 
 test('KOSIPA capabilities need an active link to an active KOSIPA account', async () => {
   const w = world();
-  assert.deepEqual(await resolveKosipaCapabilities(w.ports, 2), { linked: false, capabilities: new Set() });
+  assert.deepEqual(await resolveKosipaCapabilities(w.ports, 2), { linked: false, kosipaUserId: null, capabilities: new Set() });
   await linkIdentity(w.ports, admin, { consoleUserId: 2, kosipaUserId: 9 });
   assert.deepEqual([...(await resolveKosipaCapabilities(w.ports, 2)).capabilities].sort(), ['kosipa.member.view', 'kosipa.savings.view']);
+  assert.equal((await resolveKosipaCapabilities(w.ports, 2)).kosipaUserId, 9);
   w.kosipaUsers.get(9).active = false;
-  assert.deepEqual(await resolveKosipaCapabilities(w.ports, 2), { linked: true, capabilities: new Set() }, 'a deactivated KOSIPA account loses access at once');
+  assert.deepEqual(await resolveKosipaCapabilities(w.ports, 2), { linked: true, kosipaUserId: null, capabilities: new Set() }, 'a deactivated KOSIPA account loses access at once');
 });
 
 test('console access: TOKO survives a console-store outage; KOSIPA becomes unavailable (fail closed)', async () => {

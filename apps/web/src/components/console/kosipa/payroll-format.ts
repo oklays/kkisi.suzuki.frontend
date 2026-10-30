@@ -1,14 +1,19 @@
 import type { LegacyDate } from '@koperasi/domain/kosipa';
 
-/** amount4 = integer in 1/10,000 rupiah (exact; 14% of recorded payroll totals carry fractions of a sen). Shown without rounding. */
-export function formatAmount4(units: number): string {
-  const negative = units < 0;
-  const abs = Math.abs(units);
-  const whole = String(Math.floor(abs / 10000)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  let frac = String(abs % 10000).padStart(4, '0').replace(/0+$/, '');
-  if (frac.length === 1) frac += '0';
-  return `${negative ? '-' : ''}Rp ${whole}${frac ? `,${frac}` : ''}`;
-}
+import { formatAmount4 as formatExactAmount4, formatRupiah } from '../../money/format.ts';
+
+/**
+ * Payroll display policy: at most 2 decimals (sen). The recorded amount4 keeps its 1/10,000 precision in the data, the CSV
+ * export and the reconciliation maths; only the on-screen text is cut at the sen (`Rp2.581.645.259,9063` shows `Rp2.581.645.259,90`).
+ * The cut is toward zero, never a rounding, and a non-zero amount is never shown as zero (`Rp0,0063` stays exact).
+ */
+export const PAYROLL_DISPLAY = { maxFractionDigits: 2, overflow: 'truncate' } as const;
+
+/** amount4 = integer in 1/10,000 rupiah (exact; 14% of recorded payroll totals carry fractions of a sen), shown in the payroll display policy. */
+export const formatAmount4 = (units: number | bigint | null | undefined): string => formatExactAmount4(units, PAYROLL_DISPLAY);
+
+/** Same policy for a source decimal string (payroll totals read straight from the legacy table). */
+export const formatPayrollDecimal = (value: string | null): string => formatRupiah(value, { ...PAYROLL_DISPLAY, placeholder: 'Tidak tersedia' });
 
 /** Legacy dates are shown as stored; zero/implausible values are labelled, never replaced by a guess. */
 export function formatLegacyDate(date: LegacyDate): string {
@@ -39,7 +44,7 @@ export const DIFFERENCE_LABEL: Record<string, string> = {
   RECORDED_LOWER: 'Payroll lebih kecil dari turunan (informasi, belum tentu salah)',
   RECORDED_ONLY: 'Hanya ada di payroll',
   DERIVED_ONLY_MEMBER_ABSENT: 'Ada belanja Kredit, anggota tidak ada di payroll periode ini',
-  DERIVED_ONLY_RECORDED_ZERO: 'Ada belanja Kredit, payroll tercatat Rp 0',
+  DERIVED_ONLY_RECORDED_ZERO: 'Ada belanja Kredit, payroll tercatat Rp0',
   NOT_COMPARABLE_ANOMALY: 'Tidak dapat dibandingkan (anomali data)',
 };
 

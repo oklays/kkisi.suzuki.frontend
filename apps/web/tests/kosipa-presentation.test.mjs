@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatExactRupiah, maskIdentifier, exportFeedback, privateSearchTarget, syntheticKosipaEnvironment } from '../src/components/console/kosipa/presentation.ts';
+import { formatExactRupiah, maskIdentifier, exportFeedback, privateSearchTarget, syntheticKosipaEnvironment, readOnlyKosipaUatEnvironment } from '../src/components/console/kosipa/presentation.ts';
 
 test('financial presentation preserves authoritative decimal digits without float rounding', () => {
-  assert.equal(formatExactRupiah('9007199254740993.0001'), 'Rp 9.007.199.254.740.993,0001');
-  assert.equal(formatExactRupiah('-1000.2300'), '-Rp 1.000,2300');
-  assert.equal(formatExactRupiah('0'), 'Rp 0');
+  assert.equal(formatExactRupiah('9007199254740993.0001'), 'Rp9.007.199.254.740.993,0001');
+  assert.equal(formatExactRupiah('-1000.2300'), '-Rp1.000,23');
+  assert.equal(formatExactRupiah('0'), 'Rp0');
   assert.equal(formatExactRupiah(null), 'Tidak tersedia');
   assert.throws(() => formatExactRupiah('1e10'));
 });
@@ -30,4 +30,11 @@ test('synthetic label requires the exact DEV LOCAL database target, never develo
   assert.equal(syntheticKosipaEnvironment({DATABASE_URL:'mysql://reader:placeholder@127.0.0.1:3307/kkisi_devlocal_staging'}), true);
   assert.equal(syntheticKosipaEnvironment({DATABASE_URL:'mysql://reader:placeholder@remote:3307/kkisi_devlocal_staging'}), false);
   assert.equal(syntheticKosipaEnvironment({DATABASE_URL:'mysql://reader:placeholder@127.0.0.1:3307/kkisi_staging'}), false);
+});
+test('production-derived read UAT label is restricted to its exact local overlay', () => {
+  const env = { KOSIPA_UAT_READ_ONLY: 'true', DATABASE_URL: 'mysql://reader:placeholder@127.0.0.1:3307/kkisi_kosipa_read_uat' };
+  assert.equal(readOnlyKosipaUatEnvironment(env), true);
+  assert.equal(syntheticKosipaEnvironment(env), false);
+  assert.equal(readOnlyKosipaUatEnvironment({ ...env, KOSIPA_UAT_READ_ONLY: '' }), false);
+  for (const url of ['mysql://reader:placeholder@remote:3307/kkisi_kosipa_read_uat', 'mysql://reader:placeholder@127.0.0.1:3322/kkisi_kfa_synthetic']) assert.equal(readOnlyKosipaUatEnvironment({ ...env, DATABASE_URL: url }), false);
 });

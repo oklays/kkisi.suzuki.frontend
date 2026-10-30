@@ -28,8 +28,8 @@ test('flags are off unless explicitly set to the exact value; console management
 
 test('console navigation hides the public savings entry while the flag is off', () => {
   assert.equal(deployedNavigation(false).some((e) => e.id === 'kosipa-public-savings'), false);
-  assert.equal(deployedNavigation(false).length, CONSOLE_NAVIGATION.length - 1);
-  assert.equal(deployedNavigation(true), CONSOLE_NAVIGATION);
+  assert.equal(deployedNavigation(false, true).length, CONSOLE_NAVIGATION.length - 1);
+  assert.equal(deployedNavigation(true, true), CONSOLE_NAVIGATION);
 });
 
 test('every public and staff operation refuses before configuration or database access when flags are off', async () => {

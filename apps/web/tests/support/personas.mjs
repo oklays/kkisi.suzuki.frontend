@@ -5,7 +5,7 @@
 import { resolveConsoleAccess } from '@koperasi/application/console/capabilities';
 import { visibleNavigation } from '@koperasi/domain/console/navigation';
 import { postLoginLanding } from '@koperasi/domain/console/capabilities';
-import { CONSOLE_NAVIGATION } from '../../src/features/console/navigation.ts';
+import { deployedNavigation } from '../../src/features/console/navigation.ts';
 import { handleLogin } from '../../src/infrastructure/auth/handlers/login.ts';
 import { handleLoanList } from '../../src/infrastructure/console/loan-handlers.ts';
 import { handlePayrollList } from '../../src/infrastructure/console/payroll-handlers.ts';
@@ -48,7 +48,7 @@ export async function evaluatePersona(persona, { warehousePreview = true, export
     permissions: permissionsOf(persona), features: { warehousePreview },
     kosipa: kosipaEnabled ? { ...kosipaPorts(persona, linkCalls), exportPolicy: { enabled: exportEnabled, allowedUserIds: new Set(persona.exportAllowed ? [persona.userId] : []) } } : null,
   }, { userId: persona.userId, roleId: persona.roleId, canSwitchBranch: persona.roleId <= 2 });
-  const nav = visibleNavigation(CONSOLE_NAVIGATION, access.capabilities).flatMap((g) => g.items.map((i) => i.id));
+  const nav = visibleNavigation(deployedNavigation(true), access.capabilities).flatMap((g) => g.items.map((i) => i.id));
   return { capabilities: [...access.capabilities].sort(), kosipa: access.kosipa, nav, landing: postLoginLanding({ capabilities: access.capabilities, consoleEnabled: true }), linkCalls };
 }
 

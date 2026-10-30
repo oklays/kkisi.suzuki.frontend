@@ -95,8 +95,8 @@ try {
   { const { context, page } = await session(); await login(page, 'koperasi');
     await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A`); await page.getByRole('heading', { name: 'Batch POTSYN202608A' }).waitFor();
     let t = await text(page);
-    assert.match(t, /Total header \(tercatat\)\s+Rp 250\.000/); assert.match(t, /Baris \/ anggota unik\s+2 \/ 2/);
-    assert.match(t, /Belanja toko \(Kredit\)\s+Rp 200\.000/); assert.match(t, /PPOB\s+Rp 50\.000/);
+    assert.match(t, /Total header \(tercatat\)\s+Rp250\.000/); assert.match(t, /Baris \/ anggota unik\s+2 \/ 2/);
+    assert.match(t, /Belanja toko \(Kredit\)\s+Rp200\.000/); assert.match(t, /PPOB\s+Rp50\.000/);
     assert.doesNotMatch(t, /Catatan integritas data/, 'a clean batch has no integrity notes');
     assert.doesNotMatch(t, /12\.345\.678/);
     await assertReadOnly(page); await page.screenshot({ path: `${output}/payroll-batch-1440.png`, fullPage: true });
@@ -113,7 +113,7 @@ try {
     await page.goto(`${base}/console/kosipa/payroll/POTSYN202606A`); t = await text(page);
     assert.match(t, /tidak memiliki baris potongan/); await page.getByRole('heading', { name: 'Tidak ada baris' }).waitFor();
     await page.goto(`${base}/console/kosipa/payroll/POTSYN202605A`); t = await text(page);
-    assert.match(t, /Status tidak dikenal/); assert.match(t, /Total pada header berbeda dari jumlah seluruh baris/); assert.match(t, /Selisih: Rp 89\.999/);
+    assert.match(t, /Status tidak dikenal/); assert.match(t, /Total pada header berbeda dari jumlah seluruh baris/); assert.match(t, /Selisih: Rp89\.999/);
     await page.goto(`${base}/console/kosipa/payroll/POTSYN202608B`); await page.getByRole('heading', { name: 'Batch POTSYN202608B' }).waitFor();
     const memberRows = page.locator('main section[aria-labelledby=sec-anggota] tbody tr');
     assert.equal(await memberRows.count(), 50, 'one bounded page of 50');
@@ -125,8 +125,8 @@ try {
   { const { context, page } = await session(); await login(page, 'koperasi');
     await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A/anggota/S9001`); await page.getByRole('heading', { name: 'Potongan anggota' }).waitFor();
     let t = await text(page);
-    assert.match(t, /TOKO TAMBUN\s+Belanja toko \(Kredit\)\s+Rp 100\.000/); assert.match(t, /PPOB\s+PPOB\s+Rp 50\.000/);
-    assert.match(t, /Total potongan tercatat\s+Rp 150\.000/);
+    assert.match(t, /TOKO TAMBUN\s+Belanja toko \(Kredit\)\s+Rp100\.000/); assert.match(t, /PPOB\s+PPOB\s+Rp50\.000/);
+    assert.match(t, /Total potongan tercatat\s+Rp150\.000/);
     assert.match(t, /PINSYN9001/); assert.match(t, /PINSYN-ORPH\s+induk pinjaman tidak ditemukan/);
     assert.match(t, /1 angsuran merujuk pinjaman induk yang tidak ada/); assert.match(t, /2 memiliki tanggal jatuh tempo kosong\/nol\/tidak wajar/);
     assert.doesNotMatch(t, /9999-12-10/, 'an implausible date is counted, not listed as a due date in the month');
@@ -143,8 +143,8 @@ try {
     await page.goto(`${base}/console/kosipa/payroll/POTSYN202608A/rekonsiliasi`); await page.getByRole('heading', { name: 'Rekonsiliasi kredit toko' }).waitFor();
     let t = await text(page);
     assert.match(t, /Hanya untuk ditinjau/); assert.match(t, /belum dikonfirmasi pemilik proses/); assert.match(t, /berstatus OPEN/);
-    assert.match(t, /Toko Tambun\s+Rp 200\.000\s+Rp 180\.000\s+Rp 20\.000/, 'A, B and C are separate columns');
-    assert.match(t, /S9002\s+Toko Tambun\s+Rp 100\.000\s+Rp 100\.000\s+Rp 20\.000\s+Rp 80\.000\s+Rp 20\.000/);
+    assert.match(t, /Toko Tambun\s+Rp200\.000\s+Rp180\.000\s+Rp20\.000/, 'A, B and C are separate columns');
+    assert.match(t, /S9002\s+Toko Tambun\s+Rp100\.000\s+Rp100\.000\s+Rp20\.000\s+Rp80\.000\s+Rp20\.000/);
     assert.match(t, /retur tampaknya tidak ikut dipotong/);
     assert.match(t, /Cabang belum dipetakan ke kolom toko payroll: 1 baris/);
     assert.match(t, /S9003\s+Toko GIIC[\s\S]*anggota tidak ada di payroll periode ini/);
@@ -160,7 +160,7 @@ try {
   { const { context, page } = await session(); await login(page, 'koperasi');
     await page.goto(`${base}/console/kosipa/anggota/9001`); await page.getByRole('heading', { name: 'Potongan payroll' }).waitFor();
     const t = await text(page);
-    assert.match(t, /POTSYN202608A[\s\S]*Rp 150\.000/); assert.match(t, /POTSYN202607A/); assert.match(t, /nilai yang tercatat di KOSIPA/);
+    assert.match(t, /POTSYN202608A[\s\S]*Rp150\.000/); assert.match(t, /POTSYN202607A/); assert.match(t, /nilai yang tercatat di KOSIPA/);
     assert.doesNotMatch(t, /12\.345\.678|5\.000\.000/, 'salary never shown');
     assert.equal((t.match(/Belum ditampilkan: sumber data ini menunggu tinjauan performa/g) ?? []).length, 1, 'only the installment section waits for the index review');
     await context.close(); }

@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 // Kredit checkout + idempotent replay, Cash sale + return by the supervisor, product edit, stock opname create/cancel, register close/reopen.
 // Run right after `scripts/dev-local.sh reset`: it consumes synthetic stock (item 9002 starts at 5).
 const base = process.env.DEV_LOCAL_URL || 'http://127.0.0.1:3200';
-assert.equal(new URL(base).hostname, '127.0.0.1'); assert.equal(new URL(base).port, '3200', 'DEV LOCAL server only');
+assert.equal(new URL(base).hostname, '127.0.0.1'); assert.ok(['3200', '3203'].includes(new URL(base).port), 'DEV LOCAL server or isolated regression runtime only');
 const pw = JSON.parse(readFileSync(new URL('../.env.dev-local-accounts.json', import.meta.url), 'utf8'));
 async function login(user) {
   const r = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base }, body: JSON.stringify({ username: `synth_${user}`, password: pw[user] }) });

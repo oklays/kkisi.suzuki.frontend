@@ -1,0 +1,211 @@
+# Implementation Task Breakdown: `kosipa-full-access`
+
+Status after checkpoints **FA-01**, **FA-01.5** and **FA-02** (30 Oct 2026; reports [FA-01](fa-01/CHECKPOINT_REPORT.md), [FA-01.5 + FA-02](fa-02/CHECKPOINT_REPORT.md)): `[x]` = verification passed on the isolated synthetic stack, `[~]` = partly done (what is missing is stated), `[ ]` = not started. A task is done only when its verification passes (skill principle 12); "done" never means production-enabled. Production steps are operator-run from reviewed SQL (OD-4); no task deploys or writes to production. Work items (WI) are in [09](09_IMPLEMENTATION_BACKLOG.md); decisions (FD/D/B) in [12](12_DECISION_REGISTER.md).
+
+## Phase 0: Evidence and decisions (no application code)
+- [ ] `TASK-101`: Owner/finance decision session on FD-01…FD-21 and inherited D1–D6.
+  - **Files**: `docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md`
+  - **Goal**: record decisions with date and decider; nothing defaults silently.
+  - **Requirements Addressed**: `REQ-141`, `MIG-101`
+  - **Verification**: register shows a decision or "still open" for every FD; review sign-off.
+- [~] `TASK-102`: Operator evidence intake G-01…G-10 (source hashes, view/procedure bodies, triggers/indexes/`sql_mode`, production menu/grants, row counts).
+  - **Files**: `docs/migration/operator-handoff-schema-evidence.md` (existing), new section for G-01/G-02/G-07/G-09
+  - **Goal**: production facts for parity and the legacy switch.
+  - **Requirements Addressed**: `REQ-101`, `REQ-138`, `MIG-103`
+  - **Verification**: `node apps/web/scripts/validate-schema-evidence.mjs` gates; hash diff report.
+  - **FA-01**: B1 export procedure delivered and rehearsed on the synthetic container (`apps/web/scripts/kosipa-b1-schema-export.sh`, definitions only, refuses data statements). **Missing:** the operator's production run and the G-01…G-10 intake.
+  - **FA-01.5**: export rehearsed against synthetic views/procedures/functions/triggers/events with a sentinel row (`apps/web/tests/kosipa-b1-export-db.test.mjs`); operator instructions [fa-01.5/B1-operator-instructions.md](fa-01.5/B1-operator-instructions.md). Still **missing**: the production run.
+- [ ] `TASK-103`: Inventory drift check tool.
+  - **Files**: `apps/web/scripts/kosipa-inventory-check.mjs`, `docs/superpowers/specs/kosipa-full-access/02A_LEGACY_METHOD_WRITE_INDEX.md`
+  - **Goal**: regenerate 02A from a legacy source path; fail on any controller/write method without an F-ID mapping.
+  - **Requirements Addressed**: `REQ-101`, `REQ-102`
+  - **Verification**: run on the local copy → 94 controllers / 285 write methods, exit 0; remove one mapping → exit 1.
+- [ ] `TASK-104`: Characterization harness and golden files for WP-01…WP-30.
+  - **Files**: `integration/kosipa-full-access/legacy-runtime/*`, `integration/kosipa-full-access/scenarios/*.json`
+  - **Goal**: record actual legacy behaviour on synthetic data with production DDL; attribute G-06/G-08; confirm status vocabulary tolerance (FD-14) and `doc_no` consumers (G-10).
+  - **Requirements Addressed**: `REQ-138`, `REQ-142`, `MIG-108`
+  - **Verification**: `node --test integration/kosipa-full-access/legacy-runtime/*.test.mjs` green; golden files committed without personal data.
+
+## Phase 1: Foundation (P0)
+- [x] `TASK-105`: Command ledger DDL and rollback (local only; production review SQL).
+  - **Files**: `apps/web/db/kosipa/001_command_ledger.sql`, `docs/migration/sql/kosipa-command-ledger-production.sql`
+  - **Goal**: additive table per design §2 (after FD-01).
+  - **Requirements Addressed**: `MIG-101`, `OBS-101`
+  - **Verification**: apply + rollback on the synthetic DB; writer account has INSERT/SELECT only.
+  - **FA-01**: `apps/web/db/kosipa/001_command_ledger.sql.tpl` + `.rollback.sql.tpl` applied ONLY to the synthetic stack; writer grant = SELECT, INSERT (verified: UPDATE/DELETE refused 1142); forward → rollback (retire, rows kept) → forward rehearsed in `apps/web/tests/kosipa-migrations-rollback-db.test.mjs`. Production file `docs/migration/sql/kosipa-command-ledger-production.sql` is review-only and carries blocker **FD-01b** (cPanel has database-level privileges only).
+  - **FA-01.5 (FD-01b)**: ledger moved to its own database on the same server; writer has database-level SELECT, INSERT there (cPanel-expressible); cross-database atomicity and every refused mutation proven with a cPanel-model account ([FD-01b](fa-01.5/FD-01b-ledger-isolation.md)). Production SQL rewritten for option (b).
+- [x] `TASK-106`: Domain command primitives (request hash, idempotency outcome, error codes).
+  - **Files**: `packages/domain/src/kosipa/command.ts`, `packages/domain/tests/kosipa-command.test.mjs`
+  - **Requirements Addressed**: `REQ-105`, `NFR-105`, `VAL-109`
+  - **Verification**: `pnpm test` (domain package) green.
+  - **FA-01**: `packages/domain/src/kosipa/command.ts`; tests `packages/domain/tests/kosipa-command.test.mjs` (6) green.
+- [x] `TASK-107`: Unit of work + lock helpers + ownership gate + flags.
+  - **Files**: `apps/web/src/infrastructure/db/kosipa-unit-of-work.ts`, `apps/web/src/infrastructure/console/kosipa-ownership.ts`, `apps/web/src/infrastructure/console/kosipa-command-http.ts`
+  - **Goal**: one transaction per command, lock order, `capLockWait`, deadlock retry once, 503 when flag off or ownership ≠ N.
+  - **Requirements Addressed**: `REQ-103`, `REQ-104`, `REQ-105`, `REQ-140`, `NFR-103`, `NFR-105`, `SEC-105`, `SEC-108`, `VAL-112`
+  - **Verification**: `apps/web/tests/kosipa-foundation-db.test.mjs` (20 concurrent same key → 1 effect; injected failure → 0 rows; deadlock retry), `kosipa-foundation-http.test.mjs`.
+  - **FA-01**: `kosipa-unit-of-work.ts`, `kosipa-ownership.ts`, `kosipa-command-http.ts` as listed. `kosipa-foundation-db.test.mjs` (9: 20 concurrent same key → 1 row + 1 ledger row; same code ×20 → 1 row; injected failure → 0 rows/0 ledger; real 1205 retried; retry cap → BUSY_RETRY) and `kosipa-master-http.test.mjs` (8) green.
+  - **FA-01.5 (FD-03)**: fail-closed legacy fence inside every command transaction (`LEGACY_ACTIVE`), share-locked against a concurrent `adm_menu_c` re-enable; 4 new foundation DB tests (13 total).
+- [x] `TASK-108`: Command pipeline use case + audit emission.
+  - **Files**: `packages/application/src/kosipa/commands/pipeline.ts`, `packages/application/tests/kosipa-commands-pipeline.test.mjs`
+  - **Requirements Addressed**: `REQ-105`, `REQ-106`, `OBS-102`, `OBS-103`, `SEC-111`
+  - **Verification**: application tests green; audit details contain no PII (assertion).
+  - **FA-01**: `packages/application/src/kosipa/commands/pipeline.ts`; `packages/application/tests/kosipa-commands-pipeline.test.mjs` (7) green incl. no record values in audit detail. REQ-106 (document states) applies from the first document command; masters have no lifecycle.
+- [x] `TASK-109`: Transaction-safe native document-number allocation (local reusable foundation).
+  - **Files**: `packages/domain/src/kosipa/document-number.ts`, `packages/application/src/kosipa/document-numbering.ts`, `apps/web/src/infrastructure/repositories/kosipa-document-number.ts`, `apps/web/db/kosipa/005_document_number_registry.sql.tpl`
+  - **Requirements Addressed**: `REQ-107`, `BR-116`
+  - **Verification**: concurrent allocation test → unique numbers, legacy format.
+  - **FA-01**: not needed by reference masters (no document numbers). **FA-03A**: reusable formatter, application contract, transaction-bound repository and append-only unique registry implemented. Concurrency uses database unique-key serialization with bounded collision retry; no named-lock dependency. Domain/application/DB test files exist; executed continuation results are in [FA-03A](fa-03a/CHECKPOINT_REPORT.md). This closes the local foundation task only: FD-23 deviations, FD-02 legacy uniqueness and first real document-command integration remain gates.
+- [x] `TASK-110`: Write capability vocabulary and grant store.
+  - **Files**: `packages/domain/src/console/capabilities.ts`, `packages/domain/src/console/kosipa-grants.ts`, `packages/application/src/console/kosipa-grants.ts`, `apps/web/db/console/004_kosipa_grants.sql`, `apps/web/src/app/api/console/kosipa-grants/**`, `apps/web/src/app/console/settings/akses-kosipa/page.tsx`
+  - **Requirements Addressed**: `REQ-130`, `SEC-101`, `SEC-102`, `SEC-104`
+  - **Verification**: persona matrix extended (`apps/web/tests/console-persona-matrix.test.mjs`): link-only user has zero write capabilities; self-grant 403.
+  - **FA-01**: vocabulary + `KOSIPA_WRITE_REQUIRES` + `GRANTABLE_KOSIPA_CAPABILITIES` (master only), `packages/domain/src/console/kosipa-grants.ts`, `packages/application/src/console/kosipa-grants.ts`, `db/console/004_kosipa_grants.sql` (+005 grants, rollback), `/api/console/kosipa-grants/**`, `/console/settings/akses-kosipa`. Tests: domain (5), application (4: link-only user has zero write capabilities; self-grant refused), DB (grant store), browser E2E. Persona matrix unchanged on purpose (it models the staging deployment, where grants are off). Open: second-admin confirmation of a grant (FD-16 2-person rule).
+  - **FA-01.5**: two-administrator confirmation built (request -> approval by another administrator within 24 h, re-checked; reject; revoke), enforced in the application and by the console store (open-key unique index, CHECKs, transition trigger). The FD-16 2-person rule is no longer open.
+- [ ] `TASK-111`: Read-model corrections (computed loan status; zero writes in reads).
+  - **Files**: `packages/domain/src/kosipa/loan-read.ts`, `apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts`
+  - **Requirements Addressed**: `REQ-134`, `BR-104`, `NFR-108`
+  - **Verification**: domain tests; DB test asserting no write statements on read paths.
+- [ ] `TASK-112`: Performance baseline and index proposal.
+  - **Files**: `apps/web/scripts/kosipa-perf-baseline.mjs`, `docs/migration/sql/kosipa-full-access-indexes-production.sql`
+  - **Requirements Addressed**: `REQ-139`, `NFR-101`
+  - **Verification**: baseline report (p50/p95/query count/rows examined) committed; `EXPLAIN` before/after on synthetic copy.
+  - **FA-01**: no index created beyond the ledger's own keys (prompt §10); existing Tier-1 proposal unchanged.
+- [~] `TASK-113`: Legacy switch generator and staging rehearsal.
+  - **Files**: `apps/web/scripts/kosipa-legacy-switch.mjs`, `docs/migration/sql/kosipa-legacy-switch-<group>.sql`
+  - **Requirements Addressed**: `REQ-103`, `REQ-140`, `MIG-104`, `MIG-105`, `BR-117`
+  - **Verification**: on staging copy, controller denied after switch and allowed after rollback.
+
+  - **FA-01**: `apps/web/scripts/kosipa-legacy-fence.mjs` (prints SQL), rehearsed with the exact legacy gate SQL on the synthetic stack (`kosipa-legacy-fence-db.test.mjs`); verification note [fa-01/FD-03](fa-01/FD-03-legacy-fence-verification.md). **Missing:** rehearsal on a staging copy (writes to the real-data copy are out of FA-01 scope) and the legacy-runtime (PHP) proof.
+  - **FA-01.5**: generator covers the 5 masters; native fail-closed check protects against a legacy re-enable. **FA-03A**: real-PHP synthetic fence/rollback harness exists; see [compatibility results](fa-03a/LEGACY_COMPATIBILITY_RESULTS.md). Real-data staging rehearsal remains outside local scope. The menu fence is per controller, not sufficient for all member writers (FD-22).
+## Phase 2: Masters and membership (P1)
+- [~] `TASK-114`: Masters domain + commands + writer + pages.
+  - **Files**: `packages/domain/src/kosipa/master.ts`, `packages/application/src/kosipa/commands/master.ts`, `apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts`, `apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts`, `apps/web/src/app/api/kosipa/master/[type]/**`, `apps/web/src/app/console/kosipa/master/[type]/page.tsx`, `apps/web/scripts/setup-kosipa-master-write.mjs`
+  - **Requirements Addressed**: `REQ-129`, `SEC-107`, `VAL-102`
+  - **Verification**: domain/DB/HTTP/browser tests; legacy forms read Next.js-written rows (harness).
+  - **FA-01**: Master **Lokasi** only (1 of 17): `domain/kosipa/master.ts`, `application/kosipa/commands/master.ts`, `repositories/kosipa-location-write.repository.ts`, `db/prisma-kosipa-master-write.ts`, `/api/kosipa/master/[type]/**`, `/console/kosipa/master/lokasi`, writer grants `db/kosipa/002_master_writer_grants.sql.tpl`, stack `integration/kosipa-full-access/local-stack.mjs`. Domain/DB/HTTP/browser tests green. **Missing:** the other 16 masters; "legacy forms read Next.js-written rows" via the PHP harness.
+  - **FA-02**: Bagian, Jenis Dokumen, Rekening Bank, Periode Angsuran implemented natively on one generic master implementation (`domain/kosipa/master.ts` definitions, `application/kosipa/commands/master.ts`, `repositories/kosipa-master-write.repository.ts`, `/api/kosipa/master/[type]/**`, `/console/kosipa/master` + `[type]`). 5 of 17 masters done; semantics [fa-02/MASTER_SEMANTICS.md](fa-02/MASTER_SEMANTICS.md). **Missing**: 12 masters (4 of them need D6/B1). **FA-03A** adds real-PHP synthetic compatibility tests for all five implemented masters; see [results](fa-03a/LEGACY_COMPATIBILITY_RESULTS.md). This does not close all-master TASK-114.
+- [ ] `TASK-115`: Member register/profile/status/deactivate.
+  - **FA-03A:** dependency-ordered [FA-03B plan](fa-03a/NEXT_IMPLEMENTATION_PLAN.md) delivered; commands remain unimplemented/unavailable. FD-07/08/17/22/23/24/25 and the documented ownership/activation gates must be resolved for affected behavior.
+  - **Files**: `packages/domain/src/kosipa/member-command.ts`, `packages/application/src/kosipa/commands/member.ts`, `apps/web/src/infrastructure/repositories/kosipa-member-write.repository.ts`, `apps/web/src/infrastructure/db/prisma-kosipa-member-write.ts`, `apps/web/src/app/api/kosipa/members/**`, `apps/web/src/app/console/kosipa/anggota/**`
+  - **Requirements Addressed**: `REQ-108`, `REQ-109`, `REQ-110`, `REQ-111`, `BR-111`, `BR-112`, `BR-113`, `VAL-101`, `VAL-105`, `SEC-106`, `SEC-112`
+  - **Verification**: `apps/web/tests/kosipa-member-write-db.test.mjs` (atomic status change, token revoke by `user_id`, history blocks hard delete); POS Kredit reads new limits.
+- [ ] `TASK-116`: Staged imports (members, limits).
+  - **Files**: `packages/domain/src/kosipa/import.ts`, `packages/application/src/kosipa/commands/member-import.ts`, `apps/web/src/app/console/kosipa/anggota/impor/**`
+  - **Requirements Addressed**: `REQ-112`, `VAL-107`, `BR-118`
+  - **Verification**: 5,000-row and malformed-file tests; nothing applied before confirmation.
+- [ ] `TASK-117`: Deduction configuration + request decisions (mobile, public link, savings changes).
+  - **Files**: `packages/application/src/kosipa/commands/deduction.ts`, `packages/application/src/kosipa/commands/request-decision.ts`, `apps/web/src/infrastructure/repositories/kosipa-savings-config-write.repository.ts`, `apps/web/src/app/console/kosipa/pengajuan/**`
+  - **Requirements Addressed**: `REQ-113`, `REQ-128`
+  - **Verification**: one active row per member×type; double decision race → one effect; legacy procedure reads new amounts.
+
+## Phase 3: Savings (P1)
+- [ ] `TASK-118`: Savings documents (payroll, deposit, opening balance).
+  - **Files**: `packages/domain/src/kosipa/savings-document.ts`, `packages/application/src/kosipa/commands/savings-document.ts`, `apps/web/src/infrastructure/repositories/kosipa-savings-write.repository.ts`, `apps/web/src/infrastructure/db/prisma-kosipa-savings-write.ts`, `apps/web/src/app/api/kosipa/savings-documents/**`, `apps/web/src/app/console/kosipa/simpanan/dokumen/**`
+  - **Requirements Addressed**: `REQ-114`, `BR-101`, `BR-105`, `BR-106`, `VAL-103`, `VAL-110`
+  - **Verification**: header/lines same status; saldo row once under replay; reconciliation of a synthetic month = 0 blocking differences.
+- [ ] `TASK-119`: Withdrawals (staff + mobile processing).
+  - **Files**: `packages/application/src/kosipa/commands/withdrawal.ts`, `apps/web/src/app/api/kosipa/withdrawals/**`, `apps/web/src/app/console/kosipa/simpanan/penarikan/**`
+  - **Requirements Addressed**: `REQ-115`, `BR-109`, `SEC-109`
+  - **Verification**: concurrent withdrawal test (INV-05); approval re-checks balance.
+- [ ] `TASK-120`: Savings reversal.
+  - **Files**: `packages/application/src/kosipa/commands/savings-reversal.ts`
+  - **Requirements Addressed**: `REQ-116`, `BR-106`, `VAL-108`
+  - **Verification**: reversal nets to zero; original untouched; legacy card shows net.
+
+## Phase 4: Lending (P1)
+- [ ] `TASK-121`: Loan product configuration and exact calculations (flat/annuity, fees, due-day clamp, ratio).
+  - **Files**: `packages/domain/src/kosipa/loan-product.ts`, `packages/domain/src/kosipa/loan-schedule.ts`, `packages/domain/src/kosipa/disbursement.ts`, `packages/domain/tests/kosipa-loan-*.test.mjs`
+  - **Requirements Addressed**: `REQ-118`, `BR-102`, `BR-114`, `BR-120`, `VAL-104`, `NFR-104`
+  - **Verification**: unit tests incl. the 05 R-03/R-04/R-08 examples; parity grid vs production views (B1).
+- [ ] `TASK-122`: Loan application command + pages.
+  - **Files**: `packages/application/src/kosipa/commands/loan-application.ts`, `apps/web/src/infrastructure/repositories/kosipa-lending-write.repository.ts`, `apps/web/src/infrastructure/db/prisma-kosipa-lending-write.ts`, `apps/web/src/app/api/kosipa/loans/route.ts` (POST), `apps/web/src/app/console/kosipa/pinjaman/baru/**`
+  - **Requirements Addressed**: `REQ-118`, `BR-113`, `REQ-107`
+  - **Verification**: member salary unchanged; doc no unique under concurrency.
+- [ ] `TASK-123`: Loan approve/reject/cancel/void.
+  - **Files**: `packages/application/src/kosipa/commands/loan-decision.ts`
+  - **Requirements Addressed**: `REQ-119`, `REQ-123`, `BR-105`
+  - **Verification**: maker ≠ checker; `cd_usr` unchanged; concurrent approvals → one.
+- [ ] `TASK-124`: Disbursement with schedule-once and rollover settlement.
+  - **Files**: `packages/application/src/kosipa/commands/loan-disbursement.ts`, `packages/application/src/kosipa/commands/loan-rollover.ts`
+  - **Requirements Addressed**: `REQ-120`, `REQ-121`, `BR-103`, `BR-107`
+  - **Verification**: INV-01/02/03; rollover amounts server-side; legacy procedure computes expected deduction (harness).
+- [ ] `TASK-125`: Early settlement, over-kredit, loan reversal.
+  - **Files**: `packages/application/src/kosipa/commands/loan-settlement.ts`, `packages/application/src/kosipa/commands/loan-reversal.ts`
+  - **Requirements Addressed**: `REQ-122`, `REQ-123`
+  - **Verification**: payoff per FD-11; approval required; reversal compensates.
+- [ ] `TASK-126`: Loan document attachments.
+  - **Files**: `apps/web/src/infrastructure/kosipa/document-storage.ts`, `apps/web/src/app/api/kosipa/loans/[docNo]/documents/**`
+  - **Requirements Addressed**: `REQ-124`, `VAL-111`, `SEC-110`
+  - **Verification**: upload/download authenticated; files outside web root.
+- [ ] `TASK-127`: Mobile loan request conversion.
+  - **Files**: `packages/application/src/kosipa/commands/request-decision.ts` (loan branch)
+  - **Requirements Addressed**: `REQ-128`
+  - **Verification**: request converted once; status synced.
+
+## Phase 5: Payroll, exit, SHU, PPOB bills
+- [ ] `TASK-128`: Payroll batch lifecycle with batch-scoped settlement.
+  - **Files**: `packages/application/src/kosipa/commands/payroll.ts`, `apps/web/src/infrastructure/repositories/kosipa-payroll-write.repository.ts`, `apps/web/src/infrastructure/db/prisma-kosipa-payroll-write.ts`, `apps/web/src/app/console/kosipa/payroll/**`
+  - **Requirements Addressed**: `REQ-125`, `BR-108`, `VAL-106`
+  - **Verification**: settles only batch members; exceptions listed; re-approval refused; ≤ 10 s for 1,400 members.
+- [ ] `TASK-129`: Native payroll generator (after B1).
+  - **Files**: `packages/domain/src/kosipa/payroll-generator.ts`, `packages/application/src/kosipa/commands/payroll-generate.ts`
+  - **Requirements Addressed**: `REQ-125`, `BR-119`, `MIG-107`
+  - **Verification**: parity vs procedure output for ≥ 3 historical periods on staging; differences only from returns.
+- [ ] `TASK-130`: Member exit settlement.
+  - **Files**: `packages/domain/src/kosipa/exit-settlement.ts`, `packages/application/src/kosipa/commands/exit.ts`, `apps/web/src/app/console/kosipa/keluar/**`
+  - **Requirements Addressed**: `REQ-117`, `BR-110`
+  - **Verification**: failure injected at each step → nothing committed; statement totals.
+- [~] `TASK-131`: Compatibility tests (legacy pages + procedure read Next.js rows).
+  - **Files**: `integration/kosipa-full-access/compatibility/*.test.mjs`
+  - **Requirements Addressed**: `REQ-142`, `MIG-106`
+  - **Verification**: green on staging with production definitions. **FA-03A local slice:** five-master real-PHP compatibility harness in `apps/web/tests/kosipa-legacy-runtime.test.mjs`; executed results in [FA-03A](fa-03a/CHECKPOINT_REPORT.md). Financial-document/procedure parity and production-definition evidence remain open (B1/G-01).
+- [ ] `TASK-132`: SHU lifecycle.
+  - **Files**: `packages/application/src/kosipa/commands/shu.ts`, `apps/web/src/app/console/kosipa/shu/**`
+  - **Requirements Addressed**: `REQ-127`, `BR-115`
+  - **Verification**: INV-10; zero totals refused; effect per FD-10 only.
+- [ ] `TASK-133`: PPOB member billing.
+  - **Files**: `packages/application/src/kosipa/commands/ppob-bill.ts`
+  - **Requirements Addressed**: `REQ-126`
+  - **Verification**: bills reconcile to orders.
+
+## Phase 6: Read side, documents, operations
+- [ ] `TASK-134`: Report parity (outstanding/cash per product, transaction cash, savings outstanding) and authenticated prints.
+  - **Files**: `apps/web/src/infrastructure/repositories/kosipa-report.repository.ts`, `apps/web/src/app/console/kosipa/laporan/**`, print routes under `apps/web/src/app/api/kosipa/**/pdf`
+  - **Requirements Addressed**: `REQ-131`, `REQ-132`, `SEC-110`
+  - **Verification**: totals equal legacy views per period (B1); prints need session + capability.
+- [ ] `TASK-135`: Dashboard KPIs, notifications, business settings.
+  - **Files**: `apps/web/src/components/console/DashboardClientWidgets.tsx`, `packages/application/src/kosipa/commands/settings.ts`
+  - **Requirements Addressed**: `REQ-135`, `REQ-136`, `REQ-137`
+  - **Verification**: unavailable state within budget; settings require second confirmation; no IAK call exists.
+- [ ] `TASK-136`: Security and concurrency suite across all commands.
+  - **Files**: `apps/web/tests/console-kosipa-security-http.test.mjs`, `apps/web/tests/kosipa-concurrency-db.test.mjs`
+  - **Requirements Addressed**: `SEC-101`, `SEC-103`, `SEC-104`, `SEC-105`, `SEC-108`, `SEC-109`, `SEC-111`, `SEC-112`, `NFR-105`
+  - **Verification**: threat matrix of 08 §6 green.
+- [ ] `TASK-137`: Read-after-write and UI states.
+  - **Files**: `apps/web/tests/console-kosipa-write-browser.mjs`
+  - **Requirements Addressed**: `REQ-133`, `NFR-106`, `NFR-107`
+  - **Verification**: after each command the affected list/detail/report shows the change on refresh; axe checks; `/pos` unaffected.
+- [ ] `TASK-138`: Reconciliation reports and audit review job.
+  - **Files**: `apps/web/scripts/kosipa-reconcile.mjs`
+  - **Requirements Addressed**: `REQ-138`, `OBS-104`, `OBS-105`, `MIG-102`
+  - **Verification**: report format of 10 §5 produced for each feature.
+- [~] `TASK-139`: Connection budget and writer account review SQL.
+  - **Files**: `apps/web/src/infrastructure/db/deployment-guard.ts`, `apps/web/scripts/setup-kosipa-<ctx>-write.mjs`, `docs/migration/sql/kosipa-<ctx>-writer-production.sql`
+  - **Requirements Addressed**: `NFR-102`, `SEC-107`, `MIG-105`
+  - **Verification**: guard tests: enabled writers counted, pools ≤ 2; local accounts have exact grants. **FA-03A:** operator intake, pool arithmetic and production prerequisites documented in [production gates](fa-03a/PRODUCTION_READINESS_GATES.md). KOSIPA remains absent from production pool accounting because it is synthetic-only; B5/B8 evidence and reviewed registry/startup-guard changes are still required before production enablement.
+- [ ] `TASK-140`: Cutover rehearsal per feature group on staging (gates 1–8).
+  - **Files**: `docs/superpowers/specs/kosipa-full-access/11_CUTOVER_AND_ROLLBACK_PLAN.md` (evidence appendix)
+  - **Requirements Addressed**: `REQ-140`, `MIG-104`, `MIG-103`
+  - **Verification**: switch → Next.js writes → rollback → legacy continues; recorded.
+
+## Phase 7: Verification & handover
+- [~] `TASK-141`: Full verification run.
+  - **Verification**: `pnpm lint && pnpm typecheck && pnpm test`, `pnpm test:browser`, DB suites against the local container, `.agents/skills/brownfield-spec-engineer/scripts/validate-spec-coverage.sh docs/superpowers/specs/kosipa-full-access`.
+  - **Requirements Addressed**: `REQ-101`, `REQ-102`, `REQ-139`, `REQ-142`
+  - **FA-01**: lint, typecheck, unit, DB (synthetic), HTTP, browser E2E and `next build` executed — see [report §G](fa-01/CHECKPOINT_REPORT.md#g-test-results).
+  - **FA-01.5/FA-02**: full run repeated on the final tree; existing DEV LOCAL browser suites run in an isolated runtime (:3203): nav 13/13, UI/UX 59/59, smoke 11 + one pre-existing stale assertion — [report §7](fa-02/CHECKPOINT_REPORT.md#7-executed-test-commands-and-results-30-oct-2026-final-tree).
+- [ ] `TASK-142`: Owner UAT checklist per feature group (not production).
+  - **Files**: `docs/superpowers/specs/kosipa-full-access/owner-uat-checklist.md` (to be written with the first feature)
+  - **Requirements Addressed**: `REQ-140`, `REQ-141`
+  - **Verification**: owner fills Pass/Fail; nothing activated without it.

@@ -12,7 +12,10 @@
 .receipt-meta div { display:grid; grid-template-columns:105px 1fr; gap:8px; text-align:left; }
 .receipt-meta dd { margin:0; text-align:left; min-width:0; overflow-wrap:anywhere; }
 .receipt-meta dd::before { content:':'; display:inline-block; width:12px; }
-.receipt-totals div,.receipt-line div { display:flex; justify-content:space-between; gap:10px; }
+.receipt-totals div,.receipt-line div { display:flex; justify-content:space-between; gap:0 10px; flex-wrap:wrap; }
+/* An amount is never broken across lines (that would make the number ambiguous): when a row is too wide the amount drops to its own right-aligned line. Precision is never reduced to fit. */
+.receipt-line div > span,.receipt-totals dd { white-space:nowrap; }
+.receipt-line div > span:last-child,.receipt-totals dd { margin-left:auto; text-align:right; }
 .receipt-totals dt { flex-shrink:0; }
 .receipt-totals dd { margin:0; text-align:right; }
 .receipt-lines { border-block:1px dashed #333; padding:5px 0; }

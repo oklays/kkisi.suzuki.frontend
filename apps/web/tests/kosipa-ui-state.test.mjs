@@ -27,8 +27,8 @@ registerHooks({
 const {FinancialTable,ContextNotice,ReportYearFilter}=await import('../src/components/console/kosipa/KosipaUI.tsx');
 const {default:DataQualityPage}=await import('../src/app/console/kosipa/laporan/kualitas-data/page.tsx');
 test('financial column metadata aligns header and count cells and preserves exact source text',()=>{
- const html=renderToStaticMarkup(React.createElement(FinancialTable,{label:'Mutasi tercatat',columns:[{label:'Jenis'},{label:'Jumlah',numeric:true}]},React.createElement('tbody',null,React.createElement('tr',null,React.createElement('th',{scope:'row'},'Sukarela'),React.createElement('td',null,'Rp 50.000,6666')))));
- assert.match(html,/<th scope="col" class="num"[^>]*>Jumlah/);assert.match(html,/<td class="num">Rp 50\.000,6666/);assert.match(html,/role="region" aria-label="Mutasi tercatat" tabindex="0"/);assert.match(html,/scope="row">Sukarela/);
+ const html=renderToStaticMarkup(React.createElement(FinancialTable,{label:'Mutasi tercatat',columns:[{label:'Jenis'},{label:'Jumlah',numeric:true}]},React.createElement('tbody',null,React.createElement('tr',null,React.createElement('th',{scope:'row'},'Sukarela'),React.createElement('td',null,'Rp50.000,6666')))));
+ assert.match(html,/<th scope="col" class="num"[^>]*>Jumlah/);assert.match(html,/<td class="num">Rp50\.000,6666/);assert.match(html,/role="region" aria-label="Mutasi tercatat" tabindex="0"/);assert.match(html,/scope="row">Sukarela/);
 });
 test('failed and truncated scans render unavailable without a count or detected/zero-success claim',async()=>{
  for(const reason of ['READ_FAILED','SOURCE_TRUNCATED']){

@@ -21,6 +21,14 @@ import { storeColumnMapFromEnv } from './payroll-config.ts';
 import { exportPolicyFromEnv, exportThrottle } from './export-config.ts';
 import { PrismaAuditLog, PrismaIdentityLinkStore } from './console-store.ts';
 import { PrismaKosipaDirectory } from './kosipa-directory.ts';
+import { PrismaKosipaGrantStore } from './kosipa-grant-store.ts';
+import { kosipaGrantAdmins, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
+import { PrismaKosipaMasterRepository } from '../repositories/kosipa-master-write.repository.ts';
+import { kosipaMasterWritePrisma, kosipaMasterWritesAvailable, validateKosipaLedgerDatabase } from '../db/prisma-kosipa-master-write.ts';
+import type { KosipaWriteSources } from '@koperasi/application/console/capabilities';
+import type { WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
+import type { MasterRepository } from '@koperasi/application/kosipa/commands/master';
+import type { KosipaGrantStore } from '@koperasi/application/console/kosipa-grants';
 
 export type ConsoleServices = IdentityPorts & { directory: PrismaKosipaDirectory };
 
@@ -33,8 +41,28 @@ export function consoleServices(env: Record<string, string | undefined> = proces
 }
 
 /** KOSIPA read access needs BOTH the flag and a usable console store (identity links live there). */
-export function kosipaServices(env: Record<string, string | undefined> = process.env): (ConsoleServices & { members: KosipaMemberReader; payroll: PayrollReader; loans: LoanReader; savings: SavingsReader; reports: ReportReader; opsReports: OpsReportReader; storeColumnMap: StoreColumnMap; exportPolicy: ExportPolicy; exportThrottle: ExportThrottle }) | null {
+export function kosipaServices(env: Record<string, string | undefined> = process.env): (ConsoleServices & KosipaWriteSources & { members: KosipaMemberReader; payroll: PayrollReader; loans: LoanReader; savings: SavingsReader; reports: ReportReader; opsReports: OpsReportReader; storeColumnMap: StoreColumnMap; exportPolicy: ExportPolicy; exportThrottle: ExportThrottle }) | null {
   if (!kosipaReadEnabled(env)) return null;
   const services = consoleServices(env);
-  return services ? { ...services, members: new PrismaKosipaMemberReader(prisma), payroll: new PrismaKosipaPayrollReader(prisma), loans: new PrismaKosipaLoanReader(prisma), savings: new PrismaKosipaSavingsReader(prisma), reports: new PrismaKosipaReportReader(prisma), opsReports: new PrismaKosipaOpsReportReader(prisma), storeColumnMap: storeColumnMapFromEnv(env), exportPolicy: exportPolicyFromEnv(env), exportThrottle } : null;
+  // Write grants (FD-16) are read only where the console store has db/console/004 and the flag says so; otherwise no write capability.
+  const write: KosipaWriteSources = services && kosipaWriteGrantsEnabled(env) ? { grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) } : {};
+  return services ? { ...services, ...write, members: new PrismaKosipaMemberReader(prisma), payroll: new PrismaKosipaPayrollReader(prisma), loans: new PrismaKosipaLoanReader(prisma), savings: new PrismaKosipaSavingsReader(prisma), reports: new PrismaKosipaReportReader(prisma), opsReports: new PrismaKosipaOpsReportReader(prisma), storeColumnMap: storeColumnMapFromEnv(env), exportPolicy: exportPolicyFromEnv(env), exportThrottle } : null;
+}
+
+/** Native KOSIPA commands (FA-01): KOSIPA read services + ownership gate + writer repositories. The writer is attached only when its
+ *  guarded configuration is valid; otherwise reads work and every command answers 503 WRITE_NOT_CONFIGURED. */
+export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository };
+export function kosipaCommandServices(env: Record<string, string | undefined> = process.env): KosipaCommandServices | null {
+  const services = kosipaServices(env);
+  if (!services) return null;
+  const writable = kosipaMasterWritesAvailable(env);
+  const masters = new PrismaKosipaMasterRepository(prisma, writable ? kosipaMasterWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaLedgerDatabase(env) : undefined });
+  return { ...services, ownership: kosipaWriteOwnership(env), masters };
+}
+
+/** Grant administration needs the console store, the grant table (flag) and the KOSIPA directory for identity links. */
+export function kosipaGrantServices(env: Record<string, string | undefined> = process.env): (ConsoleServices & { grants: KosipaGrantStore; grantAdmins: ReadonlySet<number> }) | null {
+  const services = consoleServices(env);
+  if (!services || !kosipaWriteGrantsEnabled(env)) return null;
+  return { ...services, grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) };
 }

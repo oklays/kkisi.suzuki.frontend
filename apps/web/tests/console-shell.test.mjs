@@ -88,7 +88,10 @@ test('the console-store client is private to console/db infrastructure; KOSIPA c
     const rel = file.slice(ROOT.length);
     const text = readFileSync(file, 'utf8');
     if (!rel.startsWith('src/infrastructure/console/') && !rel.startsWith('src/infrastructure/db/')) assert.doesNotMatch(text, /prisma-console/, `${rel} must not import the console-store client`);
-    if (rel.startsWith('src/infrastructure/console/') || rel.includes('kosipa')) assert.doesNotMatch(text, /prisma-(pos|register|inventory|product|return)-write|DATABASE_URL_\w*WRITE/, `${rel} must not reach a business writer`);
+    if (rel.startsWith('src/infrastructure/console/') || rel.includes('kosipa')) assert.doesNotMatch(text, /prisma-(pos|register|inventory|product|return)-write/, `${rel} must not reach a TOKO business writer`);
+    // FA-01: the dedicated KOSIPA master writer is the only KOSIPA file that may name write DSNs (its own, and the others to refuse a shared account).
+    if ((rel.startsWith('src/infrastructure/console/') || rel.includes('kosipa')) && rel !== 'src/infrastructure/db/prisma-kosipa-master-write.ts') assert.doesNotMatch(text, /DATABASE_URL_\w*WRITE/, `${rel} must not reach a business writer DSN`);
+    if (/prisma-kosipa-master-write/.test(text)) assert.ok(['src/infrastructure/console/services.ts', 'src/infrastructure/db/prisma-kosipa-master-write.ts'].includes(rel), `${rel}: only the service wiring may use the KOSIPA master writer`);
   }
 });
 
@@ -109,7 +112,8 @@ const kosipaPages = () => walk(join(ROOT, 'src/app/console/kosipa')).filter((p) 
 test('route-to-navigation matrix: every static KOSIPA page is a registered, available entry; dynamic pages are reached from a registered parent page', () => {
   const registered = new Map(CONSOLE_NAVIGATION.map((e) => [e.href, e]));
   const reachedFrom = { '/console/kosipa/anggota/[id]': '/console/kosipa/anggota', '/console/kosipa/simpanan/[id]': '/console/kosipa/simpanan', '/console/kosipa/pinjaman/[docNo]': '/console/kosipa/pinjaman',
-    '/console/kosipa/payroll/[docNo]': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/rekonsiliasi': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/anggota/[nik]': '/console/kosipa/payroll' };
+    '/console/kosipa/payroll/[docNo]': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/rekonsiliasi': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/anggota/[nik]': '/console/kosipa/payroll',
+    '/console/kosipa/master/[type]': '/console/kosipa/master' };
   for (const route of kosipaPages()) {
     if (route.includes('[')) { assert.ok(route in reachedFrom, `${route}: dynamic page with no declared parent`); assert.equal(registered.get(reachedFrom[route])?.readiness, 'available', `${route}: parent ${reachedFrom[route]} is not an available entry`); continue; }
     const entry = registered.get(route);

@@ -16,8 +16,8 @@ export default defineConfig([
       "**/*",
       "!apps/", "!apps/web/", "!apps/web/**",
       "!packages/", "!packages/**",
-      "!integration/", "!integration/public-savings/", "!integration/public-savings/**",
-      "**/node_modules/**", "**/.next/**", "**/out/**", "**/build/**", "**/next-env.d.ts",
+      "!integration/", "!integration/public-savings/", "!integration/public-savings/**", "!integration/kosipa-full-access/", "!integration/kosipa-full-access/**",
+      "**/node_modules/**", "**/.next/**", "**/.next-*/**", "**/out/**", "**/build/**", "**/next-env.d.ts",
     ])],
   },
   {
@@ -27,7 +27,7 @@ export default defineConfig([
   },
   {
     basePath: root,
-    files: ["packages/**/*.{ts,tsx,mjs}", "integration/public-savings/**/*.mjs"],
+    files: ["packages/**/*.{ts,tsx,mjs}", "integration/public-savings/**/*.mjs", "integration/kosipa-full-access/**/*.mjs"],
     extends: nextTs,
   },
   {
@@ -43,11 +43,11 @@ export default defineConfig([
     basePath: root,
     // Only dedicated local-staging DB clients may read legacy write DSNs.
     files: ["apps/web/src/**/*.{ts,tsx}", "apps/web/scripts/**/*.ts", "packages/**/*.{ts,tsx}"],
-    ignores: ["apps/web/src/infrastructure/db/prisma-pos-write.ts", "apps/web/src/infrastructure/db/prisma-register-write.ts", "apps/web/src/infrastructure/db/prisma-inventory-write.ts", "apps/web/src/infrastructure/db/prisma-product-write.ts", "apps/web/src/infrastructure/db/prisma-return-write.ts"],
+    ignores: ["apps/web/src/infrastructure/db/prisma-pos-write.ts", "apps/web/src/infrastructure/db/prisma-register-write.ts", "apps/web/src/infrastructure/db/prisma-inventory-write.ts", "apps/web/src/infrastructure/db/prisma-product-write.ts", "apps/web/src/infrastructure/db/prisma-return-write.ts", "apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts"],
     rules: {
       "no-restricted-syntax": ["error",
-        { selector: "MemberExpression[property.name=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT|_RETURN)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." },
-        { selector: "Literal[value=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT|_RETURN)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." }],
+        { selector: "MemberExpression[property.name=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT|_RETURN|_KOSIPA_MASTER)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." },
+        { selector: "Literal[value=/^DATABASE_URL(_REGISTER|_INVENTORY|_PRODUCT|_RETURN|_KOSIPA_MASTER)?_WRITE$/]", message: "Legacy write DSNs are private to their dedicated infrastructure/db clients." }],
     },
   },
   {

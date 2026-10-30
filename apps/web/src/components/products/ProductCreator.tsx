@@ -4,9 +4,11 @@ import {useEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {ArrowRight,Check,PackagePlus,Save,Shuffle,X} from 'lucide-react';
 import {purchasePriceFor,type ProductCreateOptions,type ProductCreateResult,type ProductTaxType,type ProductType} from '@koperasi/domain/inventory';
+import {formatRupiah} from '../money/format';
+import {CurrencyInput} from '../money/CurrencyInput.tsx';
 
 const errors:Record<string,string>={INVALID_INPUT:'Periksa kolom wajib, format harga, dan jumlah stok. Diskon tidak boleh melebihi harga jual dan beberapa karakter mungkin tidak didukung.',FORBIDDEN:'Akun Anda tidak memiliki izin menambah produk di cabang ini.',IDENTIFIER_EXISTS:'Barcode, barcode kemasan, SKU, atau kode barang sudah dipakai produk lain di cabang ini.',WRITE_NOT_CONFIGURED:'Penyimpanan produk belum diaktifkan. Hubungi pengelola.',PRODUCTS_UNAVAILABLE:'Data form belum dapat dimuat. Periksa koneksi dan coba lagi.'};
-const rupiah=(value:string)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:Number(value)%1?2:0,maximumFractionDigits:2}).format(Number(value));
+const rupiah=(value:string)=>value===''?'—':formatRupiah(value);
 const quantity=(n:number)=>new Intl.NumberFormat('id-ID').format(n);
 const money=(value:string)=>/^\d{1,10}(\.\d{1,2})?$/.test(value);
 const fixed=(value:number)=>Number.isFinite(value)&&value>=0?value.toFixed(2):'';
@@ -107,13 +109,13 @@ export function ProductCreator({csrfToken,writes,branchName,onClose,onSaved,onFi
      <label>Isi per kemasan<input name="packQuantity" type="number" min={1} max={2147483647} step={1} required {...field('packQuantity')}/></label>
      <label>Konsinyasi<select name="consignment" value={form.consignment?'1':'0'} onChange={event=>update({consignment:event.target.value==='1'})}><option value="0">Tidak</option><option value="1">Ya, barang titipan</option></select></label>
     </div></section>
-    <section><h3>Harga &amp; pajak</h3><p>Harga dalam Rupiah per satuan. Gunakan titik untuk desimal, misalnya 4000.50.</p><div className="product-editor-grid">
-     <label>Harga beli dasar <span>*</span><div className="product-editor-money"><span>Rp</span><input name="basePrice" type="number" min={0} max="9999999999.99" step="0.01" required placeholder="Sebelum pajak" {...field('basePrice')}/></div></label>
+    <section><h3>Harga &amp; pajak</h3><p>Harga dalam Rupiah per satuan. Gunakan titik untuk ribuan dan koma untuk desimal, misalnya 4.000,50.</p><div className="product-editor-grid">
+     <label>Harga beli dasar <span>*</span><CurrencyInput name="basePrice" maxIntegerDigits={10} required placeholder="Sebelum pajak" value={String(form.basePrice)} onValueChange={v=>update({basePrice:v})}/></label>
      <label>Pajak <span>*</span><select name="taxId" required {...field('taxId')}>{options.taxes.map(t=><option key={t.id} value={t.id}>{t.name.includes('%')?t.name:`${t.name} · ${Number(t.rate)}%`}</option>)}</select></label>
      <label>Perhitungan pajak<select name="taxType" {...field('taxType')}><option value="Inclusive">Tanpa tambahan pajak</option><option value="Exclusive">Tambahkan pajak ke harga beli</option></select></label>
      <label>Margin keuntungan<div className="product-editor-money"><input name="margin" type="number" step="0.01" min={-100} placeholder="Opsional" {...field('margin')}/><span>%</span></div></label>
-     <label>Harga jual <span>*</span><div className="product-editor-money"><span>Rp</span><input name="sellingPrice" type="number" min={0} max="9999999999.99" step="0.01" required {...field('sellingPrice')}/></div></label>
-     <label>Diskon per satuan<div className="product-editor-split"><div className="product-editor-money"><input name="discountPercent" type="number" min={0} max={100} step="0.01" aria-label="Diskon persen" {...field('discountPercent')}/><span>%</span></div><div className="product-editor-money"><span>Rp</span><input name="discount" type="number" min={0} max="9999999999.99" step="0.01" required aria-label="Diskon rupiah" aria-invalid={invalidDiscount} {...field('discount')}/></div></div>{invalidDiscount&&<small className="product-editor-hint-error">Diskon melebihi harga jual.</small>}</label>
+     <label>Harga jual <span>*</span><CurrencyInput name="sellingPrice" maxIntegerDigits={10} required value={String(form.sellingPrice)} onValueChange={v=>update({sellingPrice:v})}/></label>
+     <label>Diskon per satuan<div className="product-editor-split"><div className="product-editor-money"><input name="discountPercent" type="number" min={0} max={100} step="0.01" aria-label="Diskon persen" {...field('discountPercent')}/><span>%</span></div><div><CurrencyInput name="discount" maxIntegerDigits={10} required aria-label="Diskon rupiah" aria-invalid={invalidDiscount} value={String(form.discount)} onValueChange={v=>update({discount:v})}/></div></div>{invalidDiscount&&<small className="product-editor-hint-error">Diskon melebihi harga jual.</small>}</label>
     </div>
      <div className="product-price-strip" aria-label="Ringkasan harga"><div><span>Harga beli final</span><strong>{purchase?rupiah(purchase):'—'}</strong></div><ArrowRight size={17} aria-hidden="true"/><div><span>Harga jual</span><strong>{money(form.sellingPrice)?rupiah(form.sellingPrice):'—'}</strong></div><div className={`product-price-margin ${purchase&&money(form.sellingPrice)&&Number(form.sellingPrice)<Number(purchase)?'product-price-loss':''}`}><span>Laba per satuan</span><strong>{purchase&&!Number.isNaN(net)?rupiah((net-Number(purchase)).toFixed(2)):'—'}</strong><small>setelah diskon</small></div></div>
     </section>

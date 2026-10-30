@@ -25,7 +25,8 @@ export interface KosipaDirectory {
   kosipaUser(id: number): Promise<{ id: number; username: string; fullName: string; active: boolean; activeGroups: number } | null>;
   allowedMenuUrls(kosipaUserId: number): Promise<string[]>;
 }
-export interface ConsoleUserDirectory { consoleUser(id: number): Promise<{ id: number; active: boolean } | null>; }
+/** `roleId` = the user's CURRENT role (re-read on every call), used where an earlier authorization must be re-proven (grant approval). */
+export interface ConsoleUserDirectory { consoleUser(id: number): Promise<{ id: number; active: boolean; roleId?: number } | null>; }
 
 export type Actor = { userId: number; capabilities: CapabilitySet; requestId: string };
 export type IdentityPorts = { links: IdentityLinkStore; audit: AuditLog; kosipa: KosipaDirectory; consoleUsers: ConsoleUserDirectory; now: () => Date };
@@ -81,10 +82,10 @@ export async function listIdentityLinks(ports: Pick<IdentityPorts, 'links'>, act
  * KOSIPA capabilities of one console user: active link -> active KOSIPA account -> controllers it may open -> view
  * capabilities. Anything missing yields no KOSIPA access; store/reader failures propagate (callers fail closed).
  */
-export async function resolveKosipaCapabilities(ports: Pick<IdentityPorts, 'links' | 'kosipa'>, consoleUserId: number): Promise<{ linked: boolean; capabilities: Set<Capability> }> {
+export async function resolveKosipaCapabilities(ports: Pick<IdentityPorts, 'links' | 'kosipa'>, consoleUserId: number): Promise<{ linked: boolean; kosipaUserId: number | null; capabilities: Set<Capability> }> {
   const link = await ports.links.activeForConsoleUser(consoleUserId);
-  if (!link) return { linked: false, capabilities: new Set() };
+  if (!link) return { linked: false, kosipaUserId: null, capabilities: new Set() };
   const user = await ports.kosipa.kosipaUser(link.externalUserId);
-  if (!user?.active || user.activeGroups < 1) return { linked: true, capabilities: new Set() };
-  return { linked: true, capabilities: kosipaCapabilitiesFromMenus(await ports.kosipa.allowedMenuUrls(user.id)) };
+  if (!user?.active || user.activeGroups < 1) return { linked: true, kosipaUserId: null, capabilities: new Set() };
+  return { linked: true, kosipaUserId: user.id, capabilities: kosipaCapabilitiesFromMenus(await ports.kosipa.allowedMenuUrls(user.id)) };
 }

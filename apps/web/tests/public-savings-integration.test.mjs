@@ -110,9 +110,11 @@ test('verified intake writes one OPEN legacy header, immutable encrypted evidenc
   const pdf = await f.service.pdf(auth.token, auth.proof);
   assert.equal(Buffer.from(pdf).subarray(0, 5).toString(), '%PDF-');
   const text = await pdfText(pdf, t);
-  for (const expected of [f.name, '100000', '150000', 'PENGAJUAN', 'BELUM DISETUJUI']) assert.ok(text.includes(expected), expected);
+  // New submissions are pinned to template v2: Rupiah document format plus terbilang for the requested amount.
+  const flat = text.replace(/\s+/g, ' ');
+  for (const expected of [f.name, 'Rp100.000,00', 'Rp150.000,00', 'Terbilang: Seratus lima puluh ribu rupiah.', 'Template: kkisi-pss-a4/v2', 'PENGAJUAN', 'BELUM DISETUJUI']) assert.ok(flat.includes(expected), expected);
   assert.equal(text.includes('MUTATED CURRENT MEMBER'), false, 'render uses the submitted member display snapshot');
-  assert.equal(text.includes('170000'), false, 'render uses the submitted old deduction');
+  assert.equal(/170000|170\.000/.test(text), false, 'render uses the submitted old deduction');
   await f.service.processOutbox();
   assert.deepEqual(await f.service.pdf(auth.token, auth.proof), pdf);
   const [after] = await f.admin.execute('SELECT snapshot_cipher,pdf_ref,pdf_digest,proof_status FROM pss_application WHERE reference=?', [result.reference]);

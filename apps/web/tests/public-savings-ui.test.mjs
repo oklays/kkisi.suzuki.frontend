@@ -61,11 +61,26 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const require=createRequire(import.meta.url);
 const ts=require('typescript');
+function loadMoney(name) {
+  const file=resolve(dirname(fileURLToPath(import.meta.url)),'../src/components/money',/\.tsx?$/.test(name)?name:`${name}.ts`);
+  const output=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+  const compiledModule={exports:{}};
+  const moneyRequire=id=>id==='./format.ts'?loadMoney('format.ts'):id.endsWith('.css')?{}:id.startsWith('@koperasi/domain/')?domainRequire(id):require(id);
+  new Function('require','module','exports',output)(moneyRequire,compiledModule,compiledModule.exports);
+  return compiledModule.exports;
+}
+function domainRequire(id) {
+  const file=resolve(dirname(fileURLToPath(import.meta.url)),'../../../packages/domain/src',id.replace('@koperasi/domain/','')+'.ts');
+  const output=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+  const compiledModule={exports:{}};
+  new Function('require','module','exports',output)(id=>id.endsWith('.ts')?domainRequire('@koperasi/domain/money/'+id.replace(/^\.\//,'').replace(/\.ts$/,'')):require(id),compiledModule,compiledModule.exports);
+  return compiledModule.exports;
+}
 function loadComponent(filename) {
   const file=resolve(dirname(fileURLToPath(import.meta.url)),'../src/components/public-savings',filename);
   const output=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
   const compiledModule={exports:{}};
-  const localRequire=id=>id.startsWith('./')?loadComponent(`${id.slice(2)}${id==='./client'?'.ts':'.tsx'}`):require(id);
+  const localRequire=id=>id.startsWith('../money/')?loadMoney(id.slice(9)):id.startsWith('./')?loadComponent(`${id.slice(2)}${id==='./client'?'.ts':'.tsx'}`):id.endsWith('.css')?{}:require(id);
   new Function('require','module','exports',output)(localRequire,compiledModule,compiledModule.exports);
   return compiledModule.exports;
 }
@@ -117,7 +132,7 @@ test('HTTP route wrappers forward the request and await dynamic identifiers', as
 test('legacy decimal scale displays exact rupiah and unchanged whole amounts stay invalid', async () => {
   const {rupiah}=await import('../src/components/public-savings/client.ts');
   assert.equal(rupiah('0.0000'),'Rp0');assert.equal(rupiah('100000.0000'),'Rp100.000');
-  assert.equal(rupiah('100000.5000'),'Rp100.000,5');
+  assert.equal(rupiah('100000.5000'),'Rp100.000,50');
   assert.ok(validateDraft('100000',true,true,{...form,originalDeduction:'100000.0000'}).some(message=>message.includes('berbeda')));
 });
 test('positively verified first enrollment is displayed as absent deduction rather than a zero balance', async()=>{
