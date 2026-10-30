@@ -1,6 +1,6 @@
 import type { PosProduct } from "@/features/pos/types";
 import { formatSen } from "../money/format.ts";
-export { changeQuantity, hasPrice, netPriceSen, previewSubtotal } from '@koperasi/domain/pos/preview';
+export { changeQuantity, setQuantity, quantityError, MAX_CART_QUANTITY, hasPrice, netPriceSen, previewSubtotal } from '@koperasi/domain/pos/preview';
 
 const families: Record<string, string> = {
   minuman: "minuman", makanan: "makanan", sembako: "sembako",

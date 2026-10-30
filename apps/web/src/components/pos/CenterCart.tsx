@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { ShoppingBag, Trash2 } from "lucide-react";
 import type { PosProduct, PreviewCartLine } from "@/features/pos/types";
 import { CartItem, EmptyCartState } from "./TransactionPanel";
+import { cartDisplayOrder } from "@/features/pos/cart-state";
 
 /** Shared tab action: available while browsing products as well as reviewing the cart. */
 export function ClearCartButton({ disabled, onClear }: { disabled: boolean; onClear: () => void }) {
@@ -20,12 +21,12 @@ export function ClearCartButton({ disabled, onClear }: { disabled: boolean; onCl
   </>;
 }
 
-export function CenterCart({ cart, locked, onChange, onRemove }: { cart: PreviewCartLine[]; locked: boolean; onChange: (product: PosProduct, delta: 1 | -1) => void; onRemove: (id: string) => void }) {
+export function CenterCart({ cart, locked, onChange, onSetQuantity, onScan, onRemove }: { cart: PreviewCartLine[]; locked: boolean; onChange: (product: PosProduct, delta: 1 | -1) => void; onSetQuantity: (product: PosProduct, quantity: number, expectedQuantity: number) => void; onScan: (identifier: string) => void; onRemove: (id: string) => void }) {
   const count = cart.reduce((sum, line) => sum + line.quantity, 0);
   return <section className="pos-center-cart" aria-label="Keranjang belanja">
     <header><h2><ShoppingBag size={19} />Keranjang <span>{count} item</span></h2><p>Periksa produk dan jumlah sebelum pembayaran.</p></header>
     <fieldset className="pos-cart-lock" disabled={locked}>
-      <div className="pos-cart-items" aria-live="polite">{cart.length === 0 ? <EmptyCartState /> : <ul>{cart.map(line => <CartItem key={line.product.id} line={line} onChange={onChange} onRemove={onRemove} disabled={locked} />)}</ul>}</div>
+      <div className="pos-cart-items" aria-live="polite">{cart.length === 0 ? <EmptyCartState /> : <ul>{cartDisplayOrder(cart).map(line => <CartItem key={line.product.id} line={line} onChange={onChange} onSetQuantity={onSetQuantity} onScan={onScan} onRemove={onRemove} disabled={locked} />)}</ul>}</div>
     </fieldset>
   </section>;
 }

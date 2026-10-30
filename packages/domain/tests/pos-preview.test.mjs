@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { changeQuantity, hasPrice, netPriceSen, previewSubtotal } from '@koperasi/domain/pos/preview';
+import * as preview from '@koperasi/domain/pos/preview';
 
 const product = { id: '7', priceSen: 400000, discountSen: 0, stock: 2 };
 
@@ -43,4 +44,25 @@ test('quantity changes preserve full product metadata and use the latest product
   assert.deepEqual(two[0].product.metadata, item.metadata);
   assert.equal(two[0].product.illustrationIndex, 1);
   assert.strictEqual(changeQuantity(two, updated, 1), two);
+});
+
+test('absolute quantity updates share delta validation and preserve display metadata', () => {
+  assert.equal(typeof preview.setQuantity, 'function');
+  const item = { ...product, stock: 20000, discountSen: 100 };
+  let cart = [{ product: item, quantity: 1, lastAdded: 7 }];
+  for (const quantity of [10, 100, 1, 9999]) {
+    cart = preview.setQuantity(cart, item, quantity);
+    assert.equal(cart[0].quantity, quantity);
+    assert.equal(cart[0].lastAdded, 7);
+    assert.equal(previewSubtotal(cart), quantity * 399900);
+  }
+  for (const quantity of [0, -1, 1.5, NaN, Infinity, 10000, Number.MAX_SAFE_INTEGER]) {
+    assert.equal(preview.quantityError(item, quantity), 'invalid');
+    assert.strictEqual(preview.setQuantity(cart, item, quantity), cart);
+  }
+  assert.strictEqual(changeQuantity(cart, item, 1), cart, 'plus uses the checkout maximum');
+  assert.equal(preview.quantityError(product, 3), 'stock');
+  const one = [{ product, quantity: 1 }];
+  assert.strictEqual(preview.setQuantity(one, product, 3), one);
+  assert.deepEqual(changeQuantity(one, product, -1), [], 'existing minus-at-one removal remains');
 });

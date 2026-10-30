@@ -8,8 +8,9 @@ import { PosHeader, PosShell } from "./PosShell";
 import { ProductGrid, ProductSearch } from "./ProductCatalog";
 import { TransactionPanel } from "./TransactionPanel";
 import { CenterCart, ClearCartButton } from "./CenterCart";
-import { changeQuantity, hasPrice } from "./preview";
+import { changeQuantity, setQuantity, hasPrice } from "./preview";
 import { createCartScanGuard } from "@/features/pos/checkout-state";
+import { addCartProduct } from "@/features/pos/cart-state";
 import "./pos.css";
 
 class SessionEnded extends Error {}
@@ -37,6 +38,7 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
   const [hydrated, setHydrated] = useState(false);
   const storageKey = `kkisi-cart:${session.userId}:${session.companyId}:${session.register.open?.noref ?? "closed"}`;
   const [cart, setCart] = useState<PreviewCartLine[]>([]);
+  const actionOrder = useRef(0);
   const [message, setMessage] = useState("");
   const quantities = Object.fromEntries(cart.map((line) => [line.product.id, line.quantity]));
   const requestKey = query.trim();
@@ -75,7 +77,12 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
       if (!active) return;
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
-        if (Array.isArray(saved) && saved.length <= 80) setCart(saved.filter((line) => line?.product?.companyId === String(session.companyId) && Number.isSafeInteger(line.quantity) && line.quantity > 0 && Number.isSafeInteger(line.product.priceSen) && Number.isSafeInteger(line.product.discountSen)));
+        if (Array.isArray(saved) && saved.length <= 80) {
+          const restored: PreviewCartLine[] = saved.filter((line) => line?.product?.companyId === String(session.companyId) && Number.isSafeInteger(line.quantity) && line.quantity > 0 && Number.isSafeInteger(line.product.priceSen) && Number.isSafeInteger(line.product.discountSen))
+            .map(line => ({ ...line, lastAdded: Number.isSafeInteger(line.lastAdded) && line.lastAdded > 0 ? line.lastAdded : 0 }));
+          actionOrder.current = Math.max(actionOrder.current, ...restored.map(line => line.lastAdded ?? 0));
+          setCart(restored);
+        }
       } catch { /* Storage is optional; the server still validates every checkout. */ }
       setHydrated(true);
     });
@@ -92,12 +99,29 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
     setMessage(delta === 1 ? `${product.name} ditambahkan ke keranjang.` : `Jumlah ${product.name} dikurangi.`);
   }
 
+  function add(product: PosProduct, order = ++actionOrder.current) {
+    if (checkoutLocked.current) return;
+    setCart(current => addCartProduct(current, product, order));
+    setMessage(`${product.name} ditambahkan ke keranjang.`);
+    setTab("cart");
+  }
+
+  function setItemQuantity(product: PosProduct, quantity: number, expectedQuantity: number) {
+    if (checkoutLocked.current) return;
+    setCart(current => {
+      const line = current.find(item => item.product.id === product.id);
+      // A scan may have changed the line since this draft started.
+      return line?.quantity === expectedQuantity ? setQuantity(current, line.product, quantity) : current;
+    });
+  }
+
   function clearCart() { scanGuard.invalidate(); setCart([]); }
 
-  async function scan() {
-    const identifier = query.trim();
+  async function scan(value = query) {
+    const identifier = value.trim();
     if (!identifier || checkoutLocked.current) return;
     const scanGeneration = scanGuard.capture();
+    const order = ++actionOrder.current;
     try {
       let product: PosProduct | undefined = (await fetchProducts(new URLSearchParams({ barcode: identifier })))[0];
       if (!product) {
@@ -112,8 +136,9 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
       if (checkoutLocked.current || !scanGuard.isCurrent(scanGeneration)) return;
       if (!product) { setMessage("Produk tidak ditemukan. Pilih produk dari hasil pencarian."); return; }
       if (!hasPrice(product)) { setMessage(`Harga ${product.name} belum diatur.`); return; }
-      if (product.stock <= 0 || (quantities[product.id] ?? 0) >= product.stock) { setMessage(`Stok ${product.name} tidak mencukupi.`); return; }
-      adjust(product, 1); setQuery(""); setTab("cart");
+      if (product.stock <= 0) { setMessage(`Stok ${product.name} tidak mencukupi.`); return; }
+      // The functional update validates against the latest cart, not this lookup's snapshot.
+      add(product, order); setQuery(current => current.trim() === identifier ? "" : current);
     } catch (error) {
       if (!scanGuard.isCurrent(scanGeneration)) return;
       if (error instanceof SessionEnded) { router.replace("/login"); return; }
@@ -143,10 +168,10 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
             </div>
             <div className="pos-tabpanel" id="pos-product-panel" role="tabpanel" aria-labelledby="pos-product-tab" tabIndex={0} hidden={tab !== "product"}>
               <div className="pos-catalog-meta"><span>{status === "ready" ? `${products.length} produk${products.length >= CATALOG_PAGE_SIZE ? " pertama · persempit pencarian" : ""}` : ""}</span><span>{query.trim() ? "Hasil pencarian termasuk stok habis" : "Daftar hanya menampilkan produk berstok"}</span></div>
-              <div className="pos-catalog-scroll" aria-busy={fetching}><ProductGrid products={products} quantities={quantities} locked={locked} onAdd={(product) => { adjust(product, 1); setTab("cart"); }} status={status} onReset={() => setQuery("")} onRetry={() => setRetry((count) => count + 1)} /></div>
+              <div className="pos-catalog-scroll" aria-busy={fetching}><ProductGrid products={products} quantities={quantities} locked={locked} onAdd={add} status={status} onReset={() => setQuery("")} onRetry={() => setRetry((count) => count + 1)} /></div>
             </div>
             <div className="pos-tabpanel" id="pos-cart-panel" role="tabpanel" aria-labelledby="pos-cart-tab" tabIndex={0} hidden={tab !== "cart"}>
-              <CenterCart cart={cart} locked={locked} onChange={adjust} onRemove={(id) => { if (!checkoutLocked.current) setCart((current) => current.filter((line) => line.product.id !== id)); }} />
+              <CenterCart cart={cart} locked={locked} onChange={adjust} onSetQuantity={setItemQuantity} onScan={scan} onRemove={(id) => { if (!checkoutLocked.current) setCart((current) => current.filter((line) => line.product.id !== id)); }} />
             </div>
           </section>
           <TransactionPanel key={storageKey} cart={cart} session={session} storageKey={storageKey} onLockChange={updateLock} onClear={() => { clearCart(); setQuery(""); loadedKey.current = null; setRetry((count) => count + 1); }} />

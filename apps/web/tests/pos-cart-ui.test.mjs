@@ -71,9 +71,14 @@ test('center cart shows full product name, code, discount, exact line total and 
 
 test('locked cart disables every line mutation and the catalog add button', () => {
   const quantity = render(QuantityControl, { line: cart[0], onChange: noop, disabled: true });
-  assert.equal((quantity.match(/disabled=""/g) ?? []).length, 2);
+  assert.equal((quantity.match(/disabled=""/g) ?? []).length, 3);
   const html = render(ProductCard, { product, quantity: 0, onAdd: noop, locked: true });
   assert.match(html, /class="pos-add" disabled=""/);
+});
+
+test('quantity is an accessible editable input between two explicit buttons', () => {
+  const html = render(QuantityControl, { line: cart[0], onChange: noop, onSetQuantity: noop });
+  assert.match(html, /<button[^>]*type="button".*?<input[^>]*inputMode="numeric"[^>]*aria-label="Jumlah"[^>]*value="2".*?<button[^>]*type="button"/s);
 });
 
 

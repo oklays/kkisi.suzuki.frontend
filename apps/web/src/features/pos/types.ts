@@ -32,7 +32,10 @@ export type PosSession = {
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };
 };
 
-export type PreviewCartLine = DomainPreviewCartLine<PosProduct>;
+export type PreviewCartLine = DomainPreviewCartLine<PosProduct> & {
+  /** UI ordering only; never part of a checkout item or saved transaction. */
+  lastAdded?: number;
+};
 export type { PaymentMethod as PreviewPayment } from "@koperasi/domain/pos/sale";
 export type CatalogStatus = "ready" | "loading" | "error";
 export type { MemberCredit as PosMember, CheckoutResult } from "@koperasi/domain/pos/sale";

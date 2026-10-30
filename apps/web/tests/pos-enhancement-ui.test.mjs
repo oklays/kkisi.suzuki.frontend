@@ -39,6 +39,7 @@ test('confirmed checkout callback clears an outstanding barcode query', async ()
     '@/features/pos/types': {}, './PosShell': { PosShell() {}, PosHeader() {} },
     './ProductCatalog': { ProductSearch, ProductGrid() {} }, './TransactionPanel': { TransactionPanel },
     './CenterCart': { CenterCart() {}, ClearCartButton() {} }, './preview': {}, '@/features/pos/checkout-state': state, './pos.css': {},
+    '@/features/pos/cart-state': {},
   }, { localStorage: { getItem: () => null, setItem() {} } });
   const render = () => view.render('PosScreen', { products: [], session });
   find(render(), node => node.type === ProductSearch).props.onQuery('BARCODE-LEFTOVER');

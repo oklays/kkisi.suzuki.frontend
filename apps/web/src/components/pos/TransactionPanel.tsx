@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Banknote, Check, LoaderCircle, Minus, Percent, Plus, Printer, QrCode, Search, ShoppingBag, Trash2, TriangleAlert, UserRound, X } from "lucide-react";
 import type { PosMember, PosProduct, PosSession, CheckoutResult, PreviewCartLine, PreviewPayment } from "@/features/pos/types";
-import { formatRupiah, netPriceSen, previewSubtotal } from "./preview";
+import { formatRupiah, netPriceSen, previewSubtotal, quantityError, MAX_CART_QUANTITY } from "./preview";
 import { CurrencyInput } from "../money/CurrencyInput";
 import { ProductIllustration } from "./ProductCatalog";
 import { checkoutBlockingReasons } from "@/features/pos/checkout-state";
@@ -81,18 +81,73 @@ export function MemberSearch({ member, onMember, disabled }: { member: PosMember
   );
 }
 
-export function QuantityControl({ line, onChange, disabled = false }: { line: PreviewCartLine; onChange: (product: PosProduct, delta: 1 | -1) => void; disabled?: boolean }) {
-  return <div className="pos-quantity"><button disabled={disabled} aria-label={`Kurangi ${line.product.name}`} onClick={() => onChange(line.product, -1)}><Minus size={14} /></button><span aria-label="Jumlah">{line.quantity}</span><button disabled={disabled || line.quantity >= line.product.stock} aria-label={`Tambah jumlah ${line.product.name}`} onClick={() => onChange(line.product, 1)}><Plus size={14} /></button></div>;
+type QuantityProps = {
+  line: PreviewCartLine;
+  onChange: (product: PosProduct, delta: 1 | -1) => void;
+  onSetQuantity: (product: PosProduct, quantity: number, expectedQuantity: number) => void;
+  onScan?: (identifier: string) => void;
+  disabled?: boolean;
+};
+
+export function QuantityControl({ line, onChange, onSetQuantity, onScan, disabled = false }: QuantityProps) {
+  const [draft, setDraft] = useState<{ value: string; quantity: number } | null>(null);
+  const [message, setMessage] = useState("");
+  const burst = useRef({ value: "", time: 0 });
+  const editing = draft?.quantity === line.quantity;
+  const errorId = `pos-quantity-error-${line.product.id}`;
+
+  function commit() {
+    if (disabled || !draft || !editing) { setDraft(null); return; }
+    const quantity = /^\d+$/.test(draft.value) ? Number(draft.value) : NaN;
+    const error = quantityError(line.product, quantity);
+    setDraft(null);
+    if (error) {
+      setMessage(error === "stock" ? `Stok hanya ${line.product.stock}.` : "Jumlah harus bilangan bulat 1–9.999.");
+      return;
+    }
+    setMessage("");
+    if (quantity !== line.quantity) onSetQuantity(line.product, quantity, draft.quantity);
+  }
+
+  return <div className="pos-quantity">
+    <button type="button" disabled={disabled} aria-label={`Kurangi ${line.product.name}`} onClick={() => { setDraft(null); setMessage(""); onChange(line.product, -1); }}><Minus size={14} /></button>
+    <input type="text" inputMode="numeric" aria-label="Jumlah" aria-invalid={!!message} aria-describedby={message ? errorId : undefined} disabled={disabled}
+      value={editing ? draft.value : String(line.quantity)} autoComplete="off" spellCheck={false}
+      onFocus={event => { burst.current = { value: "", time: 0 }; event.currentTarget.select(); }}
+      onChange={event => { setDraft({ value: event.target.value, quantity: line.quantity }); setMessage(""); }}
+      onBlur={() => { commit(); burst.current = { value: "", time: 0 }; }}
+      onKeyDown={event => {
+        if (event.nativeEvent.isComposing) return;
+        if (event.key === "Enter") {
+          event.preventDefault(); event.stopPropagation();
+          // ponytail: keyboard wedges have no device identity. Long fast bursts are
+          // never valid quantities; short codes must use the existing barcode field.
+          if (onScan && burst.current.value.length >= 5 && event.timeStamp - burst.current.time < 100) {
+            const identifier = burst.current.value;
+            setDraft(null); setMessage(""); burst.current = { value: "", time: 0 };
+            onScan(identifier);
+          } else { burst.current = { value: "", time: 0 }; commit(); }
+          event.currentTarget.select();
+        } else if (event.key === "Escape") {
+          event.preventDefault(); setDraft(null); setMessage(""); burst.current = { value: "", time: 0 };
+          event.currentTarget.select();
+        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          burst.current = { value: event.timeStamp - burst.current.time < 35 ? burst.current.value + event.key : event.key, time: event.timeStamp };
+        } else if (event.key !== "Shift") burst.current = { value: "", time: 0 };
+      }} />
+    <button type="button" disabled={disabled || line.quantity >= Math.min(line.product.stock, MAX_CART_QUANTITY)} aria-label={`Tambah jumlah ${line.product.name}`} onClick={() => { setDraft(null); setMessage(""); onChange(line.product, 1); }}><Plus size={14} /></button>
+    {message && <small id={errorId} className="pos-quantity-error" role="status">{message}</small>}
+  </div>;
 }
 
-export function CartItem({ line, onChange, onRemove, disabled = false }: { line: PreviewCartLine; onChange: (product: PosProduct, delta: 1 | -1) => void; onRemove: (id: string) => void; disabled?: boolean }) {
+export function CartItem({ line, onChange, onSetQuantity, onScan, onRemove, disabled = false }: QuantityProps & { onRemove: (id: string) => void }) {
   const { product, quantity } = line;
   return (
     <li className="pos-cart-item">
       <div className="pos-cart-image"><ProductIllustration product={product} /></div>
       <div className="pos-cart-name"><strong>{product.name}</strong><small>{product.code}</small></div>
       <div className="pos-cart-price"><span>{formatRupiah(netPriceSen(product))} / pcs</span>{product.discountSen > 0 && <small className="pos-cart-discount">Diskon produk {formatRupiah(product.discountSen)} / pcs</small>}</div>
-      <QuantityControl line={line} onChange={onChange} disabled={disabled} />
+      <QuantityControl line={line} onChange={onChange} onSetQuantity={onSetQuantity} onScan={onScan} disabled={disabled} />
       <strong className="pos-cart-subtotal">{formatRupiah(netPriceSen(product) * quantity)}</strong>
       <button disabled={disabled} className="pos-icon-button pos-remove" aria-label={`Hapus ${product.name}`} onClick={() => onRemove(product.id)}><Trash2 size={16} /></button>
       {quantity >= product.stock && <p className="pos-stock-warning"><TriangleAlert size={13} />Stok tidak mencukupi untuk menambah jumlah.</p>}

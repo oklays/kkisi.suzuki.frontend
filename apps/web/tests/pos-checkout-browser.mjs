@@ -77,7 +77,7 @@ try{
  assert.equal(await evaluate("document.querySelector('.pos-search input').value"),'NEW-AFTER-CLEAR');
  const firstConsecutive=await holdScan();const secondConsecutive=await holdScan();
  await send('Fetch.continueRequest',{requestId:secondConsecutive});await send('Fetch.continueRequest',{requestId:firstConsecutive});
- await waitFor("document.querySelector('.pos-center-cart [aria-label=Jumlah]')?.textContent==='2'");
+ await waitFor("document.querySelector('.pos-center-cart [aria-label=Jumlah]')?.value==='2'");
  await click('.pos-clear');await click('dialog[aria-labelledby="pos-clear-title"] .pos-confirm-clear');await waitFor("document.querySelectorAll('.pos-cart-item').length===0");
  await send('Fetch.disable');interception=null;
  console.log('PASS: delayed scan after checkout/clear is rejected; consecutive scans remain additive');
@@ -87,7 +87,7 @@ try{
  await send('Fetch.enable',{patterns:[{urlPattern:'*/api/pos/checkout',requestStage:'Response'},{urlPattern:'*/api/pos/products?barcode=*',requestStage:'Response'}]});await click('#pos-product-tab');await waitFor("document.querySelectorAll('.pos-product-card').length>0");await click('.pos-add');
  await set('.pos-search input','ITEM1PACK');await evaluate("document.querySelector('.pos-search').requestSubmit()");for(let i=0;i<100&&!heldBarcode;i++)await sleep(50);assert.ok(heldBarcode,'barcode response is pending before checkout');
  await set('#pos-paid','10000');await waitFor("!document.querySelector('.pos-checkout').disabled");await click('.pos-checkout');await waitFor("document.body.innerText.includes('Hasil pembayaran belum terkonfirmasi')");assert.ok(firstBody.idempotencyKey);
- await send('Fetch.continueRequest',{requestId:heldBarcode});await sleep(250);assert.equal(await evaluate("document.querySelector('.pos-center-cart [aria-label=Jumlah]').textContent"),'1','a scan completing during uncertain checkout cannot mutate the cart');
+ await send('Fetch.continueRequest',{requestId:heldBarcode});await sleep(250);assert.equal(await evaluate("document.querySelector('.pos-center-cart [aria-label=Jumlah]').value"),'1','a scan completing during uncertain checkout cannot mutate the cart');
  await send('Fetch.disable');interception=null;
  await send('Page.reload');await waitFor("document.body.innerText.includes('Pembayaran sebelumnya belum terkonfirmasi')");
  assert.equal(await evaluate("document.querySelector('.pos-clear').disabled"),true);
