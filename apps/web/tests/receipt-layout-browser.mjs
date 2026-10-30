@@ -65,43 +65,88 @@ const returns = {
   'return-long-values': { returnCode: 'RTN-20261029-0008', returnedAt: '2026-10-29 14:05', salesCode: 'INV-20261029-0042', createdBy: 'Kasir Satu', customerName: 'SYNTH ANGGOTA', memberNik: '0100100', refundMethod: 'Kredit', reason: 'Salah pesan', storeName: base.storeName, storeAddress: base.storeAddress, totalSen: 98999999999901,
     lines: [{ label: 'Barang Mahal', quantity: 99, unitPriceSen: 999999999999, refundSen: 98999999999901 }] },
 };
+for (const paymentType of ['Cash', 'Kredit', 'QRIS']) {
+  scenarios[`checkout-${paymentType.toLowerCase()}`] = { ...scenarios['sale-kredit-member'], paymentType, mode: 'checkout' };
+  scenarios[`reprint-${paymentType.toLowerCase()}`] = { ...scenarios['sale-typical-cash'], paymentType, hasReturns: true };
+}
+scenarios['sale-long-identifiers'] = { ...scenarios['sale-long-values'], salesCode: 'TrX/CaseSensitive/610397/31/VeryLongIdentifierWithoutSpaces', cashier: 'Kasir Dengan Nama Sangat Panjang Sekali', memberNik: '00aB0100' };
+const globals = readFileSync(new URL('../src/app/globals.css', import.meta.url), 'utf8');
 
 const browser = await chromium.launch({ headless: true });
 const results = [];
 async function check(name, markup) {
   const page = await browser.newPage({ viewport: { width: 400, height: 900 } });
   await page.emulateMedia({ media: 'print' });
-  await page.setContent(`<!doctype html><html lang="id"><head><meta charset="utf-8"><style>${css}</style></head><body>${markup}</body></html>`);
+  await page.setContent(`<!doctype html><html lang="id"><head><meta charset="utf-8"><style>${globals}\n${css}</style></head><body>${markup}</body></html>`);
   const report = await page.evaluate(() => {
     const paper = document.querySelector('.receipt-paper');
     const box = paper.getBoundingClientRect();
     const problems = [];
     const lineHeight = (el) => parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.4;
-    for (const el of paper.querySelectorAll('.receipt-line > div > span, .receipt-totals dd, .receipt-totals dt, .receipt-line small')) {
+    for (const el of paper.querySelectorAll('h1, header p, dt, dd, .receipt-line strong, .receipt-line > div > span, .receipt-amount, .receipt-line small, footer')) {
       const r = el.getBoundingClientRect();
       if (r.right > box.right + 0.5 || r.left < box.left - 0.5) problems.push(`outside paper: "${el.textContent}"`);
       // Every amount must sit on one line; `small` notes and labels may wrap only if they are text, never an Rp amount.
-      if (/Rp[\d.,]/.test(el.textContent) && r.height > lineHeight(el) * 1.5) problems.push(`amount wrapped: "${el.textContent}" (${Math.round(r.height)}px)`);
+      if (el.matches('.receipt-line > div > span, .receipt-totals dd, .receipt-amount') && /Rp[\d.,]/.test(el.textContent) && r.height > lineHeight(el) * 1.5) problems.push(`amount wrapped: "${el.textContent}" (${Math.round(r.height)}px)`);
     }
-    return { paperMm: +(box.width / 96 * 25.4).toFixed(1), scrollOverflow: paper.scrollWidth - paper.clientWidth, problems, rows: [...paper.querySelectorAll('.receipt-totals > div, .receipt-line > div')].map((d) => d.textContent.replace(/\s+/g, ' ').trim()) };
+    for (const row of paper.querySelectorAll('.receipt-meta > div, .receipt-totals > div, .receipt-line > div')) {
+      const [a, b] = [...row.children].map(el => el.getBoundingClientRect());
+      if (a && b && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5) problems.push(`collision: ${row.textContent}`);
+    }
+    for (const amount of paper.querySelectorAll('.receipt-totals dd, .receipt-line > div > span:last-child')) {
+      if (Math.abs(amount.getBoundingClientRect().right - amount.parentElement.getBoundingClientRect().right) > 0.5) problems.push(`amount not right-aligned: ${amount.textContent}`);
+    }
+    const style = getComputedStyle(paper);
+    const text = [...paper.querySelectorAll('h1, header p, dt, dd, .receipt-line strong, small, footer')];
+    return { paperPx: box.width, paperMm: +(box.width / 96 * 25.4).toFixed(1), paddingLeftMm: parseFloat(style.paddingLeft) * 25.4 / 96, paddingRightMm: parseFloat(style.paddingRight) * 25.4 / 96, scrollOverflow: paper.scrollWidth - paper.clientWidth, problems,
+      font: style.fontFamily, bodyPt: parseFloat(style.fontSize) * 72 / 96, color: style.color, weight: +style.fontWeight,
+      titlePt: parseFloat(getComputedStyle(paper.querySelector('h1')).fontSize) * 72 / 96,
+      totalPt: parseFloat(getComputedStyle(paper.querySelector('.receipt-grand')).fontSize) * 72 / 96,
+      casing: text.map(el => ({ text: el.textContent, transform: getComputedStyle(el).textTransform, identifier: el.matches('.receipt-identifier') })),
+      text: paper.textContent, rows: [...paper.querySelectorAll('.receipt-totals > div, .receipt-line > div')].map((d) => d.textContent.replace(/\s+/g, ' ').trim()) };
   });
-  await page.screenshot({ path: join(output, `${name}.png`), fullPage: true });
-  await page.close();
+  await page.locator('.receipt-paper').screenshot({ path: join(output, `${name}.png`) });
+  const screenshotWidth = readFileSync(join(output, `${name}.png`)).readUInt32BE(16);
+  assert.ok(Math.abs(screenshotWidth - report.paperPx) <= 1, `${name}: preview must include only the paper, not the surrounding viewport (${screenshotWidth}px versus ${report.paperPx}px)`);
+  assert.ok(Math.abs(report.paddingLeftMm - 1.5) < 0.01 && Math.abs(report.paddingRightMm - 1.5) < 0.01, `${name}: paper must have symmetric 1.5 mm padding`);
   assert.ok(Math.abs(report.paperMm - 75) < 0.6, `${name}: paper is ${report.paperMm} mm, expected 75 mm`);
   assert.ok(report.scrollOverflow <= 1, `${name}: paper overflows horizontally by ${report.scrollOverflow}px`);
   assert.deepEqual(report.problems, [], `${name}: ${report.problems.join(' | ')}`);
   assert.ok(report.rows.some((row) => /Rp/.test(row)), `${name}: no amounts rendered`);
   assert.ok(report.rows.every((row) => !/Rp\s|Rp\./.test(row)), `${name}: legacy Rp notation found`);
+  assert.match(report.font, /monospace/i, `${name}: use a local monospace stack`);
+  assert.equal(report.color, 'rgb(0, 0, 0)');
+  assert.ok(report.bodyPt >= 9.99 && report.weight >= 600);
+  assert.ok(report.titlePt > report.totalPt && report.totalPt > report.bodyPt);
+  assert.ok(report.casing.every(row => row.transform === (row.identifier ? 'none' : 'uppercase')), `${name}: uppercase presentation with identifier exceptions`);
+  if (name === 'sale-long-identifiers') {
+    assert.ok(report.casing.some(row => row.text === scenarios[name].salesCode && row.identifier));
+    assert.ok(report.casing.some(row => row.text === '00aB0100' && row.identifier));
+  }
+  if (name.startsWith('checkout-')) for (const label of ['Limit', 'Limit Terpakai', 'Sisa Limit', 'PPN', 'Harga Sudah Termasuk PPN']) assert.ok(report.text.includes(label));
+  if (name.startsWith('reprint-')) {
+    assert.ok(report.text.includes('Sebagian/seluruh barang telah diretur. Lihat nota retur.'));
+    assert.ok(!report.text.includes('Sisa Limit'), 'reprints must not expose current credit aggregates');
+  }
+  // Also exercise the actual CSS at a narrow preview viewport, with all data intact.
+  await page.emulateMedia({ media: 'screen' });
+  await page.setViewportSize({ width: 320, height: 900 });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${name}: narrow preview overflows`);
+  await page.close();
   results.push([name, report]);
 }
 try {
   for (const [name, receipt] of Object.entries(scenarios)) {
+    const original = structuredClone(receipt);
     globalThis.__receipt = receipt;
-    await check(name, renderToStaticMarkup(await ReceiptPage({ params: Promise.resolve({ id: '1' }), searchParams: Promise.resolve({ mode: 'reprint' }) })));
+    await check(name, renderToStaticMarkup(await ReceiptPage({ params: Promise.resolve({ id: '1' }), searchParams: Promise.resolve({ mode: receipt.mode }) })));
+    assert.deepEqual(receipt, original, 'presentation must not mutate receipt data');
   }
   for (const [name, doc] of Object.entries(returns)) {
+    const original = structuredClone(doc);
     globalThis.__return = doc;
     await check(name, renderToStaticMarkup(await ReturnReceiptPage({ params: Promise.resolve({ id: '1' }), searchParams: Promise.resolve({}) })));
+    assert.deepEqual(doc, original, 'presentation must not mutate return data');
   }
   for (const [name, r] of results) console.log(`PASS ${name} — ${r.paperMm} mm, no overflow, no wrapped amount`);
   console.log('Representative rows:', results[1][1].rows.slice(-6).join(' | '));

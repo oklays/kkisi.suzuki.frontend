@@ -28,9 +28,9 @@ export default async function ReturnReceiptPage({ params, searchParams }: { para
     <nav className="receipt-actions"><a href={returnTo}>← Kembali ke retur</a><ReceiptPrintButton autoPrint={sp.autoprint === '1'} label="Cetak nota retur" /></nav>
     <article className="receipt-paper" aria-label={`Nota retur ${document.returnCode}`}>
       <header><h1>{document.storeName}</h1><p>{document.storeAddress}</p><p><strong>NOTA RETUR PENJUALAN</strong></p></header>
-      <dl className="receipt-meta"><div><dt>No. Retur</dt><dd>{document.returnCode}</dd></div><div><dt>Waktu</dt><dd>{document.returnedAt}</dd></div>
-        <div><dt>Struk Asal</dt><dd>{document.salesCode ?? '—'}</dd></div><div><dt>Kasir</dt><dd>{document.createdBy}</dd></div>
-        {document.customerName !== 'UMUM' && <div><dt>Pelanggan</dt><dd>{document.customerName}</dd></div>}{document.memberNik && <div><dt>Nik</dt><dd>{document.memberNik}</dd></div>}
+      <dl className="receipt-meta"><div><dt>No. Retur</dt><dd className="receipt-identifier">{document.returnCode}</dd></div><div><dt>Waktu</dt><dd>{document.returnedAt}</dd></div>
+        <div><dt>Struk Asal</dt><dd className="receipt-identifier">{document.salesCode ?? '—'}</dd></div><div><dt>Kasir</dt><dd>{document.createdBy}</dd></div>
+        {document.customerName !== 'UMUM' && <div><dt>Pelanggan</dt><dd>{document.customerName}</dd></div>}{document.memberNik && <div><dt>Nik</dt><dd className="receipt-identifier">{document.memberNik}</dd></div>}
         <div><dt>Pengembalian</dt><dd>{document.refundMethod === 'Kredit' ? 'Potong tagihan kredit' : 'Tunai'}</dd></div><div><dt>Alasan</dt><dd>{document.reason || '—'}</dd></div></dl>
       <div className="receipt-lines"><div className="receipt-columns"><span>Item</span><span>Qty</span><span>Harga</span><span>Retur</span></div>{document.lines.map((line, index) => <div className="receipt-line" key={index}>
         <strong>{line.label}</strong><div><span>{line.quantity} × {rupiah(line.unitPriceSen)}</span><span>{rupiah(line.refundSen)}</span></div></div>)}</div>

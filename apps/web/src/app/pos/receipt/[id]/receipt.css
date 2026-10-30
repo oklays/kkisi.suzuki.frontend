@@ -1,31 +1,35 @@
-.receipt-screen { min-height:100dvh; padding:24px; background:#eef2f7; color:#111; font-family:Arial,sans-serif; }
+.receipt-screen { min-height:100dvh; padding:24px; background:#eef2f7; color:#000; font-family:Arial,sans-serif; }
 .receipt-actions { max-width:320px; margin:0 auto 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:14px; }
 .receipt-actions a { color:#123b88; }
 .receipt-print-button { border:0; border-radius:8px; padding:10px 14px; background:#123b88; color:#fff; cursor:pointer; }
-.receipt-paper { box-sizing:border-box; width:75mm; max-width:100%; margin:auto; padding:3mm 1.5mm; background:#fff; font-family:Arial,sans-serif; font-size:13px; line-height:1.4; overflow-wrap:anywhere; box-shadow:0 8px 30px #0002; }
+/* Physical type sizes: 10 pt = 3.53 mm em; header 13 pt; total 12 pt.
+   Driver scale must remain 100%. CSS emphasis cannot set device heat/density. */
+.receipt-paper { --receipt-body:10pt; --receipt-title:13pt; --receipt-total:12pt; box-sizing:border-box; width:75mm; max-width:100%; margin:auto; padding:3mm 1.5mm; background:#fff; color:#000; font-family:"Courier New","Liberation Mono",monospace; font-size:var(--receipt-body); font-weight:600; line-height:1.35; text-transform:uppercase; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; box-shadow:0 8px 30px #0002; }
 .receipt-paper header,.receipt-paper footer { text-align:center; }
-.receipt-paper header h1 { margin:0 0 3px; font-size:17px; }
+.receipt-paper header h1 { margin:0 0 3px; font-size:var(--receipt-title); line-height:1.2; font-weight:700; }
 .receipt-paper header p { margin:2px 0; }
-.receipt-paper header { padding-bottom:9px; border-bottom:2px dashed #333; }
+.receipt-paper header { padding-bottom:2mm; border-bottom:1px dashed #000; }
 .receipt-paper header p:last-child { margin-top:2px; }
-.receipt-meta,.receipt-totals { margin:10px 0; }
-.receipt-meta div { display:grid; grid-template-columns:105px 1fr; gap:8px; text-align:left; }
-.receipt-meta dd { margin:0; text-align:left; min-width:0; overflow-wrap:anywhere; }
-.receipt-meta dd::before { content:':'; display:inline-block; width:12px; }
+.receipt-meta,.receipt-totals { margin:2mm 0; }
+.receipt-meta div { display:grid; grid-template-columns:14ch minmax(0,1fr); column-gap:1ch; row-gap:0; text-align:left; }
+.receipt-meta dd { position:relative; margin:0; padding-left:2ch; text-align:left; min-width:0; overflow-wrap:anywhere; }
+.receipt-meta dd::before { content:':'; position:absolute; left:0; }
+/* Keep identifiers case-exact; their case semantics are not known here. */
+.receipt-paper .receipt-identifier { text-transform:none; }
 .receipt-totals div,.receipt-line div { display:flex; justify-content:space-between; gap:0 10px; flex-wrap:wrap; }
 /* An amount is never broken across lines (that would make the number ambiguous): when a row is too wide the amount drops to its own right-aligned line. Precision is never reduced to fit. */
-.receipt-line div > span,.receipt-totals dd { white-space:nowrap; }
+.receipt-line div > span,.receipt-totals dd,.receipt-amount { white-space:nowrap; }
 .receipt-line div > span:last-child,.receipt-totals dd { margin-left:auto; text-align:right; }
-.receipt-totals dt { flex-shrink:0; }
-.receipt-totals dd { margin:0; text-align:right; }
-.receipt-lines { border-block:1px dashed #333; padding:5px 0; }
-.receipt-columns { display:grid; grid-template-columns:1fr auto auto auto; gap:8px; font-weight:700; border-bottom:1px dashed #333; padding-bottom:4px; }
+.receipt-totals dt { min-width:0; max-width:100%; }
+.receipt-totals dd { margin:0 0 0 auto; text-align:right; }
+.receipt-lines { border-block:1px dashed #000; padding:5px 0; }
+.receipt-columns { display:grid; grid-template-columns:1fr auto auto auto; gap:8px; font-weight:700; border-bottom:1px dashed #000; padding-bottom:4px; }
 .receipt-line { padding:4px 0; }
-.receipt-line strong { font-weight:600; }
-.receipt-line small { display:block; font-size:12px; }
+.receipt-line strong { display:block; font-weight:700; }
+.receipt-line small { display:block; font-size:inherit; font-weight:400; }
 .receipt-totals div { margin:3px 0; }
-.receipt-totals .receipt-grand { padding:5px 0; border-top:1px dashed #333; font-size:15px; font-weight:700; }
-.receipt-paper footer { margin-top:14px; border-top:1px dashed #333; padding-top:9px; font-size:inherit; color:inherit; }
+.receipt-totals .receipt-grand { padding:5px 0; border-block:2px solid #000; font-size:var(--receipt-total); font-weight:700; }
+.receipt-paper footer { margin-top:2mm; border-top:1px dashed #000; padding-top:2mm; font-size:inherit; color:inherit; }
 .receipt-message { padding:48px 16px; text-align:center; font-family:Arial,sans-serif; }
 /* Fallback until ReceiptPrintButton sets the measured 75 mm roll length. */
 @page { size:auto; margin:0; }
@@ -34,4 +38,5 @@
   body:has(> .receipt-screen) > :not(.receipt-screen),.receipt-actions { display:none!important; }
   .receipt-screen { height:auto; min-height:0; margin:0; padding:0; background:#fff; }
   .receipt-paper { width:75mm; max-width:none; margin:0; box-shadow:none; }
+  .receipt-paper header,.receipt-meta > div,.receipt-line,.receipt-totals > div,.receipt-paper footer { break-inside:avoid; }
 }

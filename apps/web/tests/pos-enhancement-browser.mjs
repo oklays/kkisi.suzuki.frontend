@@ -118,15 +118,15 @@ try {
     // The synthetic React mount wrapper is display:contents; move the receipt to match the real root DOM for print isolation.
     await evaluate("document.body.appendChild(document.querySelector('.receipt-screen'));void 0");
     const metrics = await evaluate("(()=>{const p=document.querySelector('.receipt-paper');const s=getComputedStyle(p);return {width:p.getBoundingClientRect().width,font:s.fontSize,padding:s.paddingLeft,rule:document.getElementById('receipt-page-size').textContent};})()");
-    assert.equal(metrics.font, '13px'); assert.ok(Math.abs(metrics.width - 75 * 96 / 25.4) < 1); assert.ok(parseFloat(metrics.padding) < 6);
-    assert.equal(await evaluate("getComputedStyle(document.querySelector('.receipt-paper footer')).fontSize"), '13px');
+    assert.equal(metrics.font, '13.3333px'); assert.ok(Math.abs(metrics.width - 75 * 96 / 25.4) < 1); assert.ok(parseFloat(metrics.padding) < 6);
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('.receipt-paper footer')).fontSize"), '13.3333px');
     if (lines === 1) assert.equal(metrics.rule, iframePage, 'narrow checkout iframe and full preview use the same print geometry');
     const pdf = await send('Page.printToPDF', { preferCSSPageSize: true, displayHeaderFooter: false, printBackground: false });
     const path = join(output, `receipt-${lines}.pdf`); await writeFile(path, Buffer.from(pdf.data, 'base64'));
     const info = execFileSync('pdfinfo', [path], { encoding: 'utf8' });
     assert.match(info, /Pages:\s+1\b/, `${lines} lines must not create trailing pages`);
     const dimensions = info.match(/Page size:\s+([\d.]+) x ([\d.]+) pts/); assert.ok(Math.abs(Number(dimensions[1]) - 75 * 72 / 25.4) < 1);
-    const text = execFileSync('pdftotext', [path, '-'], { encoding: 'utf8' }); assert.match(text, /Harga Sudah Termasuk PPN/); assert.equal((text.match(/Synthetic product/g) ?? []).length, lines);
+    const text = execFileSync('pdftotext', [path, '-'], { encoding: 'utf8' }); assert.match(text, /HARGA SUDAH TERMASUK PPN/); assert.equal((text.match(/SYNTHETIC PRODUCT/g) ?? []).length, lines);
     const screenshot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); await writeFile(join(output, `receipt-${lines}.png`), Buffer.from(screenshot.data, 'base64'));
     console.log(`PASS: ${lines}-line receipt PDF is one 75 mm page with footer and all items (${dimensions[2]} pts tall)`);
     if (lines === 1) {
