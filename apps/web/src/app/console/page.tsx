@@ -32,6 +32,7 @@ import {
   type DailyOpsPoint,
   type OpsSummaryData,
 } from '@/components/console/DashboardClientWidgets';
+import { CONSOLE_ICONS } from '@/components/console/icons';
 import { CONSOLE_MODULES, CONSOLE_NAVIGATION, deployedNavigation } from '@/features/console/navigation';
 import { publicSavingsConsoleEnabled } from '@/features/public-savings/flags';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
@@ -590,10 +591,12 @@ export default async function ConsoleDashboard({
     ...linksFor('settings'),
   ];
 
-  // Additional authorized entries not covered by the 10 primary quick cards (e.g., Retur Penjualan, Tautan Akun KOSIPA)
-  const coveredHrefs = new Set(
-    REFERENCE_QUICK_CARDS.flatMap((c) => [c.href, ...(c.fallbackHref ? [c.fallbackHref] : [])]),
-  );
+  // Additional authorized entries not covered by the 10 primary quick cards (e.g., Pengajuan sukarela, Tautan Akun KOSIPA).
+  // Retur Penjualan stays in the sidebar and the TOKO module card, but is not a quick card.
+  const coveredHrefs = new Set([
+    '/sales/returns',
+    ...REFERENCE_QUICK_CARDS.flatMap((c) => [c.href, ...(c.fallbackHref ? [c.fallbackHref] : [])]),
+  ]);
   const extraQuickEntries = quick.filter((entry) => !coveredHrefs.has(entry.href));
 
   const jakartaDate = new Date(now.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -859,7 +862,9 @@ export default async function ConsoleDashboard({
               );
             })}
 
-            {extraQuickEntries.map((entry) => (
+            {extraQuickEntries.map((entry) => {
+              const EntryIcon = CONSOLE_ICONS[entry.icon];
+              return (
               <li key={entry.id}>
                 <Link
                   href={entry.href}
@@ -867,7 +872,7 @@ export default async function ConsoleDashboard({
                   className="console-quick-card"
                 >
                   <span className="console-quick-icon console-tone-blue" aria-hidden="true">
-                    <QuickCardIcon iconKey="overview" />
+                    <EntryIcon size={20} aria-hidden="true" />
                   </span>
                   <span className="console-quick-text">
                     <strong>{entry.label}</strong>
@@ -876,7 +881,8 @@ export default async function ConsoleDashboard({
                   <ChevronRight size={16} className="console-quick-arrow" aria-hidden="true" />
                 </Link>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </section>
 
