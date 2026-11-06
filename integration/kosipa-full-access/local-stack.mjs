@@ -8,7 +8,7 @@
  * Accounts are the application's least-privilege set, created from the repository templates. Secrets are random, live only in
  * .local/kosipa-fa01/ (mode 600, gitignored) and apps/web/.env.kosipa-fa01 (mode 600, gitignored), and are never printed.
  * Never reads the repository .env files, never connects to port 3307, never runs DDL outside this container.
- *   node integration/kosipa-full-access/local-stack.mjs setup|status|reset|stop
+ *   node integration/kosipa-full-access/local-stack.mjs setup|status|reset|stop|member-tables
  */
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -72,6 +72,41 @@ export async function rootConnection(config, database = DB) {
   return db;
 }
 
+/** SHOW CREATE comparison ignores only qualification, CREATE's existence clause, whitespace and instance counters. */
+export function assertMemberTableShape(expected, actual) {
+  const normalize = (sql) => sql.replace(/CREATE TABLE IF NOT EXISTS/g, 'CREATE TABLE')
+    .replace(/`[^`]+`\.`/g, '`').replace(/ AUTO_INCREMENT=\d+/g, '').replace(/;\s*$/, '').replace(/\s+/g, ' ').trim();
+  if (normalize(expected) !== normalize(actual)) fail('KFA_MEMBER_TABLE_SHAPE_MISMATCH');
+}
+
+/** Additive only: fixed loopback port, installation sentinel before DDL, never invokes setup/reset. */
+export async function applyMemberSideTables() {
+  const config = await loadConfig();
+  const db = await rootConnection(config); // verifies installation before any CREATE
+  try {
+    const source = await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/member-side-tables.sql'), 'utf8');
+    const statements = source.split(';').map((s) => s.trim()).filter(Boolean);
+    const names = ['m_simpanan_aktif', 'oauth_access_tokens'];
+    if (statements.length !== names.length) fail('KFA_INVALID_MEMBER_FIXTURE');
+    // Validate all existing shapes before creating either missing table.
+    const missing = [];
+    for (const [i, name] of names.entries()) {
+      if (!statements[i].startsWith(`CREATE TABLE IF NOT EXISTS \`__KOSIPA_DB__\`.\`${name}\` (`)) fail('KFA_INVALID_MEMBER_FIXTURE');
+      const [found] = await db.query('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?', [DB, name]);
+      if (found.length) {
+        const [[row]] = await db.query(`SHOW CREATE TABLE \`${name}\``);
+        assertMemberTableShape(statements[i], row['Create Table']);
+      } else missing.push(i);
+    }
+    for (const i of missing) await db.query(statements[i].replaceAll('__KOSIPA_DB__', DB));
+    for (const [i, name] of names.entries()) {
+      const [[row]] = await db.query(`SHOW CREATE TABLE \`${name}\``);
+      assertMemberTableShape(statements[i], row['Create Table']);
+    }
+    return { mode: 'LOCAL_SYNTHETIC', port: PORT, tables: names, created: missing.length };
+  } finally { await db.end(); }
+}
+
 const template = async (path, map) => { let sql = await readFile(resolve(root, path), 'utf8'); for (const [k, v] of Object.entries(map)) sql = sql.replaceAll(k, v); return sql; };
 
 async function applySchema(config) {
@@ -84,6 +119,7 @@ async function applySchema(config) {
     business,
     await template('integration/kosipa-full-access/fixtures/legacy-structure.sql', { __KOSIPA_DB__: DB }),
     await template('integration/kosipa-full-access/fixtures/legacy-runtime-structure.sql', { __KOSIPA_DB__: DB }),
+    await template('integration/kosipa-full-access/fixtures/member-side-tables.sql', { __KOSIPA_DB__: DB }),
     `CREATE TABLE \`${DB}\`._kfa_installation (id CHAR(32) PRIMARY KEY, mode VARCHAR(20) NOT NULL); INSERT INTO \`${DB}\`._kfa_installation VALUES (${quote(config.installationId)}, 'LOCAL_SYNTHETIC');`,
     await template('apps/web/db/kosipa/001_command_ledger.sql.tpl', { __LEDGER_DB__: LEDGER_DB }),
     await template('apps/web/db/kosipa/005_document_number_registry.sql.tpl', { __LEDGER_DB__: LEDGER_DB }),
@@ -237,6 +273,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const command = process.argv[2] ?? 'status';
     if (command === 'setup') console.log(JSON.stringify(await setup()));
+    else if (command === 'member-tables') console.log(JSON.stringify(await applyMemberSideTables()));
     else if (command === 'reset') console.log(JSON.stringify(await reset()));
     else if (command === 'stop') console.log(JSON.stringify(await stop()));
     else if (command === 'status') { const config = await loadConfig(); const db = await rootConnection(config); try { const [[n]] = await db.query(`SELECT COUNT(*) AS ledger FROM \`${LEDGER_DB}\`.kosipa_command_ledger`); console.log(JSON.stringify({ mode: config.mode, port: PORT, ledgerRows: Number(n.ledger) })); } finally { await db.end(); } }

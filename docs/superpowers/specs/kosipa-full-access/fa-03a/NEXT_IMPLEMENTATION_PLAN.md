@@ -12,7 +12,7 @@ Date: 30 October 2026. Status: **plan only. No member mutation is implemented or
 | Deactivate instead of delete (REQ-111); FD-07 removal policy remains open | Exit settlement (WI-20; maker ≠ checker) |
 | Identity linking of a member with a smartkkisi account (read and verify only) | Savings and loan balances (never written by member commands) |
 
-## 2. `m_anggota` field classes (from the actual table, 73 columns)
+## 2. `m_anggota` field classes (from the actual table, 72 columns)
 
 | Class | Columns | Native rule |
 |---|---|---|
@@ -38,7 +38,7 @@ Date: 30 October 2026. Status: **plan only. No member mutation is implemented or
 
 | Application | What it holds | Native rule |
 |---|---|---|
-| smartkkisi `users` | `nik`, `name`, `ktp`, `email`, `phone`, `bagian`, `lokasi`, `no_rek`, `bank_rek`, `kd_group`, `wallet_balance`, `wallet_balance_ppob`, `is_active`, `is_delete` | Link by NIK (read-only verification). **Profile sync direction is decision FD-24 (new):** (a) native updates `m_anggota` only, and smartkkisi keeps its own copy (legacy KOSIPA behaviour); (b) native mirrors the overlapping fields into `users`. Status: FD-08 is open; option (a) recommends wallet mirror + token revocation by `user_id`, required by REQ-110 once the contract is resolved |
+| smartkkisi `users` | `nik`, `name`, `ktp`, `email`, `phone`, `bagian`, `lokasi`, `no_rek`, `bank_rek`, `kd_group`, `wallet_balance`, `wallet_balance_ppob`, `is_active`, `is_delete` | Link by NIK (read-only verification). **Profile sync direction is decision FD-24 (new):** (a) native updates `m_anggota` only, and smartkkisi keeps its own copy (a change from legacy KOSIPA behavior); (b) native mirrors the recovered legacy subset into existing `users`: `ktp`, `name`, `phone`, `email`, `street_address`. Both legacy member controllers already mirror that subset; they do not mirror bank/group/location fields. Any wider mirror remains a separate policy choice. Status: FD-08 is open; option (a) recommends wallet mirror + token revocation by `user_id`, required by REQ-110 once the contract is resolved |
 | TOKO | live reads of limits and status by NIK at POS; **writes** on pension (`Pos.php:448`); `Member_model` CRUD | The TOKO member menu must be disabled by the TOKO owner at cutover (`ANO-T03`). The `Pos.php:448` pension path must be disabled or routed to the native status command before native owns status |
 | Console identity link | console user ↔ KOSIPA `ref_users` | Unchanged; members are not console users |
 
