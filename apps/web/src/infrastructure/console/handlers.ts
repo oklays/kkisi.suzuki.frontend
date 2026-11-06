@@ -1,4 +1,4 @@
-import { resolveConsoleAccess, type PermissionSetSource } from '@koperasi/application/console/capabilities';
+import { resolveConsoleAccess, type KosipaWriteSources, type PermissionSetSource } from '@koperasi/application/console/capabilities';
 import type { IdentityPorts } from '@koperasi/application/console/identity-links';
 import { errorResponse, guard, json, type AuthServices } from '../auth/http.ts';
 
@@ -6,7 +6,7 @@ import { errorResponse, guard, json, type AuthServices } from '../auth/http.ts';
  * GET /api/console/capabilities: the server-authoritative capability set of the calling session (spec REQ-011).
  * Read-only; a session or permission-store failure is fail-closed (401/503), never an empty "allowed" list.
  */
-export async function handleConsoleCapabilities(services: AuthServices, request: Request, source: PermissionSetSource, enabled: boolean, kosipa: Pick<IdentityPorts, 'links' | 'kosipa'> | null = null): Promise<Response> {
+export async function handleConsoleCapabilities(services: AuthServices, request: Request, source: PermissionSetSource, enabled: boolean, kosipa: (Pick<IdentityPorts, 'links' | 'kosipa'> & KosipaWriteSources) | null = null): Promise<Response> {
   if (!enabled) return json(404, { error: 'NOT_FOUND' });
   const g = await guard(services, request);
   if (!g.ok) return g.response;

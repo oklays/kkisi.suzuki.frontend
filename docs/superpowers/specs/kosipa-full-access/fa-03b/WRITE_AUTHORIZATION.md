@@ -1,0 +1,15 @@
+# T02: native command authorization with role monitoring
+
+The existing `KOSIPA_WRITE_GRANTS_ENABLED=true` server flag enables `roleWriteGrantsEnabled` in the read, command and grant service factories. No new flag or runtime setting is introduced. Without that explicit opt-in, non-cashier role monitoring still returns exactly the five KOSIPA view capabilities, no command actor, writes, export or grant administration, and performs no identity/grant lookups.
+
+With opt-in, an allowed active non-cashier role retains its monitoring views. The command actor is resolved separately from the active console-to-KOSIPA link, current active legacy user and active group membership. Missing/revoked links and inactive/ungrouped users supply no actor. Legacy menu activation is not consulted in this role path: fencing a legacy controller does not erase role monitoring or a valid actor. No console id, role, name, NIK or shared account supplies a substitute actor. Denied roles exit before identity/grant lookups.
+
+A write capability additionally requires an active per-user grant, its matching view capability and a verified actor. Role mode filters grant rows against the existing `GRANTABLE_KOSIPA_CAPABILITIES` list before applying `writeCapabilitiesFromGrants`; only `kosipa.master.manage` is currently implemented/grantable. Unknown and future vocabulary names confer nothing. Role opt-in grants no export capability. The original linked-mode menu/export/grant policy remains in place.
+
+Grant administrators require all three: a configured grant store, `iam.link.manage`, and the server-side user-id allowlist. Their own legacy command identity is not required. Existing grant requests, second-administrator approval, staleness checks and self-grant prohibitions remain authoritative. The grant lookup is checked even for an unlinked administrator so an unavailable dependency cannot leave grant administration enabled.
+
+An identity or grant lookup exception in opted-in role mode returns the same monitoring views, null actor, no write/grant-administration capabilities, and the optional `kosipaWriteUnavailable: true` marker. Ordinary missing/revoked identity does not set that marker. Native command mutations return code-only `503 KOSIPA_UNAVAILABLE`; grant management reads/mutations return `503 CONSOLE_STORE_UNAVAILABLE`. Master monitoring reads remain available with `canManage: false`. Page sessions forward the marker and actor without reconstruction loss. The existing linked-mode failure contract is unchanged.
+
+Authorization does not activate a writer. Existing production/synthetic writer restrictions, ownership flags, legacy fences, unit-of-work/ledger rules and command guards are unchanged. No deployment, database change or production acceptance is implied by these local in-memory tests.
+
+Validation: focused application authorization/identity/grant tests, actual command/grant HTTP handlers, actual service-factory construction without database queries, existing persona and read-only HTTP regressions, workspace type checking, and changed-file lint. T02 does not implement native membership or financial commands.

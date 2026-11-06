@@ -29,8 +29,8 @@ async function actorFor(services: AuthServices, request: Request, deps: KosipaCo
   const g = await guard(services, request, write ? { csrf: true } : {});
   if (!g.ok) return { response: g.response };
   if (!deps.ports) return { response: json(503, { error: 'KOSIPA_UNAVAILABLE' }) };
-  const { links, kosipa, grants, grantAdmins } = deps.ports;
-  const access = await resolveConsoleAccess({ permissions: deps.permissions, kosipa: { links, kosipa, grants, grantAdmins } }, { userId: g.ctx.userId, roleId: g.ctx.roleId, canSwitchBranch: g.ctx.canSwitchBranch });
+  const access = await resolveConsoleAccess({ permissions: deps.permissions, kosipa: deps.ports }, { userId: g.ctx.userId, roleId: g.ctx.roleId, canSwitchBranch: g.ctx.canSwitchBranch });
+  if (write && access.kosipaWriteUnavailable) return { response: json(503, { error: 'KOSIPA_UNAVAILABLE' }) };
   return { actor: { userId: g.ctx.userId, kosipaUserId: access.kosipaUserId, capabilities: access.capabilities, requestId: randomUUID() }, ports: deps.ports };
 }
 

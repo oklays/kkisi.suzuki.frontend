@@ -45,7 +45,7 @@ export function kosipaServices(env: Record<string, string | undefined> = process
   if (!kosipaReadEnabled(env)) return null;
   const services = consoleServices(env);
   // Write grants (FD-16) are read only where the console store has db/console/004 and the flag says so; otherwise no write capability.
-  const write: KosipaWriteSources = services && kosipaWriteGrantsEnabled(env) ? { grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) } : {};
+  const write: KosipaWriteSources = services && kosipaWriteGrantsEnabled(env) ? { roleWriteGrantsEnabled: true, grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) } : {};
   return services ? { ...services, ...write, members: new PrismaKosipaMemberReader(prisma), payroll: new PrismaKosipaPayrollReader(prisma), loans: new PrismaKosipaLoanReader(prisma), savings: new PrismaKosipaSavingsReader(prisma), reports: new PrismaKosipaReportReader(prisma), opsReports: new PrismaKosipaOpsReportReader(prisma), storeColumnMap: storeColumnMapFromEnv(env), exportPolicy: exportPolicyFromEnv(env), exportThrottle } : null;
 }
 
@@ -61,8 +61,8 @@ export function kosipaCommandServices(env: Record<string, string | undefined> = 
 }
 
 /** Grant administration needs the console store, the grant table (flag) and the KOSIPA directory for identity links. */
-export function kosipaGrantServices(env: Record<string, string | undefined> = process.env): (ConsoleServices & { grants: KosipaGrantStore; grantAdmins: ReadonlySet<number> }) | null {
+export function kosipaGrantServices(env: Record<string, string | undefined> = process.env): (ConsoleServices & KosipaWriteSources & { grants: KosipaGrantStore; grantAdmins: ReadonlySet<number> }) | null {
   const services = consoleServices(env);
   if (!services || !kosipaWriteGrantsEnabled(env)) return null;
-  return { ...services, grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) };
+  return { ...services, roleWriteGrantsEnabled: true, grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) };
 }

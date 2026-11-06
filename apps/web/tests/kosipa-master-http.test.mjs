@@ -183,3 +183,51 @@ test('writer guard: only the isolated FA-01 synthetic database; never staging, D
     assert.throws(() => validateKosipaLedgerDatabase({ ...base, KOSIPA_LEDGER_DATABASE: ledger }), { code: 'WRITE_NOT_CONFIGURED' }, String(ledger));
   }
 });
+
+const rolePermissions = { ...permissions, async kosipaRoleAccess() { return 'allowed'; } };
+
+test('role command HTTP forwards opt-in and real linked actor despite fenced legacy menus; revocation applies next request', async () => {
+  const s = await signedIn(23, 2); const f = fixture({ menus: [] });
+  const d = deps(f, { permissions: rolePermissions });
+  const originalCreate = f.ports.masters.create;
+  f.ports.masters.create = async (definition, envelope, fields) => {
+    assert.equal(envelope.actorConsoleUserId, 23);
+    assert.equal(envelope.actorKosipaUserId, 9102, 'ledger actor comes from the verified legacy link');
+    return originalCreate(definition, envelope, fields);
+  };
+  assert.equal((await create(s, f, valid(), {}, d)).status, 403, 'monitoring default');
+  f.ports.roleWriteGrantsEnabled = true;
+  assert.equal((await create(s, f, valid(), {}, d)).status, 201);
+  f.state.grants = [];
+  assert.equal((await create(s, f, valid(), {}, d)).status, 403);
+  assert.deepEqual(f.writes, ['master.lokasi.create']);
+});
+
+for (const dependency of ['identity', 'grant']) {
+  test(`role command HTTP returns code-only 503 on ${dependency} outage while master monitoring stays available`, async () => {
+    const s = await signedIn(23, 2); const f = fixture({ menus: [] });
+    f.ports.roleWriteGrantsEnabled = true;
+    const fail = async () => { throw new Error('private connection string'); };
+    if (dependency === 'identity') f.ports.links.activeForConsoleUser = fail;
+    else f.ports.grants.activeCapabilities = fail;
+    const d = deps(f, { permissions: rolePermissions });
+    const response = await create(s, f, valid(), {}, d);
+    assert.equal(response.status, 503);
+    assert.deepEqual(await bodyOf(response), { error: 'KOSIPA_UNAVAILABLE' });
+    const list = await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/lokasi', { cookie: s.cookie }), 'lokasi', d);
+    assert.equal(list.status, 200);
+    assert.equal((await bodyOf(list)).canManage, false);
+    assert.deepEqual(f.writes, []);
+  });
+}
+
+test('role command HTTP denies a cashier before looking up existing grants or links', async () => {
+  const s = await signedIn(); const f = fixture();
+  f.ports.roleWriteGrantsEnabled = true;
+  let lookups = 0;
+  f.ports.links.activeForConsoleUser = f.ports.grants.activeCapabilities = async () => { lookups++; throw new Error('must not query'); };
+  const response = await create(s, f, valid(), {}, deps(f, { permissions: { ...permissions, async kosipaRoleAccess() { return 'denied'; } } }));
+  assert.equal(response.status, 403);
+  assert.equal(lookups, 0);
+  assert.deepEqual(f.writes, []);
+});
