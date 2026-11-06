@@ -1,4 +1,5 @@
 import { MASTER_DEFINITIONS } from '@koperasi/domain/kosipa/master';
+import { PRODUCT_MASTER_DEFINITIONS } from '@koperasi/domain/kosipa/product-master';
 import type { WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
 
 /**
@@ -15,6 +16,8 @@ export type KosipaWriteFeatureConfig = { flag: string; legacyControllers: readon
 /** Reference masters (FA-01 Lokasi, FA-02 Bagian, Jenis Dokumen, Rekening Bank, Periode Angsuran): one feature per legacy controller. */
 export const KOSIPA_WRITE_FEATURES: Readonly<Record<string, KosipaWriteFeatureConfig>> = {
   ...Object.fromEntries(Object.values(MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }])),
+  /** Product masters (FA-03B T06; FD-32/FD-34): same master writer and flag, one feature per legacy controller. */
+  ...Object.fromEntries(Object.values(PRODUCT_MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }])),
   /** Members (FA-03B): every legacy controller that writes m_anggota / member deduction config must be fenced (MC01-MC11). */
   member: { flag: 'KOSIPA_MEMBER_WRITES_ENABLED', legacyControllers: ['master/anggota_c', 'anggota/anggota_c', 'mobile/users_c'] },
 };

@@ -144,6 +144,7 @@ async function applySchema(config) {
     await template('integration/kosipa-full-access/fixtures/legacy-structure.sql', { __KOSIPA_DB__: DB }),
     await template('integration/kosipa-full-access/fixtures/legacy-runtime-structure.sql', { __KOSIPA_DB__: DB }),
     await template('integration/kosipa-full-access/fixtures/member-side-tables.sql', { __KOSIPA_DB__: DB }),
+    await template('integration/kosipa-full-access/fixtures/product-master-tables.sql', { __KOSIPA_DB__: DB }),
     `CREATE TABLE \`${DB}\`._kfa_installation (id CHAR(32) PRIMARY KEY, mode VARCHAR(20) NOT NULL); INSERT INTO \`${DB}\`._kfa_installation VALUES (${quote(config.installationId)}, 'LOCAL_SYNTHETIC');`,
     await template('apps/web/db/kosipa/001_command_ledger.sql.tpl', { __LEDGER_DB__: LEDGER_DB }),
     await template('apps/web/db/kosipa/005_document_number_registry.sql.tpl', { __LEDGER_DB__: LEDGER_DB }),
@@ -258,6 +259,14 @@ async function ensureAccounts(config) {
   await chmod(configPath, 0o600);
 }
 
+/** Additive: re-applies ONLY the master writer's grants (FA-03B T06 product masters extend them). Never resets data. */
+export async function applyMasterWriter() {
+  const config = await loadConfig();
+  (await rootConnection(config)).end();
+  await adminSql(config, await template('apps/web/db/kosipa/002_master_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: config.accounts.masterWrite.password }));
+  return { mode: config.mode, port: PORT, account: config.accounts.masterWrite.user };
+}
+
 /** Additive: creates/refreshes ONLY the member writer account (FA-03B T04) on the existing synthetic stack. Never resets data. */
 export async function applyMemberWriter() {
   const config = await loadConfig();
@@ -321,6 +330,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const command = process.argv[2] ?? 'status';
     if (command === 'setup') console.log(JSON.stringify(await setup()));
+    else if (command === 'master-writer') console.log(JSON.stringify(await applyMasterWriter()));
     else if (command === 'product-masters') console.log(JSON.stringify(await applyProductMasters()));
     else if (command === 'member-writer') console.log(JSON.stringify(await applyMemberWriter()));
     else if (command === 'member-tables') console.log(JSON.stringify(await applyMemberSideTables()));
