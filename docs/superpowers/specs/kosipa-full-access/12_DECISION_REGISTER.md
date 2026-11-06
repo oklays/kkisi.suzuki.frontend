@@ -36,6 +36,14 @@ The owner selected **one authorized operator, matching legacy, with mandatory re
 
 The owner explicitly included WI-25/F49 in the replacement scope: implement and test using the provider sandbox, **without automatic paid production transactions**. Member PPOB billing/payroll remains separately required. The earlier HOLD is superseded for implementation/sandbox verification only; production paid execution is not an automated acceptance test or a side effect of provisioning/deployment. Preserve fail-closed environment/credential separation, per-action authorization and replay protection.
 
+### FD-30 — member reactivation (owner, 6 November 2026; resolves FD-25)
+
+The owner selected reactivation of the **member only**. Activation and verification of the mobile account require a separate authorized action. A member reactivation must not restore previous limits, mobile flags, verification or tokens automatically; the member's three credit ceilings remain zero. Require the authorized operator, reason and audit under FD-28. This permits non-AKTIVE → AKTIVE membership transitions without pretending that the separate mobile identity has been reactivated.
+
+### FD-31 — expired employment contracts (owner, 6 November 2026; resolves D3 behavior)
+
+The owner selected **deny credit, with member-status changes performed by an authorized operator with reason and audit**. An expired contract lookup must not silently convert the member to PENSIUN or write limits/mobile flags/tokens. Preserve the existing POS eligibility boundary: for employment KONTRAK, a missing expiry date or a Jakarta business date on/after `tgl_keluar` denies credit. The competing legacy TOKO lookup write must be excluded at ownership cutover; no automatic retirement job is authorized by this decision.
+
 ## 3. Open decisions (new)
 
 | ID | Decision | Options | Recommendation | Blocks | Owner |
@@ -68,8 +76,8 @@ The owner explicitly included WI-25/F49 in the replacement scope: implement and 
 |---|---|---|---|---|
 | FD-22 | Business-table ownership triggers vs verified exclusion of every competing writer | SQL generator and synthetic prototype only; five masters plus five member-profile UPDATE columns. Requires explicit exception to the business-trigger prohibition. Current member prototype does not cover INSERT/DELETE/status/bank fields. See [ownership](fa-03a/SHARED_WRITE_OWNERSHIP.md) | native member activation | Owner + operator + application maintainers |
 | FD-23 | Approve numbering family scope and legacy-format deviations | Local implementation uses REG/DBT period sequence, PIN/KAS/POT row ID; PIN first-of-month and REG/DBT ≥1000 padding differences are documented, not approved. Registry uniqueness protects native claims; FD-02 and exclusion of legacy concurrent writers still apply | first document/member registration command | Owner + finance + operator |
-| FD-24 | Member-profile synchronization with smartkkisi `users` | (a) update `m_anggota` only, preserving legacy behavior; (b) mirror an explicitly approved overlapping field set. No native member profile command exists | membership profile contract | Owner + smartkkisi maintainer |
-| FD-25 | Reactivation transition and limit restoration | Decide whether non-AKTIVE → AKTIVE is allowed and define checks; no automatic restoration policy approved | member status command | Owner + finance |
+| FD-24 | Member-profile synchronization with smartkkisi `users` | Source/runtime correction: both legacy member controllers already mirror exactly ktp/name/phone/email/street_address into an existing user. Updating `m_anggota` only changes legacy behavior. FD-27 supplies the verified-parity implementation baseline; account creation, broader mirroring and external writer exclusion still need their own contracts | member profile implementation and verified smartkkisi activation boundary | Owner + smartkkisi maintainer |
+| FD-25 | Reactivation transition and limit restoration | Resolved by FD-30: member-only reactivation, zero credit ceilings; mobile activation/verification separate | implementation and verification remain | Owner |
 
 FD-01c remains **open**, separate from implemented FD-01b. The hash-chain/off-host-anchor outline in [production gates](fa-03a/PRODUCTION_READINESS_GATES.md#5-fd-01c--owner-bypass-and-the-pending-tamper-evidence-decision) is a candidate, not an approved architecture or completed control. FD-07, FD-08 and FD-17 recommendations above remain open; the FA-03B plan does not silently adopt them.
 
@@ -82,7 +90,7 @@ The owner's FA-01 instruction set FD-01, FD-03 and FD-16 as the **implementation
 | FD-03 | The fence is verified per controller ([FD-03 verification](fa-01/FD-03-legacy-fence-verification.md)). The SQL generator was rehearsed on the synthetic stack. A separate native ownership flag was added. **FA-01.5:** native commands now fail closed (`LEGACY_ACTIVE`) whenever a fenced row is enabled again, with share locks against a racing `adm_menu_c`. | The operator fences per feature and drains in-flight legacy requests first. Confirm the smartkkisi admin panel never writes the five masters ([shared writers](fa-01.5/SHARED_WRITER_OWNERSHIP.md)). |
 | FD-16 | Option (b). A `console_kosipa_grant` table, a grants API and the `/console/settings/akses-kosipa` page. Grant administrators = `iam.link.manage` plus the allow-list `KOSIPA_GRANT_ADMIN_USER_IDS`. Only capabilities with existing commands are grantable (`kosipa.master.manage`). **FA-01.5:** two-administrator confirmation (request, then approval by another administrator within 24 h), enforced by the application and the console store. | Production console store (B6) and the real administrator list. |
 
-Inherited and still open: D1 (ratio), D2 (withdrawal policy), D3 (expiry), D4 (short payroll), D6 (loan rule authority), B1 (views/procedures), B3 (indexes/triggers/sql_mode), B4 (single-writer mechanism → FD-03 proposes it), B5/B8 (connections), B6 (console store production), B10 (real roles/menu).
+Inherited and still open: D1 (ratio), D2 (withdrawal policy), D4 (short payroll), D6 (loan rule authority), B1 (views/procedures), B3 (indexes/triggers/sql_mode), B4 (single-writer mechanism → FD-03 proposes it), B5/B8 (connections), B6 (console store production), B10 (real roles/menu). D3 expiry behavior is resolved by FD-31; implementation and legacy-writer exclusion still need verification. Historical evidence requirements are not closed merely by a business decision.
 
 ## 4. Recommended changes (pending approval)
 All "Proposed" behaviour in [05](05_BUSINESS_RULES_AND_FINANCIAL_LOGIC.md) (R-01…R-23), [06](06_LEGACY_ANOMALIES_AND_PERFORMANCE.md) fixes, [07](07_TARGET_ARCHITECTURE.md), [08](08_AUTHORIZATION_AND_AUDIT_DESIGN.md), [11](11_CUTOVER_AND_ROLLBACK_PLAN.md).
