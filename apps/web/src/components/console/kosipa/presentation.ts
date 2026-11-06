@@ -36,6 +36,19 @@ export function syntheticKosipaEnvironment(env: Record<string, string | undefine
   } catch { return false; }
 }
 
+/** Label for the local COPY of production (kkisi-staging, owner-approved write testing). It is real-data-derived but never production. */
+export function localStagingReplicaEnvironment(env: Record<string, string | undefined>): boolean {
+  try {
+    const url = new URL(env.DATABASE_URL ?? '');
+    return env.KOSIPA_LOCAL_STAGING_WRITES === 'true' && env.APP_ENV !== 'production' && url.protocol === 'mysql:' && url.hostname === '127.0.0.1' && url.port === '3307' && url.pathname === '/kkisi_staging';
+  } catch { return false; }
+}
+
+/** Database name shown in the replica banner, read from the configured DSN (never hardcoded). */
+export function replicaDatabaseName(env: Record<string, string | undefined>): string {
+  try { return decodeURIComponent(new URL(env.DATABASE_URL ?? '').pathname.slice(1)); } catch { return ''; }
+}
+
 /** Label sensitive production-derived UAT reads separately from synthetic write testing. */
 export function readOnlyKosipaUatEnvironment(env: Record<string, string | undefined>): boolean {
   try {

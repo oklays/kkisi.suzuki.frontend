@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { toMinorUnits } from '@koperasi/domain/money';
 import { KosipaError, nikLookupKeys } from '@koperasi/domain/kosipa';
-import type { KosipaMemberReader, LoanHeader, MemberRecordRow, MemberSummary, SavingsAggregate } from '@koperasi/application/kosipa/member-360';
+import type { KosipaMemberReader, LoanHeader, MemberCounts, MemberDirectoryFilter, MemberRecordRow, MemberSummary, SavingsAggregate } from '@koperasi/application/kosipa/member-360';
 import { kreditReturnedSen } from './sales-return-ledger.ts';
 
 // Anggota 360 reads (spec REQ-022..024) through the existing SELECT-only reader. The 30 Sep 2026 production dump shows only
@@ -25,6 +25,26 @@ export class PrismaKosipaMemberReader implements KosipaMemberReader {
     const where = q.nikKeys ? Prisma.sql`nik_kar IN (${Prisma.join(q.nikKeys)})` : Prisma.sql`nama_kar LIKE ${`%${q.nameLike}%`}`;
     const rows = await this.db.$queryRaw<SummaryRow[]>`SET STATEMENT max_statement_time=5 FOR SELECT ${SUMMARY} FROM m_anggota WHERE ${where} ORDER BY nama_kar, id LIMIT ${q.limit}`;
     return rows.map(summary);
+  }
+
+  async listMembers(q: MemberDirectoryFilter): Promise<{ items: MemberSummary[]; total: number }> {
+    const conditions: Prisma.Sql[] = [];
+    if (q.nikKeys) conditions.push(Prisma.sql`nik_kar IN (${Prisma.join(q.nikKeys)})`);
+    if (q.nameLike) conditions.push(Prisma.sql`nama_kar LIKE ${`%${q.nameLike}%`}`);
+    if (q.group) conditions.push(Prisma.sql`kd_group = ${q.group}`);
+    if (q.status) conditions.push(Prisma.sql`status_anggota = ${q.status}`);
+    if (q.employment === 'KOSONG') conditions.push(Prisma.sql`(status_karyawan IS NULL OR TRIM(status_karyawan) = '')`);
+    else if (q.employment) conditions.push(Prisma.sql`status_karyawan = ${q.employment}`);
+    const where = conditions.length ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}` : Prisma.empty;
+    const [count] = await this.db.$queryRaw<{ n: Num }[]>`SET STATEMENT max_statement_time=5 FOR SELECT COUNT(*) AS n FROM m_anggota ${where}`;
+    const rows = await this.db.$queryRaw<SummaryRow[]>`SET STATEMENT max_statement_time=5 FOR SELECT ${SUMMARY} FROM m_anggota ${where} ORDER BY nama_kar, id LIMIT ${q.limit} OFFSET ${q.offset}`;
+    return { items: rows.map(summary), total: Number(count?.n ?? 0) };
+  }
+
+  async counts(): Promise<MemberCounts> {
+    const [r] = await this.db.$queryRaw<{ total: Num; active: Num | null; non_member: Num | null }[]>`SET STATEMENT max_statement_time=5 FOR
+      SELECT COUNT(*) AS total, SUM(status_anggota = 'AKTIVE') AS active, SUM(kd_group = 'NON ANGGOTA') AS non_member FROM m_anggota`;
+    return { total: Number(r?.total ?? 0), active: Number(r?.active ?? 0), nonMember: Number(r?.non_member ?? 0) };
   }
 
   async member(id: number): Promise<MemberRecordRow | null> {

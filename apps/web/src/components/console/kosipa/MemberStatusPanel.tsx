@@ -38,23 +38,25 @@ export function MemberStatusPanel({ memberId, currentStatus, version, csrfToken,
   }
 
   return (
-    <section className="console-card" aria-labelledby="member-status-title">
-      <h2 id="member-status-title">Ubah status anggota</h2>
-      <p>Status saat ini: <strong>{currentStatus || '—'}</strong></p>
-      <form className="console-form kosipa-member-status" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-        <label htmlFor="member-status-target"><span>Status baru *</span>
+    <section className="mstatus" aria-labelledby="member-status-title">
+      <header>
+        <h2 id="member-status-title">Ubah status anggota</h2>
+        <p>Status saat ini: <b>{currentStatus || 'Tidak tercatat'}</b></p>
+      </header>
+      <form className="mstatus-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+        <label htmlFor="member-status-target"><span>Status baru <b aria-hidden="true">*</b></span>
           <select id="member-status-target" value={target} disabled={!hydrated || !canSubmit} onChange={(e) => setTarget(e.target.value)}>{targets.map((s) => <option key={s} value={s}>{s}</option>)}</select>
         </label>
-        <label htmlFor="member-status-reason"><span>Alasan *</span>
+        <label htmlFor="member-status-reason" className="mstatus-reason"><span>Alasan <b aria-hidden="true">*</b></span>
           <input id="member-status-reason" value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} maxLength={200} required disabled={!hydrated || !canSubmit} autoComplete="off" placeholder="Wajib; tercatat di buku besar perintah" />
         </label>
-        <p className="console-notice" role="note" data-kind={deactivating ? 'warning' : undefined}>
+        <button type="submit" disabled={busy || !hydrated || !canSubmit || !target}>Ubah status</button>
+        <p className="mstatus-effect" role="note" data-kind={deactivating ? 'warning' : undefined}>
           {deactivating
             ? <>Saat disimpan: <strong>limit toko, limit PPOB, dan gaji minus menjadi 0</strong>; bila anggota punya akun mobile, akun dinonaktifkan, saldo dompetnya 0, dan semua token loginnya dicabut. Konfigurasi potongan payroll tidak diubah.</>
             : <>Hanya status anggota yang diubah. <strong>Batas kredit tetap 0</strong> dan akun mobile tidak diaktifkan kembali otomatis; keduanya memerlukan tindakan terpisah.</>}
         </p>
         {message && <p className={message.kind === 'error' ? 'console-message console-message-error' : 'console-message'} role={message.kind === 'error' ? 'alert' : 'status'}>{message.text}</p>}
-        <button type="submit" disabled={busy || !hydrated || !canSubmit || !target}>Ubah status</button>
       </form>
     </section>
   );

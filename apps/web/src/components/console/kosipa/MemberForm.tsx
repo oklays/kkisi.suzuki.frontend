@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import { Copy, Info } from 'lucide-react';
 import { useHydrated } from '../../use-hydrated';
 import { useFlash } from './member-flash';
 import { BANK_FIELDS, MEMBER_FIELD_GROUPS, MEMBER_MESSAGES, MEMBER_STATUS_OPTIONS, RETRY_SAME_KEY, type MemberFieldConfig } from './member-form-config';
@@ -81,6 +82,20 @@ export function MemberForm({ mode, memberId, initial = {}, version, bagian, loka
   }
 
   const set = (key: string, value: string) => setValues((v) => ({ ...v, [key]: value }));
+  const allFields = MEMBER_FIELD_GROUPS.flatMap((g) => g.fields).filter(visible);
+  const requiredFields = allFields.filter((f) => f.required);
+  const missing = requiredFields.filter((f) => (values[f.key] ?? '').trim() === '');
+  const changedFields = allFields.filter(changed);
+  const locked = !hydrated || !canSubmit;
+  /** One-time copy of the KTP address into the residence fields; both stay editable afterwards. */
+  function copyKtpAddress() {
+    setValues((v) => ({ ...v, alamat_tinggal: v.alamat ?? '', kelurahan_tinggal: v.kelurahan ?? '', kecamatan_tinggal: v.kecamatan ?? '', kabupaten_tinggal: v.kabupaten ?? '', kode_pos_tinggal: v.kode_pos ?? '' }));
+  }
+  function jumpTo(key: string) {
+    const el = document.getElementById(`member-${key}`);
+    el?.scrollIntoView({ block: 'center' });
+    el?.focus();
+  }
   function input(f: MemberFieldConfig) {
     const id = `member-${f.key}`;
     const common = { id, name: f.key, value: values[f.key] ?? '', disabled: !hydrated || !canSubmit, 'aria-describedby': f.hint ? `${id}-hint` : undefined };
@@ -89,68 +104,87 @@ export function MemberForm({ mode, memberId, initial = {}, version, bagian, loka
       const current = values[f.key] ?? '';
       const extra = current && !opts.includes(current) ? [current] : [];
       return <select {...common} required={f.required} onChange={(e) => set(f.key, e.target.value)}>
-        {!current && <option value="">— pilih —</option>}
+        {!current && <option value="">Pilih...</option>}
         {[...extra, ...opts].map((o) => <option key={o} value={o}>{extra.includes(o) ? `${o} (tidak aktif)` : o}</option>)}
       </select>;
     }
-    if (f.kind === 'textarea') return <textarea {...common} maxLength={f.max} rows={3} onChange={(e) => set(f.key, e.target.value)} />;
+    if (f.kind === 'textarea') return <textarea {...common} maxLength={f.max} rows={2} onChange={(e) => set(f.key, e.target.value)} />;
     return <input {...common} type={f.kind === 'date' ? 'date' : 'text'} inputMode={f.kind === 'amount' ? 'decimal' : undefined} required={f.required} maxLength={f.kind === 'date' ? undefined : f.max} autoComplete="off" onChange={(e) => set(f.key, e.target.value)} />;
   }
 
   return (
-    <form className="console-form kosipa-member-form" aria-label={editing ? 'Ubah profil anggota' : 'Daftarkan anggota'} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-      {MEMBER_FIELD_GROUPS.map((g) => {
-        const fields = g.fields.filter(visible);
-        if (!fields.length) return null;
-        return (
-          <fieldset key={g.id} className="kosipa-member-group">
-            <legend>{g.title}</legend>
-            <div className="kosipa-member-grid">
-              {fields.map((f) => (
-                <label key={f.key} className={f.kind === 'textarea' ? 'kosipa-member-wide' : undefined} htmlFor={`member-${f.key}`}>
-                  <span>{f.label}{f.required ? ' *' : ''}{editing && changed(f) ? ' · diubah' : ''}</span>
-                  {input(f)}
-                  {f.hint && <small id={`member-${f.key}-hint`}>{f.hint}</small>}
-                </label>
-              ))}
+    <form className="mform" aria-label={editing ? 'Ubah profil anggota' : 'Daftarkan anggota'} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      <div className="mform-main">
+        {MEMBER_FIELD_GROUPS.map((g) => {
+          const fields = g.fields.filter(visible);
+          if (!fields.length) return null;
+          return (
+            <section key={g.id} className="mform-group" role="group" aria-labelledby={`mform-${g.id}`}>
+              <header>
+                <h2 id={`mform-${g.id}`}>{g.title}</h2>
+                {g.id === 'tinggal' && <button type="button" className="mform-link" disabled={locked} onClick={copyKtpAddress}><Copy size={14} aria-hidden="true" />Salin dari alamat KTP</button>}
+              </header>
+              <div className="mform-grid">
+                {fields.map((f) => (
+                  <label key={f.key} className={f.kind === 'textarea' ? 'mform-wide' : undefined} htmlFor={`member-${f.key}`} data-changed={editing && changed(f) ? 'true' : undefined}>
+                    <span>{f.label}{f.required && <b aria-hidden="true"> *</b>}{editing && changed(f) && <em> diubah</em>}</span>
+                    {input(f)}
+                    {f.hint && <small id={`member-${f.key}-hint`}>{f.hint}</small>}
+                  </label>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <aside className="mform-rail" aria-label={editing ? 'Ringkasan perubahan' : 'Ringkasan pendaftaran'}>
+        {editing ? (
+          <>
+            <h2>Perubahan</h2>
+            {changedFields.length === 0
+              ? <p className="mform-muted">Belum ada perubahan.</p>
+              : <ul className="mform-changes">{changedFields.map((f) => <li key={f.key}><button type="button" className="mform-link" onClick={() => jumpTo(f.key)}>{f.label}</button></li>)}</ul>}
+            {bankChanged && (
+              <label htmlFor="member-reason" className="mform-reason"><span>Alasan perubahan rekening bank <b aria-hidden="true">*</b></span>
+                <input id="member-reason" value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} maxLength={200} required disabled={locked} placeholder="Mis. koreksi sesuai buku tabungan" autoComplete="off" />
+                <small>Wajib; tersimpan di buku besar perintah, tidak di audit konsol.</small>
+              </label>
+            )}
+          </>
+        ) : (
+          <>
+            <h2>Ringkasan</h2>
+            <div className="mform-progress">
+              <div className="mform-progress-bar" role="progressbar" aria-label="Isian wajib terisi" aria-valuemin={0} aria-valuemax={requiredFields.length} aria-valuenow={requiredFields.length - missing.length}><span style={{ width: `${requiredFields.length ? ((requiredFields.length - missing.length) / requiredFields.length) * 100 : 0}%` }} /></div>
+              <p><b>{requiredFields.length - missing.length}</b> dari {requiredFields.length} isian wajib terisi</p>
+              {missing.length > 0 && <ul className="mform-missing" aria-label="Isian wajib yang belum diisi">{missing.map((f) => <li key={f.key}><button type="button" className="mform-link" onClick={() => jumpTo(f.key)}>{f.label}</button></li>)}</ul>}
             </div>
-          </fieldset>
-        );
-      })}
-      {!editing && (
-        <>
-          <fieldset className="kosipa-member-group">
-            <legend>Status awal</legend>
-            <div className="kosipa-member-grid">
-              <label htmlFor="member-status-awal"><span>Status anggota *</span>
-                <select id="member-status-awal" value={status} disabled={!hydrated || !canSubmit} onChange={(e) => setStatus(e.target.value)}>{MEMBER_STATUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+            <div className="mform-rail-block">
+              <h3>Status awal</h3>
+              <label htmlFor="member-status-awal"><span>Status anggota <b aria-hidden="true">*</b></span>
+                <select id="member-status-awal" value={status} disabled={locked} onChange={(e) => setStatus(e.target.value)}>{MEMBER_STATUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}</select>
               </label>
             </div>
-          </fieldset>
-          <fieldset className="kosipa-member-group">
-            <legend>Potongan payroll awal (per bulan, Rp)</legend>
-            <div className="kosipa-member-grid">
-              {(['pokok', 'wajib', 'sukarela'] as const).map((k) => (
-                <label key={k} htmlFor={`member-ded-${k}`}><span>Simpanan {k}</span>
-                  <input id={`member-ded-${k}`} inputMode="decimal" value={deductions[k]} disabled={!hydrated || !canSubmit} required onChange={(e) => setDeductions((d) => ({ ...d, [k]: e.target.value }))} autoComplete="off" />
-                </label>
-              ))}
+            <div className="mform-rail-block">
+              <h3>Potongan payroll awal <small>per bulan, Rp</small></h3>
+              <div className="mform-deductions">
+                {(['pokok', 'wajib', 'sukarela'] as const).map((k) => (
+                  <label key={k} htmlFor={`member-ded-${k}`}><span>Simpanan {k}</span>
+                    <input id={`member-ded-${k}`} inputMode="decimal" value={deductions[k]} disabled={locked} required onChange={(e) => setDeductions((d) => ({ ...d, [k]: e.target.value }))} autoComplete="off" />
+                  </label>
+                ))}
+              </div>
+              <small>Isi 0 bila tidak ada. Potongan hanya dapat dibuat untuk NIK sampai 10 karakter.</small>
             </div>
-            <small>Isi 0 bila tidak ada. Potongan hanya dapat dibuat untuk NIK sampai 10 karakter. Batas kredit awal selalu nol.</small>
-          </fieldset>
-        </>
-      )}
-      {editing && bankChanged && (
-        <label htmlFor="member-reason"><span>Alasan perubahan rekening bank *</span>
-          <input id="member-reason" value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} maxLength={200} required disabled={!hydrated || !canSubmit} placeholder="Mis. koreksi sesuai buku tabungan" autoComplete="off" />
-          <small>Wajib; tersimpan di buku besar perintah, tidak di audit konsol.</small>
-        </label>
-      )}
-      {message && <p className={message.kind === 'error' ? 'console-message console-message-error' : 'console-message'} role={message.kind === 'error' ? 'alert' : 'status'}>{message.text}</p>}
-      <div className="kosipa-member-actions">
-        <button type="submit" disabled={busy || !hydrated || !canSubmit || (editing && changedKeys.length === 0)}>{editing ? `Simpan perubahan${changedKeys.length ? ` (${changedKeys.length})` : ''}` : 'Daftarkan anggota'}</button>
-        {editing && changedKeys.length === 0 && <span className="console-notice">Belum ada perubahan.</span>}
-      </div>
+            <p className="mform-auto"><Info size={14} aria-hidden="true" />Nomor registrasi dan nomor anggota dibuat otomatis. Batas kredit awal nol dan akun mobile tidak dibuat.</p>
+          </>
+        )}
+        {message && <p className={message.kind === 'error' ? 'console-message console-message-error' : 'console-message'} role={message.kind === 'error' ? 'alert' : 'status'}>{message.text}</p>}
+        <div className="mform-submit">
+          <button type="submit" disabled={busy || locked || (editing && changedKeys.length === 0)}>{editing ? `Simpan perubahan${changedKeys.length ? ` (${changedKeys.length})` : ''}` : 'Daftarkan anggota'}</button>
+        </div>
+      </aside>
     </form>
   );
 }

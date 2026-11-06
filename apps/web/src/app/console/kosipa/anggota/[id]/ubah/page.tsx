@@ -1,10 +1,9 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { KosipaError } from '@koperasi/domain/kosipa';
 import { MASTER_DEFINITIONS } from '@koperasi/domain/kosipa/master';
 import { getMemberForEdit, type MemberEditView } from '@koperasi/application/kosipa/commands/member';
-import { KosipaPageHeader } from '@/components/console/kosipa/KosipaUI';
+import { ContextNotice } from '@/components/console/kosipa/KosipaUI';
+import { MEMBERS_PATH, MemberFormHeader, MemberIdentityBar } from '@/components/console/kosipa/MemberProfileUI';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { MemberForm } from '@/components/console/kosipa/MemberForm';
 import { MemberStatusPanel } from '@/components/console/kosipa/MemberStatusPanel';
@@ -37,18 +36,16 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
     return <KosipaNotice state="unavailable" />;
   }
   const csrfToken = auth.services.keys.csrfToken(auth.ctx.sidHash);
+  const name = view.fields.nama_kar || 'Anggota';
   return (
-    <div className="console-page">
-      <Link prefetch={false} className="console-back" href={`/console/kosipa/anggota/${view.id}`}><ArrowLeft size={16} aria-hidden="true" />Kembali ke profil anggota</Link>
-      <KosipaPageHeader editable title={<> Ubah anggota </>}>
-        <p>{view.fields.nama_kar || 'Anggota'} · NIK {view.fields.nik_kar || '—'} · No. anggota {view.fields.no_anggota || '—'} · {view.fields.doc_no || '—'}</p>
-      </KosipaPageHeader>
-      {!view.writable && <p className="console-notice" role="note">Perubahan anggota native belum aktif di lingkungan ini (belum dimiliki aplikasi baru, atau menu anggota KOSIPA lama masih aktif). Halaman ini hanya menampilkan data.</p>}
+    <div className="console-page mform-page">
+      <MemberFormHeader tail={[{ label: name, href: `${MEMBERS_PATH}/${view.id}`, icon: 'member' }, { label: 'Ubah', icon: 'edit' }]} title="Ubah anggota" />
+      <MemberIdentityBar name={name} chips={[{ label: 'NIK', value: view.fields.nik_kar || null }, { label: 'No. anggota', value: view.fields.no_anggota || null }, { label: 'No. dokumen', value: view.fields.doc_no || null }]} />
+      {!view.writable && <ContextNotice title="Perubahan belum aktif" tone="warning">Perubahan anggota native belum aktif di lingkungan ini (belum dimiliki aplikasi baru, atau menu anggota KOSIPA lama masih aktif). Halaman ini hanya menampilkan data.</ContextNotice>}
       {view.canChangeStatus && <MemberStatusPanel key={`s-${view.version}`} memberId={view.id} currentStatus={view.fields.status_anggota ?? ''} version={view.version} csrfToken={csrfToken} canSubmit={view.writable} />}
       {view.canUpdate
-        ? <section className="console-card" aria-labelledby="member-profile-title"><h2 id="member-profile-title">Profil, kepegawaian, gaji dan rekening</h2>
-            <MemberForm key={view.version} mode="edit" memberId={view.id} initial={view.fields} version={view.version} bagian={bagian} lokasi={lokasi} csrfToken={csrfToken} canSubmit={view.writable} /></section>
-        : <p className="console-notice" role="note">Anda berwenang mengubah status, tetapi tidak mengubah profil anggota.</p>}
+        ? <MemberForm key={view.version} mode="edit" memberId={view.id} initial={view.fields} version={view.version} bagian={bagian} lokasi={lokasi} csrfToken={csrfToken} canSubmit={view.writable} />
+        : <ContextNotice title="Hanya status yang dapat diubah">Anda berwenang mengubah status, tetapi tidak mengubah profil anggota.</ContextNotice>}
     </div>
   );
 }

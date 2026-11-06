@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageBreadcrumbs } from '@/components/console/PageBreadcrumbs';
 import { notFound } from 'next/navigation';
 import { MASTER_DEFINITIONS, MASTER_TYPES } from '@koperasi/domain/kosipa/master';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
@@ -26,7 +27,7 @@ export default async function KosipaMasterIndexPage() {
   return (
     <div className="console-page">
       <header className="kosipa-page-head">
-        <p className="kosipa-eyebrow">KOSIPA <span>/</span> Master data</p>
+        <PageBreadcrumbs />
         <div className="kosipa-title-row"><h1>Master Data</h1></div>
         <div className="kosipa-page-purpose"><p>Data referensi KOSIPA. Perubahan hanya oleh akun dengan hak kelola master dan tercatat di buku besar perintah.</p></div>
       </header>

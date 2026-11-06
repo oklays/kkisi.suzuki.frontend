@@ -31,7 +31,7 @@ export default async function PayrollMemberPage({ params }: { params: Promise<{ 
   return (
     <div className="console-page">
       <Link prefetch={false} className="console-back" href={back}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
-      <KosipaPageHeader title={<> Potongan anggota </>}><p>{member ? `NIK ${member.nik} · ${STATUS_LABEL[member.header.status]}` : 'Data payroll KOSIPA, baca saja.'}</p></KosipaPageHeader>
+      <KosipaPageHeader title={<> Potongan anggota </>} tail={[{ label: docNo, href: `/console/kosipa/payroll/${encodeURIComponent(docNo)}`, icon: 'batch' }, { label: 'Potongan anggota', icon: 'member' }]}><p>{member ? `NIK ${member.nik} · ${STATUS_LABEL[member.header.status]}` : 'Data payroll KOSIPA, baca saja.'}</p></KosipaPageHeader>
       {failed && <FeedbackState kind="error" title={<> Data tidak dapat dibaca </>}><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {member && (<>
         {member.duplicateRows && <p className="console-notice" role="status">Anggota ini memiliki lebih dari satu baris di batch yang sama. Setiap baris ditampilkan terpisah, tidak digabung.</p>}

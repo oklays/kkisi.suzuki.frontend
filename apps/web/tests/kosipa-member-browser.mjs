@@ -146,7 +146,7 @@ try {
   await p.locator('#member-status-reason').waitFor();
   await p.locator('#member-status-target').selectOption('RESIGN');
   await shot(p, '06-status-deactivate');
-  assert.match(await p.locator('.kosipa-member-status .console-notice').innerText(), /limit toko, limit PPOB, dan gaji minus menjadi 0/);
+  assert.match(await p.locator('.mstatus-effect').innerText(), /limit toko, limit PPOB, dan gaji minus menjadi 0/);
   await p.locator('#member-status-reason').fill('Karyawan mengundurkan diri');
   await p.getByRole('button', { name: 'Ubah status', exact: true }).click();
   await p.getByRole('status').filter({ hasText: 'Status diubah menjadi RESIGN.' }).waitFor();
@@ -158,7 +158,7 @@ try {
   await p.getByText('Status saat ini:').waitFor();
   assert.match(await p.locator('#member-status-title').locator('xpath=..').innerText(), /RESIGN/);
   await p.locator('#member-status-target').selectOption('AKTIVE');
-  assert.match(await p.locator('.kosipa-member-status .console-notice').innerText(), /Batas kredit tetap 0/);
+  assert.match(await p.locator('.mstatus-effect').innerText(), /Batas kredit tetap 0/);
   await p.locator('#member-status-reason').fill('Aktif kembali per SK');
   await p.getByRole('button', { name: 'Ubah status', exact: true }).click();
   await p.getByRole('status').filter({ hasText: 'Status diubah menjadi AKTIVE.' }).waitFor();

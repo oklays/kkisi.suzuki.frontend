@@ -1,8 +1,7 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { MASTER_DEFINITIONS } from '@koperasi/domain/kosipa/master';
-import { KosipaPageHeader } from '@/components/console/kosipa/KosipaUI';
+import { ContextNotice } from '@/components/console/kosipa/KosipaUI';
+import { MemberFormHeader } from '@/components/console/kosipa/MemberProfileUI';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { MemberForm } from '@/components/console/kosipa/MemberForm';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
@@ -28,12 +27,11 @@ export default async function NewMemberPage() {
     bagian = active(b); lokasi = active(l); writable = services.ownership.owns('member') && legacy === 'fenced';
   } catch { return <KosipaNotice state="unavailable" />; }
   return (
-    <div className="console-page">
-      <Link prefetch={false} className="console-back" href="/console/kosipa/anggota"><ArrowLeft size={16} aria-hidden="true" />Kembali ke keanggotaan</Link>
-      <KosipaPageHeader editable title={<> Daftarkan anggota </>}>
-        <p>Pendaftaran membuat nomor registrasi dan nomor anggota otomatis. Batas kredit awal nol; akun mobile tidak dibuat.</p>
-      </KosipaPageHeader>
-      {!writable && <p className="console-notice" role="note">Pendaftaran anggota native belum aktif di lingkungan ini (belum dimiliki aplikasi baru, atau menu anggota KOSIPA lama masih aktif). Formulir ini tidak dapat dikirim.</p>}
+    <div className="console-page mform-page">
+      <MemberFormHeader title="Daftarkan anggota">
+        Isi data anggota baru. Isian bertanda * wajib.
+      </MemberFormHeader>
+      {!writable && <ContextNotice title="Pendaftaran belum aktif" tone="warning">Pendaftaran anggota native belum aktif di lingkungan ini (belum dimiliki aplikasi baru, atau menu anggota KOSIPA lama masih aktif). Formulir ini tidak dapat dikirim.</ContextNotice>}
       <MemberForm mode="register" bagian={bagian} lokasi={lokasi} csrfToken={auth.services.keys.csrfToken(auth.ctx.sidHash)} canSubmit={writable} />
     </div>
   );

@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { currentEntryId } from '@koperasi/domain/console/navigation';
 import { CONSOLE_ICONS } from './icons';
+import { Breadcrumbs } from './Breadcrumbs';
+import { buildConsoleTrail } from './breadcrumb-trail';
 import { landingFont } from '@/components/landing/fonts';
 import { AppSidebar } from './sidebar/AppSidebar';
 import { SIDEBAR_COOKIE, SIDEBAR_THEME_COOKIE, writeSidebarCookie, type SidebarPrefs } from './sidebar/prefs';
@@ -121,6 +123,7 @@ export function ConsoleFrame({
   });
 
   const isDashboardRoot = !current || current.id === 'dashboard';
+  const trail = buildConsoleTrail({ current, section: currentGroup ?? null, parent: currentParent, deeper, pathname });
   const settingsEntry = entries.find((e) => e.section === 'settings');
   const filteredEntries = searchQuery.trim()
     ? entries.filter(
@@ -180,54 +183,18 @@ export function ConsoleFrame({
             </button>
             <div className="console-header-brand-block">
               <div className="console-header-title">KKISI TB2</div>
-              <nav aria-label="Breadcrumb" className="console-breadcrumb">
-                {isDashboardRoot ? (
-                  <>
-                    <span className="console-header-subtitle">Konsol Terpadu Koperasi Suzuki</span>
-                    <ol className="console-visually-hidden">
-                      <li>
-                        <Link href="/console">KKISI TB2</Link>
-                      </li>
-                    </ol>
-                  </>
-                ) : (
-                  <ol>
+              {isDashboardRoot ? (
+                <nav aria-label="Breadcrumb" className="console-breadcrumb">
+                  <span className="console-header-subtitle">Konsol Terpadu Koperasi Suzuki</span>
+                  <ol className="console-visually-hidden">
                     <li>
                       <Link href="/console">KKISI TB2</Link>
                     </li>
-                    {currentGroup && currentGroup.section !== 'dashboard' && (
-                      <li>{currentGroup.label}</li>
-                    )}
-                    {currentParent && (
-                      <li>
-                        <Link
-                          href={currentParent.href}
-                          prefetch={currentParent.href.startsWith('/console/kosipa') ? false : undefined}
-                        >
-                          {currentParent.label}
-                        </Link>
-                      </li>
-                    )}
-                    {current &&
-                      current.id !== 'dashboard' &&
-                      (deeper ? (
-                        <>
-                          <li>
-                            <Link
-                              href={current.href}
-                              prefetch={current.href.startsWith('/console/kosipa') ? false : undefined}
-                            >
-                              {current.label}
-                            </Link>
-                          </li>
-                          <li aria-current="page">Detail</li>
-                        </>
-                      ) : (
-                        <li aria-current="page">{current.label}</li>
-                      ))}
                   </ol>
-                )}
-              </nav>
+                </nav>
+              ) : (
+                <Breadcrumbs items={trail} />
+              )}
             </div>
           </div>
 

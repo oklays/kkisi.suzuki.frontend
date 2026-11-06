@@ -184,6 +184,24 @@ test('writer guard: only the isolated FA-01 synthetic database; never staging, D
   }
 });
 
+test('writer guard: the local COPY of production (kkisi_staging) is reachable only with the explicit opt-in, never in production or on a lookalike target', () => {
+  const dsn = 'mysql://kosipa_master_w:pw@127.0.0.1:3307/kkisi_staging?connection_limit=2';
+  const base = { KOSIPA_MASTER_WRITES_ENABLED: 'true', DATABASE_URL_KOSIPA_MASTER_WRITE: dsn, DATABASE_URL: 'mysql://kkisi_read:pw@127.0.0.1:3307/kkisi_staging', KOSIPA_LEDGER_DATABASE: 'kkisi_staging_ledger' };
+  const optIn = { ...base, KOSIPA_LOCAL_STAGING_WRITES: 'true' };
+  assert.equal(validateKosipaMasterWriteConfig(optIn), dsn);
+  assert.equal(validateKosipaLedgerDatabase(optIn), 'kkisi_staging_ledger');
+  for (const change of [
+    { KOSIPA_LOCAL_STAGING_WRITES: undefined }, { KOSIPA_LOCAL_STAGING_WRITES: '1' }, { KOSIPA_LOCAL_STAGING_WRITES: 'false' },
+    { APP_ENV: 'production' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://kosipa_master_w:pw@db.example.com:3307/kkisi_staging?connection_limit=2' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://kosipa_master_w:pw@127.0.0.1:3307/kkisi_devlocal_staging?connection_limit=2' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://kosipa_master_w:pw@127.0.0.1:3306/kkisi_staging?connection_limit=2' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://root:pw@127.0.0.1:3307/kkisi_staging?connection_limit=2' },
+  ]) assert.throws(() => validateKosipaMasterWriteConfig({ ...optIn, ...change }), { code: 'WRITE_NOT_CONFIGURED' }, JSON.stringify(change));
+  for (const ledger of ['kkisi_staging', 'kkisi_kfa_ledger', 'smart_kopkar']) assert.throws(() => validateKosipaLedgerDatabase({ ...optIn, KOSIPA_LEDGER_DATABASE: ledger }), { code: 'WRITE_NOT_CONFIGURED' }, ledger);
+  assert.throws(() => validateKosipaLedgerDatabase({ ...base, KOSIPA_LEDGER_DATABASE: 'kkisi_staging_ledger' }), { code: 'WRITE_NOT_CONFIGURED' }, 'ledger without opt-in');
+});
+
 const rolePermissions = { ...permissions, async kosipaRoleAccess() { return 'allowed'; } };
 
 test('role command HTTP forwards opt-in and real linked actor despite fenced legacy menus; revocation applies next request', async () => {

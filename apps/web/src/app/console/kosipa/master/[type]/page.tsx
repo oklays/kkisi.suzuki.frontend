@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { PageBreadcrumbs } from '@/components/console/PageBreadcrumbs';
 import { notFound } from 'next/navigation';
 import { listMaster } from '@koperasi/application/kosipa/commands/master';
 import { MASTER_TYPES } from '@koperasi/domain/kosipa/master';
@@ -28,7 +28,7 @@ export default async function KosipaMasterPage({ params }: { params: Promise<{ t
   return (
     <div className="console-page">
       <header className="kosipa-page-head">
-        <p className="kosipa-eyebrow"><Link href="/console/kosipa/master">Master data</Link> <span>/</span> {def.title.replace('Master ', '')}</p>
+        <PageBreadcrumbs tail={[{ label: def.title.replace('Master ', ''), icon: 'detail' }]} />
         <div className="kosipa-title-row"><h1>{def.title}</h1><span className="kosipa-provenance">KOSIPA: {def.legacyController}</span></div>
       </header>
       <MasterDataManager definition={def} rows={data.rows} canManage={data.canManage} writable={data.writable} legacyActive={data.legacy === 'legacy-active'} csrfToken={auth.services.keys.csrfToken(auth.ctx.sidHash)} />

@@ -1,7 +1,8 @@
-import { KosipaPageHeader, FinancialTable, ContextNotice } from '@/components/console/kosipa/KosipaUI';
+import { FinancialTable, ContextNotice } from '@/components/console/kosipa/KosipaUI';
+import { PageBreadcrumbs } from '@/components/console/PageBreadcrumbs';
+import { MEMBERS_PATH, MemberHero, ProfileCard, Value } from '@/components/console/kosipa/MemberProfileUI';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { classifyLegacyDate } from '@koperasi/domain/kosipa';
 import { readMember360, type Member360, type Section } from '@koperasi/application/kosipa/member-360';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
@@ -12,7 +13,7 @@ import { consoleEnabled } from '@/infrastructure/console/flags';
 import { kosipaServices } from '@/infrastructure/console/services';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Anggota 360 · KOSIPA · KKISI TB2' };
+export const metadata = { title: 'Detail Anggota · KOSIPA · KKISI TB2' };
 
 const REASON: Record<string, string> = {
   INDEX_REQUIRED: 'Belum ditampilkan: sumber data ini menunggu tinjauan performa (indeks) sebelum dibaca dari database produksi.',
@@ -20,13 +21,14 @@ const REASON: Record<string, string> = {
   NOT_CONFIGURED: 'Sumber data ini belum dikonfigurasi di lingkungan ini.',
 };
 
-function SectionBlock<T>({ title, section, children }: { title: string; section: Section<T>; children: (data: T) => React.ReactNode }) {
+const slug = (title: string) => `sec-${title.toLowerCase().replaceAll(' ', '-')}`;
+
+function SectionBlock<T>({ title, section, action, className, children }: { title: string; section: Section<T>; action?: React.ReactNode; className?: string; children: (data: T) => React.ReactNode }) {
   if (section.state === 'restricted') return null;
   return (
-    <section className="console-card" aria-labelledby={`sec-${title.toLowerCase().replaceAll(" ", "-")}`}>
-      <h2 id={`sec-${title.toLowerCase().replaceAll(" ", "-")}`}>{title}</h2>
+    <ProfileCard id={slug(title)} title={title} action={section.state === 'ok' ? action : undefined} className={className}>
       {section.state === 'ok' ? children(section.data) : <p className="console-unavailable" role="status">{REASON[section.reason]}</p>}
-    </section>
+    </ProfileCard>
   );
 }
 
@@ -48,39 +50,59 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
   if (!member) notFound();
   const p = member.profile;
 
+  const canEdit = auth.capabilities.has('kosipa.member.update') || auth.capabilities.has('kosipa.member.status');
+  const unrestricted = (section: Section<unknown>) => section.state !== 'restricted';
+  const eligibility = p.eligibility.eligible
+    ? <span className="mprofile-elig" data-ok="true">Memenuhi syarat</span>
+    : <span className="mprofile-elig" data-ok="false">Tidak memenuhi syarat: {p.eligibility.reasons.map((r) => ELIGIBILITY[r]).join(', ')}</span>;
+
   return (
-    <div className="console-page">
-      <Link prefetch={false} className="console-back" href="/console/kosipa/anggota"><ArrowLeft size={16} aria-hidden="true" />Kembali ke pencarian</Link>
-      <KosipaPageHeader title={<> {p.name || 'Anggota'} </>}>
-        <p>NIK {p.nik || '—'} · {p.group ?? 'Grup tidak tercatat'} · Data KOSIPA, baca saja</p>
-      </KosipaPageHeader>
-
-      {(auth.capabilities.has('kosipa.member.update') || auth.capabilities.has('kosipa.member.status')) && <p className="kosipa-member-links"><Link prefetch={false} className="console-button-quiet" href={`/console/kosipa/anggota/${id}/ubah`}>Ubah profil / status</Link></p>}
-      <nav className="kosipa-profile-nav" aria-label="Bagian profil anggota">
+    <div className="console-page mprofile">
+      <PageBreadcrumbs tail={[{ label: p.name || 'Anggota', icon: 'member' }]} />
+      <MemberHero
+        name={p.name} nik={p.nik} group={p.group} status={p.status} employment={p.employment} readOnly={!canEdit}
+        editHref={canEdit ? `${MEMBERS_PATH}/${id}/ubah` : null}
+        savingsHref={unrestricted(member.savings) ? `/console/kosipa/simpanan/${p.id}` : null}
+        facts={[
+          { label: 'Status karyawan', value: p.employment ? `${p.employment}${p.exitOn ? ` · berakhir ${p.exitOn}` : ''}` : null },
+          { label: 'Tanggal daftar', value: formatLegacyDate(classifyLegacyDate(p.joinedOn)) },
+          { label: 'Divisi / Bagian', value: [p.division, p.section].filter(Boolean).join(' / ') },
+          { label: 'Layanan kredit anggota', value: eligibility },
+        ]}
+      />
+      <nav className="mprofile-tabs" aria-label="Bagian profil anggota">
         <a href="#sec-profil">Profil</a>
-        {member.savings.state !== 'restricted' && <a href="#sec-simpanan">Simpanan</a>}
-        {member.loans.state !== 'restricted' && <a href="#sec-pinjaman">Pinjaman</a>}
-        {member.payroll.state !== 'restricted' && <a href="#sec-potongan-payroll">Payroll</a>}
-        {member.storeCredit.state !== 'restricted' && <a href="#sec-kredit-toko-bulan-berjalan">Kredit TOKO</a>}
+        {unrestricted(member.savings) && <a href="#sec-simpanan">Simpanan</a>}
+        {unrestricted(member.loans) && <a href="#sec-pinjaman">Pinjaman</a>}
+        {unrestricted(member.payroll) && <a href="#sec-potongan-payroll">Payroll</a>}
+        {unrestricted(member.storeCredit) && <a href="#sec-kredit-toko-bulan-berjalan">Kredit TOKO</a>}
       </nav>
-      <section className="console-card" aria-labelledby="sec-profil">
-        <h2 id="sec-profil">Profil</h2>
-        <dl className="console-dl">
-          <div><dt>Status anggota</dt><dd>{p.status ?? '—'}</dd></div>
-          <div><dt>Status karyawan</dt><dd>{p.employment ?? '—'}{p.exitOn ? ` · berakhir ${p.exitOn}` : ''}</dd></div>
-          <div><dt>Tanggal daftar</dt><dd>{formatLegacyDate(classifyLegacyDate(p.joinedOn))}</dd></div>
-          <div><dt>Divisi / Bagian</dt><dd>{[p.division, p.section].filter(Boolean).join(' / ') || '—'}</dd></div>
-          <div><dt>Telepon</dt><dd>{p.phone ?? '—'}</dd></div>
-          <div><dt>E-mail</dt><dd>{p.email ?? '—'}</dd></div>
-          <div><dt>Rekening</dt><dd>{p.bankAccount ? `${p.bankName ?? ''} ${p.bankAccount}`.trim() : '—'}</dd></div>
-          <div><dt>Layanan kredit anggota</dt><dd>{p.eligibility.eligible ? 'Memenuhi syarat' : `Tidak memenuhi syarat: ${p.eligibility.reasons.map((r) => ELIGIBILITY[r]).join(', ')}`}</dd></div>
-        </dl>
-        <p className="console-notice">Kontak dan rekening ditampilkan tersamar. Alamat, KTP, dan gaji tidak ditampilkan.</p>
-      </section>
 
-      <SectionBlock title="Simpanan" section={member.savings}>{(rows) => rows.length === 0 ? <p>Belum ada mutasi simpanan tercatat.</p> : (
+      <div className="mprofile-split">
+        <ProfileCard id="sec-kontak-dan-rekening" title="Kontak dan rekening">
+          <dl className="mprofile-dl">
+            <div><dt>Telepon</dt><dd><Value>{p.phone}</Value></dd></div>
+            <div><dt>E-mail</dt><dd><Value>{p.email}</Value></dd></div>
+            <div><dt>Rekening</dt><dd><Value>{p.bankAccount ? `${p.bankName ?? ''} ${p.bankAccount}`.trim() : null}</Value></dd></div>
+          </dl>
+          <p className="mprofile-note">Kontak dan rekening ditampilkan tersamar. Alamat, KTP, dan gaji tidak ditampilkan.</p>
+        </ProfileCard>
+
+        <SectionBlock title="Kredit toko bulan berjalan" section={member.storeCredit}>{(c) => (
+          <>
+            <dl className="mprofile-tiles">
+              <div><dt>Belanja Kredit</dt><dd>{formatRupiah(c.spentSen)}</dd></div>
+              <div><dt>Retur Kredit</dt><dd>{formatRupiah(c.returnedSen)}</dd></div>
+              <div><dt>Pemakaian bersih</dt><dd>{formatRupiah(c.netSen)}</dd></div>
+              <div><dt>Limit / sisa</dt><dd>{c.limitSen === null ? <span className="mprofile-empty">Tidak berlaku</span> : <>{formatRupiah(c.limitSen)} <small>/ {formatRupiah(c.remainingSen ?? 0)}</small></>}</dd></div>
+            </dl>
+            {c.limitSen === null && <p className="mprofile-note">Anggota ini tidak memenuhi syarat layanan kredit, jadi tidak ada limit.</p>}
+          </>
+        )}</SectionBlock>
+      </div>
+
+      <SectionBlock title="Simpanan" section={member.savings} action={<Link prefetch={false} className="console-more" href={`/console/kosipa/simpanan/${p.id}`}>Buku simpanan lengkap</Link>}>{(rows) => rows.length === 0 ? <p className="mprofile-note">Belum ada mutasi simpanan tercatat.</p> : (
         <>
-          <p><Link prefetch={false} className="console-more" href={`/console/kosipa/simpanan/${p.id}`}>Lihat buku simpanan lengkap</Link></p>
           <FinancialTable label="Mutasi simpanan anggota" columns={[{ label: "Jenis" }, { label: "Mutasi bersih disetujui", numeric: true }, { label: "Penarikan menunggu", numeric: true }, { label: "Setoran menunggu", numeric: true }]}>
             <tbody>{rows.map((r) => <tr key={r.type}><td>{r.type}</td><td className="num">{formatRupiah(r.postedSen)}</td><td className="num">{formatRupiah(r.pendingDebitSen)}</td><td className="num">{formatRupiah(r.pendingCreditSen)}</td></tr>)}</tbody>
           </FinancialTable>
@@ -88,37 +110,28 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
         </>
       )}</SectionBlock>
 
-      <SectionBlock title="Pinjaman" section={member.loans}>{(rows) => rows.length === 0 ? <p>Tidak ada pinjaman tercatat.</p> : (
+      <SectionBlock title="Pinjaman" section={member.loans}>{(rows) => rows.length === 0 ? <p className="mprofile-note">Tidak ada pinjaman tercatat.</p> : (
         <FinancialTable label="Pinjaman anggota" columns={[{ label: "Dokumen" }, { label: "Tanggal" }, { label: "Jenis" }, { label: "Pokok", numeric: true }, { label: "Tenor", numeric: true }, { label: "Angsuran rencana", numeric: true }, { label: "Status" }]}>
-          <tbody>{rows.map((l, index) => <tr key={`${l.docNo}-${index}`}><td><Link prefetch={false} href={`/console/kosipa/pinjaman/${encodeURIComponent(l.docNo)}`}>{l.docNo}</Link></td><td>{formatLegacyDate(classifyLegacyDate(l.docDate))}</td><td>{[l.type, l.method].filter(Boolean).join(' · ') || '—'}</td><td className="num">{formatRupiah(l.principalSen)}</td><td>{l.months ? `${l.months} bln` : '—'}</td><td className="num">{formatRupiah(l.installmentSen)}</td><td>{[l.docStatus, l.disbursement, l.repayment].filter(Boolean).join(' · ') || '—'}</td></tr>)}</tbody>
+          <tbody>{rows.map((l, index) => <tr key={`${l.docNo}-${index}`}><td><Link prefetch={false} href={`/console/kosipa/pinjaman/${encodeURIComponent(l.docNo)}`}>{l.docNo}</Link></td><td>{formatLegacyDate(classifyLegacyDate(l.docDate))}</td><td>{[l.type, l.method].filter(Boolean).join(' · ') || <span className="mprofile-empty">Tidak tercatat</span>}</td><td className="num">{formatRupiah(l.principalSen)}</td><td>{l.months ? `${l.months} bln` : <span className="mprofile-empty">Tidak tercatat</span>}</td><td className="num">{formatRupiah(l.installmentSen)}</td><td>{[l.docStatus, l.disbursement, l.repayment].filter(Boolean).join(' · ') || <span className="mprofile-empty">Tidak tercatat</span>}</td></tr>)}</tbody>
         </FinancialTable>
       )}</SectionBlock>
 
       <SectionBlock title="Rincian angsuran" section={member.installments}>{() => null}</SectionBlock>
-      <SectionBlock title="Potongan payroll" section={member.payroll}>{(rows) => rows.length === 0 ? <p>Belum ada potongan payroll tercatat.</p> : (
+      <SectionBlock title="Potongan payroll" section={member.payroll}>{(rows) => rows.length === 0 ? <p className="mprofile-note">Belum ada potongan payroll tercatat.</p> : (
         <>
           <FinancialTable label="Riwayat potongan payroll anggota" columns={[{ label: "Batch" }, { label: "Periode" }, { label: "Status" }, { label: "Toko (Kredit)", numeric: true }, { label: "Total potongan tercatat", numeric: true }]}>
             <tbody>{rows.map((r) => (
               <tr key={r.id}>
                 <td>{r.header.state === 'OK' ? <Link prefetch={false} href={`/console/kosipa/payroll/${encodeURIComponent(r.docNo)}/anggota/${encodeURIComponent(p.nik)}`}>{r.docNo}</Link> : r.docNo}</td>
-                <td>{r.header.state === 'OK' ? (r.header.period ?? '—') : '—'}</td>
+                <td>{r.header.state === 'OK' ? (r.header.period ?? <span className="mprofile-empty">Tidak tercatat</span>) : <span className="mprofile-empty">Tidak tercatat</span>}</td>
                 <td>{r.header.state === 'OK' ? STATUS_LABEL[r.header.status] : r.header.state === 'MISSING' ? 'Header batch tidak ditemukan' : 'Header ganda: status tidak dapat dipastikan'}</td>
                 <td className="num">{formatAmount4(r.toko4.TOKO_TAMBUN + r.toko4.TOKO_MJ + r.toko4.TOKO_GIIC)}</td>
                 <td className="num">{formatAmount4(r.total4)}</td>
               </tr>
             ))}</tbody>
           </FinancialTable>
-          <p className="console-notice">Menampilkan paling banyak 24 baris terbaru, sebagai nilai yang tercatat di KOSIPA. Bukan perhitungan ulang.</p>
+          <p className="mprofile-note">Menampilkan paling banyak 24 baris terbaru, sebagai nilai yang tercatat di KOSIPA. Bukan perhitungan ulang.</p>
         </>
-      )}</SectionBlock>
-
-      <SectionBlock title="Kredit toko bulan berjalan" section={member.storeCredit}>{(c) => (
-        <dl className="console-dl">
-          <div><dt>Belanja Kredit</dt><dd>{formatRupiah(c.spentSen)}</dd></div>
-          <div><dt>Retur Kredit</dt><dd>{formatRupiah(c.returnedSen)}</dd></div>
-          <div><dt>Pemakaian bersih</dt><dd>{formatRupiah(c.netSen)}</dd></div>
-          <div><dt>Limit / sisa</dt><dd>{c.limitSen === null ? 'Tidak berlaku (tidak memenuhi syarat kredit)' : `${formatRupiah(c.limitSen)} / ${formatRupiah(c.remainingSen ?? 0)}`}</dd></div>
-        </dl>
       )}</SectionBlock>
     </div>
   );
