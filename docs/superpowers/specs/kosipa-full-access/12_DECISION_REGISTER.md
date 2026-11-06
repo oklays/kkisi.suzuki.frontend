@@ -56,6 +56,20 @@ For Jenis Simpanan, Jenis Pinjaman and Jenis Pembiayaan the owner selected **leg
 
 Implement natively with legacy parity, keyed by the consumed `field` (`tgl_tempo`), after a read-only production row count. The reader ignores `is_active`; the UI must not claim deactivation has an effect.
 
+### FD-35 — maker ≠ checker for savings deposits (owner, 7 November 2026)
+
+A savings deposit is created by an operator holding `kosipa.savings.prepare` and approved by a DIFFERENT person holding `kosipa.savings.approve` (BR-105 / FD-17 a). Legacy let one person do both. Documents created by legacy (no native maker in the ledger) may be approved natively (FD-17 c).
+
+### FD-36 — savings deposit document date (owner, 7 November 2026)
+
+The deposit date must lie in the CURRENT Jakarta month and not after today. Legacy accepted any date; the savings card groups balances by document month/year, so earlier periods must not change silently.
+
+### FD-37 — cancelling a pending savings deposit (owner, 7 November 2026)
+
+A deposit that is not yet approved is cancelled by REJECTION with a mandatory reason (header and lines `REJECTED`, rows kept, never counted: every balance view filters `doc_status = 'APPROVED'`). The legacy hard delete is not offered (FD-14 option a).
+
+**Evidence for FD-12 (savings status authority), 7 Nov 2026:** every captured production savings balance view — `v_kartu_simpanan`, `v_trans_simpanan_total`, `v_trans_simpanan_outstanding`, `v_trans_simpanan_kas_new`, `v_trans_simpanan_saldo_awal`, `v_saldo_awal`, `v_mobile_simpanan_sukarela` — filters on the HEADER `trans_simpanan.doc_status = 'APPROVED'` and sums `kredit + kredit_cash − debit` of the lines; line `doc_status` is not read. Native savings documents therefore keep header and lines in the same status (REQ-114) and treat the header as authoritative for balances. FD-12 itself (how to read legacy rows whose line status diverges) stays open for the reversal work.
+
 ## 3. Open decisions (new)
 
 | ID | Decision | Options | Recommendation | Blocks | Owner |
