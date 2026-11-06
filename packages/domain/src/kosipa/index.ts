@@ -1,4 +1,4 @@
-export { KosipaError } from './errors.ts';
+export { KosipaError, KosipaFieldError } from './errors.ts';
 export { canonicalNik, nikLookupKeys, sameMember } from './nik.ts';
 export { evaluateMemberEligibility, type EligibilityFacts, type IneligibleReason } from './member-eligibility.ts';
 export { DOCUMENT_STATES, nextDocumentState, isEditable, type DocumentState, type DocumentKind, type DocumentAction, type DocumentFacts, type TransitionRequest } from './document-state.ts';

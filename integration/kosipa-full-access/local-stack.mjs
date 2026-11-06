@@ -107,6 +107,30 @@ export async function applyMemberSideTables() {
   } finally { await db.end(); }
 }
 
+/** Additive (FA-03B T06): product-master + chart-of-accounts tables (structure from the production capture) and their synthetic rows. Never resets. */
+export async function applyProductMasters() {
+  const config = await loadConfig();
+  const db = await rootConnection(config); // verifies installation before any DDL
+  try {
+    const statements = (await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/product-master-tables.sql'), 'utf8'))
+      .split('\n').filter((l) => !/^\s*--/.test(l)).join('\n').split(';').map((s) => s.trim()).filter(Boolean);
+    const names = ['m_acc_coa', 'm_jenis_pembiayaan', 'm_jenis_pinjaman', 'm_jenis_simpanan', 'm_suku_bunga'];
+    if (statements.length !== names.length) fail('KFA_INVALID_PRODUCT_FIXTURE');
+    let created = 0;
+    for (const [i, name] of names.entries()) {
+      if (!statements[i].startsWith(`CREATE TABLE IF NOT EXISTS \`__KOSIPA_DB__\`.\`${name}\` (`)) fail('KFA_INVALID_PRODUCT_FIXTURE');
+      const [found] = await db.query('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?', [DB, name]);
+      if (!found.length) { await db.query(statements[i].replaceAll('__KOSIPA_DB__', DB)); created++; }
+      const [[row]] = await db.query(`SHOW CREATE TABLE \`${name}\``);
+      assertMemberTableShape(statements[i], row['Create Table']);
+    }
+    const seed = (await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/product-master-seed.sql'), 'utf8'))
+      .split('\n').filter((l) => !/^\s*--/.test(l)).join('\n').split(';').map((s) => s.trim()).filter(Boolean);
+    for (const st of seed) { if (!/^INSERT IGNORE INTO /.test(st)) fail('KFA_INVALID_PRODUCT_FIXTURE'); await db.query(st.replaceAll('__KOSIPA_DB__', DB)); }
+    return { mode: 'LOCAL_SYNTHETIC', port: PORT, tables: names, created };
+  } finally { await db.end(); }
+}
+
 const template = async (path, map) => { let sql = await readFile(resolve(root, path), 'utf8'); for (const [k, v] of Object.entries(map)) sql = sql.replaceAll(k, v); return sql; };
 
 async function applySchema(config) {
@@ -272,6 +296,7 @@ export async function setup() {
   try { const [rows] = await probe.query('SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?', [DB, '_kfa_installation']); installed = Number(rows[0].n) === 1; } finally { await probe.end(); }
   if (installed) (await rootConnection(config)).end();
   else { await applySchema(config); await seed(config); }
+  await applyProductMasters();
   await writeAppEnv(config);
   return { mode: config.mode, port: PORT, database: DB, installationId: config.installationId, appEnv: 'apps/web/.env.kosipa-fa01' };
 }
@@ -280,7 +305,7 @@ export async function reset() {
   const config = await loadConfig();
   await ensureAccounts(config);
   (await rootConnection(config)).end();                  // refuses unless the sentinel matches this installation
-  await applySchema(config); await seed(config); await writeAppEnv(config);
+  await applySchema(config); await seed(config); await applyProductMasters(); await writeAppEnv(config);
   return { reset: true };
 }
 
@@ -296,6 +321,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const command = process.argv[2] ?? 'status';
     if (command === 'setup') console.log(JSON.stringify(await setup()));
+    else if (command === 'product-masters') console.log(JSON.stringify(await applyProductMasters()));
     else if (command === 'member-writer') console.log(JSON.stringify(await applyMemberWriter()));
     else if (command === 'member-tables') console.log(JSON.stringify(await applyMemberSideTables()));
     else if (command === 'reset') console.log(JSON.stringify(await reset()));
