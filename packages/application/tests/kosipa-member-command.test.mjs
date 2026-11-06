@@ -34,7 +34,7 @@ test('ownership/capability/view/live link gates both member commands before repo
     const w=world();
     await assert.rejects(registerMember(w.ports,candidate,null), { code:'FORBIDDEN' });
     await assert.rejects(updateMemberProfile(w.ports,candidate,'PII-FORGED',null), { code:'FORBIDDEN' });
-    assert.equal(w.calls.length,0); assert.ok(w.events.every((e)=>e.action==='kosipa.command.denied'));
+    assert.equal(w.calls.length,0); assert.equal(w.events.length,2); assert.ok(w.events.every((e)=>e.action==='kosipa.command.denied'));
     assert.ok(!JSON.stringify(w.events).includes('PII-FORGED'));
   }
 });
@@ -62,7 +62,8 @@ test('update passes locked-record identity, full parsed patch, opaque version an
 test('strict key, route id, body and forbidden field refusals occur before repository', async () => {
   const w=world();
   for (const rawId of ['0','-1','1 OR 1=1','001','2147483648','secret-name']) await assert.rejects(updateMemberProfile(w.ports,actor,rawId,profile()), { code:'MEMBER_ID_INVALID' });
-  for (const bad of [null, [], { ...registration(), fields:{ ...registration().fields, limit_toko:'1' } }, { ...registration(), extra:1 }, { ...registration(), idempotencyKey:'x' }]) await assert.rejects(registerMember(w.ports,actor,bad));
+  for (const bad of [null, []]) await assert.rejects(registerMember(w.ports,actor,bad), { code:'INVALID_INPUT' });
+  for (const [bad,code] of [[{ ...registration(), fields:{ ...registration().fields, limit_toko:'1' } },'FIELD_NOT_ALLOWED'], [{ ...registration(), extra:1 },'FIELD_NOT_ALLOWED'], [{ ...registration(), idempotencyKey:'x' },'IDEMPOTENCY_KEY_INVALID']]) await assert.rejects(registerMember(w.ports,actor,bad), { code });
   assert.equal(w.calls.length,0); assert.ok(!JSON.stringify(w.events).includes('secret-name'));
 });
 test('fingerprint binds all validated fields, deductions, expectedVersion and reason; replay suppresses audit', async () => {
@@ -90,3 +91,8 @@ test('repository stale/uniqueness/transaction rejection produces failure audit a
     assert.equal(w.ledger.size,0);
   }
 });
+// Repository/database acceptance scenarios belong to later tasks; mock ports cannot prove them.
+test.todo('repository create writes member + positive m_simpanan_aktif config rows atomically, sim_* = initialDeductions (including "0")');
+test.todo('repository update mirrors exactly ktp/name/phone/email/street_address to an existing linked users row');
+test.todo('repository update refuses a stale expectedVersion under the row lock (STALE) after replay lookup');
+test.todo('repository replay of the same actor/key/fingerprint returns the stored result without a second write');

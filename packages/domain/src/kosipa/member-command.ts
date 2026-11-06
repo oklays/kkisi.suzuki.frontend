@@ -23,7 +23,9 @@ export type MemberFields = Partial<Record<MemberField, string | null>>;
 export type InitialDeductions = { pokok: string; wajib: string; sukarela: string };
 export type MemberRegistration = { fields: MemberFields; initialDeductions: InitialDeductions; idempotencyKey: string };
 export type MemberProfile = { fields: MemberFields; expectedVersion: string; reason?: string; idempotencyKey: string };
-export type MemberRecord = { id: number; fields: MemberFields };
+/** Stored legacy row values may be numeric or malformed (legacy wrote sanitized ints with sign); compared tolerantly. */
+export type MemberStoredFields = Partial<Record<MemberField, string | number | null>>;
+export type MemberRecord = { id: number; fields: MemberStoredFields };
 export type MemberMasterFacts = { bagian: readonly { name: string; active: boolean }[]; lokasi: readonly { name: string; active: boolean }[] };
 
 const required = ['nama_kar', 'nik_kar', 'kd_group', 'bagian', 'lokasi', 'status_anggota'];
@@ -31,6 +33,8 @@ const dates = ['tgl_daftar', 'tgl_lahir', 'tgl_karyawan', 'tgl_masuk', 'tgl_kelu
 const status = ['AKTIVE', 'LUAR BIASA', 'KONTRAK', 'RESIGN', 'PENSIUN'];
 const groups = ['ANGGOTA', 'NON ANGGOTA', 'BMP', 'KOPERASI'];
 const mirrorNotNull = ['ktp', 'email', 'no_telp'];
+// Legacy anggota_v.php renders these as <textarea>: LF/CRLF line breaks are legitimate latin1 values. Lone CR stays refused.
+const multiline = ['alamat', 'alamat_tinggal'];
 // Member VARCHAR widths, narrowed where the verified five-field users mirror requires it.
 const widths: Partial<Record<MemberField, number>> = {
   id_card: 50, nama_kar: 50, ktp: 50, email: 50, jenis_kel: 50, tempat_lahir: 50, alamat: 250, rt: 50, rw: 50, provinsi: 100, kabupaten: 50, kecamatan: 50, kelurahan: 50, kode_pos: 50,
@@ -86,7 +90,7 @@ function fields(raw: unknown, registration: boolean): MemberFields {
     } else {
       const max = widths[k];
       if (value === null && !mirrorNotNull.includes(k) && !required.includes(k)) { out[k] = null; continue; }
-      if (typeof value !== 'string' || max === undefined || value.length > max || !printableLatin1.test(value) || (required.includes(k) && !value.trim())) throw new KosipaError('MEMBER_FIELD_INVALID');
+      if (typeof value !== 'string' || max === undefined || value.length > max || !printableLatin1.test(multiline.includes(k) ? value.replace(/\r?\n/g, '') : value) || (required.includes(k) && !value.trim())) throw new KosipaError('MEMBER_FIELD_INVALID');
       if ((k === 'status_anggota' && !status.includes(value)) || (k === 'kd_group' && !groups.includes(value))) throw new KosipaError('MEMBER_FIELD_INVALID');
       out[k] = value;
     }
@@ -120,11 +124,13 @@ export function parseMemberProfile(raw: unknown): MemberProfile {
 /** Write uniqueness only. Do not change read-side canonicalNik/sameMember behavior. */
 export const memberNikUniquenessKey = (raw: string): string => canonicalNik(raw).toLowerCase();
 
-function resolveMasters(values: MemberFields, facts: MemberMasterFacts, current?: MemberFields): MemberFields {
+function resolveMasters(values: MemberFields, facts: MemberMasterFacts, current?: MemberStoredFields): MemberFields {
   const out = { ...values };
   for (const key of ['bagian', 'lokasi'] as const) {
-    if (!Object.hasOwn(values, key) || values[key] === current?.[key]) continue;
-    const value = values[key];
+    if (!Object.hasOwn(values, key)) continue;
+    const value = values[key], stored = current?.[key];
+    // Unchanged (same master text) keeps the stored spelling and is not revalidated, so historical inactive values survive.
+    if (typeof stored === 'string' && typeof value === 'string' && sameMasterText(stored, value)) { out[key] = stored; continue; }
     const match = typeof value === 'string' && facts[key].find((m) => m.active && sameMasterText(m.name, value));
     if (!match) throw new KosipaError('MEMBER_MASTER_INVALID');
     out[key] = match.name;
@@ -138,11 +144,18 @@ export function planMemberRegistration(input: MemberRegistration, masters: Membe
 }
 export type MemberChangeSummary = { id: number; presence: Partial<Record<MemberField, boolean>>; changes: Partial<Record<MemberField, boolean>>; bankChanged: boolean; salaryChanged: boolean };
 
+/** Stored salary that is not a canonical amount (legacy negative/oversized/garbage) counts as different, so it can be corrected. */
+function storedAmount(raw: string | number | null | undefined): string | undefined {
+  try { return amount(typeof raw === 'number' ? String(raw) : raw); } catch { return undefined; }
+}
+/** Change detection only: NULL and '' are the same nullable-text intent; the parsed value is still written as submitted. */
+const storedText = (raw: string | number | null | undefined): string => (raw == null ? '' : String(raw));
+
 /** Repository checks the opaque HMAC version on the locked row BEFORE calling this planner. */
 export function planMemberProfile(current: MemberRecord | null, input: MemberProfile, masters: MemberMasterFacts): { before: MemberRecord; after: MemberRecord; changed: MemberField[]; reason?: string; summary: MemberChangeSummary } {
   if (!current) throw new KosipaError('MEMBER_NOT_FOUND');
   const values = resolveMasters(input.fields, masters, current.fields);
-  const changed = (Object.keys(values) as MemberField[]).filter((key) => key === 'gaji' && current.fields.gaji != null ? amount(current.fields.gaji) !== values.gaji : current.fields[key] !== values[key]);
+  const changed = (Object.keys(values) as MemberField[]).filter((key) => key === 'gaji' ? storedAmount(current.fields.gaji) !== values.gaji : storedText(current.fields[key]) !== storedText(values[key]));
   if (!changed.length) throw new KosipaError('NO_CHANGE');
   const bankChanged = changed.some((key) => (MEMBER_FIELD_CLASSES.bank as readonly string[]).includes(key));
   const reason = bankChanged ? parseReason(input.reason) : input.reason;

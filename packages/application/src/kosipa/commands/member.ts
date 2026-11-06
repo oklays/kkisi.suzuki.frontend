@@ -16,9 +16,12 @@ export type MemberResult = { id: number; version: string };
  * member/REG numbers using the approved numbering policy; supply explicit strict-mode zero financial/server defaults and actor
  * attribution; write member plus positive initial deduction configs atomically (explicit potongan_old/is_mobile defaults,
  * exact legacy savings types, no balances/opening entries). Positive config NIK must fit VARCHAR(10). No mobile account creation.
+ * Deduction contract: set m_anggota.sim_pokok/sim_wajib/sim_sukarela to input.initialDeductions.pokok/wajib/sukarela exactly
+ * (including "0"), and insert m_simpanan_aktif config rows ONLY for the positive amounts (none for "0").
  *
  * Update: lock by record id, verify expectedVersion with server HMAC SHA256 over the authoritative editable row, and recheck
- * actual bank changes with parseReason via planMemberProfile. Derive linked users identity only from that locked member.
+ * actual bank changes with parseReason via planMemberProfile (stored values compared tolerantly: NULL = '', non-canonical
+ * stored gaji counts as changed). Derive linked users identity only from that locked member.
  * Mirror exactly ktp/name/phone/email/street_address when an existing account is present, validating the actual users unique
  * email, nik and (ktp,phone) constraints under locks. No account creation, bank/group/location or wallet mirror; no status,
  * credit limits, deductions, credential/file writes. Preserve omitted fields and historical unchanged master references.

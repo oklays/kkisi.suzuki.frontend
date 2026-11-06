@@ -26,7 +26,10 @@ test('registration keeps salary explicit zero, requires explicit config/status a
   for (const key of ['nama_kar', 'nik_kar', 'kd_group', 'bagian', 'lokasi', 'status_anggota']) {
     const b = register(); delete b.fields[key]; fail(() => parseMemberRegistration(b, today), 'MEMBER_FIELD_INVALID');
   }
-  for (const b of [{ ...register(), initialDeductions: undefined }, register({}, { pokok: '0', wajib: '0' }), register({}, { pokok: '0', wajib: '0', sukarela: '0', extra: '0' })]) assert.throws(() => parseMemberRegistration(b, today));
+  for (const b of [{ ...register(), initialDeductions: undefined }, register({}, { pokok: '0', wajib: '0' }), register({}, { pokok: '0', wajib: '0', sukarela: '0', extra: '0' })]) assert.throws(() => parseMemberRegistration(b, today), (e) => ['INVALID_INPUT', 'MEMBER_AMOUNT_INVALID', 'FIELD_NOT_ALLOWED'].includes(e.code));
+  fail(() => parseMemberRegistration({ ...register(), initialDeductions: undefined }, today), 'INVALID_INPUT');
+  fail(() => parseMemberRegistration(register({}, { pokok: '0', wajib: '0' }), today), 'MEMBER_AMOUNT_INVALID');
+  fail(() => parseMemberRegistration(register({}, { pokok: '0', wajib: '0', sukarela: '0', extra: '0' }), today), 'FIELD_NOT_ALLOWED');
   for (const status_anggota of ['AKTIVE', 'LUAR BIASA', 'KONTRAK', 'RESIGN', 'PENSIUN']) assert.equal(parseMemberRegistration(register({ status_anggota }), today).fields.status_anggota, status_anggota);
   fail(() => parseMemberRegistration(register({ status_anggota: 'ACTIVE' }), today), 'MEMBER_FIELD_INVALID');
   for (const kd_group of ['ANGGOTA', 'NON ANGGOTA', 'BMP', 'KOPERASI']) assert.equal(parseMemberRegistration(register({ kd_group }), today).fields.kd_group, kd_group);
@@ -61,7 +64,17 @@ test('actual widths, mirror NOT NULL constraints and printable Windows-1252 repr
   }
   for (const key of ['ktp', 'email', 'no_telp']) fail(() => parseMemberProfile(profile({ [key]: null })), 'MEMBER_FIELD_INVALID');
   assert.deepEqual(parseMemberProfile(profile({ alamat: null, alamat_tinggal: '', nama_istri: 'Élodie € Š Œ – ™' })).fields, { alamat: null, alamat_tinggal: '', nama_istri: 'Élodie € Š Œ – ™' });
-  for (const value of ['漢字','😀','a\n', '\u0080', '\u009f', '\u007f', '\u0000']) fail(() => parseMemberProfile(profile({ alamat: value })), 'MEMBER_FIELD_INVALID');
+  for (const value of ['漢字','😀','a\r', 'a\t', '\u0080', '\u009f', '\u007f', '\u0000']) fail(() => parseMemberProfile(profile({ alamat: value })), 'MEMBER_FIELD_INVALID');
+});
+test('legacy textarea addresses accept LF/CRLF lines; every other field still refuses controls', () => {
+  for (const key of ['alamat', 'alamat_tinggal']) {
+    assert.equal(parseMemberProfile(profile({ [key]: 'Jl. Satu\nRT 01' })).fields[key], 'Jl. Satu\nRT 01');
+    assert.equal(parseMemberProfile(profile({ [key]: 'Jl. Satu\r\nRT 01\r\n' })).fields[key], 'Jl. Satu\r\nRT 01\r\n');
+    fail(() => parseMemberProfile(profile({ [key]: 'Jl. Satu\rRT 01' })), 'MEMBER_FIELD_INVALID');
+  }
+  assert.equal(parseMemberRegistration(register({ alamat: 'A\nB' }), today).fields.alamat, 'A\nB');
+  for (const key of ['nama_kar', 'kelurahan_tinggal', 'nama_rek', 'email']) fail(() => parseMemberProfile(profile({ [key]: 'a\nb' })), 'MEMBER_FIELD_INVALID');
+  fail(() => parseMemberRegistration(register({ nama_kar: 'a\r\nb' }), today), 'MEMBER_FIELD_INVALID');
 });
 test('positive registration config enforces stored canonical NIK width ten, zero config permits width twenty', () => {
   assert.doesNotThrow(() => parseMemberRegistration(register({ nik_kar: '1234567890' }, { pokok: '0.01', wajib: '0', sukarela: '0' }), today));
@@ -112,4 +125,40 @@ test('registration ledger summary is keyed by generated record id and contains o
   assert.equal(summary.bankChanged, true); assert.equal(summary.salaryChanged, true);
   const text = JSON.stringify(summary);
   for (const value of ['secret-account','José','999','00123']) assert.ok(!text.includes(value));
+});
+
+test('NIK syntax and whitespace-only required fields are refused at registration', () => {
+  for (const nik_kar of ['1'.repeat(21), '12-3', '12.3', 'A B']) fail(() => parseMemberRegistration(register({ nik_kar }), today), 'NIK_INVALID');
+  for (const key of ['nama_kar', 'nik_kar', 'kd_group', 'bagian', 'lokasi', 'status_anggota']) fail(() => parseMemberRegistration(register({ [key]: '   ' }), today), 'MEMBER_FIELD_INVALID');
+});
+test('stored legacy salary is compared tolerantly so malformed rows can be corrected', () => {
+  const plan = (gaji, patch) => planMemberProfile({ id: 9, fields: { gaji } }, parseMemberProfile(profile({ gaji: patch })), facts);
+  for (const stored of ['-5000', '99999999999999999', '1e3', 'abc', -5000, null]) {
+    const p = plan(stored, '5000');
+    assert.deepEqual(p.changed, ['gaji']); assert.equal(p.after.fields.gaji, '5000'); assert.equal(p.summary.salaryChanged, true);
+  }
+  fail(() => plan(100, '100'), 'NO_CHANGE');
+  fail(() => plan(100.5, '100.50'), 'NO_CHANGE');
+  fail(() => plan('100.00', '100'), 'NO_CHANGE');
+});
+test('NULL and empty nullable text are equal for change detection but the submitted value is written', () => {
+  const current = { id: 9, fields: { no_rek: null, bank_rek: '', alamat: 'Old', tgl_lahir: '' } };
+  const p = planMemberProfile(current, parseMemberProfile(profile({ no_rek: '', bank_rek: null, alamat: 'New', tgl_lahir: null })), facts);
+  assert.deepEqual(p.changed, ['alamat']); assert.equal(p.summary.bankChanged, false); assert.equal(p.reason, undefined);
+  assert.equal(p.after.fields.no_rek, ''); assert.equal(p.after.fields.bank_rek, null);
+  fail(() => planMemberProfile(current, parseMemberProfile(profile({ no_rek: '' })), facts), 'NO_CHANGE');
+});
+test('bank reason is required for bank_rek or nama_rek alone', () => {
+  const current = { id: 9, fields: { no_rek: '1', bank_rek: 'BANK', nama_rek: 'Old' } };
+  for (const f of [{ bank_rek: 'OTHER' }, { nama_rek: 'New' }]) {
+    fail(() => planMemberProfile(current, parseMemberProfile(profile(f)), facts), 'REASON_INVALID');
+    assert.equal(planMemberProfile(current, parseMemberProfile(profile(f, { reason: 'Verified bank correction' })), facts).summary.bankChanged, true);
+  }
+});
+test('unchanged master check is case-insensitive and keeps stored spelling of an inactive historical value', () => {
+  const current = { id: 9, fields: { bagian: 'Historical', lokasi: 'Closed', alamat: 'Old' } };
+  const inactive = { bagian: [{ name: 'Historical', active: false }], lokasi: [] };
+  fail(() => planMemberProfile(current, parseMemberProfile(profile({ bagian: 'historical' })), inactive), 'NO_CHANGE');
+  const p = planMemberProfile(current, parseMemberProfile(profile({ bagian: ' historical ', lokasi: 'CLOSED', alamat: 'New' })), inactive);
+  assert.deepEqual(p.changed, ['alamat']); assert.equal(p.after.fields.bagian, 'Historical'); assert.equal(p.after.fields.lokasi, 'Closed');
 });
