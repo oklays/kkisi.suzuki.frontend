@@ -17,7 +17,7 @@ const errors: Record<string, string> = {
   INSUFFICIENT_PAYMENT: "Uang bayar kurang dari total yang dihitung server.", REGISTER_CLOSED: "Buka sesi kasir sebelum membayar.", REGISTER_STALE: "Tutup sesi kasir hari sebelumnya terlebih dahulu.",
   REGISTER_AMBIGUOUS: "Ada lebih dari satu sesi kasir terbuka. Hubungi pengelola.", WRITE_NOT_CONFIGURED: "Pembayaran belum diaktifkan untuk lingkungan ini.",
   QR_NOT_CONFIGURED: "QR terenkripsi belum dikonfigurasi. Gunakan NIK atau ID card.", INVALID_QR: "QR anggota tidak valid.", PAYMENT_PRECISION: "Total Kredit mengandung pecahan rupiah yang belum didukung pencatatan pembayaran.",
-  IDEMPOTENCY_CONFLICT: "Kunci pembayaran telah digunakan untuk transaksi berbeda.", CSRF: "Muat ulang halaman untuk memperbarui sesi pembayaran.", FORBIDDEN: "Akses POS ditolak.",
+  IDEMPOTENCY_CONFLICT: "Kunci pembayaran telah digunakan untuk transaksi berbeda.", CSRF: "Muat ulang halaman untuk memperbarui sesi pembayaran.", FORBIDDEN: "Akses POS ditolak.", INVALID_DATE: "Tanggal transaksi tidak valid. Maksimal 7 hari ke belakang dan tidak boleh melewati hari ini.",
 };
 const errorText = (code: string) => errors[code] ?? "Permintaan belum dapat diproses. Coba lagi.";
 
@@ -75,7 +75,7 @@ export function MemberSearch({ member, onMember, disabled }: { member: PosMember
         <button type="submit" disabled={disabled || busy || !query.trim()}><UserRound size={15} />{busy ? "Mencari…" : "Pilih"}</button>
       </form>
       <div className="pos-member-hint"><span>Cari dengan</span><MemberKindPicker value={kind} disabled={disabled || busy} onChange={value => { setKind(value); changeQuery(""); }} /></div>
-      {member && <div className="pos-member-result" role="status"><div><strong>{member.name} · {member.nik}</strong><small>Sisa limit {formatRupiah(member.remainingSen)} · Total limit {formatRupiah(member.limitSen)}</small></div><button disabled={disabled} className="pos-icon-button" aria-label="Lepas anggota" onClick={() => changeQuery("")}><X size={16} /></button></div>}
+      {member && <div className="pos-member-result" role="status"><div><strong className="pos-member-name">{member.name} · {member.nik}</strong><small>Sisa limit {formatRupiah(member.remainingSen)} · Total limit {formatRupiah(member.limitSen)}</small></div><button disabled={disabled} className="pos-icon-button" aria-label="Lepas anggota" onClick={() => changeQuery("")}><X size={16} /></button></div>}
       {message && <div className="pos-inline-error" role="status"><TriangleAlert size={15} />{message}</div>}
     </section>
   );
@@ -183,7 +183,7 @@ export function CheckoutButton({ processing, disabled, retry, onClick }: { proce
   return <button className="pos-checkout" onClick={onClick} disabled={disabled} aria-busy={processing}>{processing ? <LoaderCircle className="pos-spinner" size={18} /> : <ShoppingBag size={18} />}<span>{processing ? "Memproses pembayaran…" : retry ? "Periksa / Ulangi Pembayaran" : "Proses Pembayaran"}</span></button>;
 }
 
-type PendingCheckout = { items: { itemId: number; quantity: number }[]; memberId: number | null; paymentType: PreviewPayment; paidAmount: string; idempotencyKey: string };
+type PendingCheckout = { items: { itemId: number; quantity: number }[]; memberId: number | null; paymentType: PreviewPayment; paidAmount: string; idempotencyKey: string; saleDate?: string };
 
 export function TransactionPanel({ cart, session, storageKey, onLockChange, onClear }: { cart: PreviewCartLine[]; session: PosSession; storageKey: string; onLockChange: (locked: boolean) => void; onClear: () => void }) {
   const [payment, setPayment] = useState<PreviewPayment>("Cash");
@@ -198,11 +198,16 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
   const pending = useRef<PendingCheckout | null>(null);
   const sending = useRef(false);
   const [hydrated, setHydrated] = useState(false);
+  const [today, setToday] = useState("");
+  const [backdate, setBackdate] = useState(false);
+  const [saleDate, setSaleDate] = useState("");
+  const oldest = today ? new Date(Date.parse(`${today}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10) : "";
+  const backdateInvalid = backdate && !(/^\d{4}-\d{2}-\d{2}$/.test(saleDate) && saleDate >= oldest && saleDate <= today);
   const total = previewSubtotal(cart);
   const paidSen = /^\d{1,10}$/.test(paidAmount) ? Number(paidAmount) * 100 : 0;
   const locked = processing || uncertain;
   const blockers = checkoutBlockingReasons({ session, payment, itemCount: cart.length, totalSen: total, paidSen, remainingSen: member?.remainingSen ?? null });
-  const ready = blockers.length === 0;
+  const ready = blockers.length === 0 && !backdateInvalid;
   const pendingKey = `kkisi-payment:${session.userId}:${session.companyId}`;
   useEffect(() => {
     let active = true;
@@ -212,6 +217,8 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
         const saved = JSON.parse(localStorage.getItem(pendingKey) ?? "null");
         if (saved?.idempotencyKey && Array.isArray(saved.items)) { pending.current = saved; setUncertain(true); onLockChange(true); setMessage("Pembayaran sebelumnya belum terkonfirmasi. Periksa dengan tombol ulangi sebelum membuat transaksi baru."); }
       } catch { /* Empty or unavailable storage. */ }
+      // Asia/Bangkok business date, matching the server.
+      setToday(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10));
       setHydrated(true);
     });
     return () => { active = false; };
@@ -220,7 +227,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
   async function submit() {
     if (sending.current || (!pending.current && !ready)) return;
     sending.current = true; setProcessing(true); onLockChange(true); setMessage(""); setReceipt(null);
-    const body = pending.current ?? { items: cart.map((line) => ({ itemId: Number(line.product.id), quantity: line.quantity })), memberId: member?.id ?? null, paymentType: payment, paidAmount, idempotencyKey: crypto.randomUUID() };
+    const body = pending.current ?? { items: cart.map((line) => ({ itemId: Number(line.product.id), quantity: line.quantity })), memberId: member?.id ?? null, paymentType: payment, paidAmount, idempotencyKey: crypto.randomUUID(), ...(backdate && saleDate !== today ? { saleDate } : {}) };
     pending.current = body;
     // Persist BEFORE sending. If storage cannot preserve a retry key, fail before a payment can be committed.
     try { localStorage.setItem(pendingKey, JSON.stringify(body)); }
@@ -237,7 +244,7 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
         setMessage(errorText(data.error)); return;
       }
       localStorage.removeItem(pendingKey); localStorage.removeItem(storageKey); pending.current = null;
-      setUncertain(false); onLockChange(false); onClear(); setMember(null); setMemberSearchKey((key) => key + 1); setPaidAmount(""); setPayment("Cash"); setReceipt(data.receipt);
+      setUncertain(false); onLockChange(false); onClear(); setMember(null); setMemberSearchKey((key) => key + 1); setPaidAmount(""); setPayment("Cash"); setBackdate(false); setSaleDate(""); setReceipt(data.receipt);
       printReceipt(data.receipt.saleId);
     } catch {
       setUncertain(true); onLockChange(true); setMessage("Hasil pembayaran belum terkonfirmasi. Ulangi pemeriksaan dengan kunci yang sama; jangan membuat pembayaran baru.");
@@ -249,12 +256,19 @@ export function TransactionPanel({ cart, session, storageKey, onLockChange, onCl
       <div className="pos-transaction-scroll">
         <MemberSearch key={memberSearchKey} member={member} onMember={(value) => { setMember(value); setPayment(value ? "Kredit" : "Cash"); }} disabled={locked} />
         <PromotionSection />
+        <section className="pos-date-section" aria-label="Tanggal transaksi">
+          <label htmlFor="pos-sale-date">Tanggal Transaksi</label>
+          <input id="pos-sale-date" type="date" value={backdate ? saleDate : today} min={oldest} max={today} disabled={!backdate || locked} onChange={(event) => setSaleDate(event.target.value)} aria-invalid={backdateInvalid} />
+          <label className="pos-backdate-toggle"><input type="checkbox" checked={backdate} disabled={locked || !today} onChange={(event) => { setBackdate(event.target.checked); setSaleDate(today); }} />Lakukan Transaksi Backdate</label>
+          {backdate && <p className="pos-backdate-warning" role="status"><TriangleAlert size={13} />Transaksi akan dicatat pada tanggal {saleDate || "—"}, bukan hari ini (maks. 7 hari ke belakang). Limit kredit dihitung pada bulan tanggal tersebut.</p>}
+        </section>
       </div>
       <div className="pos-transaction-bottom">
         <PriceSummary cart={cart} /><PaymentMethodSelector selected={payment} onSelect={setPayment} disabled={locked} />
         {payment === "Cash" && <div className="pos-cash-payment"><label htmlFor="pos-paid">Uang bayar</label><CurrencyInput id="pos-paid" value={paidAmount} onValueChange={setPaidAmount} allowDecimals={false} maxIntegerDigits={10} disabled={locked} placeholder="0" /><span className="pos-change">Kembalian <strong>{formatRupiah(Math.max(0, paidSen - total))}</strong></span></div>}
         {payment === "QRIS" && <div className="pos-qris-banner"><div className="pos-qris-banner-head"><QrCode size={16} /><span>Instruksi QRIS Statis</span></div><p>Pelanggan scan kode QRIS toko. Pastikan notifikasi dana masuk telah terverifikasi sebelum memproses transaksi.</p></div>}
-        {payment === "Kredit" && <p className="pos-checkout-note">{member ? `Sisa setelah belanja: ${formatRupiah(member.remainingSen - total)}` : "Pilih anggota aktif terlebih dahulu."}</p>}
+        {payment === "Kredit" && <p className="pos-checkout-note pos-remaining-after">{member ? `Sisa setelah belanja: ${formatRupiah(member.remainingSen - total)}` : "Pilih anggota aktif terlebih dahulu."}</p>}
+        {!uncertain && backdateInvalid && <p className="pos-checkout-note">Pilih tanggal transaksi yang valid.</p>}
         {!uncertain && blockers.map((reason) => <p className="pos-checkout-note" key={reason}>{reason}</p>)}
         <CheckoutButton processing={processing} disabled={!hydrated || processing || (!uncertain && !ready)} retry={uncertain} onClick={() => { if (payment === "QRIS" && !uncertain) setConfirmQris(true); else void submit(); }} />
         {message && <p className="pos-inline-error" role="alert">{message}</p>}

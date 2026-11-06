@@ -13,6 +13,8 @@ export type CheckoutInput = {
   paidSen: number;
   memberId: number | null;
   idempotencyKey: string;
+  /** Optional backdated business date (YYYY-MM-DD, Asia/Bangkok). Absent = today. Range is enforced at write time. */
+  saleDate?: string;
 };
 export type MemberRecord = {
   id: number; nik: string; name: string; status: string; employment: string;
@@ -20,6 +22,17 @@ export type MemberRecord = {
 };
 export type MemberCredit = { id: number; nik: string; name: string; limitSen: number; spentSen: number; remainingSen: number };
 export type CheckoutResult = { saleId: number; salesCode: string; grandTotalSen: number; paidSen: number; changeSen: number; paymentType: PaymentMethod };
+
+export const MAX_BACKDATE_DAYS = 7;
+const isoDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+/** Backdate window: today-7 .. today. Returns the validated date (or today when absent). */
+export function resolveSaleDate(saleDate: string | undefined, now: Date): string {
+  const today = businessDates(now).day;
+  if (saleDate === undefined) return today;
+  const oldest = new Date(Date.parse(`${today}T00:00:00Z`) - MAX_BACKDATE_DAYS * 86_400_000).toISOString().slice(0, 10);
+  if (!isoDate(saleDate) || saleDate > today || saleDate < oldest) throw new PosError('INVALID_DATE');
+  return saleDate;
+}
 
 export function businessDates(now: Date) {
   const day = new Date(now.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
@@ -54,12 +67,13 @@ export function parseCheckout(value: unknown): CheckoutInput {
   if (memberId !== null && !positiveId(memberId)) throw new PosError('INVALID_INPUT');
   if (body.paymentType === 'Kredit' && memberId === null) throw new PosError('MEMBER_REQUIRED');
   if (typeof body.idempotencyKey !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.idempotencyKey)) throw new PosError('INVALID_INPUT');
+  if (body.saleDate != null && !isoDate(body.saleDate)) throw new PosError('INVALID_DATE');
   let paidSen = 0;
   if (body.paymentType === 'Cash') {
     if (typeof body.paidAmount !== 'string' || !/^\d{1,10}$/.test(body.paidAmount) || Number(body.paidAmount) > 9_999_999_999) throw new PosError('INVALID_AMOUNT');
     paidSen = toMinorUnits(body.paidAmount);
   }
-  return { items, memberId, paymentType: body.paymentType, paidSen, idempotencyKey: body.idempotencyKey.toLowerCase() };
+  return { items, memberId, paymentType: body.paymentType, paidSen, idempotencyKey: body.idempotencyKey.toLowerCase(), ...(body.saleDate != null ? { saleDate: body.saleDate as string } : {}) };
 }
 
 /** Parameter values for DECIMAL / legacy DOUBLE(18,2), produced without floating-point arithmetic. */

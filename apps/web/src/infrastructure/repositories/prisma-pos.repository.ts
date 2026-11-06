@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { capLockWait } from '../db/lock-wait.ts';
 import { toMinorUnits } from '@koperasi/domain/money';
-import { businessDates, decimalAmount, memberCredit, PosError, type CheckoutInput, type CheckoutResult, type MemberCredit, type MemberRecord, type PaymentMethod } from '@koperasi/domain/pos/sale';
+import { businessDates, resolveSaleDate, decimalAmount, memberCredit, PosError, type CheckoutInput, type CheckoutResult, type MemberCredit, type MemberRecord, type PaymentMethod } from '@koperasi/domain/pos/sale';
 import type { MemberLookupKind, PosContext, PosRepository } from '@koperasi/application/pos/checkout';
 import { prisma } from '../db/prisma.ts';
 import { kreditReturnedSen } from './sales-return-ledger.ts';
@@ -66,7 +66,10 @@ export class PrismaPosRepository implements PosRepository {
   private async finalize(tx: Prisma.TransactionClient, context: PosContext, input: CheckoutInput, now: Date): Promise<CheckoutResult> {
     await capLockWait(tx);
     const { companyId, userId } = context;
-    const dates = businessDates(now);
+    const today = businessDates(now).day;
+    const saleDay = resolveSaleDate(input.saleDate, now);
+    // Noon of the sale day keeps month window, invoice code and contract expiry anchored to the backdated date.
+    const dates = businessDates(saleDay === today ? now : new Date(`${saleDay}T12:00:00+07:00`));
     // ponytail: branch mutex serializes Next checkouts; use a dedicated counter if measured throughput requires it.
     const [company] = await tx.$queryRaw<{ sales_init: string }[]>`SELECT sales_init FROM db_company WHERE id = ${companyId} AND status = 1 FOR UPDATE`;
     if (!company) throw new PosError('FORBIDDEN');
@@ -75,7 +78,7 @@ export class PrismaPosRepository implements PosRepository {
       AND EXISTS(SELECT 1 FROM db_permissions p WHERE p.role_id = u.role_id AND p.permissions = 'sales_add') FOR UPDATE`;
     if (!user) throw new PosError('FORBIDDEN');
     const reference = `NXT-${createHash('sha256').update(`${companyId}:${userId}:${input.idempotencyKey}`).digest('hex').slice(0, 40)}`;
-    const digest = `next-pos:v1:${createHash('sha256').update(JSON.stringify({ items: input.items, memberId: input.memberId, paymentType: input.paymentType, paidSen: input.paidSen })).digest('hex')}`;
+    const digest = `next-pos:v1:${createHash('sha256').update(JSON.stringify({ items: input.items, memberId: input.memberId, paymentType: input.paymentType, paidSen: input.paidSen, saleDate: input.saleDate })).digest('hex')}`;
     const saved = await tx.$queryRaw<SavedRow[]>`SELECT id, sales_code, CAST(grand_total AS DECIMAL(18,2)) AS grand_total, paid_amount,
       CAST(other_charges_amt AS DECIMAL(18,2)) AS change_return, payment_type, sales_note FROM db_sales WHERE company_id = ${companyId} AND reference_no = ${reference} AND sales_status = 'Final' LIMIT 2`;
     if (saved.length) {
@@ -88,7 +91,7 @@ export class PrismaPosRepository implements PosRepository {
     if (!registers.length) throw new PosError('REGISTER_CLOSED');
     if (registers.length !== 1) throw new PosError('REGISTER_AMBIGUOUS');
     const register = registers[0];
-    if (register.opened_on !== dates.day) throw new PosError('REGISTER_STALE');
+    if (register.opened_on !== today) throw new PosError('REGISTER_STALE');
     if (register.kasir_status !== 1) throw new PosError('REGISTER_CLOSED');
 
     let member: MemberCredit | null = null;
@@ -96,7 +99,7 @@ export class PrismaPosRepository implements PosRepository {
       // Global row lock: concurrent Kredit checkouts from DIFFERENT companies must serialize on the same member.
       const rows = await tx.$queryRaw<MemberRow[]>(Prisma.sql`SELECT ${memberFields} FROM m_anggota m WHERE m.id = ${input.memberId} FOR UPDATE`);
       if (!rows[0]) throw new PosError('MEMBER_NOT_FOUND');
-      member = await credit(tx, this.read, rows[0], now);
+      member = await credit(tx, this.read, rows[0], saleDay === today ? now : new Date(`${saleDay}T12:00:00+07:00`));
       const [{ n }] = await tx.$queryRaw<{ n: bigint }[]>`SELECT COUNT(*) AS n FROM m_anggota WHERE nik_kar = ${member.nik}`;
       if (Number(n) !== 1) throw new PosError('MEMBER_AMBIGUOUS');
     }
@@ -144,7 +147,7 @@ export class PrismaPosRepository implements PosRepository {
        other_charges_input, other_charges_amt, subtotal_hpp, subtotal, round_off, created_date, created_by, system_ip, system_name,
        pos, status, payment_status, return_bit, reference_no, sales_note, company_id, payment_type, id_kasir, id_buka_kasir, type_order, ppob, admin, jw, in_proses)
       VALUES (${salesCode},${customerId},${nik},${member?.name ?? 'UMUM'},${decimalAmount(paid)},${decimalAmount(total)},'Final',${dates.day},0,
-       ${decimalAmount(change)},${decimalAmount(change)},${decimalAmount(hpp)},${decimalAmount(total)},${decimalAmount(Math.floor((total + 50) / 100) * 100)},${dates.day},${user.username},'','Next.js POS',
+       ${decimalAmount(change)},${decimalAmount(change)},${decimalAmount(hpp)},${decimalAmount(total)},${decimalAmount(Math.floor((total + 50) / 100) * 100)},${today},${user.username},'','Next.js POS',
        1,1,'Paid','0',${reference},${digest},${companyId},${input.paymentType},${register.id_kasir},${register.id},0,0,0,0,0)`;
     const [{ id }] = await tx.$queryRaw<{ id: bigint }[]>`SELECT LAST_INSERT_ID() AS id`;
     const saleId = Number(id);
@@ -153,7 +156,7 @@ export class PrismaPosRepository implements PosRepository {
     await tx.$executeRaw(Prisma.sql`INSERT INTO db_salesitems (sales_id,customer_id,item_id,barcode,sales_code,sales_status,sales_qty,description,purchase_price,purchase_price_pack,
       price_per_unit,price_per_pack,tax_id,tax_amt,tax_type,discount_type,discount_input,discount_amt,unit_total_cost,total_cost,status,company_id,item_type,id_kasir,id_buka_kasir) VALUES ${Prisma.join(values)}`);
     await tx.$executeRaw`INSERT INTO db_salespayments (sales_id,customer_id,payment,payment_date,payment_type,payment_note,created_date,created_by,system_ip,system_name,change_return,status,company_id)
-      VALUES (${saleId},${customerId},${decimalAmount(paid)},${dates.day},${input.paymentType},${`Dibayar By ${input.paymentType}`},${dates.day},${user.username},'','Next.js POS',${decimalAmount(change)},1,${companyId})`;
+      VALUES (${saleId},${customerId},${decimalAmount(paid)},${dates.day},${input.paymentType},${`Dibayar By ${input.paymentType}`},${today},${user.username},'','Next.js POS',${decimalAmount(change)},1,${companyId})`;
     for (const line of lines) {
       const changed = await tx.$executeRaw`UPDATE db_items SET stock = stock - ${line.quantity} WHERE id = ${line.itemId} AND company_id = ${companyId} AND status = 1 AND status_so = 0 AND stock >= ${line.quantity}`;
       if (changed !== 1) throw new PosError('INSUFFICIENT_STOCK');

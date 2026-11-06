@@ -168,7 +168,7 @@ export function PosScreen({ products: initialProducts, catalogStatus = "ready", 
             </div>
             <div className="pos-tabpanel" id="pos-product-panel" role="tabpanel" aria-labelledby="pos-product-tab" tabIndex={0} hidden={tab !== "product"}>
               <div className="pos-catalog-meta"><span>{status === "ready" ? `${products.length} produk${products.length >= CATALOG_PAGE_SIZE ? " pertama · persempit pencarian" : ""}` : ""}</span><span>{query.trim() ? "Hasil pencarian termasuk stok habis" : "Daftar hanya menampilkan produk berstok"}</span></div>
-              <div className="pos-catalog-scroll" aria-busy={fetching}><ProductGrid products={products} quantities={quantities} locked={locked} onAdd={add} status={status} onReset={() => setQuery("")} onRetry={() => setRetry((count) => count + 1)} /></div>
+              <div className="pos-catalog-scroll" aria-busy={fetching}><ProductGrid products={products} quantities={quantities} locked={locked} onAdd={(product) => { add(product); setQuery(""); }} status={status} onReset={() => setQuery("")} onRetry={() => setRetry((count) => count + 1)} /></div>
             </div>
             <div className="pos-tabpanel" id="pos-cart-panel" role="tabpanel" aria-labelledby="pos-cart-tab" tabIndex={0} hidden={tab !== "cart"}>
               <CenterCart cart={cart} locked={locked} onChange={adjust} onSetQuantity={setItemQuantity} onScan={scan} onRemove={(id) => { if (!checkoutLocked.current) setCart((current) => current.filter((line) => line.product.id !== id)); }} />
