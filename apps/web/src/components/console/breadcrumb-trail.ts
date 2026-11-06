@@ -1,4 +1,4 @@
-import { BookText, Building2, ClipboardCheck, FileSpreadsheet, FileText, House, Landmark, Pencil, UserPlus, UserRound, Users, type LucideIcon } from 'lucide-react';
+import { BookText, Building2, ClipboardCheck, FileSpreadsheet, FileText, House, Landmark, Pencil, Plus, UserPlus, UserRound, Users, type LucideIcon } from 'lucide-react';
 import type { NavSection } from '@koperasi/domain/console/navigation';
 import { SECTION_ICONS, type ConsoleNavEntry } from '../../features/console/navigation.ts';
 import type { BreadcrumbItem } from './Breadcrumbs';
@@ -7,7 +7,7 @@ import { CONSOLE_ICONS } from './icons.ts';
 /** Icons for trails written by hand on a page (the registry covers the ones derived from navigation). */
 export const CRUMB_ICONS = {
   home: House, kosipa: Landmark, admin: Building2, members: Users, member: UserRound, register: UserPlus, edit: Pencil, detail: FileText,
-  book: BookText, batch: FileSpreadsheet, reconcile: ClipboardCheck,
+  book: BookText, batch: FileSpreadsheet, reconcile: ClipboardCheck, add: Plus,
 } as const satisfies Record<string, LucideIcon>;
 export type CrumbIconKey = keyof typeof CRUMB_ICONS;
 /** A crumb a page adds after its registered entry. The icon is a key, so a server page can hand it to the client breadcrumb. */

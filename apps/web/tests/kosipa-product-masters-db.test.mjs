@@ -52,7 +52,7 @@ const update = (type, row, values, reason) => updateProductMaster(ports(), actor
 const status = (type, row, active, reason = 'uji sintetis T06') => setProductMasterStatus(ports(), actor(), type, String(row.id), { idempotencyKey: randomUUID(), expectedVersion: row.version, reason }, active);
 const pick = (type, values) => Object.fromEntries(PRODUCT_MASTER_DEFINITIONS[type].fields.map((f) => [f.key, values[f.key] ?? '']));
 const load = async (type, id) => (await listProductMaster(ports(), actor(), type)).rows.find((r) => r.id === id);
-const ledger = async (requestHashFree = true) => (await q(`SELECT * FROM \`${stack.LEDGER_DB}\`.kosipa_command_ledger ORDER BY id DESC LIMIT 1`))[0];
+const ledger = async () => (await q(`SELECT * FROM \`${stack.LEDGER_DB}\`.kosipa_command_ledger ORDER BY id DESC LIMIT 1`))[0];
 const errno = (e) => (/\b(1142|1143)\b/.exec(String(e?.message)) ?? [])[1];
 const pembiayaan = (code) => ({ pembiayaan_code: code, pembiayaan_name: `SYNTH PB ${RUN}`, pembiayaan_remarks: '', jenis_bunga: 'Flat', biaya_asuransi: '0.5', biaya_jasa: '1.2345', biaya_admin: '10000', biaya_bunga: '1', biaya_pinalty: '0', tgl_tempo: '25', akun_code: '1-1300', lock_1angsuran: '0' });
 

@@ -88,7 +88,7 @@ test('read-only page data: GET needs member view; returns rows with versions and
   assert.equal(r.headers.get('cache-control'), 'no-store');
   const none = fixture({ menus: [] });
   assert.equal((await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/lokasi', { cookie: s.cookie }), 'lokasi', deps(none))).status, 403);
-  assert.equal((await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/suku-bunga', { cookie: s.cookie }), 'suku-bunga', deps(viewer))).status, 404, 'masters without native commands do not exist here');
+  assert.equal((await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/divisi', { cookie: s.cookie }), 'divisi', deps(viewer))).status, 404, 'masters retired by FD-33 have no native route');
 });
 
 test('granted operator: 201 create, 200 replay, 409 key reuse, 400/422 validation, PATCH update, 409 stale, deactivate with reason', async () => {

@@ -1545,3 +1545,15 @@
 
 /* The trail above a page title sits on the page background and is part of the heading block. */
 .page-crumbs { margin-bottom:-2px; }
+
+/* FA-03B T06 product masters: built on the mform standard; only what that standard does not cover. */
+.kosipa-module .product-actions { display:flex; justify-content:flex-end; margin:0; }
+.mform-auto.product-warning { background:#fffaf0; color:#80501b; border:1px solid #efdab5; }
+.product-status > header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mform.product-status-form { display:flex; flex-direction:column; gap:10px; max-width:560px; }
+.product-status-actions { display:flex; }
+.product-status-actions button { min-height:44px; padding:0 18px; border:0; border-radius:10px; background:var(--c-blue); color:#fff; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+.product-status-actions button.product-danger { background:#b42318; }
+.product-status-actions button:disabled { background:#b9c6dc; cursor:not-allowed; }
+.product-status-actions button:focus-visible { outline:2px solid var(--c-blue); outline-offset:2px; }
+.mform [aria-invalid="true"] { border-color:#b42318; background:#fff5f4; }

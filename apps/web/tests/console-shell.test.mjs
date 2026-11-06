@@ -114,7 +114,7 @@ test('route-to-navigation matrix: every static KOSIPA page is a registered, avai
   const registered = new Map(CONSOLE_NAVIGATION.map((e) => [e.href, e]));
   const reachedFrom = { '/console/kosipa/anggota/[id]': '/console/kosipa/anggota', '/console/kosipa/simpanan/[id]': '/console/kosipa/simpanan', '/console/kosipa/pinjaman/[docNo]': '/console/kosipa/pinjaman',
     '/console/kosipa/payroll/[docNo]': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/rekonsiliasi': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/anggota/[nik]': '/console/kosipa/payroll',
-    '/console/kosipa/master/[type]': '/console/kosipa/master',
+    '/console/kosipa/master/[type]': '/console/kosipa/master', '/console/kosipa/master/[type]/baru': '/console/kosipa/master', '/console/kosipa/master/[type]/[id]/ubah': '/console/kosipa/master',
     '/console/kosipa/anggota/baru': '/console/kosipa/anggota', '/console/kosipa/anggota/[id]/ubah': '/console/kosipa/anggota/[id]' };
   for (const route of kosipaPages()) {
     if (route.includes('[') || route in reachedFrom) { assert.ok(route in reachedFrom, `${route}: dynamic page with no declared parent`); const parent = reachedFrom[route]; assert.ok(registered.get(parent)?.readiness === 'available' || parent in reachedFrom, `${route}: parent ${parent} is not an available entry`); continue; }

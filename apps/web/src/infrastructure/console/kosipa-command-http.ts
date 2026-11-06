@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { KosipaError } from '@koperasi/domain/kosipa';
+import { KosipaError, KosipaFieldError } from '@koperasi/domain/kosipa';
+import { isProductMasterType } from '@koperasi/domain/kosipa/product-master';
 import { resolveConsoleAccess, type KosipaWriteSources, type PermissionSetSource } from '@koperasi/application/console/capabilities';
 import type { IdentityPorts } from '@koperasi/application/console/identity-links';
 import type { CommandActor, CommandOutcome, WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
 import { createMaster, listMaster, setMasterStatus, updateMaster, type MasterRepository } from '@koperasi/application/kosipa/commands/master';
+import { createProductMaster, listProductMaster, setProductMasterStatus, updateProductMaster, type ProductMasterRepository } from '@koperasi/application/kosipa/commands/product-master';
 import { changeMemberStatus, getMemberForEdit, registerMember, updateMemberProfile, type MemberRepository } from '@koperasi/application/kosipa/commands/member';
 import { errorResponse, guard, json, readJson, type AuthServices } from '../auth/http.ts';
 
@@ -12,7 +14,7 @@ import { errorResponse, guard, json, readJson, type AuthServices } from '../auth
  * JSON content type for every state change, SEC-105) -> services present -> server-side capabilities (fresh per request, from the
  * live identity link and explicit grants, SEC-108) -> use case. Responses are code-only (SEC-111) and never cached.
  */
-export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository };
+export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository };
 export type KosipaCommandDeps = { enabled: boolean; permissions: PermissionSetSource; ports: KosipaCommandPorts | null; log?: (event: string, fields: Record<string, string | number>) => void };
 
 const STATUS: Record<string, number> = {
@@ -20,6 +22,7 @@ const STATUS: Record<string, number> = {
   FORBIDDEN: 403,
   MASTER_TYPE_UNKNOWN: 404, MASTER_NOT_FOUND: 404, MEMBER_NOT_FOUND: 404, MEMBER_STATUS_INVALID: 400,
   STALE: 409, IDEMPOTENCY_CONFLICT: 409, BUSY_RETRY: 409, DOCUMENT_NUMBER_CONFLICT: 409,
+  PRODUCT_FIELD_INVALID: 400, PRODUCT_COA_INVALID: 422, PRODUCT_COA_DESC_TOO_LONG: 422, PRODUCT_FINANCING_INVALID: 422, PRODUCT_PARENT_INVALID: 422, PRODUCT_FIELD_DUPLICATE: 422,
   MEMBER_NIK_DUPLICATE: 422, MEMBER_MASTER_INVALID: 422, MEMBER_MIRROR_CONFLICT: 422, MEMBER_FIELD_INVALID: 400, MEMBER_ID_INVALID: 400, MEMBER_DATE_INVALID: 400, MEMBER_AMOUNT_INVALID: 400, MEMBER_DEDUCTION_NIK_TOO_LONG: 400,
   MASTER_CODE_DUPLICATE: 422, MASTER_NAME_DUPLICATE: 422, MASTER_REFERENCED: 422, MASTER_FIELD_IMMUTABLE: 422, NO_CHANGE: 422,
   WRITE_DISABLED: 503, WRITE_NOT_CONFIGURED: 503, LEGACY_ACTIVE: 503, MASTER_TOO_LARGE: 503, MEMBER_TOO_LARGE: 503, POSTCONDITION_FAILED: 503,
@@ -39,6 +42,8 @@ async function actorFor(services: AuthServices, request: Request, deps: KosipaCo
 }
 
 function failure(services: AuthServices, deps: KosipaCommandDeps, error: unknown): Response {
+  // A field error names the field (a column name, never a value) so the form can point at it.
+  if (error instanceof KosipaFieldError) return json(STATUS[error.code] ?? 400, { error: error.code, field: error.field });
   if (error instanceof KosipaError) return json(STATUS[error.code] ?? 400, { error: error.code }, error.code === 'BUSY_RETRY' ? { 'Retry-After': '1' } : {});
   if (error instanceof Error && error.name !== 'AuthError') { (deps.log ?? services.deps.log)('kosipa_command_failed', {}); return json(503, { error: 'KOSIPA_UNAVAILABLE' }); }
   return errorResponse(services, error);
@@ -52,6 +57,10 @@ export async function handleListMaster(services: AuthServices, request: Request,
   try {
     const a = await actorFor(services, request, deps, false);
     if ('response' in a) return a.response;
+    if (isProductMasterType(rawType)) {
+      const product = await listProductMaster(a.ports, a.actor, rawType);
+      return json(200, { type: product.definition.type, rows: product.rows, facts: product.facts, canManage: product.canManage, writable: product.writable, legacy: product.legacy });
+    }
     const data = await listMaster(a.ports, a.actor, rawType);
     return json(200, { type: data.definition.type, rows: data.rows, canManage: data.canManage, writable: data.writable, legacy: data.legacy });
   } catch (error) { return failure(services, deps, error); }
@@ -62,7 +71,8 @@ export async function handleCreateMaster(services: AuthServices, request: Reques
   try {
     const a = await actorFor(services, request, deps, true);
     if ('response' in a) return a.response;
-    return ok(201, await createMaster(commandPorts(a.ports, deps), a.actor, rawType, await readJson(request, BODY_LIMIT)));
+    const body = await readJson(request, BODY_LIMIT);
+    return ok(201, isProductMasterType(rawType) ? await createProductMaster(commandPorts(a.ports, deps), a.actor, rawType, body) : await createMaster(commandPorts(a.ports, deps), a.actor, rawType, body));
   } catch (error) { return failure(services, deps, error); }
 }
 
@@ -71,7 +81,8 @@ export async function handleUpdateMaster(services: AuthServices, request: Reques
   try {
     const a = await actorFor(services, request, deps, true);
     if ('response' in a) return a.response;
-    return ok(200, await updateMaster(commandPorts(a.ports, deps), a.actor, rawType, rawId, await readJson(request, BODY_LIMIT)));
+    const body = await readJson(request, BODY_LIMIT);
+    return ok(200, isProductMasterType(rawType) ? await updateProductMaster(commandPorts(a.ports, deps), a.actor, rawType, rawId, body) : await updateMaster(commandPorts(a.ports, deps), a.actor, rawType, rawId, body));
   } catch (error) { return failure(services, deps, error); }
 }
 
@@ -81,7 +92,8 @@ export async function handleMasterStatus(services: AuthServices, request: Reques
     if (action !== 'deactivate' && action !== 'reactivate') return json(404, { error: 'NOT_FOUND' });
     const a = await actorFor(services, request, deps, true);
     if ('response' in a) return a.response;
-    return ok(200, await setMasterStatus(commandPorts(a.ports, deps), a.actor, rawType, rawId, await readJson(request, BODY_LIMIT), action === 'reactivate'));
+    const body = await readJson(request, BODY_LIMIT);
+    return ok(200, isProductMasterType(rawType) ? await setProductMasterStatus(commandPorts(a.ports, deps), a.actor, rawType, rawId, body, action === 'reactivate') : await setMasterStatus(commandPorts(a.ports, deps), a.actor, rawType, rawId, body, action === 'reactivate'));
   } catch (error) { return failure(services, deps, error); }
 }
 
