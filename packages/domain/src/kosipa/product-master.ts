@@ -94,7 +94,8 @@ export const PRODUCT_MASTER_DEFINITIONS: Readonly<Record<ProductMasterType, Prod
       money('biaya_pinalty', 'Biaya penalti'),
       { key: 'tgl_tempo', label: 'Tanggal jatuh tempo', kind: 'int', min: 0, maxValue: 31, required: true, financial: true },
       { key: 'lock_1angsuran', label: 'Kunci 1 angsuran', kind: 'flag', required: true, financial: true },
-      { key: 'max_angsuran', label: 'Maks. angsuran (bulan)', kind: 'int', min: 1, maxValue: 360, required: true, financial: true },
+      // 0 = not set: most real loan types store 0 and legacy only prints the value on the loan document (prn_pinjaman_doc.php "max N kali").
+      { key: 'max_angsuran', label: 'Maks. angsuran (bulan)', kind: 'int', min: 0, maxValue: 360, required: true, financial: true, hint: '0 = tidak ditetapkan (hanya tercetak di dokumen pinjaman).' },
       money('max_pinjaman', 'Maks. pinjaman (Rp)'),
       coa('akun_code', 'Akun COA', 'akun_desc', 50, true), coa('akun_code_pembiayaan', 'Akun pembiayaan', 'akun_desc_pembiayaan', 200, false),
       coa('akun_code_pendapatan', 'Akun pendapatan', 'akun_desc_pendapatan', 200, false),
@@ -161,7 +162,9 @@ export function canonicalDecimal(raw: string): string {
 function parseField(field: ProductField, raw: unknown): string {
   if (raw !== undefined && raw !== null && typeof raw !== 'string') return bad(field);
   const value = (raw ?? '').replace(/\s+/g, ' ').trim();
-  if (!value) return field.required ? bad(field) : '';
+  // Accounts: real legacy rows store '' (or '0', or codes absent from the chart). Parsing keeps them so unrelated edits stay possible; a NEW row or a
+  // CHANGED account must resolve in the chart (planProductCreate / planProductUpdate).
+  if (!value) return field.required && field.kind !== 'coa' ? bad(field) : '';
   if (!PRINTABLE.test(value)) return bad(field);
   switch (field.kind) {
     case 'decimal': {
@@ -239,7 +242,13 @@ function assertUnique(def: ProductMasterDefinition, values: ProductValues, other
 }
 
 /** New rows start active (the legacy forms' first option). `existing` = every row, read under the table lock. */
+/** A required account may not be left empty on a new row or be changed to empty. */
+function assertRequiredCoa(def: ProductMasterDefinition, values: ProductValues, keys: readonly string[]): void {
+  for (const f of def.fields) if (f.kind === 'coa' && f.required && keys.includes(f.key) && !(values[f.key] ?? '')) throw new KosipaFieldError('PRODUCT_COA_INVALID', f.key);
+}
+
 export function planProductCreate(def: ProductMasterDefinition, input: ProductValues, existing: readonly ProductRecord[], facts: ProductFacts): { values: ProductValues; active: true } {
+  assertRequiredCoa(def, input, def.fields.map((f) => f.key));
   assertUnique(def, input, existing, def.fields.map((f) => f.key));
   assertFinancing(def, input, facts);
   if (def.fields.some((f) => f.kind === 'parent')) assertParent(input.parent_id ?? '0', existing);
@@ -265,6 +274,7 @@ export function planProductUpdate(def: ProductMasterDefinition, current: Product
   if (!current) throw new KosipaError('MASTER_NOT_FOUND');
   const byKey = new Map(def.fields.map((f) => [f.key, f]));
   const editedCoa = new Set(def.fields.filter((f) => f.kind === 'coa' && !same(f, current.values[f.key], input[f.key])).map((f) => f.key));
+  assertRequiredCoa(def, input, [...editedCoa]);
   const after = deriveCoa(def, { ...current.values, ...input }, facts, editedCoa);
   const descColumns = def.fields.filter((f) => f.descColumn).map((f) => f.descColumn as string);
   const changed = [...def.fields.map((f) => f.key), ...descColumns].filter((k) => !same(byKey.get(k), current.values[k], after[k]));

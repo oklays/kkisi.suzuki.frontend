@@ -81,7 +81,8 @@ export function ProductMasterForm({ definition, facts, mode, row, csrfToken, can
     const options = (list: readonly { value: string; label: string }[], placeholder?: string) => {
       const current = values[f.key] ?? '';
       const extra = current && !list.some((o) => o.value === current) ? [{ value: current, label: `${current} (tidak tersedia)` }] : [];
-      return <select {...common} required={f.required} onChange={(e) => set(f.key, e.target.value)}>
+      // Legacy rows may store no account: on edit an unchanged empty account must not block the form (the server rejects CHANGING it to empty).
+      return <select {...common} required={f.required && !(editing && f.kind === 'coa')} onChange={(e) => set(f.key, e.target.value)}>
         {placeholder !== undefined && <option value="">{placeholder}</option>}
         {[...extra, ...list].map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>;

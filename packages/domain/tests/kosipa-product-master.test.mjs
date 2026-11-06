@@ -46,7 +46,8 @@ test('typed parsing: exact decimals by column scale, enums, flags, bounded ints,
   const pj = parseProductValues(def('jenis-pinjaman'), pinjaman());
   assert.equal(pj.max_pinjaman, '50000000'); assert.equal(pj.parent_id, '1');
   fail(() => parseProductValues(def('jenis-pinjaman'), { ...pinjaman(), max_angsuran: '' }), 'PRODUCT_FIELD_INVALID', 'max_angsuran');
-  fail(() => parseProductValues(def('jenis-pinjaman'), { ...pinjaman(), max_angsuran: '0' }), 'PRODUCT_FIELD_INVALID', 'max_angsuran');
+  assert.equal(parseProductValues(def('jenis-pinjaman'), { ...pinjaman(), max_angsuran: '0' }).max_angsuran, '0', '0 = not set: 19 of 31 real loan types store 0; legacy only prints it');
+  fail(() => parseProductValues(def('jenis-pinjaman'), { ...pinjaman(), max_angsuran: '361' }), 'PRODUCT_FIELD_INVALID', 'max_angsuran');
   fail(() => parseProductValues(def('jenis-pinjaman'), { ...pinjaman(), parent_id: '-' }), 'PRODUCT_FIELD_INVALID', 'parent_id');
   fail(() => parseProductValues(def('jenis-pinjaman'), { ...pinjaman(), dd_usr: 'x' }), 'FIELD_NOT_ALLOWED');
   fail(() => parseProductValues(def('jenis-pinjaman'), { ...pinjaman(), is_payroll: '1' }), 'FIELD_NOT_ALLOWED');
@@ -119,4 +120,19 @@ test('status: never a delete; same status is NO_CHANGE; version is a 64-hex dige
   fail(() => planProductStatus(d, null, false), 'MASTER_NOT_FOUND');
   const a = productVersion({ id: 5, columns: { x: '1', y: null } }), b = productVersion({ id: 5, columns: { x: '1', y: '' } });
   assert.match(a, /^[0-9a-f]{64}$/); assert.notEqual(a, b, 'NULL and empty are different stored states');
+});
+
+test('real legacy accounts: a stored COA code that is empty or not in the chart is kept on unrelated edits; new rows and changed accounts must be valid', () => {
+  const d = def('jenis-simpanan');
+  assert.equal(parseProductValues(d, { ...simpanan(), akun_code: '' }).akun_code, '', 'parsing tolerates an empty account (legacy rows store "" or "0")');
+  fail(() => planProductCreate(d, parseProductValues(d, { ...simpanan(), akun_code: '' }), [], facts()), 'PRODUCT_COA_INVALID', 'akun_code');
+  for (const legacy of ['0', '', '3.01.02.01']) {
+    const current = row(5, { ...parseProductValues(d, { ...simpanan(), jenis_simpanan_code: 'POTONGAN DKM', akun_code: legacy }), akun_desc: legacy === '' ? '' : 'legacy' });
+    const label = planProductUpdate(d, current, { ...current.values, jenis_simpanan_name: 'Nama Baru' }, undefined, [current], facts(), 0);
+    assert.deepEqual(label.changed, ['jenis_simpanan_name'], `unchanged legacy account ${JSON.stringify(legacy)} is not re-validated`);
+    assert.equal(label.after.values.akun_code, legacy);
+  }
+  const current = row(5, { ...parseProductValues(d, simpanan()), akun_desc: 'Simpanan Pokok' });
+  fail(() => planProductUpdate(d, current, { ...current.values, akun_code: '' }, 'hapus akun', [current], facts(), 0), 'PRODUCT_COA_INVALID', 'akun_code');
+  fail(() => planProductUpdate(d, current, { ...current.values, akun_code: '7-7777' }, 'akun salah', [current], facts(), 0), 'PRODUCT_COA_INVALID', 'akun_code');
 });
