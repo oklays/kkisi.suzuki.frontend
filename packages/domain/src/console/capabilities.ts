@@ -56,7 +56,7 @@ export const KOSIPA_WRITE_REQUIRES: Readonly<Record<KosipaWriteCapability, Kosip
  * Grantable today = capabilities whose native commands exist. FA-01 shipped the reference-master commands, FA-03B adds member register/profile/status, so no financial
  * capability can be granted ahead of its command, its decisions (FD-xx) and its cutover gates.
  */
-export const GRANTABLE_KOSIPA_CAPABILITIES: readonly KosipaWriteCapability[] = ['kosipa.master.manage', 'kosipa.member.create', 'kosipa.member.update', 'kosipa.member.status'];
+export const GRANTABLE_KOSIPA_CAPABILITIES: readonly KosipaWriteCapability[] = ['kosipa.master.manage', 'kosipa.member.create', 'kosipa.member.update', 'kosipa.member.status', 'kosipa.savings.prepare', 'kosipa.savings.approve'];
 
 /**
  * Risky action, NOT derived from legacy menus: exporting aggregate KOSIPA reports. It is granted only by an explicit deployment policy

@@ -36,7 +36,8 @@
     "./kosipa/commands/master": "./src/kosipa/commands/master.ts",
     "./kosipa/document-numbering": "./src/kosipa/document-numbering.ts",
     "./kosipa/commands/member": "./src/kosipa/commands/member.ts",
-    "./kosipa/commands/product-master": "./src/kosipa/commands/product-master.ts"
+    "./kosipa/commands/product-master": "./src/kosipa/commands/product-master.ts",
+    "./kosipa/commands/savings-deposit": "./src/kosipa/commands/savings-deposit.ts"
   },
   "scripts": {
     "lint": "eslint .",

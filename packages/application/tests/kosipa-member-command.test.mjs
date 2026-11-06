@@ -80,7 +80,7 @@ test('result, subject, envelope and audit exclude member values and reason; gran
   const w=world(); await registerMember(w.ports,actor,registration()); await updateMemberProfile(w.ports,actor,'42',profile());
   const safe=JSON.stringify({ events:w.events,envelopes:w.calls.map((c)=>c.envelope),results:[...w.ledger.values()].map((l)=>l.result) });
   for (const pii of ['José','00123','123456','Private address','Verified correction','no_rek','gaji']) assert.ok(!safe.includes(pii),pii);
-  assert.deepEqual(GRANTABLE_KOSIPA_CAPABILITIES,['kosipa.master.manage','kosipa.member.create','kosipa.member.update','kosipa.member.status']);
+  assert.deepEqual(GRANTABLE_KOSIPA_CAPABILITIES,['kosipa.master.manage','kosipa.member.create','kosipa.member.update','kosipa.member.status','kosipa.savings.prepare','kosipa.savings.approve']);
   assert.ok(AUDIT_ACTIONS.includes('kosipa.member.register')); assert.ok(AUDIT_ACTIONS.includes('kosipa.member.updateProfile'));
 });
 test('repository stale/uniqueness/transaction rejection produces failure audit and no success', async () => {
