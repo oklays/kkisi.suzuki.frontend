@@ -36,7 +36,7 @@ Implementation workspace: `feat/kosipa-full-access-completion`, isolated from ma
 | TASK-112 Performance baseline and index proposal. | unchecked | missing | Benchmark script and measured full-access baseline absent. |
 | TASK-113 Legacy switch generator and staging rehearsal. | partial | partial | Equivalent named fence generator exists; five-master synthetic rehearsal only, all-writer member fence unproven. |
 | TASK-114 Masters domain + commands + writer + pages. | partial | partial | Five of seventeen masters; twelve outstanding. |
-| TASK-115 Member register/profile/status/deactivate. | unchecked | partial | Register + profile domain/application core (T03) and synthetic-stack repository, writer grants, fence/ownership feature and legacy read compatibility (T04, MC12) exist; status/deactivate, HTTP/UI, production writer and cutover absent. |
+| TASK-115 Member register/profile/status/deactivate. | unchecked | partial | Register, profile and status commands with synthetic-stack repository, writer grants, fence/ownership feature, legacy read compatibility (MC12), HTTP routes and console UI (T03–T05) exist and pass synthetic DB/HTTP/browser suites; production writer, activation, real-data UAT and the remaining member scope (limits, imports, deduction edits, delete refusal UI) absent. |
 | TASK-116 Staged imports (members, limits). | unchecked | missing | No staged imports/limits command. |
 | TASK-117 Deduction configuration + request decisions (mobile, public link, savings changes). | unchecked | missing | No config/request decisions. |
 | TASK-118 Savings documents (payroll, deposit, opening balance). | unchecked | missing | No savings document lifecycle. |
@@ -75,7 +75,7 @@ Implementation workspace: `feat/kosipa-full-access-completion`, isolated from ma
 | WI-04 Read-model corrections and performance baseline | partial | TASK-111, TASK-112 | Existing read files do not implement computed all-paid LUNAS; no read-write assertion suite.; Benchmark script and measured full-access baseline absent. |
 | WI-05 Legacy switch tooling (FD-03) | partial | TASK-113, TASK-140 | Equivalent named fence generator exists; five-master synthetic rehearsal only, all-writer member fence unproven.; No all-group staging rehearsal and accepted rollback evidence. |
 | WI-06 KOSIPA reference masters | partial | TASK-114 | Five of seventeen masters; twelve outstanding. |
-| WI-07 Members: register, profile, status, deactivate | partial | TASK-115 | Register/profile repository proven on the synthetic stack only (T04); status/deactivate, HTTP/UI and production activation remain. |
+| WI-07 Members: register, profile, status, deactivate | partial | TASK-115 | Register/profile/status with HTTP and UI proven on the synthetic stack only (T04/T05); production activation and owner UAT remain. |
 | WI-08 Member imports and credit limits | missing | TASK-116 | No staged imports/limits command. |
 | WI-09 Payroll deduction configuration and request decisions | missing | TASK-117 | No config/request decisions. |
 | WI-10 Savings documents (payroll, deposit, opening balance) | missing | TASK-118 | No savings document lifecycle. |

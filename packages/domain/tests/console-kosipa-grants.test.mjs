@@ -16,7 +16,7 @@ test('write vocabulary: every write capability is known, needs a view capability
   assert.equal(KOSIPA_WRITE_REQUIRES['kosipa.master.manage'], 'kosipa.member.view');
   assert.equal(KOSIPA_WRITE_REQUIRES['kosipa.loan.disburse'], 'kosipa.loan.view');
   assert.equal(KOSIPA_WRITE_REQUIRES['kosipa.deduction.manage'], 'kosipa.savings.view');
-  assert.deepEqual(GRANTABLE_KOSIPA_CAPABILITIES, ['kosipa.master.manage'], 'FA-01: no financial capability is grantable');
+  assert.deepEqual(GRANTABLE_KOSIPA_CAPABILITIES, ['kosipa.master.manage', 'kosipa.member.create', 'kosipa.member.update', 'kosipa.member.status'], 'masters and members only: no financial capability is grantable');
 });
 
 test('legacy menus (even every KOSIPA controller) never yield a write capability (SEC-102)', () => {

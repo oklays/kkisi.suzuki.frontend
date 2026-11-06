@@ -25,9 +25,12 @@ import { PrismaKosipaGrantStore } from './kosipa-grant-store.ts';
 import { kosipaGrantAdmins, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
 import { PrismaKosipaMasterRepository } from '../repositories/kosipa-master-write.repository.ts';
 import { kosipaMasterWritePrisma, kosipaMasterWritesAvailable, validateKosipaLedgerDatabase } from '../db/prisma-kosipa-master-write.ts';
+import { PrismaKosipaMemberRepository } from '../repositories/kosipa-member-write.repository.ts';
+import { kosipaMemberWritePrisma, kosipaMemberWritesAvailable, validateKosipaMemberLedgerDatabase } from '../db/prisma-kosipa-member-write.ts';
 import type { KosipaWriteSources } from '@koperasi/application/console/capabilities';
 import type { WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
 import type { MasterRepository } from '@koperasi/application/kosipa/commands/master';
+import type { MemberRepository } from '@koperasi/application/kosipa/commands/member';
 import type { KosipaGrantStore } from '@koperasi/application/console/kosipa-grants';
 
 export type ConsoleServices = IdentityPorts & { directory: PrismaKosipaDirectory };
@@ -36,7 +39,8 @@ export type ConsoleServices = IdentityPorts & { directory: PrismaKosipaDirectory
 export function consoleServices(env: Record<string, string | undefined> = process.env): ConsoleServices | null {
   if (!consoleStoreUsable(env)) return null;
   const db = consolePrisma();
-  const directory = new PrismaKosipaDirectory(prisma);
+  // Once Next.js owns member writes, the legacy member controllers are fenced (status 0); their group access rows must still grant member VIEW.
+  const directory = new PrismaKosipaDirectory(prisma, { fencedViewUrls: kosipaWriteOwnership(env).owns('member') ? ['anggota/anggota_c', 'master/anggota_c'] : [] });
   return { links: new PrismaIdentityLinkStore(db), audit: new PrismaAuditLog(db), kosipa: directory, consoleUsers: directory, directory, now: () => new Date() };
 }
 
@@ -51,13 +55,16 @@ export function kosipaServices(env: Record<string, string | undefined> = process
 
 /** Native KOSIPA commands (FA-01): KOSIPA read services + ownership gate + writer repositories. The writer is attached only when its
  *  guarded configuration is valid; otherwise reads work and every command answers 503 WRITE_NOT_CONFIGURED. */
-export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository };
+export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository };
 export function kosipaCommandServices(env: Record<string, string | undefined> = process.env): KosipaCommandServices | null {
   const services = kosipaServices(env);
   if (!services) return null;
   const writable = kosipaMasterWritesAvailable(env);
   const masters = new PrismaKosipaMasterRepository(prisma, writable ? kosipaMasterWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaLedgerDatabase(env) : undefined });
-  return { ...services, ownership: kosipaWriteOwnership(env), masters };
+  const memberWritable = kosipaMemberWritesAvailable(env);
+  const versionSecret = (env.KOSIPA_MEMBER_VERSION_SECRET ?? '').length >= 32 ? env.KOSIPA_MEMBER_VERSION_SECRET : undefined;
+  const members = new PrismaKosipaMemberRepository(prisma, memberWritable ? kosipaMemberWritePrisma() : undefined, { ledgerDatabase: memberWritable ? validateKosipaMemberLedgerDatabase(env) : undefined, versionSecret });
+  return { ...services, ownership: kosipaWriteOwnership(env), masters, members };
 }
 
 /** Grant administration needs the console store, the grant table (flag) and the KOSIPA directory for identity links. */

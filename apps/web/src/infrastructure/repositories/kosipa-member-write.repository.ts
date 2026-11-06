@@ -2,10 +2,11 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import { KosipaError, canonicalNik } from '@koperasi/domain/kosipa';
 import type { Snapshot } from '@koperasi/domain/kosipa/command';
 import {
-  MEMBER_REGISTRATION_FIELDS, memberFieldSummary, memberNikUniquenessKey, planMemberProfile, planMemberRegistration,
-  type MemberField, type MemberMasterFacts, type MemberProfile, type MemberRegistration, type MemberStoredFields,
+  MEMBER_REGISTRATION_FIELDS, memberFieldSummary, memberNikUniquenessKey, planMemberProfile, planMemberRegistration, planMemberStatus,
+  type MemberField, type MemberMasterFacts, type MemberProfile, type MemberRegistration, type MemberStatusChange, type MemberStoredFields,
 } from '@koperasi/domain/kosipa/member-command';
 import { businessDates } from '@koperasi/domain/pos/sale';
+import type { LegacyFenceState } from '@koperasi/application/kosipa/commands/master';
 import type { MemberRepository, MemberResult } from '@koperasi/application/kosipa/commands/member';
 import type { CommandEnvelope, CommandOutcome } from '@koperasi/application/kosipa/commands/pipeline';
 import { DocumentNumberingService } from '@koperasi/application/kosipa/document-numbering';
@@ -63,6 +64,8 @@ type UpdateLocked = { row: Row | null; masters: MemberMasterFacts; user: UsersRo
 const idOf = (row: Row) => Number(row.id);
 /** Row text -> planner input. Everything the planner may compare, exactly as stored. */
 const storedFields = (row: Row): MemberStoredFields => Object.fromEntries(MEMBER_VERSION_COLUMNS.filter((c) => c !== 'id').map((c) => [c, row[c] ?? null]));
+/** Every column as the database's own text (never numbers), for the edit view. */
+const textFields = (row: Row): Record<string, string | null> => Object.fromEntries(MEMBER_VERSION_COLUMNS.filter((c) => c !== 'id').map((c) => [c, row[c] ?? null]));
 const nikKey = (stored: string | null): string => { const value = stored ?? ''; try { return memberNikUniquenessKey(value); } catch { return value.trim().toLowerCase(); } };
 
 /** Legacy get_no_anggota(): '000n' / '00n' / '0n' (for n >= 100 simply '0' + n), then the NIK. */
@@ -91,10 +94,16 @@ export class PrismaKosipaMemberRepository implements MemberRepository {
   }
 
   /** The member as stored now plus the opaque version a profile edit must echo back. Plain consistent read (SELECT-only reader). */
-  async detail(id: number): Promise<{ id: number; fields: MemberStoredFields; version: string } | null> {
+  async detail(id: number): Promise<{ id: number; fields: Record<string, string | null>; version: string } | null> {
     if (!this.options.versionSecret) throw new KosipaError('WRITE_NOT_CONFIGURED');
     const [row] = await this.read.$queryRaw<Row[]>(Prisma.sql`SET STATEMENT max_statement_time=5 FOR SELECT ${ROW_SELECT} FROM m_anggota WHERE id = ${id}`);
-    return row ? { id: idOf(row), fields: storedFields(row), version: memberVersion(this.options.versionSecret, row) } : null;
+    return row ? { id: idOf(row), fields: textFields(row), version: memberVersion(this.options.versionSecret, row) } : null;
+  }
+
+  async fenceState(): Promise<LegacyFenceState> {
+    const rows = await this.read.$queryRaw<{ status: number | bigint | null }[]>`SET STATEMENT max_statement_time=5 FOR
+      SELECT status FROM ref_menu WHERE UPPER(url) IN (${Prisma.join(LEGACY_CONTROLLERS.map((c) => c.toUpperCase()))})`;
+    return rows.some((r) => Number(r.status) === 1) ? 'legacy-active' : 'fenced';
   }
 
   private async masters(tx: Prisma.TransactionClient): Promise<MemberMasterFacts> {
@@ -172,22 +181,23 @@ export class PrismaKosipaMemberRepository implements MemberRepository {
     });
   }
 
+  /** The member row FOR UPDATE and, from that LOCKED row's NIK only (MC05 correction), the existing users row FOR UPDATE. */
+  private async lockMember(tx: Prisma.TransactionClient, id: number): Promise<{ row: Row | null; user: UsersRow | null }> {
+    const row = await this.fetchRow(tx, id, true);
+    let user: UsersRow | null = null;
+    if (row) {
+      const nik = (row.nik_kar ?? '').trim();
+      const keys = [...new Set([nik, nikKeyOrSame(nik)])].filter(Boolean);
+      const users = keys.length ? await tx.$queryRaw<UsersRow[]>(Prisma.sql`SELECT id, ktp, phone FROM users WHERE nik IN (${Prisma.join(keys)}) FOR UPDATE`) : [];
+      if (users.length > 1) throw new KosipaError('MEMBER_MIRROR_CONFLICT');
+      user = users[0] ?? null;
+    }
+    return { row, user };
+  }
+
   update(envelope: CommandEnvelope, id: number, input: MemberProfile): Promise<CommandOutcome<MemberResult>> {
     return this.run<UpdateLocked, MemberResult>(envelope, {
-      lock: async (tx) => {
-        const row = await this.fetchRow(tx, id, true);
-        const masters = await this.masters(tx);
-        let user: UsersRow | null = null;
-        if (row) {
-          // Identity comes from the LOCKED member (MC05 correction): users.nik equals the stored NIK or its canonical form.
-          const nik = (row.nik_kar ?? '').trim();
-          const keys = [...new Set([nik, nikKeyOrSame(nik)])].filter(Boolean);
-          const users = keys.length ? await tx.$queryRaw<UsersRow[]>(Prisma.sql`SELECT id, ktp, phone FROM users WHERE nik IN (${Prisma.join(keys)}) FOR UPDATE`) : [];
-          if (users.length > 1) throw new KosipaError('MEMBER_MIRROR_CONFLICT');
-          user = users[0] ?? null;
-        }
-        return { row, masters, user };
-      },
+      lock: async (tx) => ({ ...(await this.lockMember(tx, id)), masters: await this.masters(tx) }),
       run: async (tx, locked) => {
         if (!locked.row) throw new KosipaError('MEMBER_NOT_FOUND');
         const secret = this.options.versionSecret as string;
@@ -206,6 +216,44 @@ export class PrismaKosipaMemberRepository implements MemberRepository {
         if (!stored) throw new KosipaError('POSTCONDITION_FAILED');
         for (const key of plan.changed) if (!equalsStored(key, stored[key] ?? null, plan.after.fields[key] as string | null)) throw new KosipaError('POSTCONDITION_FAILED');
         const ledger: LedgerFacts = { before: null, after: ledgerSummary(plan.summary), ...(plan.reason === undefined ? {} : { reason: plan.reason }) };
+        return { result: { id, version: memberVersion(secret, stored) }, ledger };
+      },
+    });
+  }
+
+  /** REQ-110 / FD-30: see MemberRepository.changeStatus. Reason is mandatory and stored in the ledger only. */
+  changeStatus(envelope: CommandEnvelope, id: number, input: MemberStatusChange): Promise<CommandOutcome<MemberResult>> {
+    return this.run<{ row: Row | null; user: UsersRow | null }, MemberResult>(envelope, {
+      lock: (tx) => this.lockMember(tx, id),
+      run: async (tx, locked) => {
+        if (!locked.row) throw new KosipaError('MEMBER_NOT_FOUND');
+        const secret = this.options.versionSecret as string;
+        if (memberVersion(secret, locked.row) !== input.expectedVersion) throw new KosipaError('STALE');
+        const plan = planMemberStatus({ id, status: locked.row.status_anggota }, input);
+
+        const sets = [Prisma.sql`status_anggota = ${plan.to}`];
+        if (plan.zeroLimits) sets.push(Prisma.sql`limit_toko = 0`, Prisma.sql`limit_ppob = 0`, Prisma.sql`gaji_minus = 0`);
+        sets.push(Prisma.sql`ud = ${JAKARTA_NOW}`, Prisma.sql`ud_usr = ${await this.actorName(tx, envelope)}`);
+        if ((await tx.$executeRaw(Prisma.sql`UPDATE m_anggota SET ${Prisma.join(sets)} WHERE id = ${id}`)) !== 1) throw new KosipaError('POSTCONDITION_FAILED');
+
+        // Existing mobile identity only: all and only its tokens (by user_id), and the disabled mirror written once (no legacy wallet recredit).
+        let tokensRevoked = 0;
+        if (plan.disableMobile && locked.user) {
+          const userId = Number(locked.user.id);
+          tokensRevoked = Number(await tx.$executeRaw`DELETE FROM oauth_access_tokens WHERE user_id = ${userId}`);
+          await tx.$executeRaw`UPDATE users SET is_active = 0, is_delete = 1, admin_verifikasi = 0, temporary_token = '', wallet_balance = 0, wallet_balance_ppob = 0 WHERE id = ${userId}`;
+          const [u] = await tx.$queryRaw<Record<string, string | null>[]>`SELECT CAST(is_active AS CHAR) AS is_active, CAST(is_delete AS CHAR) AS is_delete, CAST(admin_verifikasi AS CHAR) AS admin_verifikasi,
+            temporary_token, CAST(wallet_balance AS CHAR) AS wallet_balance, CAST(wallet_balance_ppob AS CHAR) AS wallet_balance_ppob FROM users WHERE id = ${userId}`;
+          const [left] = await tx.$queryRaw<{ n: bigint | number }[]>`SELECT COUNT(*) AS n FROM oauth_access_tokens WHERE user_id = ${userId}`;
+          if (!u || Number(u.is_active) !== 0 || Number(u.is_delete) !== 1 || Number(u.admin_verifikasi) !== 0 || u.temporary_token !== '' || Number(u.wallet_balance) !== 0 || Number(u.wallet_balance_ppob) !== 0 || Number(left.n) !== 0) throw new KosipaError('POSTCONDITION_FAILED');
+        }
+
+        const stored = await this.fetchRow(tx, id, false);
+        if (!stored || stored.status_anggota !== plan.to || (plan.zeroLimits && ['limit_toko', 'limit_ppob', 'gaji_minus'].some((c) => Number(stored[c]) !== 0))) throw new KosipaError('POSTCONDITION_FAILED');
+        const ledger: LedgerFacts = {
+          fromState: plan.from, toState: plan.to, reason: input.reason, before: null,
+          after: { id, kind: plan.kind, limitsZeroed: plan.zeroLimits, mobileDisabled: plan.disableMobile && locked.user !== null, tokensRevoked },
+        };
         return { result: { id, version: memberVersion(secret, stored) }, ledger };
       },
     });

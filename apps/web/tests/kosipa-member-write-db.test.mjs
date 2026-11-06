@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
-import { registerMember, updateMemberProfile } from '@koperasi/application/kosipa/commands/member';
+import { registerMember, updateMemberProfile, changeMemberStatus } from '@koperasi/application/kosipa/commands/member';
 import { PrismaKosipaMemberRepository, legacyMemberNumber } from '../src/infrastructure/repositories/kosipa-member-write.repository.ts';
 import { validateKosipaMemberLedgerDatabase, validateKosipaMemberWriteConfig } from '../src/infrastructure/db/prisma-kosipa-member-write.ts';
 import { PrismaAuditLog } from '../src/infrastructure/console/console-store.ts';
@@ -24,7 +24,7 @@ const SECRET = 'synthetic-member-version-secret-0123456789abcdef';
 const CONTROLLERS = ['master/anggota_c', 'anggota/anggota_c', 'mobile/users_c'];
 
 const RUN = randomUUID().slice(0, 5).toUpperCase();
-const created = { members: [], users: [], niks: [], bagian: [] };
+const created = { members: [], users: [], niks: [], bagian: [], tokens: [] };
 let fenceBefore = [];
 let seq = 0;
 const nik = () => `K${RUN}${++seq}`;
@@ -39,6 +39,7 @@ if (ENABLED) {
 test.after(async () => {
   if (!ENABLED) return;
   try {
+    for (const id of created.tokens) await q('DELETE FROM oauth_access_tokens WHERE id = ?', [id]);
     for (const id of created.users) await q('DELETE FROM users WHERE id = ?', [id]);
     for (const n of created.niks) await q('DELETE FROM m_simpanan_aktif WHERE nik_kar = ?', [n]);
     for (const id of created.members) await q('DELETE FROM m_anggota WHERE id = ?', [id]);
@@ -50,7 +51,7 @@ test.after(async () => {
   }
 });
 
-const actor = () => ({ userId: stack.USERS.operator, kosipaUserId: 9102, capabilities: new Set(['kosipa.member.view', 'kosipa.member.create', 'kosipa.member.update']), requestId: randomUUID() });
+const actor = () => ({ userId: stack.USERS.operator, kosipaUserId: 9102, capabilities: new Set(['kosipa.member.view', 'kosipa.member.create', 'kosipa.member.update', 'kosipa.member.status']), requestId: randomUUID() });
 const repo = (hooks) => new PrismaKosipaMemberRepository(read, write, { ledgerDatabase: stack.LEDGER_DB, versionSecret: SECRET, hooks });
 const ports = (hooks, owns = true) => ({ ownership: { owns: () => owns }, audit: new PrismaAuditLog(consoleDb), now: () => new Date(), members: repo(hooks) });
 let master = null;
@@ -72,6 +73,12 @@ const memberRow = async (id) => (await q('SELECT * FROM m_anggota WHERE id = ?',
 const memberCount = async () => Number((await q('SELECT COUNT(*) AS n FROM m_anggota'))[0].n);
 const configRows = (n) => q('SELECT * FROM m_simpanan_aktif WHERE nik_kar = ? ORDER BY id', [n]);
 const detail = (id) => repo().detail(id);
+const setStatus = (id, status, version, extra = {}, hooks) => changeMemberStatus(ports(hooks), actor(), String(id), { idempotencyKey: randomUUID(), status, expectedVersion: version, reason: 'Perubahan status uji sintetis', ...extra });
+async function seedToken(userId, id = `T${RUN}${++seq}`) {
+  await root.query('INSERT INTO oauth_access_tokens (id, user_id, client_id, revoked) VALUES (?, ?, 1, 0)', [id, userId]);
+  created.tokens.push(id); return id;
+}
+const tokensOf = async (...ids) => (await q(`SELECT id FROM oauth_access_tokens WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY id`, ids)).map((r) => r.id);
 const update = (id, fields, version, extra = {}) => updateMemberProfile(ports(), actor(), String(id), { idempotencyKey: randomUUID(), fields, expectedVersion: version, ...extra });
 const ledgerRow = async (key) => (await q('SELECT * FROM kkisi_kfa_ledger.kosipa_command_ledger WHERE idempotency_key = ?', [key]))[0];
 async function seedUser(memberNik, extra = {}) {
@@ -92,14 +99,17 @@ test('review-only production grants equal the tested synthetic grants and offer 
   assert.ok(tpl.length >= 10);
   assert.deepEqual(prod, tpl);
   for (const g of tpl) {
-    assert.doesNotMatch(g, /\b(DELETE|DROP|ALTER|CREATE|ALL PRIVILEGES|GRANT OPTION|EXECUTE|TRIGGER|LOCK TABLES)\b/i, g.slice(0, 80));
+    if (!/oauth_access_tokens/.test(g)) assert.doesNotMatch(g, /\b(DELETE|DROP|ALTER|CREATE|ALL PRIVILEGES|GRANT OPTION|EXECUTE|TRIGGER|LOCK TABLES)\b/i, g.slice(0, 80));
+    assert.doesNotMatch(g, /\b(DROP|ALTER|CREATE|ALL PRIVILEGES|GRANT OPTION|EXECUTE|TRIGGER|LOCK TABLES)\b/i, g.slice(0, 80));
     if (!/ON `__LEDGER_DB__`\.\*/.test(g)) assert.doesNotMatch(g, /ON `[^`]+`\.\*|\*\.\*/, 'only the ledger database is granted database-wide: ' + g.slice(0, 60));
   }
   assert.equal(tpl.filter((g) => /ON `__LEDGER_DB__`\.\*/.test(g) && /^GRANT SELECT, INSERT ON/.test(g)).length, 1);
   assert.ok(!tpl.some((g) => /`password`/.test(g) && /^GRANT (SELECT|UPDATE)/.test(g) && /m_anggota/.test(g)), 'the member credential column is never granted');
-  for (const forbidden of ['sim_pokok', 'status_anggota', 'nik_kar', 'doc_no', 'limit_toko', 'gaji_minus']) assert.ok(!tpl.some((g) => /^GRANT UPDATE/.test(g) && /m_anggota/.test(g) && g.includes(`\`${forbidden}\``)), `no UPDATE on ${forbidden}`);
+  for (const forbidden of ['sim_pokok', 'nik_kar', 'doc_no', 'limit_persen', 'limit_toko_old', 'password', 'cd_usr']) assert.ok(!tpl.some((g) => /^GRANT UPDATE/.test(g) && /m_anggota/.test(g) && g.includes(`\`${forbidden}\``)), `no UPDATE on ${forbidden}`);
+  assert.equal(tpl.filter((g) => /^GRANT UPDATE/.test(g) && /m_anggota/.test(g) && g.includes('`status_anggota`')).length, 1, 'status is writable only through the one status grant');
+  assert.ok(tpl.some((g) => /oauth_access_tokens/.test(g) && /DELETE/.test(g)) && !tpl.some((g) => /oauth_access_tokens/.test(g) && /(INSERT|UPDATE)/.test(g)), 'tokens: select + delete only');
   const code = file('../../docs/migration/sql/kosipa-member-writer-production.sql').split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
-  assert.doesNotMatch(code, /\b(DROP|DELETE|ALTER|CREATE|TRUNCATE)\b/i);
+  assert.doesNotMatch(code.split('\n').filter((l) => !/oauth_access_tokens/.test(l)).join('\n'), /\b(DROP|DELETE|ALTER|CREATE|TRUNCATE)\b/i);
 });
 
 test('legacy member number: 000n / 00n / 0n then NIK (n >= 100 is simply 0 + n, as get_no_anggota)', () => {
@@ -328,16 +338,108 @@ test('bank change needs a reason; the reason lives in the ledger only; ledger/re
   assert.deepEqual(Object.keys(out.result).sort(), ['id', 'version']);
 });
 
+test('status to non-AKTIVE: status + three ceilings zeroed, mobile identity disabled once, all and only its tokens revoked; nothing else changes', options, async () => {
+  const b = await body({ email: `s.${RUN}@example.invalid`, gaji: '4000000' }, { pokok: '25', wajib: '30' });
+  const reg = await register(b);
+  await q('UPDATE m_anggota SET limit_toko = 500000, limit_ppob = 100000, gaji_minus = 250000, limit_persen = 30, limit_toko_old = 7 WHERE id = ?', [reg.result.id]);
+  const user = await seedUser(b.fields.nik_kar, { is_active: 1, is_delete: 0, admin_verifikasi: 1, temporary_token: 'abc', wallet_balance_ppob: 9 });
+  const other = await seedUser(`O${RUN}${++seq}`, { is_active: 1, is_delete: 0, admin_verifikasi: 1, wallet_balance: 77 });
+  const own = [await seedToken(user.id), await seedToken(user.id)];
+  const bystander = await seedToken(other.id);
+  const trapId = String(user.id); let trap = null;
+  if (!(await tokensOf(trapId)).length) trap = await seedToken(other.id, trapId);   // an unrelated token whose id equals the user's id (MC08 trap)
+  const before = await memberRow(reg.result.id), cfgBefore = await configRows(b.fields.nik_kar), otherBefore = (await q('SELECT * FROM users WHERE id = ?', [other.id]))[0];
+  const v = (await detail(reg.result.id)).version;
+  const key = randomUUID();
+  const out = await changeMemberStatus(ports(), actor(), String(reg.result.id), { idempotencyKey: key, status: 'RESIGN', expectedVersion: v, reason: 'Karyawan mengundurkan diri per surat 123' });
+  assert.notEqual(out.result.version, v);
+  const row = await memberRow(reg.result.id);
+  assert.equal(row.status_anggota, 'RESIGN');
+  for (const c of ['limit_toko', 'limit_ppob', 'gaji_minus']) assert.equal(Number(row[c]), 0, c);
+  for (const c of ['limit_persen', 'limit_toko_old', 'gaji', 'sim_pokok', 'sim_wajib', 'sim_sukarela', 'nama_kar', 'nik_kar', 'doc_no', 'no_anggota', 'bagian', 'lokasi', 'kd_group', 'cd', 'cd_usr']) assert.equal(String(row[c]), String(before[c]), `${c} untouched`);
+  assert.equal(row.ud_usr, 'SYNTH KFA KOSIPA OPERATOR');
+  const [u] = await q('SELECT * FROM users WHERE id = ?', [user.id]);
+  assert.deepEqual([u.is_active, u.is_delete, u.admin_verifikasi, u.temporary_token, Number(u.wallet_balance), Number(u.wallet_balance_ppob)], [0, 1, 0, '', 0, 0]);
+  for (const c of ['nik', 'ktp', 'phone', 'email', 'name', 'bagian', 'lokasi', 'no_rek', 'bank_rek', 'kd_group', 'password']) assert.equal(u[c], user[c], `users.${c} untouched`);
+  assert.deepEqual(await tokensOf(...own), [], 'own tokens revoked');
+  assert.deepEqual(await tokensOf(bystander, ...(trap ? [trap] : [])), [bystander, ...(trap ? [trap] : [])].sort(), 'other users\' tokens (and the id trap) survive');
+  assert.deepEqual((await q('SELECT * FROM users WHERE id = ?', [other.id]))[0], otherBefore);
+  assert.deepEqual(await configRows(b.fields.nik_kar), cfgBefore, 'deduction config is a separate policy: untouched');
+  const ledger = await ledgerRow(key);
+  assert.equal(ledger.command, 'member.change_status'); assert.equal(ledger.reason, 'Karyawan mengundurkan diri per surat 123');
+  assert.equal(ledger.from_state, 'AKTIVE'); assert.equal(ledger.to_state, 'RESIGN');
+  const after = typeof ledger.after_json === 'string' ? JSON.parse(ledger.after_json) : ledger.after_json;
+  assert.deepEqual(after, { id: reg.result.id, kind: 'deactivate', limitsZeroed: true, mobileDisabled: true, tokensRevoked: 2 });
+  assert.ok(PII(JSON.stringify({ ...ledger, reason: '' }), [b.fields.nik_kar, b.fields.nama_kar, '4000000']));
+  assert.equal((await setStatus(reg.result.id, 'RESIGN', out.result.version).catch((e) => e.code)), 'NO_CHANGE');
+});
+
+test('status: another non-AKTIVE target repeats the safe effects; reactivation is member-only (ceilings stay 0, mobile identity and tokens not restored)', options, async () => {
+  const b = await body(); const reg = await register(b);
+  const user = await seedUser(b.fields.nik_kar, { is_active: 1, is_delete: 0, admin_verifikasi: 1 });
+  let v = (await detail(reg.result.id)).version;
+  v = (await setStatus(reg.result.id, 'KONTRAK', v)).result.version;
+  await q('UPDATE m_anggota SET limit_toko = 9, limit_ppob = 9, gaji_minus = 9 WHERE id = ?', [reg.result.id]);   // a competing legacy write after the first transition
+  await q('UPDATE users SET is_active = 1, is_delete = 0, wallet_balance = 5 WHERE id = ?', [user.id]);
+  v = (await detail(reg.result.id)).version;
+  v = (await setStatus(reg.result.id, 'PENSIUN', v)).result.version;
+  const row = await memberRow(reg.result.id);
+  assert.equal(row.status_anggota, 'PENSIUN'); assert.deepEqual([row.limit_toko, row.limit_ppob, row.gaji_minus].map(Number), [0, 0, 0]);
+  assert.equal(Number((await q('SELECT is_active FROM users WHERE id = ?', [user.id]))[0].is_active), 0);
+  const tok = await seedToken(user.id);
+  const on = await setStatus(reg.result.id, 'AKTIVE', v);
+  const back = await memberRow(reg.result.id);
+  assert.equal(back.status_anggota, 'AKTIVE'); assert.deepEqual([back.limit_toko, back.limit_ppob, back.gaji_minus].map(Number), [0, 0, 0], 'FD-30: no limit restoration');
+  const [u] = await q('SELECT is_active, is_delete, admin_verifikasi, wallet_balance FROM users WHERE id = ?', [user.id]);
+  assert.deepEqual([Number(u.is_active), Number(u.is_delete), Number(u.admin_verifikasi), Number(u.wallet_balance)], [0, 1, 0, 0], 'mobile identity stays disabled');
+  assert.deepEqual(await tokensOf(tok), [tok], 'reactivation never touches tokens');
+  const ledger = (await q("SELECT after_json, from_state, to_state FROM kkisi_kfa_ledger.kosipa_command_ledger WHERE command = 'member.change_status' AND subject_ref = ? ORDER BY id DESC LIMIT 1", [String(reg.result.id)]))[0];
+  assert.deepEqual([ledger.from_state, ledger.to_state], ['PENSIUN', 'AKTIVE']); void on;
+});
+
+test('status: member without a users row, stale/unknown/invalid, replay and rollback leave no half-applied state', options, async () => {
+  const b = await body(); const reg = await register(b);
+  const users = Number((await q('SELECT COUNT(*) AS n FROM users'))[0].n);
+  const v = (await detail(reg.result.id)).version;
+  await assert.rejects(setStatus(reg.result.id, 'AKTIVE', v), { code: 'NO_CHANGE' });
+  await assert.rejects(setStatus(reg.result.id, 'DELETED', v), { code: 'MEMBER_STATUS_INVALID' });
+  await assert.rejects(setStatus(reg.result.id, 'RESIGN', v, { reason: '' }), { code: 'REASON_INVALID' });
+  await assert.rejects(setStatus(2_000_000_000, 'RESIGN', v), { code: 'MEMBER_NOT_FOUND' });
+  await q('UPDATE m_anggota SET rt = ? WHERE id = ?', ['3', reg.result.id]);
+  await assert.rejects(setStatus(reg.result.id, 'RESIGN', v), { code: 'STALE' });
+  assert.equal((await memberRow(reg.result.id)).status_anggota, 'AKTIVE');
+  const v2 = (await detail(reg.result.id)).version;
+  const key = randomUUID();
+  const first = await changeMemberStatus(ports(), actor(), String(reg.result.id), { idempotencyKey: key, status: 'LUAR BIASA', expectedVersion: v2, reason: 'Cuti panjang di luar tanggungan' });
+  const again = await changeMemberStatus(ports(), actor(), String(reg.result.id), { idempotencyKey: key, status: 'LUAR BIASA', expectedVersion: v2, reason: 'Cuti panjang di luar tanggungan' });
+  assert.equal(again.replayed, true); assert.deepEqual(again.result, first.result);
+  assert.equal(Number((await q('SELECT COUNT(*) AS n FROM users'))[0].n), users, 'no account created');
+  // rollback: failure after the business write leaves member, user and tokens exactly as before
+  const b2 = await body(); const reg2 = await register(b2);
+  const user = await seedUser(b2.fields.nik_kar, { is_active: 1, is_delete: 0, admin_verifikasi: 1, wallet_balance: 11 });
+  const tok = await seedToken(user.id);
+  await q('UPDATE m_anggota SET limit_toko = 123 WHERE id = ?', [reg2.result.id]);
+  const m2 = await memberRow(reg2.result.id), u2 = (await q('SELECT * FROM users WHERE id = ?', [user.id]))[0], v3 = (await detail(reg2.result.id)).version;
+  await assert.rejects(setStatus(reg2.result.id, 'RESIGN', v3, {}, { afterBusinessWrite: async () => { throw new Error('INJECTED'); } }), /INJECTED/);
+  assert.deepEqual(await memberRow(reg2.result.id), m2); assert.deepEqual((await q('SELECT * FROM users WHERE id = ?', [user.id]))[0], u2); assert.deepEqual(await tokensOf(tok), [tok]);
+  await q('UPDATE ref_menu SET status = 1 WHERE UPPER(url) = UPPER(?)', ['mobile/users_c']);
+  try { await assert.rejects(setStatus(reg2.result.id, 'RESIGN', v3), { code: 'LEGACY_ACTIVE' }); } finally { await q('UPDATE ref_menu SET status = 0 WHERE UPPER(url) = UPPER(?)', ['mobile/users_c']); }
+  assert.equal((await memberRow(reg2.result.id)).status_anggota, 'AKTIVE');
+});
+
 test('least privilege: the member writer cannot change identity/status/deductions/limits/credentials, delete, create accounts or read the credential column', options, async () => {
   const denied = async (sql) => { try { await write.$executeRawUnsafe(sql); } catch (e) { return errno(e); } return 'allowed'; };
   for (const sql of [
-    'UPDATE m_anggota SET nik_kar = nik_kar WHERE id = 0', 'UPDATE m_anggota SET status_anggota = status_anggota WHERE id = 0', 'UPDATE m_anggota SET sim_pokok = sim_pokok WHERE id = 0',
-    'UPDATE m_anggota SET limit_toko = limit_toko WHERE id = 0', 'UPDATE m_anggota SET password = password WHERE id = 0', 'UPDATE m_anggota SET doc_no = doc_no WHERE id = 0',
-    'UPDATE users SET bagian = bagian WHERE id = 0', 'UPDATE users SET wallet_balance = wallet_balance WHERE id = 0', 'UPDATE users SET password = password WHERE id = 0',
+    'UPDATE m_anggota SET nik_kar = nik_kar WHERE id = 0', 'UPDATE m_anggota SET sim_pokok = sim_pokok WHERE id = 0', 'UPDATE m_anggota SET limit_persen = limit_persen WHERE id = 0',
+    'UPDATE m_anggota SET limit_toko_old = limit_toko_old WHERE id = 0', 'UPDATE m_anggota SET password = password WHERE id = 0', 'UPDATE m_anggota SET doc_no = doc_no WHERE id = 0',
+    'UPDATE users SET bagian = bagian WHERE id = 0', 'UPDATE users SET nik = nik WHERE id = 0', 'UPDATE users SET password = password WHERE id = 0', 'UPDATE users SET bank_rek = bank_rek WHERE id = 0',
     'UPDATE m_simpanan_aktif SET potongan_payroll = 1 WHERE id = 0',
   ]) assert.ok(['1142', '1143'].includes(await denied(sql)), sql);
-  for (const sql of ['DELETE FROM m_anggota WHERE id = 0', 'DELETE FROM users WHERE id = 0', 'DELETE FROM m_simpanan_aktif WHERE id = 0', "INSERT INTO users (nik) VALUES ('x')", 'UPDATE oauth_access_tokens SET user_id = 0 WHERE id = 0', 'DELETE FROM oauth_access_tokens WHERE id = 0', 'DROP TABLE m_anggota'])
+  for (const sql of ['DELETE FROM m_anggota WHERE id = 0', 'DELETE FROM users WHERE id = 0', 'DELETE FROM m_simpanan_aktif WHERE id = 0', "INSERT INTO users (nik) VALUES ('x')", 'UPDATE oauth_access_tokens SET user_id = 0 WHERE id = 0', 'DROP TABLE m_anggota'])
     assert.equal(await denied(sql), '1142', sql);
+  // Exactly what the status command needs, and nothing wider: these succeed (they match no row).
+  for (const sql of ['UPDATE m_anggota SET status_anggota = status_anggota, limit_toko = 0, limit_ppob = 0, gaji_minus = 0 WHERE id = 0', "UPDATE users SET is_active = 0, is_delete = 1, admin_verifikasi = 0, temporary_token = '', wallet_balance = 0, wallet_balance_ppob = 0 WHERE id = 0", "DELETE FROM oauth_access_tokens WHERE user_id = 0"])
+    assert.equal(await denied(sql), 'allowed', sql);
   await assert.rejects(write.$queryRawUnsafe('SELECT password FROM m_anggota LIMIT 1'), (e) => ['1142', '1143'].includes(errno(e)));
   await assert.rejects(write.$queryRawUnsafe('SELECT * FROM m_simpanan_aktif LIMIT 1'), (e) => ['1142', '1143'].includes(errno(e)));
   await assert.rejects(write.$executeRawUnsafe('UPDATE kkisi_kfa_ledger.kosipa_command_ledger SET reason = reason WHERE id = 0'), (e) => ['1142', '1143'].includes(errno(e)));

@@ -36,3 +36,41 @@ MC12 (real PHP 5.6 / CI2): legacy `master/anggota_c/ajax_edit/<id>` returns the 
 ## Residual gaps (not claimed)
 
 HTTP/UI for members; status/deactivate (WI-07 remainder), limits and imports (WI-08), deduction edits (WI-09); `KOSIPA_MEMBER_VERSION_SECRET` is not yet wired into `services.ts`; production writer enablement (guard extension + grant run + fence + ownership are separate, owner-approved cutover steps); FD-23 numbering deviations; `mobile/users_c`/TOKO competing writers beyond the fence; read-side version for pages.
+
+---
+
+# T05 — member status command, HTTP and console UI (6 Nov 2026)
+
+Still **synthetic stack only**; no production writer, fence, grant or deployment. Flags stay off by default (`KOSIPA_MEMBER_WRITES_ENABLED`, `KOSIPA_WRITE_OWNERSHIP` containing `member`, `KOSIPA_MEMBER_VERSION_SECRET`).
+
+| Piece | Path |
+|---|---|
+| Status domain (`parseMemberStatus`, `planMemberStatus`, `MEMBER_STATUSES`) | `packages/domain/src/kosipa/member-command.ts` |
+| Application (`changeMemberStatus`, `getMemberForEdit`) | `packages/application/src/kosipa/commands/member.ts` |
+| Repository `changeStatus`, `fenceState` | `apps/web/src/infrastructure/repositories/kosipa-member-write.repository.ts` |
+| HTTP: `POST /api/kosipa/members`, `GET/PATCH /api/kosipa/members/[id]`, `POST /api/kosipa/members/[id]/status` | `kosipa-command-http.ts`, `src/app/api/kosipa/members/**` |
+| UI: `/console/kosipa/anggota/baru`, `/console/kosipa/anggota/[id]/ubah`, links from list and profile | `src/app/console/kosipa/anggota/**`, `components/console/kosipa/Member*.tsx` |
+| Tests | `kosipa-member-status.test.mjs` (domain), `kosipa-member-command.test.mjs` (application), `kosipa-member-http.test.mjs` (6), `kosipa-member-write-db.test.mjs` (24), `kosipa-member-browser.mjs` (E1–E8, Playwright) |
+
+## Status semantics (REQ-110, FD-30, FD-31)
+
+- **To any non-AKTIVE** (`LUAR BIASA`, `KONTRAK`, `RESIGN`, `PENSIUN`): in one transaction set `status_anggota`; `limit_toko`, `limit_ppob`, `gaji_minus` = 0 (other columns, `limit_persen`, `limit_toko_old`, `sim_*`, `gaji`, config rows untouched); for an **existing** users row (from the locked member's NIK) delete all and only its `oauth_access_tokens` by `user_id` and write the disabled mirror once: `is_active 0, is_delete 1, admin_verifikasi 0, temporary_token '', wallet_balance 0, wallet_balance_ppob 0` (no legacy recredit from `gaji_minus`). Non-AKTIVE → another non-AKTIVE repeats these safe effects; same status = `NO_CHANGE`.
+- **To AKTIVE** (FD-30): `status_anggota` only. Ceilings stay 0; the mobile identity and tokens are not restored.
+- One authorized operator, **mandatory reason** (ledger `reason` only; the console audit event carries no reason), optimistic version, idempotent. No automatic expiry job (FD-31).
+- Writer grants extended by exactly: UPDATE `status_anggota, limit_toko, limit_ppob, gaji_minus` on `m_anggota`; SELECT/UPDATE the six disabled-mirror columns on `users`; SELECT(`id`,`user_id`) + DELETE on `oauth_access_tokens`. Updated in both the synthetic template and the review-only production SQL; the static test asserts nothing wider.
+
+## Decisions taken by the implementer (owner review requested)
+
+1. **Command name** `member.change_status` (ledger regex is lowercase), audit action `kosipa.member.changeStatus`.
+2. **Grantable capabilities** now include `kosipa.member.create`, `kosipa.member.update`, `kosipa.member.status` (previously master-only). Still two-administrator grants; inert unless the feature flag, ownership, the legacy fence and a guarded writer are all present.
+3. **View entitlement vs. fence.** Linked-mode member VIEW is derived from `ref_menu.status = 1` of `anggota/anggota_c` / `master/anggota_c`, which the cutover fence sets to 0, so fencing would have removed native member access from every linked user (found by the browser suite). When Next.js owns `member`, `PrismaKosipaDirectory` now lets those two controllers' **group access rows** keep granting view although their menu status is 0. All other menus, the active-group requirement and the default (flag off) behaviour are unchanged. Role-monitoring users were never affected (they ignore menus).
+4. **PII-rich edit record.** `GET /api/kosipa/members/[id]` (bank, NPWP, salary…) needs the view capability **and** a member write capability; view alone is not enough. The record never contains credentials, photos, ceilings or deduction configuration.
+5. **FD-08** (mobile wallet mirror/token revocation) is implemented per REQ-110 as recommended option (a); the decision remains open on the owner/smartkkisi side, so this stays behind the member ownership flag.
+
+## Evidence
+
+Synthetic stack, 6 Nov 2026: 172 pass, 0 fail, 3 skipped over the member write/HTTP/MC12/foundation/masters/fence/numbering/static-SQL/rollback/directory/console suites; domain + application unit 570 pass, 0 fail, 4 todo; typecheck clean; changed files lint clean. Browser E1–E8 pass (no-capability views, two-administrator grant, register incl. duplicate NIK and validation feedback, edit with bank reason, stale version after a legacy-style write, deactivate/reactivate with a seeded mobile account and tokens, legacy menu re-enabled, revocation, no console errors, 375/768/1440 without horizontal overflow); the existing master browser suite still passes.
+
+## Residual gaps
+
+Members list/detail pages do not yet show the new `doc_no`/`no_anggota` in search results; deduction edits (WI-09), limits and imports (WI-08), hard-delete refusal UI (REQ-111) and the member photo/QR flows are absent; production activation (guard extension, grants, fence, ownership, secret) and owner UAT remain separate gated steps.

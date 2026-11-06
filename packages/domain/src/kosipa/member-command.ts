@@ -30,7 +30,10 @@ export type MemberMasterFacts = { bagian: readonly { name: string; active: boole
 
 const required = ['nama_kar', 'nik_kar', 'kd_group', 'bagian', 'lokasi', 'status_anggota'];
 const dates = ['tgl_daftar', 'tgl_lahir', 'tgl_karyawan', 'tgl_masuk', 'tgl_keluar'];
-const status = ['AKTIVE', 'LUAR BIASA', 'KONTRAK', 'RESIGN', 'PENSIUN'];
+/** Exact legacy status vocabulary (m_anggota.status_anggota). */
+export const MEMBER_STATUSES = ['AKTIVE', 'LUAR BIASA', 'KONTRAK', 'RESIGN', 'PENSIUN'] as const;
+export type MemberStatus = (typeof MEMBER_STATUSES)[number];
+const status: readonly string[] = MEMBER_STATUSES;
 const groups = ['ANGGOTA', 'NON ANGGOTA', 'BMP', 'KOPERASI'];
 const mirrorNotNull = ['ktp', 'email', 'no_telp'];
 // Legacy anggota_v.php renders these as <textarea>: LF/CRLF line breaks are legitimate latin1 values. Lone CR stays refused.
@@ -167,4 +170,29 @@ export function memberFieldSummary(id: number, values: MemberFields, changed: re
   const presence = Object.fromEntries(Object.keys(values).map((key) => [key, true]));
   const changes = Object.fromEntries(Object.keys(values).map((key) => [key, changed.includes(key as MemberField)]));
   return { id, presence, changes, bankChanged: changed.some((key) => (MEMBER_FIELD_CLASSES.bank as readonly string[]).includes(key)), salaryChanged: changed.includes('gaji') };
+}
+
+export type MemberStatusChange = { status: MemberStatus; reason: string; expectedVersion: string; idempotencyKey: string };
+/** REQ-110 / FD-17 subset: ONE authorized operator, a mandatory reason, optimistic version. Nothing else is accepted (limits are never a client input). */
+export function parseMemberStatus(raw: unknown): MemberStatusChange {
+  const b = object(raw, ['status', 'reason', 'expectedVersion', 'idempotencyKey']);
+  const idempotencyKey = parseIdempotencyKey(b.idempotencyKey);
+  if (typeof b.status !== 'string' || !status.includes(b.status)) throw new KosipaError('MEMBER_STATUS_INVALID');
+  const reason = parseReason(b.reason);
+  if (typeof b.expectedVersion !== 'string' || !/^[0-9a-f]{64}$/.test(b.expectedVersion)) throw new KosipaError('VERSION_INVALID');
+  return { status: b.status as MemberStatus, reason, expectedVersion: b.expectedVersion, idempotencyKey };
+}
+
+export type MemberStatusPlan = { id: number; from: string | null; to: MemberStatus; kind: 'deactivate' | 'reactivate'; zeroLimits: boolean; disableMobile: boolean };
+/**
+ * Moving to any non-AKTIVE status (REQ-110, MC07): the three credit ceilings (limit_toko, limit_ppob, gaji_minus) become 0 and an existing mobile identity
+ * is disabled, its tokens revoked and its wallet mirror written ONCE as 0/0 (no legacy recredit from gaji_minus). Moving to AKTIVE (FD-30) changes the member
+ * status only: ceilings stay as they are (zero), nothing of the mobile identity is restored. Re-applying a non-AKTIVE target from another non-AKTIVE status is
+ * allowed and repeats the safe effects; the same status again is NO_CHANGE.
+ */
+export function planMemberStatus(current: { id: number; status: string | null } | null, input: MemberStatusChange): MemberStatusPlan {
+  if (!current) throw new KosipaError('MEMBER_NOT_FOUND');
+  if ((current.status ?? '') === input.status) throw new KosipaError('NO_CHANGE');
+  const off = input.status !== 'AKTIVE';
+  return { id: current.id, from: current.status, to: input.status, kind: off ? 'deactivate' : 'reactivate', zeroLimits: off, disableMobile: off };
 }

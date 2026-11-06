@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { registerMember, updateMemberProfile } from '../src/kosipa/commands/member.ts';
+import { registerMember, updateMemberProfile, changeMemberStatus } from '../src/kosipa/commands/member.ts';
 import { KosipaError } from '../../domain/src/kosipa/errors.ts';
 import { GRANTABLE_KOSIPA_CAPABILITIES } from '../../domain/src/console/capabilities.ts';
 import { AUDIT_ACTIONS } from '../../domain/src/console/identity-link.ts';
@@ -23,7 +23,7 @@ function world(owns = true) {
     ledger.set(key, { result, hash:envelope.requestHash, id:ledger.size+1 });
     return { result, replayed:false, ledgerId:ledger.size };
   };
-  const ports = { ownership:{ owns:(f) => owns && f === 'member' }, audit:{ async append(e) { events.push(e); } }, now:() => new Date('2026-11-05T18:00:00Z'), members:{ create:(...i) => execute('create',...i), update:(...i) => execute('update',...i) } };
+  const ports = { ownership:{ owns:(f) => owns && f === 'member' }, audit:{ async append(e) { events.push(e); } }, now:() => new Date('2026-11-05T18:00:00Z'), members:{ create:(...i) => execute('create',...i), update:(...i) => execute('update',...i), changeStatus:(...i) => execute('status',...i) } };
   return { ports, calls, events, ledger };
 }
 test('ownership/capability/view/live link gates both member commands before repository or parsing', async () => {
@@ -76,11 +76,11 @@ test('fingerprint binds all validated fields, deductions, expectedVersion and re
   await assert.rejects(updateMemberProfile(w.ports,actor,'43',profile()), { code:'IDEMPOTENCY_CONFLICT' });
   assert.ok(w.calls.every((c)=>/^[0-9a-f]{64}$/.test(c.envelope.requestHash)));
 });
-test('result, subject, envelope and audit exclude member values and reason; grants remain master-only', async () => {
+test('result, subject, envelope and audit exclude member values and reason; grants cover masters and members only', async () => {
   const w=world(); await registerMember(w.ports,actor,registration()); await updateMemberProfile(w.ports,actor,'42',profile());
   const safe=JSON.stringify({ events:w.events,envelopes:w.calls.map((c)=>c.envelope),results:[...w.ledger.values()].map((l)=>l.result) });
   for (const pii of ['José','00123','123456','Private address','Verified correction','no_rek','gaji']) assert.ok(!safe.includes(pii),pii);
-  assert.deepEqual(GRANTABLE_KOSIPA_CAPABILITIES,['kosipa.master.manage']);
+  assert.deepEqual(GRANTABLE_KOSIPA_CAPABILITIES,['kosipa.master.manage','kosipa.member.create','kosipa.member.update','kosipa.member.status']);
   assert.ok(AUDIT_ACTIONS.includes('kosipa.member.register')); assert.ok(AUDIT_ACTIONS.includes('kosipa.member.updateProfile'));
 });
 test('repository stale/uniqueness/transaction rejection produces failure audit and no success', async () => {
@@ -96,3 +96,33 @@ test.todo('repository create writes member + positive m_simpanan_aktif config ro
 test.todo('repository update mirrors exactly ktp/name/phone/email/street_address to an existing linked users row');
 test.todo('repository update refuses a stale expectedVersion under the row lock (STALE) after replay lookup');
 test.todo('repository replay of the same actor/key/fingerprint returns the stored result without a second write');
+
+const statusBody = (extra = {}) => ({ status:'RESIGN', reason:'Karyawan mengundurkan diri', expectedVersion:version, idempotencyKey:KEY(5), ...extra });
+test('status: needs its own capability + view + live link; ownership first; invalid route/body refused before the repository', async () => {
+  const off = world(false);
+  await assert.rejects(changeMemberStatus(off.ports, actor, '42', statusBody()), { code:'WRITE_DISABLED' });
+  for (const candidate of [{ ...actor, kosipaUserId:null }, { ...actor, capabilities:new Set(['kosipa.member.view','kosipa.member.create','kosipa.member.update']) }, { ...actor, capabilities:new Set(['kosipa.member.status']) }]) {
+    const w = world();
+    await assert.rejects(changeMemberStatus(w.ports, candidate, 'PII-FORGED', statusBody()), { code:'FORBIDDEN' });
+    assert.equal(w.calls.length, 0); assert.ok(!JSON.stringify(w.events).includes('PII-FORGED'));
+  }
+  const w = world(); const ok = { ...actor, capabilities:new Set(['kosipa.member.view','kosipa.member.status']) };
+  for (const rawId of ['0','1 OR 1=1','001','secret-name']) await assert.rejects(changeMemberStatus(w.ports, ok, rawId, statusBody()), { code:'MEMBER_ID_INVALID' });
+  for (const [bad, code] of [[statusBody({ status:'DELETED' }),'MEMBER_STATUS_INVALID'],[statusBody({ reason:'' }),'REASON_INVALID'],[statusBody({ limit_toko:'1' }),'FIELD_NOT_ALLOWED'],[statusBody({ expectedVersion:'x' }),'VERSION_INVALID'],[null,'INVALID_INPUT']])
+    await assert.rejects(changeMemberStatus(w.ports, ok, '42', bad), { code });
+  assert.equal(w.calls.length, 0);
+});
+test('status: passes the locked-record id, parsed input and the member feature; audit names only the command; replay suppresses a second audit event', async () => {
+  const w = world(); const ok = { ...actor, capabilities:new Set(['kosipa.member.view','kosipa.member.status']) };
+  const first = await changeMemberStatus(w.ports, ok, '42', statusBody());
+  assert.deepEqual(first.result, { id:42, version });
+  const { envelope, input } = w.calls[0];
+  assert.equal(envelope.command,'member.change_status'); assert.equal(envelope.capability,'kosipa.member.status'); assert.equal(envelope.subjectRef,'42');
+  assert.equal(input[0], 42); assert.deepEqual(input[1], { status:'RESIGN', reason:'Karyawan mengundurkan diri', expectedVersion:version, idempotencyKey:KEY(5) });
+  assert.equal(w.events[0].action, 'kosipa.member.changeStatus');
+  assert.ok(!JSON.stringify(w.events).includes('mengundurkan'), 'the reason never reaches the console audit');
+  const again = await changeMemberStatus(w.ports, ok, '42', statusBody());
+  assert.equal(again.replayed, true); assert.equal(w.events.length, 1);
+  await assert.rejects(changeMemberStatus(w.ports, ok, '42', statusBody({ status:'PENSIUN' })), { code:'IDEMPOTENCY_CONFLICT' });
+  await assert.rejects(changeMemberStatus(w.ports, ok, '43', statusBody()), { code:'IDEMPOTENCY_CONFLICT' });
+});

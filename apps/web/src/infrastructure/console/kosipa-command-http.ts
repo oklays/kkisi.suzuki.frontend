@@ -4,6 +4,7 @@ import { resolveConsoleAccess, type KosipaWriteSources, type PermissionSetSource
 import type { IdentityPorts } from '@koperasi/application/console/identity-links';
 import type { CommandActor, CommandOutcome, WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
 import { createMaster, listMaster, setMasterStatus, updateMaster, type MasterRepository } from '@koperasi/application/kosipa/commands/master';
+import { changeMemberStatus, getMemberForEdit, registerMember, updateMemberProfile, type MemberRepository } from '@koperasi/application/kosipa/commands/member';
 import { errorResponse, guard, json, readJson, type AuthServices } from '../auth/http.ts';
 
 /**
@@ -11,19 +12,21 @@ import { errorResponse, guard, json, readJson, type AuthServices } from '../auth
  * JSON content type for every state change, SEC-105) -> services present -> server-side capabilities (fresh per request, from the
  * live identity link and explicit grants, SEC-108) -> use case. Responses are code-only (SEC-111) and never cached.
  */
-export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository };
+export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository };
 export type KosipaCommandDeps = { enabled: boolean; permissions: PermissionSetSource; ports: KosipaCommandPorts | null; log?: (event: string, fields: Record<string, string | number>) => void };
 
 const STATUS: Record<string, number> = {
   INVALID_INPUT: 400, FIELD_NOT_ALLOWED: 400, IDEMPOTENCY_KEY_INVALID: 400, MASTER_CODE_INVALID: 400, MASTER_NAME_INVALID: 400, MASTER_REMARKS_INVALID: 400, MASTER_ID_INVALID: 400, VERSION_INVALID: 400, REASON_INVALID: 400,
   FORBIDDEN: 403,
-  MASTER_TYPE_UNKNOWN: 404, MASTER_NOT_FOUND: 404, MEMBER_NOT_FOUND: 404,
+  MASTER_TYPE_UNKNOWN: 404, MASTER_NOT_FOUND: 404, MEMBER_NOT_FOUND: 404, MEMBER_STATUS_INVALID: 400,
   STALE: 409, IDEMPOTENCY_CONFLICT: 409, BUSY_RETRY: 409, DOCUMENT_NUMBER_CONFLICT: 409,
   MEMBER_NIK_DUPLICATE: 422, MEMBER_MASTER_INVALID: 422, MEMBER_MIRROR_CONFLICT: 422, MEMBER_FIELD_INVALID: 400, MEMBER_ID_INVALID: 400, MEMBER_DATE_INVALID: 400, MEMBER_AMOUNT_INVALID: 400, MEMBER_DEDUCTION_NIK_TOO_LONG: 400,
   MASTER_CODE_DUPLICATE: 422, MASTER_NAME_DUPLICATE: 422, MASTER_REFERENCED: 422, MASTER_FIELD_IMMUTABLE: 422, NO_CHANGE: 422,
   WRITE_DISABLED: 503, WRITE_NOT_CONFIGURED: 503, LEGACY_ACTIVE: 503, MASTER_TOO_LARGE: 503, MEMBER_TOO_LARGE: 503, POSTCONDITION_FAILED: 503,
 };
 const BODY_LIMIT = 4096;
+/** A member form carries ~45 fields incl. two 250-char addresses: well above 4 KiB, still bounded. */
+const MEMBER_BODY_LIMIT = 16 * 1024;
 
 async function actorFor(services: AuthServices, request: Request, deps: KosipaCommandDeps, write: boolean): Promise<{ response: Response } | { actor: CommandActor; ports: KosipaCommandPorts }> {
   if (!deps.enabled) return { response: json(404, { error: 'NOT_FOUND' }) };
@@ -79,5 +82,41 @@ export async function handleMasterStatus(services: AuthServices, request: Reques
     const a = await actorFor(services, request, deps, true);
     if ('response' in a) return a.response;
     return ok(200, await setMasterStatus(commandPorts(a.ports, deps), a.actor, rawType, rawId, await readJson(request, BODY_LIMIT), action === 'reactivate'));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** POST /api/kosipa/members  { idempotencyKey, fields, initialDeductions } */
+export async function handleRegisterMember(services: AuthServices, request: Request, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, true);
+    if ('response' in a) return a.response;
+    return ok(201, await registerMember(commandPorts(a.ports, deps), a.actor, await readJson(request, MEMBER_BODY_LIMIT)));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** GET /api/kosipa/members/[id]  edit view: fields + opaque version + what the caller may do (private, never cached) */
+export async function handleGetMemberForEdit(services: AuthServices, request: Request, rawId: string, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, false);
+    if ('response' in a) return a.response;
+    return json(200, await getMemberForEdit(a.ports, a.actor, rawId));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** PATCH /api/kosipa/members/[id]  { idempotencyKey, fields, expectedVersion, reason? } */
+export async function handleUpdateMemberProfile(services: AuthServices, request: Request, rawId: string, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, true);
+    if ('response' in a) return a.response;
+    return ok(200, await updateMemberProfile(commandPorts(a.ports, deps), a.actor, rawId, await readJson(request, MEMBER_BODY_LIMIT)));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** POST /api/kosipa/members/[id]/status  { idempotencyKey, status, reason, expectedVersion } */
+export async function handleChangeMemberStatus(services: AuthServices, request: Request, rawId: string, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, true);
+    if ('response' in a) return a.response;
+    return ok(200, await changeMemberStatus(commandPorts(a.ports, deps), a.actor, rawId, await readJson(request, BODY_LIMIT)));
   } catch (error) { return failure(services, deps, error); }
 }

@@ -12,7 +12,7 @@
  */
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -208,7 +208,10 @@ async function writeAppEnv(config) {
     CONSOLE_ENABLED: 'true', KOSIPA_READ_ENABLED: 'true',
     KOSIPA_WRITE_GRANTS_ENABLED: 'true', KOSIPA_GRANT_ADMIN_USER_IDS: GRANT_ADMINS.join(','),
     KOSIPA_MASTER_WRITES_ENABLED: 'true', KOSIPA_LEDGER_DATABASE: LEDGER_DB,
-    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran',
+    KOSIPA_MEMBER_WRITES_ENABLED: 'true',
+    // Deterministic per installation (synthetic only): HMAC key of the opaque member versions.
+    KOSIPA_MEMBER_VERSION_SECRET: createHash('sha256').update(`member-version:${config.authSecret}`).digest('hex'),
+    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran,member',
   };
   await writeFile(envPath, Object.entries(lines).map(([k, v]) => `${k}="${v}"`).join('\n') + '\n', { mode: 0o600 });
   await chmod(envPath, 0o600);

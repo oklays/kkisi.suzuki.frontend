@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import type { ConsoleUserDirectory, KosipaDirectory } from '@koperasi/application/console/identity-links';
 
 // Business-database reads through the existing SELECT-only reader (DATABASE_URL); no new pool. Every statement is
@@ -8,7 +8,13 @@ const n = (v: Num | null) => Number(v ?? 0);
 
 export class PrismaKosipaDirectory implements KosipaDirectory, ConsoleUserDirectory {
   private readonly db: PrismaClient;
-  constructor(db: PrismaClient) { this.db = db; }
+  private readonly fencedViewUrls: readonly string[];
+  /**
+   * `fencedViewUrls`: legacy controllers whose ref_menu.status was set to 0 ON PURPOSE by the cutover fence because Next.js now owns the feature. Their
+   * GROUP ACCESS rows still decide who may VIEW (so fencing the legacy member controllers does not silently remove native member access from every
+   * linked user). Empty (the default) = exactly the legacy rule, where a disabled menu grants nothing.
+   */
+  constructor(db: PrismaClient, options: { fencedViewUrls?: readonly string[] } = {}) { this.db = db; this.fencedViewUrls = (options.fencedViewUrls ?? []).map((u) => u.trim().toLowerCase()); }
 
   async kosipaUser(id: number) {
     const rows = await this.db.$queryRaw<{ id: Num; username: string | null; name: string | null; status: Num | null; groups: Num }[]>`SET STATEMENT max_statement_time=5 FOR
@@ -21,6 +27,14 @@ export class PrismaKosipaDirectory implements KosipaDirectory, ConsoleUserDirect
 
   /** The controllers this KOSIPA account may open (legacy cekstatushakakses), plus active menu-access rows. */
   async allowedMenuUrls(kosipaUserId: number): Promise<string[]> {
+    if (this.fencedViewUrls.length) {
+      const fenced = await this.db.$queryRaw<{ url: string }[]>(Prisma.sql`SET STATEMENT max_statement_time=5 FOR
+        SELECT DISTINCT LOWER(TRIM(m.url)) AS url FROM ref_group_akses ga
+          JOIN ref_group g ON g.id = ga.id_group AND g.status = 1
+          JOIN ref_menu_akses ma ON ma.id_group = ga.id_group JOIN ref_menu m ON m.id = ma.id_menu
+        WHERE ga.id_user = ${kosipaUserId} AND ga.status = 1 AND ma.status = 1 AND (m.status = 1 OR LOWER(TRIM(m.url)) IN (${Prisma.join(this.fencedViewUrls)})) AND m.url IS NOT NULL`);
+      return fenced.map((r) => r.url);
+    }
     const rows = await this.db.$queryRaw<{ url: string }[]>`SET STATEMENT max_statement_time=5 FOR
       SELECT DISTINCT LOWER(TRIM(m.url)) AS url FROM ref_group_akses ga
         JOIN ref_group g ON g.id = ga.id_group AND g.status = 1

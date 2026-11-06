@@ -55,6 +55,7 @@ export default async function Member360Page({ params }: { params: Promise<{ id: 
         <p>NIK {p.nik || '—'} · {p.group ?? 'Grup tidak tercatat'} · Data KOSIPA, baca saja</p>
       </KosipaPageHeader>
 
+      {(auth.capabilities.has('kosipa.member.update') || auth.capabilities.has('kosipa.member.status')) && <p className="kosipa-member-links"><Link prefetch={false} className="console-button-quiet" href={`/console/kosipa/anggota/${id}/ubah`}>Ubah profil / status</Link></p>}
       <nav className="kosipa-profile-nav" aria-label="Bagian profil anggota">
         <a href="#sec-profil">Profil</a>
         {member.savings.state !== 'restricted' && <a href="#sec-simpanan">Simpanan</a>}

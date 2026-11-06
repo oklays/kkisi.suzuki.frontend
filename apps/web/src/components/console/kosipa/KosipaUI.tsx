@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { ArrowRight, CircleAlert, CircleHelp, Inbox, LockKeyhole, Search, ShieldCheck } from 'lucide-react';
 import { Children, cloneElement, isValidElement, type ReactNode, type ReactElement } from 'react';
 
-export function KosipaPageHeader({ title, children, review = false }: { title: ReactNode; children: ReactNode; review?: boolean }) {
+/** `editable`: the page can change data through native commands (member register/edit), so the read-only badge would be wrong. */
+export function KosipaPageHeader({ title, children, review = false, editable = false }: { title: ReactNode; children: ReactNode; review?: boolean; editable?: boolean }) {
   return <header className="console-page-head kosipa-page-head">
     <div className="kosipa-eyebrow">KOSIPA <span>/</span> Administrasi koperasi</div>
-    <div className="kosipa-title-row"><h1 tabIndex={-1}>{title}</h1><Provenance kind={review ? 'review' : 'readonly'} /></div>
+    <div className="kosipa-title-row"><h1 tabIndex={-1}>{title}</h1>{!editable && <Provenance kind={review ? 'review' : 'readonly'} />}</div>
     <div className="kosipa-page-purpose">{children}</div>
   </header>;
 }

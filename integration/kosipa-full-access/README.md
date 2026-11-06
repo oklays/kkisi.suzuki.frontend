@@ -34,6 +34,7 @@ cd apps/web && KOSIPA_FA01=1 node --experimental-strip-types --test --test-concu
 # 3. console on http://127.0.0.1:3230, built into apps/web/.next-kfa01 (never .next, never a running dev server)
 node integration/kosipa-full-access/app-server.mjs build && node integration/kosipa-full-access/app-server.mjs start
 cd apps/web && node tests/kosipa-master-browser.mjs && cd ../..   # E1–E9, screenshots in /private/tmp/kfa01-browser
+cd apps/web && node --experimental-strip-types tests/kosipa-member-browser.mjs && cd ../..   # member register/edit/status E1–E8 (fences the legacy member menus for the run, restores them)
 node integration/kosipa-full-access/app-server.mjs stop
 
 # 4. regression of the existing DEV LOCAL browser suites in an isolated runtime (:3203, apps/web/.next-devlocal; FA features off)

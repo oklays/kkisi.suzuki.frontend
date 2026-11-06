@@ -30,6 +30,7 @@ export default async function MemberSearchPage({ searchParams }: { searchParams:
       <KosipaPageHeader title={<> Keanggotaan </>}>
         <p>Temukan anggota dan telusuri profil, simpanan, pinjaman, serta potongan yang boleh Anda lihat.</p>
       </KosipaPageHeader>
+      {auth.capabilities.has('kosipa.member.create') && <p className="kosipa-member-links"><Link prefetch={false} className="console-button-quiet" href="/console/kosipa/anggota/baru">Daftarkan anggota baru</Link></p>}
       <form className="console-search" action="/console/kosipa/anggota" method="post" data-kosipa-private role="search">
         <label htmlFor="member-q">NIK atau nama anggota</label>
         <div><input id="member-q" name="q" placeholder="NIK atau nama anggota" defaultValue={q} minLength={2} maxLength={50} autoComplete="off" required /><button type="submit"><Search size={16} aria-hidden="true" />Cari anggota</button><button type="submit" name="_reset" value="1" formNoValidate>Reset filter</button></div>
