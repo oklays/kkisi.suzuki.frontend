@@ -5,7 +5,7 @@ export type ConsoleIcon =
   // module (section) parents
   | 'dashboard' | 'kosipa' | 'toko' | 'warehouse' | 'reports' | 'settings'
   // KOSIPA
-  | 'overview' | 'members' | 'savings' | 'voluntary' | 'loans' | 'installments' | 'payroll' | 'reportMembers' | 'reportSavings' | 'reportLoans' | 'reportPayroll' | 'quality'
+  | 'overview' | 'members' | 'savings' | 'deposit' | 'voluntary' | 'loans' | 'installments' | 'payroll' | 'reportMembers' | 'reportSavings' | 'reportLoans' | 'reportPayroll' | 'quality'
   // TOKO & POS
   | 'pos' | 'history' | 'returns' | 'products'
   // Warehouse and administration
@@ -45,6 +45,7 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'kosipa-overview', section: 'kosipa', label: 'Ringkasan KOSIPA', href: '/console/kosipa', order: 0, anyOf: KOSIPA_VIEW, readiness: 'available', icon: 'overview', description: 'Pintu masuk modul KOSIPA: menu yang diizinkan, status, dan batasan data' },
   { id: 'kosipa-members', section: 'kosipa', label: 'Keanggotaan', href: '/console/kosipa/anggota', order: 1, anyOf: ['kosipa.member.view'], readiness: 'available', icon: 'members', description: 'Cari anggota dan lihat Anggota 360 (baca saja)' },
   { id: 'kosipa-savings', section: 'kosipa', label: 'Simpanan', href: '/console/kosipa/simpanan', order: 2, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'savings', description: 'Buku simpanan per anggota (baca saja)' },
+  { id: 'kosipa-savings-deposits', section: 'kosipa', label: 'Setoran simpanan', href: '/console/kosipa/simpanan/setoran', order: 2.5, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'deposit', description: 'Setoran simpanan sukarela tunai/transfer: buat, setujui, tolak' },
   { id: 'kosipa-loans', section: 'kosipa', label: 'Pinjaman', href: '/console/kosipa/pinjaman', order: 3, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loans', description: 'Dokumen dan jadwal pinjaman (baca saja)' },
   { id: 'kosipa-installments', section: 'kosipa', label: 'Angsuran', href: '/console/kosipa/angsuran', order: 4, anyOf: [], readiness: 'planned', icon: 'installments' },
   { id: 'kosipa-payroll', section: 'kosipa', label: 'Payroll', href: '/console/kosipa/payroll', order: 5, anyOf: ['kosipa.payroll.view'], readiness: 'available', icon: 'payroll', description: 'Batch potongan bulanan, rekonsiliasi kredit TOKO untuk ditinjau (baca saja)' },
