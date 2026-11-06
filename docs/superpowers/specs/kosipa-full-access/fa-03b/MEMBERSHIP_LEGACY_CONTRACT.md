@@ -19,6 +19,7 @@ Date: 2026-11-06. Scope: T01, the MC01–MC11 CI2 membership slice of M-01. **Sy
 | MC09 | Non-AKTIVE edit with no users row succeeds, creates no users or linked token; legacy still preserves positive gaji_minus. | Native no-user transition and atomic ledger behavior remain unimplemented. |
 | MC10 | Zero leaves positive configs unchanged while the member configured amount becomes zero. Positive edit changes all matching duplicates, preserving inactive status and stale stored name/group. | WI-09 must define zero/disable/reactivate behavior and uniqueness. Do not copy these defects silently. |
 | MC11 | Member with owned synthetic loan, savings header/detail, payroll matrix, sales and orders is hard-deleted; configs set inactive; all histories, user flags/wallet and token remain unchanged. | REQ-111 prevents unsafe hard deletion; complete history and status effects must be implemented after removal-target decisions. |
+| MC12 | **Native → legacy (T04).** Real legacy `master/anggota_c/ajax_edit` and `ajax_list` render a member registered and edited by the native commands (doc_no, no_anggota, sim_*, multi-line address, salary); the `master_payroll_c` config join returns the two config rows. | Synthetic only; see `MEMBER_WRITE_REPOSITORY.md`. |
 
 ## Precise recovered writes
 

@@ -53,7 +53,7 @@ export function registerMember(ports: MemberPorts, actor: CommandActor, body: un
 
 export function updateMemberProfile(ports: MemberPorts, actor: CommandActor, rawId: string, body: unknown): Promise<CommandOutcome<MemberResult>> {
   const spec: CommandSpec<{ id: number; input: MemberProfile }, MemberResult> = {
-    command: 'member.updateProfile', feature: 'member', capability: 'kosipa.member.update', audit: 'kosipa.member.updateProfile',
+    command: 'member.update_profile', feature: 'member', capability: 'kosipa.member.update', audit: 'kosipa.member.updateProfile',
     parse(raw) {
       const id = memberId(rawId); const input = parseMemberProfile(raw);
       return { input: { id, input }, subject: { type: 'member', ref: String(id) }, payload: input };

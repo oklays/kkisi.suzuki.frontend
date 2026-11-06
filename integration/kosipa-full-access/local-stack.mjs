@@ -133,6 +133,7 @@ async function applySchema(config) {
     await template('apps/web/db/console/002_console_grants.sql.tpl', { __AUTH_HOST__: '%', __AUTH_PW__: pw('console') }),
     await template('apps/web/db/console/005_kosipa_grants_grants.sql.tpl', { __CONSOLE_USER__: 'kkisi_console', __HOST__: '%' }),
     await template('apps/web/db/kosipa/002_master_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: pw('masterWrite') }),
+    await template('apps/web/db/kosipa/006_member_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: pw('memberWrite') }),
     await template('apps/web/db/kosipa/003_cpanel_model_writer.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: pw('cpanelModel') }),
     // TASK-109 test writer: the privileges a future document writer needs for numbering (read the numbered column; claim in the ledger database).
     `CREATE USER IF NOT EXISTS 'kfa_numbering_w'@'%' IDENTIFIED BY ${quote(pw('numbering'))}; ALTER USER 'kfa_numbering_w'@'%' IDENTIFIED BY ${quote(pw('numbering'))} WITH MAX_USER_CONNECTIONS 4;
@@ -203,6 +204,7 @@ async function writeAppEnv(config) {
     DATABASE_URL_AUTH: dsn(config, 'auth', AUTH_DB, 2),
     DATABASE_URL_CONSOLE: dsn(config, 'console', CONSOLE_DB, 1),
     DATABASE_URL_KOSIPA_MASTER_WRITE: dsn(config, 'masterWrite', DB, 2),
+    DATABASE_URL_KOSIPA_MEMBER_WRITE: dsn(config, 'memberWrite', DB, 2),
     CONSOLE_ENABLED: 'true', KOSIPA_READ_ENABLED: 'true',
     KOSIPA_WRITE_GRANTS_ENABLED: 'true', KOSIPA_GRANT_ADMIN_USER_IDS: GRANT_ADMINS.join(','),
     KOSIPA_MASTER_WRITES_ENABLED: 'true', KOSIPA_LEDGER_DATABASE: LEDGER_DB,
@@ -220,6 +222,24 @@ async function waitReady(config) {
   fail('KFA_DATABASE_NOT_READY');
 }
 
+/** Backfill accounts added after the config was first written (additive; never rotates an existing password). */
+async function ensureAccounts(config) {
+  const wanted = { cpanelModel: 'kosipa_cpanel_w', numbering: 'kfa_numbering_w', memberWrite: 'kosipa_member_w' };
+  let changed = false;
+  for (const [key, user] of Object.entries(wanted)) if (!config.accounts[key]) { config.accounts[key] = { user, password: secret() }; changed = true; }
+  if (changed) await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+  await chmod(configPath, 0o600);
+}
+
+/** Additive: creates/refreshes ONLY the member writer account (FA-03B T04) on the existing synthetic stack. Never resets data. */
+export async function applyMemberWriter() {
+  const config = await loadConfig();
+  await ensureAccounts(config);
+  (await rootConnection(config)).end();                  // refuses unless the sentinel matches this installation
+  await adminSql(config, await template('apps/web/db/kosipa/006_member_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: config.accounts.memberWrite.password }));
+  return { mode: config.mode, port: PORT, account: config.accounts.memberWrite.user };
+}
+
 export async function setup() {
   await mkdir(local, { recursive: true, mode: 0o700 }); await chmod(local, 0o700);
   let config;
@@ -227,12 +247,12 @@ export async function setup() {
     if (error.code !== 'ENOENT') throw error;
     config = {
       mode: 'LOCAL_SYNTHETIC', port: PORT, installationId: randomBytes(16).toString('hex'), rootPassword: secret(), authSecret: randomBytes(48).toString('base64'),
-      accounts: { read: { user: 'kfa_read', password: secret() }, auth: { user: 'kkisi_auth', password: secret() }, console: { user: 'kkisi_console', password: secret() }, masterWrite: { user: 'kosipa_master_w', password: secret() }, cpanelModel: { user: 'kosipa_cpanel_w', password: secret() }, numbering: { user: 'kfa_numbering_w', password: secret() } },
+      accounts: { read: { user: 'kfa_read', password: secret() }, auth: { user: 'kkisi_auth', password: secret() }, console: { user: 'kkisi_console', password: secret() }, masterWrite: { user: 'kosipa_master_w', password: secret() }, cpanelModel: { user: 'kosipa_cpanel_w', password: secret() }, numbering: { user: 'kfa_numbering_w', password: secret() }, memberWrite: { user: 'kosipa_member_w', password: secret() } },
       passwords: Object.fromEntries(Object.keys(USERS).map((n) => [n, randomBytes(12).toString('base64url')])),
     };
     await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
   }
-  if (!config.accounts.cpanelModel || !config.accounts.numbering) { config.accounts.cpanelModel ??= { user: 'kosipa_cpanel_w', password: secret() }; config.accounts.numbering ??= { user: 'kfa_numbering_w', password: secret() }; await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 }); }
+  await ensureAccounts(config);
   await chmod(configPath, 0o600);
   let exists = false; try { await run('docker', ['inspect', CONTAINER]); exists = true; } catch { /* first run */ }
   if (!exists) {
@@ -255,7 +275,7 @@ export async function setup() {
 
 export async function reset() {
   const config = await loadConfig();
-  if (!config.accounts.cpanelModel || !config.accounts.numbering) { config.accounts.cpanelModel ??= { user: 'kosipa_cpanel_w', password: secret() }; config.accounts.numbering ??= { user: 'kfa_numbering_w', password: secret() }; await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 }); }
+  await ensureAccounts(config);
   (await rootConnection(config)).end();                  // refuses unless the sentinel matches this installation
   await applySchema(config); await seed(config); await writeAppEnv(config);
   return { reset: true };
@@ -273,6 +293,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const command = process.argv[2] ?? 'status';
     if (command === 'setup') console.log(JSON.stringify(await setup()));
+    else if (command === 'member-writer') console.log(JSON.stringify(await applyMemberWriter()));
     else if (command === 'member-tables') console.log(JSON.stringify(await applyMemberSideTables()));
     else if (command === 'reset') console.log(JSON.stringify(await reset()));
     else if (command === 'stop') console.log(JSON.stringify(await stop()));

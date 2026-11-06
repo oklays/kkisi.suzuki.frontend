@@ -54,7 +54,7 @@ test('update passes locked-record identity, full parsed patch, opaque version an
   const w=world(); const r=await updateMemberProfile(w.ports,actor,'42',profile());
   assert.deepEqual(r.result,{ id:42,version });
   const { envelope,input }=w.calls[0];
-  assert.equal(envelope.command,'member.updateProfile'); assert.equal(envelope.capability,'kosipa.member.update');
+  assert.equal(envelope.command,'member.update_profile'); assert.equal(envelope.capability,'kosipa.member.update');
   assert.equal(envelope.subjectRef,'42'); assert.equal(input[0],42);
   assert.deepEqual(input[1],{ fields:profile().fields, expectedVersion:version, reason:'Verified correction', idempotencyKey:KEY(2) });
   assert.equal(w.events[0].action,'kosipa.member.updateProfile');

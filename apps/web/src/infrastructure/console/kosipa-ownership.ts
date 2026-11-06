@@ -13,9 +13,11 @@ import type { WriteOwnership } from '@koperasi/application/kosipa/commands/pipel
  */
 export type KosipaWriteFeatureConfig = { flag: string; legacyControllers: readonly string[] };
 /** Reference masters (FA-01 Lokasi, FA-02 Bagian, Jenis Dokumen, Rekening Bank, Periode Angsuran): one feature per legacy controller. */
-export const KOSIPA_WRITE_FEATURES: Readonly<Record<string, KosipaWriteFeatureConfig>> = Object.fromEntries(
-  Object.values(MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }]),
-);
+export const KOSIPA_WRITE_FEATURES: Readonly<Record<string, KosipaWriteFeatureConfig>> = {
+  ...Object.fromEntries(Object.values(MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }])),
+  /** Members (FA-03B): every legacy controller that writes m_anggota / member deduction config must be fenced (MC01-MC11). */
+  member: { flag: 'KOSIPA_MEMBER_WRITES_ENABLED', legacyControllers: ['master/anggota_c', 'anggota/anggota_c', 'mobile/users_c'] },
+};
 
 export function kosipaWriteOwnership(env: Record<string, string | undefined> = process.env): WriteOwnership {
   const owned = new Set((env.KOSIPA_WRITE_OWNERSHIP ?? '').split(',').map((f) => f.trim()).filter(Boolean));

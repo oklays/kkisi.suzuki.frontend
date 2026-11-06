@@ -13,15 +13,16 @@ import { isProduction } from './deployment-guard.ts';
 const LOCAL_TARGETS = new Set(['3322/kkisi_kfa_synthetic']);
 const OTHER_ACCOUNTS = ['DATABASE_URL', 'DATABASE_URL_AUTH', 'DATABASE_URL_CONSOLE', 'DATABASE_URL_WRITE', 'DATABASE_URL_REGISTER_WRITE', 'DATABASE_URL_INVENTORY_WRITE', 'DATABASE_URL_PRODUCT_WRITE', 'DATABASE_URL_RETURN_WRITE'];
 
-export function validateKosipaMasterWriteConfig(env: Record<string, string | undefined> = process.env): string {
+/** Shared by every KOSIPA writer account (master, member, ...): own flag + own DSN variable, never the same login as any other account. */
+export function validateKosipaWriterConfig(env: Record<string, string | undefined>, flag: string, dsnVariable: string): string {
   const fail = (): never => { throw new KosipaError('WRITE_NOT_CONFIGURED'); };
   try {
-    if (env.KOSIPA_MASTER_WRITES_ENABLED !== 'true' || isProduction(env)) return fail();
-    const url = new URL(env.DATABASE_URL_KOSIPA_MASTER_WRITE ?? '');
+    if (env[flag] !== 'true' || isProduction(env)) return fail();
+    const url = new URL(env[dsnVariable] ?? '');
     const user = decodeURIComponent(url.username);
     if (url.protocol !== 'mysql:' || !['127.0.0.1', 'localhost'].includes(url.hostname) || !LOCAL_TARGETS.has(`${url.port}${url.pathname}`)) return fail();
     if (!user || !url.password || ['root', 'admin'].includes(user)) return fail();
-    for (const key of OTHER_ACCOUNTS) {
+    for (const key of [...OTHER_ACCOUNTS, ...KOSIPA_WRITER_DSNS].filter((k) => k !== dsnVariable)) {
       const other = env[key];
       if (other && decodeURIComponent(new URL(other).username) === user) return fail();
     }
@@ -33,14 +34,18 @@ export function validateKosipaMasterWriteConfig(env: Record<string, string | und
     return fail();
   }
 }
+const KOSIPA_WRITER_DSNS = ['DATABASE_URL_KOSIPA_MASTER_WRITE', 'DATABASE_URL_KOSIPA_MEMBER_WRITE'];
+
+export function validateKosipaMasterWriteConfig(env: Record<string, string | undefined> = process.env): string {
+  return validateKosipaWriterConfig(env, 'KOSIPA_MASTER_WRITES_ENABLED', 'DATABASE_URL_KOSIPA_MASTER_WRITE');
+}
 
 /**
  * The command ledger's database (FD-01b option b): a separate database on the SAME server as the business database, where the writer holds
  * SELECT, INSERT only. Required for every KOSIPA writer; FA-01.5 allows only the synthetic ledger database next to the synthetic business one.
  */
 const LOCAL_LEDGERS = new Set(['kkisi_kfa_ledger']);
-export function validateKosipaLedgerDatabase(env: Record<string, string | undefined> = process.env): string {
-  const url = validateKosipaMasterWriteConfig(env);
+export function validateKosipaLedgerDatabase(env: Record<string, string | undefined> = process.env, url: string = validateKosipaMasterWriteConfig(env)): string {
   const ledger = env.KOSIPA_LEDGER_DATABASE ?? '';
   if (!/^[A-Za-z0-9_]{1,64}$/.test(ledger) || !LOCAL_LEDGERS.has(ledger) || `/${ledger}` === new URL(url).pathname) throw new KosipaError('WRITE_NOT_CONFIGURED');
   return ledger;

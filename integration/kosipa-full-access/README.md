@@ -18,6 +18,9 @@ Secrets are random. They live only in `.local/kosipa-fa01/` and `apps/web/.env.k
 # 1. database stack (container, schemas, least-privilege accounts, synthetic seed; legacy master menus start FENCED)
 node integration/kosipa-full-access/local-stack.mjs setup      # status | reset | stop
 
+# 1b. (existing stacks) member writer account for FA-03B T04 — additive, sentinel-checked, never resets data
+node apps/web/scripts/setup-kosipa-member-write.mjs     # same as: node integration/kosipa-full-access/local-stack.mjs member-writer
+
 # 2. Build the isolated legacy test image (cached after first build).
 docker build --platform linux/amd64 -t kkisi-kfa-php56-ci2 integration/kosipa-full-access/legacy-runtime
 
@@ -26,7 +29,7 @@ cd apps/web && KOSIPA_FA01=1 node --experimental-strip-types --test --test-concu
   tests/kosipa-foundation-db.test.mjs tests/kosipa-masters-db.test.mjs tests/kosipa-legacy-fence-db.test.mjs \
   tests/kosipa-migrations-rollback-db.test.mjs tests/kosipa-b1-export-db.test.mjs \
   tests/kosipa-document-number-db.test.mjs tests/kosipa-production-sql-static-db.test.mjs \
-  tests/kosipa-legacy-runtime.test.mjs && cd ../..
+  tests/kosipa-legacy-runtime.test.mjs tests/kosipa-member-write-db.test.mjs tests/kosipa-member-native-legacy-compat-db.test.mjs && cd ../..
 
 # 3. console on http://127.0.0.1:3230, built into apps/web/.next-kfa01 (never .next, never a running dev server)
 node integration/kosipa-full-access/app-server.mjs build && node integration/kosipa-full-access/app-server.mjs start
