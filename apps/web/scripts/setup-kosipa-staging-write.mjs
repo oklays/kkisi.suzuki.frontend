@@ -123,9 +123,15 @@ sql(await tpl('kosipa/006_member_writer_grants.sql.tpl', { __KOSIPA_DB__: BUSINE
 // 4: fence, keeping the first recorded pre-state (a re-run must not overwrite the true original statuses)
 await mkdir(stateDir, { recursive: true, mode: 0o700 });
 let recorded = null; try { recorded = JSON.parse(await readFile(fencePrestateFile(), 'utf8')); } catch { /* first run */ }
-if (!recorded) {
-  const rows = sql(`SELECT id, status FROM ${BUSINESS_DB}.ref_menu WHERE UPPER(url) IN (${urlList}) ORDER BY id`).split('\n').filter(Boolean).map((l) => { const [id, status] = l.split('\t'); return { id: Number(id), status: Number(status) }; });
-  await writeFile(fencePrestateFile(), JSON.stringify({ recordedAt: new Date().toISOString(), database: BUSINESS_DB, urls: fenceUrls, rows }, null, 2), { mode: 0o600 });
+// Record the pre-state of every controller not recorded yet. New native features (e.g. the product masters) add controllers after the first run;
+// their original statuses must be captured BEFORE this run fences them, while rows recorded earlier keep their true original status.
+const missing = recorded ? fenceUrls.filter((u) => !recorded.urls.includes(u)) : fenceUrls;
+if (missing.length) {
+  const list = missing.map((u) => `UPPER('${u}')`).join(', ');
+  const rows = sql(`SELECT id, status FROM ${BUSINESS_DB}.ref_menu WHERE UPPER(url) IN (${list}) ORDER BY id`).split('\n').filter(Boolean).map((l) => { const [id, status] = l.split('\t'); return { id: Number(id), status: Number(status) }; });
+  const known = new Set((recorded?.rows ?? []).map((r) => r.id));
+  const merged = { recordedAt: recorded?.recordedAt ?? new Date().toISOString(), database: BUSINESS_DB, urls: [...(recorded?.urls ?? []), ...missing], rows: [...(recorded?.rows ?? []), ...rows.filter((r) => !known.has(r.id))] };
+  await writeFile(fencePrestateFile(), JSON.stringify(merged, null, 2), { mode: 0o600 });
 }
 sql(`UPDATE ${BUSINESS_DB}.ref_menu SET status = 0 WHERE UPPER(url) IN (${urlList}) AND status = 1;`);
 
