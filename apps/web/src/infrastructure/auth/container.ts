@@ -28,7 +28,7 @@ export function getContainer(): Container {
   const keys = buildKeys(config.secrets);
   const legacy = prisma;                       // DATABASE_URL: SELECT-only
   const auth = authPrisma();                   // DATABASE_URL_AUTH: kkisi_auth, auth schema only
-  const permissions = new PrismaPermissionRepository(legacy, log);
+  const permissions = new PrismaPermissionRepository(legacy, log, { kosipaReadAccessMode: process.env.KOSIPA_READ_ACCESS_MODE });
   const services: AuthServices = {
     config, keys,
     deps: {

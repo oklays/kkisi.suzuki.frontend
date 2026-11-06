@@ -4,6 +4,8 @@ Audit 30 Oct 2026 (Asia/Jakarta). Sources: local legacy copy `kosipa/` (read-onl
 
 **Implementation update, 30 Oct 2026:** FA-01/01.5/02 and [FA-03A](fa-03a/CHECKPOINT_REPORT.md) now provide synthetic-only native CRUD for five reference masters, two-administrator grants, a separate atomic command-ledger database, real legacy-PHP compatibility tests and reusable numbering. The writer guard permits only the isolated synthetic target. No native member mutation or financial posting is activated. Metrics below remain the original read-only audit measurements; production capacity and activation gates are in [PRODUCTION_READINESS_GATES](fa-03a/PRODUCTION_READINESS_GATES.md).
 
+**Approved production read-access update, 6 Nov 2026:** the owner requested KOSIPA access for every role except KASIR, a separate monitoring administrator and deployment to .178. The [scoped role-access design](../kosipa-production-role-access/design.md) introduces explicit `non-cashier` read mode with no legacy identity impersonation. Active non-cashier roles receive the five view capabilities; KASIR/CASHIER roles are denied on pages/APIs. Master and financial writes remain gated. A separate console audit store and the `monitor_admin` account (existing Admin Koperasi role) have been provisioned and validated; runtime activation evidence is recorded by the release process. This does not complete the pending production-to-local database replication.
+
 ## 1. Systems and databases
 
 | System | Stack | Role for KOSIPA data | Writes KOSIPA tables? |

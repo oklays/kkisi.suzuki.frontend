@@ -141,7 +141,7 @@ test('nested entries: the parent exists in the same section, is itself top level
 
 test('the dashboard explains KOSIPA access states instead of "Segera hadir", and the KOSIPA overview reads no KOSIPA data', () => {
   const dash = read('src/app/console/page.tsx');
-  assert.match(dash, /unlinked: 'Akun belum ditautkan'/); assert.match(dash, /auth\.kosipa === 'linked' \? 'restricted' : auth\.kosipa/);
+  assert.match(dash, /unlinked: 'Akun belum ditautkan'/); assert.match(dash, /auth\.kosipa === 'linked' \|\| auth\.kosipa === 'role' \? 'restricted' : auth\.kosipa/);
   const overview = read('src/app/console/kosipa/page.tsx');
   assert.doesNotMatch(overview.replace(/\/\*[\s\S]*?\*\//g, ''), /searchMembers|\.deps\.|Rp\s?\d|prisma|\$queryRaw/);
   assert.match(overview, /requireConsoleSession\(\{ next: '\/console\/kosipa' \}\)/);

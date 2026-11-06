@@ -8,8 +8,8 @@ import { makeLoanWorld, loanHdr, inst } from '../../../packages/application/test
 const { handleLoanList, handleLoanDetail } = loanHandlers;
 const MENUS = { member: 'anggota/anggota_c', loan: 'anggota/trans_pinjaman_c', payroll: 'payroll/matrix_c' };
 
-async function signedIn() {
-  const world = makeWorld(); world.addUser({ id: 4, roleId: 4 });
+async function signedIn(roleId = 4) {
+  const world = makeWorld(); world.addUser({ id: 4, roleId });
   const r = await handleLogin(world.services, makeRequest('/api/auth/login', { method: 'POST', body: { username: 'kasir', password: 'Pw-Synthetic-1' } }));
   return { world, cookie: cookieOf(r), permissions: { async grantedAmong() { return new Set(); } } };
 }
@@ -22,6 +22,18 @@ function ports(lw, { menus = [MENUS.member, MENUS.loan], linked = true, audit = 
 }
 const world = () => makeLoanWorld({ headers: [loanHdr(1, { name: 'SYNTH A' }), loanHdr(2, { nik: '00200', name: 'SYNTH B', docStatus: 'REJECTED', disbursement: 'OPEN', repayment: 'LUNAS' })], installments: Array.from({ length: 12 }, (_, i) => inst(100 + i, 'PIN000001', i + 1)) });
 const get = (path, cookie) => makeRequest(path, { cookie });
+
+test('role policy permits an unlinked monitoring administrator and denies a linked cashier before reading loans', async () => {
+  for (const roleId of [2, 4]) {
+    const { world: w, cookie } = await signedIn(roleId);
+    const lw = world(); const p = ports(lw, { linked: roleId === 4 });
+    const permissions = { async grantedAmong() { return new Set(); }, async kosipaRoleAccess(id) { assert.equal(id, roleId); return id === 4 ? 'denied' : 'allowed'; } };
+    const response = await handleLoanList(w.services, get('/api/kosipa/loans', cookie), { enabled: true, permissions, ports: p.value });
+    assert.equal(response.status, roleId === 4 ? 403 : 200);
+    if (roleId === 4) { assert.equal(lw.calls.length, 0); assert.equal(p.audit.length, 0); }
+    else { assert.equal(p.audit[0].actorUserId, 4); assert.equal(p.audit[0].action, 'kosipa.loan.list.view'); }
+  }
+});
 
 test('flag off 404, anonymous 401, no services 503 — before any loan read or audit', async () => {
   const { world: w, cookie, permissions } = await signedIn(); const lw = world(); const p = ports(lw);

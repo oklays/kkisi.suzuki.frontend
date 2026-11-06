@@ -17,7 +17,7 @@ export default async function KosipaMasterPage({ params }: { params: Promise<{ t
   if (!consoleEnabled() || !(MASTER_TYPES as readonly string[]).includes(type)) notFound();
   const auth = await requireConsoleSession({ next: `/console/kosipa/master/${type}` });
   if (auth.kind !== 'ok') return null;
-  if (auth.kosipa !== 'linked') return <KosipaNotice state={auth.kosipa} />;
+  if (auth.kosipa !== 'linked' && auth.kosipa !== 'role') return <KosipaNotice state={auth.kosipa} />;
   if (!auth.capabilities.has('kosipa.member.view')) return <KosipaNotice state="no-capability" />;
   const services = kosipaCommandServices();
   if (!services) return <KosipaNotice state="unavailable" />;

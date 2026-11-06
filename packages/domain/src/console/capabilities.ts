@@ -18,9 +18,15 @@ export const TOKO_CAPABILITIES = [
 
 export type TokoCapability = (typeof TOKO_CAPABILITIES)[number];
 
-/** Read-only KOSIPA access, derived from an active identity link (spec REQ-020/021). Write access is the separate list below. */
+/** Read-only KOSIPA access: linked policy (REQ-020/021) or an explicitly enabled non-cashier role policy. Writes remain separate. */
 export const KOSIPA_CAPABILITIES = ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.store-credit.view'] as const;
 export type KosipaCapability = (typeof KOSIPA_CAPABILITIES)[number];
+
+/** Explicit role-based monitoring policy; never confers a legacy identity, mutation or export right. */
+export function kosipaRoleReadAllowed(roleName: string | null, status: number): boolean {
+  const name = (roleName ?? '').normalize('NFKC').trim().toLowerCase();
+  return status === 1 && name.length > 0 && !/kasir|cashier/.test(name);
+}
 
 /**
  * KOSIPA write vocabulary (kosipa-full-access 08 §3, TASK-110). NEVER derived from legacy menus or from an identity link: only an

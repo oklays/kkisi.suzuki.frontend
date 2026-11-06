@@ -20,6 +20,10 @@ Earlier registers stay authoritative for their items: [UCKW decision register](.
 ## 2. Approved rules carried in (not re-opened)
 OD-1 … OD-6 and UCKW:BR001–BR013 — see [05 §1](05_BUSINESS_RULES_AND_FINANCIAL_LOGIC.md#1-decision-baseline-already-approved--not-re-opened). Memory-recorded decisions: sales-return Kredit handling; production DB changes manual-only.
 
+### FD-26 — owner-approved role-based production monitoring (6 November 2026)
+
+The owner explicitly authorized KOSIPA access for all roles except KASIR, a new production administrator account for monitoring, and redeployment to .178. The scope is read access: under `KOSIPA_READ_ACCESS_MODE=non-cashier`, active non-cashier roles receive the five existing view capabilities; KASIR/CASHIER, inactive and unknown roles are denied. Role mode does not fabricate a legacy actor or confer writes, exports or grant administration. The original linked policy remains the default outside this mode. The authorization includes additive provisioning of the reviewed isolated console audit store and a separate `monitor_admin` login using existing role 2; it does not authorize financial-data changes or resolve FD-22/FD-23. See [design](../kosipa-production-role-access/design.md) and [verification](../kosipa-production-role-access/verification.md).
+
 ## 3. Open decisions (new)
 
 | ID | Decision | Options | Recommendation | Blocks | Owner |

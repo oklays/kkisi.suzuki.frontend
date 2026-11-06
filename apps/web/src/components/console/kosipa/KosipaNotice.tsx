@@ -5,6 +5,8 @@ const TEXT: Record<KosipaAccessState | 'no-capability', { title: string; text: s
   unlinked: { title: 'Akun belum ditautkan ke KOSIPA', text: 'Akun console Anda belum ditautkan ke akun KOSIPA. Minta administrator untuk menautkannya.' },
   unavailable: { title: 'Layanan KOSIPA tidak tersedia', text: 'Akses KOSIPA sementara tidak dapat diperiksa. Data tidak ditampilkan sampai layanan pulih.' },
   linked: { title: 'Akses ditolak', text: 'Akun KOSIPA Anda tidak memiliki akses ke halaman ini.' },
+  role: { title: 'Akses ditolak', text: 'Peran akun Anda tidak memiliki akses ke halaman ini.' },
+  restricted: { title: 'Akses ditolak', text: 'Modul KOSIPA tidak tersedia untuk peran akun Anda.' },
   'no-capability': { title: 'Akses ditolak', text: 'Akun Anda tidak memiliki akses ke halaman ini.' },
 };
 

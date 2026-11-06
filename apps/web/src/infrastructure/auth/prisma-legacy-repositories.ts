@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
+import { kosipaRoleReadAllowed } from '@koperasi/domain/console/capabilities';
 import type { PermissionSetSource } from '@koperasi/application/console/capabilities';
 import type { Company, CompanyRepository, OpenRegister, PermissionRepository, RegisterRepository, UserRecord, UserRepository } from '@koperasi/application/auth/ports';
 import { withStoreRetry, type StoreLog } from './store-errors.ts';
@@ -41,7 +42,20 @@ export class PrismaUserRepository implements UserRepository {
 
 export class PrismaPermissionRepository implements PermissionRepository, PermissionSetSource {
   private readonly db: PrismaClient; private readonly log: StoreLog;
-  constructor(db: PrismaClient, log: StoreLog) { this.db = db; this.log = log; }
+  private readonly kosipaReadAccessMode: string | undefined;
+  constructor(db: PrismaClient, log: StoreLog, options: { kosipaReadAccessMode?: string } = {}) {
+    this.db = db; this.log = log; this.kosipaReadAccessMode = options.kosipaReadAccessMode;
+  }
+  async kosipaRoleAccess(roleId: number): Promise<'allowed' | 'denied' | null> {
+    const mode = this.kosipaReadAccessMode;
+    if (!mode || mode === 'linked') return null;
+    if (mode !== 'non-cashier') return 'denied';
+    return withStoreRetry(this.log, 'kosipa_role_access', async () => {
+      const rows = await this.db.$queryRaw<{ role_name: string | null; status: number }[]>`SELECT role_name, status FROM db_roles WHERE id = ${roleId} LIMIT 1`;
+      const role = rows[0];
+      return role && kosipaRoleReadAllowed(role.role_name, Number(role.status)) ? 'allowed' : 'denied';
+    });
+  }
   has(roleId: number, slug: string): Promise<boolean> {
     return withStoreRetry(this.log, 'permission', async () => {
       const rows = await this.db.$queryRaw<{ n: number | bigint }[]>`SELECT COUNT(*) AS n FROM db_permissions WHERE role_id = ${roleId} AND permissions = ${slug}`;

@@ -106,7 +106,7 @@ const metricsCache = new Map<string, { expiresAt: number; data: DashboardLiveMet
 async function loadDashboardLiveMetrics(
   companyId: number,
   capabilities: CapabilitySet,
-  kosipaState: 'linked' | 'unlinked' | 'disabled' | 'unavailable',
+  kosipaState: 'linked' | 'role' | 'restricted' | 'unlinked' | 'disabled' | 'unavailable',
   now: Date,
 ): Promise<DashboardLiveMetrics> {
   const cacheKey = `${companyId}:${kosipaState}:${Array.from(capabilities).sort().join(',')}`;
@@ -200,7 +200,7 @@ async function loadDashboardLiveMetrics(
     );
   }
 
-  if (kosipaState === 'linked') {
+  if (kosipaState === 'linked' || kosipaState === 'role') {
     const kServices = kosipaServices();
     if (kServices && capabilities.has('kosipa.member.view')) {
       tasks.push(
@@ -572,7 +572,7 @@ export default async function ConsoleDashboard({
     const planned = CONSOLE_NAVIGATION.filter((e) => e.section === m.section && e.readiness === 'planned');
     // KOSIPA without any visible destination is explained by its real access state, never shown as "coming soon": the module is built.
     const kosipaReason: ModuleState | null =
-      m.section === 'kosipa' && links.length === 0 ? (auth.kosipa === 'linked' ? 'restricted' : auth.kosipa) : null;
+      m.section === 'kosipa' && links.length === 0 ? (auth.kosipa === 'linked' || auth.kosipa === 'role' ? 'restricted' : auth.kosipa) : null;
     const state: ModuleState =
       kosipaReason ??
       (m.section === 'warehouse'

@@ -1,4 +1,4 @@
-import { IAM_PERMISSION_SLUGS, TOKO_PERMISSION_SLUGS, iamCapabilities, tokoCapabilities, type Capability, type CapabilitySet } from '@koperasi/domain/console/capabilities';
+import { IAM_PERMISSION_SLUGS, KOSIPA_CAPABILITIES, TOKO_PERMISSION_SLUGS, iamCapabilities, tokoCapabilities, type Capability, type CapabilitySet } from '@koperasi/domain/console/capabilities';
 import { writeCapabilitiesFromGrants } from '@koperasi/domain/console/kosipa-grants';
 import { resolveKosipaCapabilities, type IdentityPorts } from './identity-links.ts';
 import type { KosipaGrantStore } from './kosipa-grants.ts';
@@ -6,6 +6,8 @@ import type { KosipaGrantStore } from './kosipa-grants.ts';
 /** Read port: which of the given slugs the role holds, answered in one query. A store failure must throw (never "none"). */
 export interface PermissionSetSource {
   grantedAmong(roleId: number, slugs: readonly string[]): Promise<ReadonlySet<string>>;
+  /** null = original linked policy; role mode is an explicit server deployment choice. */
+  kosipaRoleAccess?(roleId: number): Promise<'allowed' | 'denied' | null>;
 }
 
 export type CapabilitySubject = { roleId: number; canSwitchBranch: boolean };
@@ -22,7 +24,7 @@ export async function resolveConsoleCapabilities(source: PermissionSetSource, su
 /** Deployment policy for the risky export action (never read from the browser or the console store). */
 export type ExportPolicy = { enabled: boolean; allowedUserIds: ReadonlySet<number> };
 
-export type KosipaAccessState = 'disabled' | 'unlinked' | 'linked' | 'unavailable';
+export type KosipaAccessState = 'disabled' | 'unlinked' | 'linked' | 'role' | 'restricted' | 'unavailable';
 /** `kosipaUserId` = the active KOSIPA account behind the link (the actor id written to the command ledger); null when none. */
 export type ConsoleAccess = { capabilities: CapabilitySet; kosipa: KosipaAccessState; kosipaUserId: number | null };
 
@@ -34,7 +36,7 @@ export type KosipaWriteSources = { grants?: Pick<KosipaGrantStore, 'activeCapabi
 
 /**
  * Full console access: TOKO + administration from the legacy permission table (one query) and, when KOSIPA reading is
- * enabled, KOSIPA view capabilities from the identity link. A failing console store or KOSIPA read removes ONLY the KOSIPA
+ * enabled, KOSIPA view capabilities from the configured role policy or identity link. A failing console store or KOSIPA read removes ONLY the KOSIPA
  * part (state 'unavailable'); TOKO access stays available because it does not depend on the console database.
  */
 export async function resolveConsoleAccess(
@@ -46,9 +48,15 @@ export async function resolveConsoleAccess(
   // The SYNTHETIC Warehouse preview: deployment flag AND the existing global-warehouse capability; independent of KOSIPA and the console store.
   if (sources.features?.warehousePreview && capabilities.has('toko.inventory.warehouse')) capabilities.add('warehouse.preview.view');
   if (!sources.kosipa) return { capabilities, kosipa: 'disabled', kosipaUserId: null };
-  // Grant administration is a console-store feature: iam.link.manage AND the explicit allow-list, never a role alone.
-  if (sources.kosipa.grants && capabilities.has('iam.link.manage') && sources.kosipa.grantAdmins?.has(subject.userId)) capabilities.add('iam.kosipa.grant');
   try {
+    const roleAccess = await sources.permissions.kosipaRoleAccess?.(subject.roleId);
+    if (roleAccess === 'denied') return { capabilities, kosipa: 'restricted', kosipaUserId: null };
+    if (roleAccess === 'allowed') {
+      for (const cap of KOSIPA_CAPABILITIES) capabilities.add(cap);
+      return { capabilities, kosipa: 'role', kosipaUserId: null };
+    }
+    // Grant administration remains an independently approved linked-policy feature.
+    if (sources.kosipa.grants && capabilities.has('iam.link.manage') && sources.kosipa.grantAdmins?.has(subject.userId)) capabilities.add('iam.kosipa.grant');
     const kosipa = await resolveKosipaCapabilities(sources.kosipa, subject.userId);
     for (const cap of kosipa.capabilities) capabilities.add(cap);
     // Export is an explicit, per-user deployment grant on top of a linked KOSIPA account; it never follows from a view capability.

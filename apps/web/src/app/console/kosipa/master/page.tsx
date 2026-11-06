@@ -21,7 +21,7 @@ export default async function KosipaMasterIndexPage() {
   if (!consoleEnabled()) notFound();
   const auth = await requireConsoleSession({ next: '/console/kosipa/master' });
   if (auth.kind !== 'ok') return null;
-  if (auth.kosipa !== 'linked') return <KosipaNotice state={auth.kosipa} />;
+  if (auth.kosipa !== 'linked' && auth.kosipa !== 'role') return <KosipaNotice state={auth.kosipa} />;
   if (!auth.capabilities.has('kosipa.member.view')) return <KosipaNotice state="no-capability" />;
   return (
     <div className="console-page">
