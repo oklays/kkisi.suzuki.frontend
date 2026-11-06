@@ -40,7 +40,15 @@ async function session(name) {
   return { context, page: p };
 }
 const shot = (p, name) => p.screenshot({ path: `${output}/member-${name}.png`, fullPage: true });
-const noOverflow = async (p, label) => { for (const width of [375, 768, 1440]) { await p.setViewportSize({ width, height: 860 }); const o = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); assert.ok(o <= 0, `${label}: overflow ${o}px at ${width}`); } };
+// Measured after the layout settles (a resize can report a one-frame transient overflow); only an overflow persisting 500 ms fails.
+const noOverflow = async (p, label) => {
+  for (const width of [375, 768, 1440]) {
+    await p.setViewportSize({ width, height: 860 });
+    let o = 0;
+    for (let i = 0; i < 10; i++) { o = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); if (o <= 0) break; await p.waitForTimeout(50); }
+    assert.ok(o <= 0, `${label}: overflow ${o}px at ${width}`);
+  }
+};
 const fence = (open) => q('UPDATE ref_menu SET status = ? WHERE UPPER(url) IN (?, ?, ?)', [open ? 1 : 0, ...CONTROLLERS.map((c) => c.toUpperCase())]);
 const memberBy = async (nik) => (await q('SELECT * FROM m_anggota WHERE nik_kar = ?', [nik]))[0];
 
@@ -156,7 +164,8 @@ try {
   assert.deepEqual([mob.is_active, mob.is_delete, mob.admin_verifikasi, Number(mob.wallet_balance), mob.temporary_token], [0, 1, 0, 0, '']);
   assert.equal(Number((await q('SELECT COUNT(*) AS n FROM oauth_access_tokens WHERE user_id = ?', [u.insertId]))[0].n), 0);
   await p.getByText('Status saat ini:').waitFor();
-  assert.match(await p.locator('#member-status-title').locator('xpath=..').innerText(), /RESIGN/);
+  // The panel re-renders after router.refresh(); wait for the new status instead of reading the header before the refresh lands.
+  await p.locator('#member-status-title').locator('xpath=..').filter({ hasText: 'RESIGN' }).waitFor();
   await p.locator('#member-status-target').selectOption('AKTIVE');
   assert.match(await p.locator('.mstatus-effect').innerText(), /Batas kredit tetap 0/);
   await p.locator('#member-status-reason').fill('Aktif kembali per SK');

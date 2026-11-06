@@ -236,7 +236,7 @@ async function writeAppEnv(config) {
     KOSIPA_MEMBER_WRITES_ENABLED: 'true',
     // Deterministic per installation (synthetic only): HMAC key of the opaque member versions.
     KOSIPA_MEMBER_VERSION_SECRET: createHash('sha256').update(`member-version:${config.authSecret}`).digest('hex'),
-    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran,member',
+    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran,master.jenis_simpanan,master.jenis_pinjaman,master.jenis_pembiayaan,master.suku_bunga,member',
   };
   await writeFile(envPath, Object.entries(lines).map(([k, v]) => `${k}="${v}"`).join('\n') + '\n', { mode: 0o600 });
   await chmod(envPath, 0o600);

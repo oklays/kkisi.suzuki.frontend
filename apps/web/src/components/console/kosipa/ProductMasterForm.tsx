@@ -49,7 +49,8 @@ export function ProductMasterForm({ definition, facts, mode, row, csrfToken, can
   const placed = new Set(groups.flatMap((g) => g.keys));
   const sections = groups.map((g, i) => ({ ...g, fields: [...g.keys, ...(i === groups.length - 1 ? definition.fields.map((f) => f.key).filter((k) => !placed.has(k)) : [])].map((k) => definition.fields.find((f) => f.key === k)).filter((f): f is ProductField => !!f) }));
 
-  const set = (key: string, value: string) => { setValues((v) => ({ ...v, [key]: value })); if (invalid === key) setInvalid(null); };
+  // A new edit makes an earlier outcome message stale: clear it, and the invalid mark of that field.
+  const set = (key: string, value: string) => { setValues((v) => ({ ...v, [key]: value })); if (invalid === key) setInvalid(null); if (message) setMessage(null); };
   function jumpTo(key: string) { const el = document.getElementById(`pm-${key}`); el?.scrollIntoView({ block: 'center' }); el?.focus(); }
 
   async function submit() {
