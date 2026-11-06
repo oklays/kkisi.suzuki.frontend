@@ -34,7 +34,8 @@
     "./console/kosipa-grants": "./src/console/kosipa-grants.ts",
     "./kosipa/commands/pipeline": "./src/kosipa/commands/pipeline.ts",
     "./kosipa/commands/master": "./src/kosipa/commands/master.ts",
-    "./kosipa/document-numbering": "./src/kosipa/document-numbering.ts"
+    "./kosipa/document-numbering": "./src/kosipa/document-numbering.ts",
+    "./kosipa/commands/member": "./src/kosipa/commands/member.ts"
   },
   "scripts": {
     "lint": "eslint .",
