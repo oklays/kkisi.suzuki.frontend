@@ -44,6 +44,18 @@ The owner selected reactivation of the **member only**. Activation and verificat
 
 The owner selected **deny credit, with member-status changes performed by an authorized operator with reason and audit**. An expired contract lookup must not silently convert the member to PENSIUN or write limits/mobile flags/tokens. Preserve the existing POS eligibility boundary: for employment KONTRAK, a missing expiry date or a Jakarta business date on/after `tgl_keluar` denies credit. The competing legacy TOKO lookup write must be excluded at ownership cutover; no automatic retirement job is authorized by this decision.
 
+### FD-32 — financial parameters on product masters (owner, 6 November 2026)
+
+For Jenis Simpanan, Jenis Pinjaman and Jenis Pembiayaan the owner selected **legacy parity**: an authorized operator may edit rates, fees, COA accounts and `lock_1angsuran`, including on products already referenced by transactions, with **mandatory reason and audit**, and the UI must warn that legacy screens/reports and running loans read the current master value. **Product codes are immutable once referenced.** No second approver. Evidence: [remaining masters contract](fa-03b/REMAINING_MASTERS_CONTRACT.md).
+
+### FD-33 — dormant/broken master dispositions (owner, 6 November 2026)
+
+**RETIRE from KOSIPA** (document evidence, no native writer, legacy controllers stay fenced/unlisted): Divisi (`app_jobsection`), Master Surat (`m_surat`), Cabang (`db_cabang`, absent in production), Jabatan (`app_joblevel`). Daftar Pajak, Mata Uang, Kategori Beban and Jenis Pembayaran are retired from KOSIPA; their `db_*` tables remain owned and maintained by TOKO.
+
+### FD-34 — Suku Bunga (owner, 6 November 2026)
+
+Implement natively with legacy parity, keyed by the consumed `field` (`tgl_tempo`), after a read-only production row count. The reader ignores `is_active`; the UI must not claim deactivation has an effect.
+
 ## 3. Open decisions (new)
 
 | ID | Decision | Options | Recommendation | Blocks | Owner |
