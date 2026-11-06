@@ -6,6 +6,7 @@ import type { IdentityPorts } from '@koperasi/application/console/identity-links
 import type { CommandActor, CommandOutcome, WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
 import { createMaster, listMaster, setMasterStatus, updateMaster, type MasterRepository } from '@koperasi/application/kosipa/commands/master';
 import { createProductMaster, listProductMaster, setProductMasterStatus, updateProductMaster, type ProductMasterRepository } from '@koperasi/application/kosipa/commands/product-master';
+import { approveSavingsDeposit, createSavingsDeposit, listSavingsDeposits, lookupDepositMember, rejectSavingsDeposit, type SavingsDepositRepository } from '@koperasi/application/kosipa/commands/savings-deposit';
 import { changeMemberStatus, getMemberForEdit, registerMember, updateMemberProfile, type MemberRepository } from '@koperasi/application/kosipa/commands/member';
 import { errorResponse, guard, json, readJson, type AuthServices } from '../auth/http.ts';
 
@@ -14,7 +15,7 @@ import { errorResponse, guard, json, readJson, type AuthServices } from '../auth
  * JSON content type for every state change, SEC-105) -> services present -> server-side capabilities (fresh per request, from the
  * live identity link and explicit grants, SEC-108) -> use case. Responses are code-only (SEC-111) and never cached.
  */
-export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository };
+export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository };
 export type KosipaCommandDeps = { enabled: boolean; permissions: PermissionSetSource; ports: KosipaCommandPorts | null; log?: (event: string, fields: Record<string, string | number>) => void };
 
 const STATUS: Record<string, number> = {
@@ -22,6 +23,8 @@ const STATUS: Record<string, number> = {
   FORBIDDEN: 403,
   MASTER_TYPE_UNKNOWN: 404, MASTER_NOT_FOUND: 404, MEMBER_NOT_FOUND: 404, MEMBER_STATUS_INVALID: 400,
   STALE: 409, IDEMPOTENCY_CONFLICT: 409, BUSY_RETRY: 409, DOCUMENT_NUMBER_CONFLICT: 409,
+  SAVINGS_FIELD_INVALID: 400, SAVINGS_AMOUNT_INVALID: 400, SAVINGS_DATE_INVALID: 400, SAVINGS_DOC_ID_INVALID: 400, NIK_INVALID: 400, SAVINGS_DOC_NOT_FOUND: 404,
+  SAVINGS_STATUS_INVALID: 409, SAVINGS_MAKER_CHECKER: 403, SAVINGS_NOT_A_DEPOSIT: 422, SAVINGS_LINES_INVALID: 422, SAVINGS_MEMBER_INACTIVE: 422, SAVINGS_NIK_TOO_LONG: 422, SAVINGS_PRODUCT_INACTIVE: 422,
   PRODUCT_FIELD_INVALID: 400, PRODUCT_COA_INVALID: 422, PRODUCT_COA_DESC_TOO_LONG: 422, PRODUCT_FINANCING_INVALID: 422, PRODUCT_PARENT_INVALID: 422, PRODUCT_FIELD_DUPLICATE: 422,
   MEMBER_NIK_DUPLICATE: 422, MEMBER_MASTER_INVALID: 422, MEMBER_MIRROR_CONFLICT: 422, MEMBER_FIELD_INVALID: 400, MEMBER_ID_INVALID: 400, MEMBER_DATE_INVALID: 400, MEMBER_AMOUNT_INVALID: 400, MEMBER_DEDUCTION_NIK_TOO_LONG: 400,
   MASTER_CODE_DUPLICATE: 422, MASTER_NAME_DUPLICATE: 422, MASTER_REFERENCED: 422, MASTER_FIELD_IMMUTABLE: 422, NO_CHANGE: 422,
@@ -130,5 +133,45 @@ export async function handleChangeMemberStatus(services: AuthServices, request: 
     const a = await actorFor(services, request, deps, true);
     if ('response' in a) return a.response;
     return ok(200, await changeMemberStatus(commandPorts(a.ports, deps), a.actor, rawId, await readJson(request, BODY_LIMIT)));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** GET /api/kosipa/savings/deposits?status=&month=  (savings + member view; private, never cached) */
+export async function handleListDeposits(services: AuthServices, request: Request, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, false);
+    if ('response' in a) return a.response;
+    const url = new URL(request.url);
+    return json(200, await listSavingsDeposits(a.ports, a.actor, { status: url.searchParams.get('status') ?? undefined, month: url.searchParams.get('month') ?? undefined }));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** POST /api/kosipa/savings/deposits/member  { nik }  — member facts for the deposit form (POST so the NIK never appears in a URL or log). */
+export async function handleDepositMember(services: AuthServices, request: Request, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, true);
+    if ('response' in a) return a.response;
+    const body = await readJson(request, 512) as { nik?: unknown } | null;
+    return json(200, await lookupDepositMember(a.ports, a.actor, body?.nik));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** POST /api/kosipa/savings/deposits  { idempotencyKey, memberId, docDate, paymentType, amount, bankName, bankAccount, remarks } */
+export async function handleCreateDeposit(services: AuthServices, request: Request, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, true);
+    if ('response' in a) return a.response;
+    return ok(201, await createSavingsDeposit(commandPorts(a.ports, deps), a.actor, await readJson(request, BODY_LIMIT)));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** POST /api/kosipa/savings/deposits/[id]/approve|reject  { idempotencyKey, expectedVersion, reason? } */
+export async function handleDecideDeposit(services: AuthServices, request: Request, rawId: string, action: string, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    if (action !== 'approve' && action !== 'reject') return json(404, { error: 'NOT_FOUND' });
+    const a = await actorFor(services, request, deps, true);
+    if ('response' in a) return a.response;
+    const body = await readJson(request, BODY_LIMIT);
+    return ok(200, action === 'approve' ? await approveSavingsDeposit(commandPorts(a.ports, deps), a.actor, rawId, body) : await rejectSavingsDeposit(commandPorts(a.ports, deps), a.actor, rawId, body));
   } catch (error) { return failure(services, deps, error); }
 }

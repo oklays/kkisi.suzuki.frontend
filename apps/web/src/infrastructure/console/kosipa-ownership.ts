@@ -20,6 +20,8 @@ export const KOSIPA_WRITE_FEATURES: Readonly<Record<string, KosipaWriteFeatureCo
   ...Object.fromEntries(Object.values(PRODUCT_MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }])),
   /** Members (FA-03B): every legacy controller that writes m_anggota / member deduction config must be fenced (MC01-MC11). */
   member: { flag: 'KOSIPA_MEMBER_WRITES_ENABLED', legacyControllers: ['master/anggota_c', 'anggota/anggota_c', 'mobile/users_c'] },
+  /** Voluntary-savings deposits (FA-03C T07): the legacy Setor Simpanan screen. Other legacy savings screens stay legacy-owned until their own cutover. */
+  'savings.deposit': { flag: 'KOSIPA_SAVINGS_WRITES_ENABLED', legacyControllers: ['simpanan/sim_setor_c'] },
 };
 
 export function kosipaWriteOwnership(env: Record<string, string | undefined> = process.env): WriteOwnership {

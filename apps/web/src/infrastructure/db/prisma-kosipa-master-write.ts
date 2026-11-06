@@ -41,7 +41,7 @@ export function validateKosipaWriterConfig(env: Record<string, string | undefine
     return fail();
   }
 }
-const KOSIPA_WRITER_DSNS = ['DATABASE_URL_KOSIPA_MASTER_WRITE', 'DATABASE_URL_KOSIPA_MEMBER_WRITE'];
+const KOSIPA_WRITER_DSNS = ['DATABASE_URL_KOSIPA_MASTER_WRITE', 'DATABASE_URL_KOSIPA_MEMBER_WRITE', 'DATABASE_URL_KOSIPA_SAVINGS_WRITE'];
 
 export function validateKosipaMasterWriteConfig(env: Record<string, string | undefined> = process.env): string {
   return validateKosipaWriterConfig(env, 'KOSIPA_MASTER_WRITES_ENABLED', 'DATABASE_URL_KOSIPA_MASTER_WRITE');

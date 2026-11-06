@@ -27,12 +27,15 @@ import { PrismaKosipaMasterRepository } from '../repositories/kosipa-master-writ
 import { kosipaMasterWritePrisma, kosipaMasterWritesAvailable, validateKosipaLedgerDatabase } from '../db/prisma-kosipa-master-write.ts';
 import { PrismaKosipaMemberRepository } from '../repositories/kosipa-member-write.repository.ts';
 import { PrismaKosipaProductMasterRepository } from '../repositories/kosipa-product-master.repository.ts';
+import { PrismaKosipaSavingsDepositRepository } from '../repositories/kosipa-savings-deposit.repository.ts';
+import { kosipaSavingsWritePrisma, kosipaSavingsWritesAvailable, validateKosipaSavingsLedgerDatabase } from '../db/prisma-kosipa-savings-write.ts';
 import { kosipaMemberWritePrisma, kosipaMemberWritesAvailable, validateKosipaMemberLedgerDatabase } from '../db/prisma-kosipa-member-write.ts';
 import type { KosipaWriteSources } from '@koperasi/application/console/capabilities';
 import type { WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
 import type { MasterRepository } from '@koperasi/application/kosipa/commands/master';
 import type { MemberRepository } from '@koperasi/application/kosipa/commands/member';
 import type { ProductMasterRepository } from '@koperasi/application/kosipa/commands/product-master';
+import type { SavingsDepositRepository } from '@koperasi/application/kosipa/commands/savings-deposit';
 import type { KosipaGrantStore } from '@koperasi/application/console/kosipa-grants';
 
 export type ConsoleServices = IdentityPorts & { directory: PrismaKosipaDirectory };
@@ -57,7 +60,7 @@ export function kosipaServices(env: Record<string, string | undefined> = process
 
 /** Native KOSIPA commands (FA-01): KOSIPA read services + ownership gate + writer repositories. The writer is attached only when its
  *  guarded configuration is valid; otherwise reads work and every command answers 503 WRITE_NOT_CONFIGURED. */
-export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository };
+export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository };
 export function kosipaCommandServices(env: Record<string, string | undefined> = process.env): KosipaCommandServices | null {
   const services = kosipaServices(env);
   if (!services) return null;
@@ -68,7 +71,10 @@ export function kosipaCommandServices(env: Record<string, string | undefined> = 
   const members = new PrismaKosipaMemberRepository(prisma, memberWritable ? kosipaMemberWritePrisma() : undefined, { ledgerDatabase: memberWritable ? validateKosipaMemberLedgerDatabase(env) : undefined, versionSecret });
   // Product masters (FA-03B T06) share the master writer, its flag and its ledger.
   const products = new PrismaKosipaProductMasterRepository(prisma, writable ? kosipaMasterWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaLedgerDatabase(env) : undefined });
-  return { ...services, ownership: kosipaWriteOwnership(env), masters, members, products };
+  // Savings deposits (FA-03C T07): their own writer account, flag and ledger check.
+  const savingsWritable = kosipaSavingsWritesAvailable(env);
+  const deposits = new PrismaKosipaSavingsDepositRepository(prisma, savingsWritable ? kosipaSavingsWritePrisma() : undefined, { ledgerDatabase: savingsWritable ? validateKosipaSavingsLedgerDatabase(env) : undefined });
+  return { ...services, ownership: kosipaWriteOwnership(env), masters, members, products, deposits };
 }
 
 /** Grant administration needs the console store, the grant table (flag) and the KOSIPA directory for identity links. */

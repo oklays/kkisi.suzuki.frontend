@@ -19,7 +19,8 @@ export type DepositLine = { kredit: string; kreditCash: string; debit: string; s
 export type DepositDocument = { id: number; docNo: string; docType: string | null; kind: string | null; type: string | null; status: string | null; docDate: string | null; lines: readonly DepositLine[] };
 
 const PRINTABLE = /^[\x20-\x7e]*$/;
-const MAX_AMOUNT = 10n ** 13n * 100n; // in sen: 10^13 rupiah (VAL-103)
+const MAX_AMOUNT = BigInt('1000000000000000'); // in sen: 10^13 rupiah (VAL-103)
+const HUNDRED = BigInt(100), ZERO = BigInt(0);
 
 function plain(raw: unknown, allowed: readonly string[]): Record<string, unknown> {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw) || Object.getPrototypeOf(raw) !== Object.prototype) throw new KosipaError('INVALID_INPUT');
@@ -37,9 +38,9 @@ function text(raw: unknown, max: number): string {
 export function parseDepositAmount(raw: unknown): string {
   if (typeof raw !== 'string' || !/^\d{1,16}(\.\d{1,2})?$/.test(raw)) throw new KosipaError('SAVINGS_AMOUNT_INVALID');
   const [w, f = ''] = raw.split('.');
-  const sen = BigInt(w) * 100n + BigInt((f + '00').slice(0, 2));
-  if (sen <= 0n || sen > MAX_AMOUNT) throw new KosipaError('SAVINGS_AMOUNT_INVALID');
-  const whole = (sen / 100n).toString(), frac = (sen % 100n).toString().padStart(2, '0').replace(/0+$/, '');
+  const sen = BigInt(w) * HUNDRED + BigInt((f + '00').slice(0, 2));
+  if (sen <= ZERO || sen > MAX_AMOUNT) throw new KosipaError('SAVINGS_AMOUNT_INVALID');
+  const whole = (sen / HUNDRED).toString(), frac = (sen % HUNDRED).toString().padStart(2, '0').replace(/0+$/, '');
   return frac ? `${whole}.${frac}` : whole;
 }
 function realDate(v: string): boolean {
@@ -86,8 +87,8 @@ export function parseDepositDecision(raw: unknown, reasonRequired: boolean): { e
   return { expectedVersion: b.expectedVersion, ...(reason === undefined ? {} : { reason }), idempotencyKey };
 }
 
-const sen = (v: string) => { const [w, f = ''] = (v || '0').split('.'); return BigInt(w || '0') * 100n + BigInt((f + '00').slice(0, 2)); };
-const rupiah = (s: bigint) => { const w = (s / 100n).toString(), f = (s % 100n).toString().padStart(2, '0').replace(/0+$/, ''); return f ? `${w}.${f}` : w; };
+const sen = (v: string) => { const [w, f = ''] = (v || '0').split('.'); return BigInt(w || '0') * HUNDRED + BigInt((f + '00').slice(0, 2)); };
+const rupiah = (s: bigint) => { const w = (s / HUNDRED).toString(), f = (s % HUNDRED).toString().padStart(2, '0').replace(/0+$/, ''); return f ? `${w}.${f}` : w; };
 
 /** A pending cash/transfer deposit with ≥ 1 credit line and no debit; header and every line still pending (or unset, as legacy writes them). */
 function assertPendingDeposit(doc: DepositDocument | null): { lines: number; total: string } {
@@ -95,9 +96,9 @@ function assertPendingDeposit(doc: DepositDocument | null): { lines: number; tot
   if (doc.docType !== SAVINGS_DEPOSIT.docType || doc.kind !== SAVINGS_DEPOSIT.jenisTransaksi) throw new KosipaError('SAVINGS_NOT_A_DEPOSIT');
   if (doc.status !== SAVINGS_DEPOSIT.pending) throw new KosipaError('SAVINGS_STATUS_INVALID');
   if (!doc.lines.length) throw new KosipaError('SAVINGS_LINES_INVALID');
-  let total = 0n;
+  let total = ZERO;
   for (const l of doc.lines) {
-    if (!/^\d+(\.\d+)?$/.test(l.kreditCash) || sen(l.kreditCash) <= 0n || sen(l.debit) !== 0n || sen(l.kredit) !== 0n) throw new KosipaError('SAVINGS_LINES_INVALID');
+    if (!/^\d+(\.\d+)?$/.test(l.kreditCash) || sen(l.kreditCash) <= ZERO || sen(l.debit) !== ZERO || sen(l.kredit) !== ZERO) throw new KosipaError('SAVINGS_LINES_INVALID');
     if (l.status !== null && l.status !== '' && l.status !== SAVINGS_DEPOSIT.pending) throw new KosipaError('SAVINGS_LINES_INVALID');
     total += sen(l.kreditCash);
   }
@@ -118,6 +119,6 @@ export function planDepositReject(doc: DepositDocument | null) {
 
 /** Ledger snapshot: document identity, status and totals; no member identity. */
 export function depositLedgerSummary(doc: DepositDocument, status: string) {
-  const total = doc.lines.reduce((t, l) => t + sen(l.kreditCash), 0n);
+  const total = doc.lines.reduce((t, l) => t + sen(l.kreditCash), ZERO);
   return { id: doc.id, doc_no: doc.docNo, status, lines: doc.lines.length, total: rupiah(total), jenis_simpanan: doc.type ?? '' };
 }

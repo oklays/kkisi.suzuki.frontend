@@ -230,13 +230,15 @@ async function writeAppEnv(config) {
     DATABASE_URL_CONSOLE: dsn(config, 'console', CONSOLE_DB, 1),
     DATABASE_URL_KOSIPA_MASTER_WRITE: dsn(config, 'masterWrite', DB, 2),
     DATABASE_URL_KOSIPA_MEMBER_WRITE: dsn(config, 'memberWrite', DB, 2),
+    DATABASE_URL_KOSIPA_SAVINGS_WRITE: dsn(config, 'savingsWrite', DB, 2),
     CONSOLE_ENABLED: 'true', KOSIPA_READ_ENABLED: 'true',
     KOSIPA_WRITE_GRANTS_ENABLED: 'true', KOSIPA_GRANT_ADMIN_USER_IDS: GRANT_ADMINS.join(','),
     KOSIPA_MASTER_WRITES_ENABLED: 'true', KOSIPA_LEDGER_DATABASE: LEDGER_DB,
     KOSIPA_MEMBER_WRITES_ENABLED: 'true',
+    KOSIPA_SAVINGS_WRITES_ENABLED: 'true',
     // Deterministic per installation (synthetic only): HMAC key of the opaque member versions.
     KOSIPA_MEMBER_VERSION_SECRET: createHash('sha256').update(`member-version:${config.authSecret}`).digest('hex'),
-    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran,master.jenis_simpanan,master.jenis_pinjaman,master.jenis_pembiayaan,master.suku_bunga,member',
+    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran,master.jenis_simpanan,master.jenis_pinjaman,master.jenis_pembiayaan,master.suku_bunga,member,savings.deposit',
   };
   await writeFile(envPath, Object.entries(lines).map(([k, v]) => `${k}="${v}"`).join('\n') + '\n', { mode: 0o600 });
   await chmod(envPath, 0o600);
@@ -252,11 +254,24 @@ async function waitReady(config) {
 
 /** Backfill accounts added after the config was first written (additive; never rotates an existing password). */
 async function ensureAccounts(config) {
-  const wanted = { cpanelModel: 'kosipa_cpanel_w', numbering: 'kfa_numbering_w', memberWrite: 'kosipa_member_w' };
+  const wanted = { cpanelModel: 'kosipa_cpanel_w', numbering: 'kfa_numbering_w', memberWrite: 'kosipa_member_w', savingsWrite: 'kosipa_savings_w' };
   let changed = false;
   for (const [key, user] of Object.entries(wanted)) if (!config.accounts[key]) { config.accounts[key] = { user, password: secret() }; changed = true; }
   if (changed) await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
   await chmod(configPath, 0o600);
+}
+
+/** Additive (FA-03C T07): the savings writer account + grants and the fenced legacy Setor Simpanan menu. Never resets data. */
+export async function applySavingsWriter() {
+  const config = await loadConfig();
+  await ensureAccounts(config);
+  const db = await rootConnection(config);
+  try {
+    const seed = (await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/savings-seed.sql'), 'utf8')).split('\n').filter((l) => !/^\s*--/.test(l)).join('\n').split(';').map((s) => s.trim()).filter(Boolean);
+    for (const st of seed) { if (!/^INSERT IGNORE INTO /.test(st)) fail('KFA_INVALID_SAVINGS_FIXTURE'); await db.query(st.replaceAll('__KOSIPA_DB__', DB)); }
+  } finally { await db.end(); }
+  await adminSql(config, await template('apps/web/db/kosipa/007_savings_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: config.accounts.savingsWrite.password }));
+  return { mode: config.mode, port: PORT, account: config.accounts.savingsWrite.user };
 }
 
 /** Additive: re-applies ONLY the master writer's grants (FA-03B T06 product masters extend them). Never resets data. */
@@ -283,7 +298,7 @@ export async function setup() {
     if (error.code !== 'ENOENT') throw error;
     config = {
       mode: 'LOCAL_SYNTHETIC', port: PORT, installationId: randomBytes(16).toString('hex'), rootPassword: secret(), authSecret: randomBytes(48).toString('base64'),
-      accounts: { read: { user: 'kfa_read', password: secret() }, auth: { user: 'kkisi_auth', password: secret() }, console: { user: 'kkisi_console', password: secret() }, masterWrite: { user: 'kosipa_master_w', password: secret() }, cpanelModel: { user: 'kosipa_cpanel_w', password: secret() }, numbering: { user: 'kfa_numbering_w', password: secret() }, memberWrite: { user: 'kosipa_member_w', password: secret() } },
+      accounts: { read: { user: 'kfa_read', password: secret() }, auth: { user: 'kkisi_auth', password: secret() }, console: { user: 'kkisi_console', password: secret() }, masterWrite: { user: 'kosipa_master_w', password: secret() }, cpanelModel: { user: 'kosipa_cpanel_w', password: secret() }, numbering: { user: 'kfa_numbering_w', password: secret() }, memberWrite: { user: 'kosipa_member_w', password: secret() }, savingsWrite: { user: 'kosipa_savings_w', password: secret() } },
       passwords: Object.fromEntries(Object.keys(USERS).map((n) => [n, randomBytes(12).toString('base64url')])),
     };
     await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
@@ -306,6 +321,7 @@ export async function setup() {
   if (installed) (await rootConnection(config)).end();
   else { await applySchema(config); await seed(config); }
   await applyProductMasters();
+  await applySavingsWriter();
   await writeAppEnv(config);
   return { mode: config.mode, port: PORT, database: DB, installationId: config.installationId, appEnv: 'apps/web/.env.kosipa-fa01' };
 }
@@ -314,7 +330,7 @@ export async function reset() {
   const config = await loadConfig();
   await ensureAccounts(config);
   (await rootConnection(config)).end();                  // refuses unless the sentinel matches this installation
-  await applySchema(config); await seed(config); await applyProductMasters(); await writeAppEnv(config);
+  await applySchema(config); await seed(config); await applyProductMasters(); await applySavingsWriter(); await writeAppEnv(config);
   return { reset: true };
 }
 
@@ -330,6 +346,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const command = process.argv[2] ?? 'status';
     if (command === 'setup') console.log(JSON.stringify(await setup()));
+    else if (command === 'savings-writer') console.log(JSON.stringify(await applySavingsWriter()));
     else if (command === 'master-writer') console.log(JSON.stringify(await applyMasterWriter()));
     else if (command === 'product-masters') console.log(JSON.stringify(await applyProductMasters()));
     else if (command === 'member-writer') console.log(JSON.stringify(await applyMemberWriter()));
