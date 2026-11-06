@@ -44,6 +44,18 @@ node integration/kosipa-full-access/app-server.mjs stop --profile devlocal
 
 The launcher refuses to start on an occupied port, and refuses to rebuild while that profile's server is running.
 
+## Legacy source layout
+
+The legacy runtime resolves the unchanged source from `KOSIPA_LEGACY_SOURCE_DIR` when explicitly set; otherwise it tries `legacy/kosipa`, then the historical `kosipa`, relative to the repository root. The selected directory must contain the `application`, `system`, and `vendor` directories and the `index.php` file. Resolution returns the real filesystem path, including when the existing source location is reached through a symlink.
+
+An invalid explicit override (including an empty value) fails closed with `KFA_INVALID_LEGACY_SOURCE`; it never falls back to another tree. If neither default contains a complete source tree, the runtime fails with `KFA_LEGACY_SOURCE_NOT_FOUND`. Validation happens after the `KOSIPA_FA01=1` enable gate and before loading synthetic stack configuration or creating any runtime resources. It inspects filesystem metadata only and never reads legacy `database.php` or `.env` contents.
+
+The source remains mounted read-only. The runtime still uses its generated synthetic development database override, internal-only Docker network and no published port. Source resolver tests need no database or containers:
+
+```bash
+node --test apps/web/tests/kosipa-legacy-source.test.mjs
+```
+
 ## Synthetic accounts
 
 Passwords are in `.local/kosipa-fa01/accounts.json`.

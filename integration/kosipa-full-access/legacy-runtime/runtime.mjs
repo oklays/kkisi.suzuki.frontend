@@ -10,7 +10,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomBytes } from 'node:crypto';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTAINER, DB, loadConfig, rootConnection } from '../local-stack.mjs';
@@ -18,14 +18,33 @@ import { CONTAINER, DB, loadConfig, rootConnection } from '../local-stack.mjs';
 const exec = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../../..');
-const source = resolve(root, 'kosipa');
 const IMAGE = 'kkisi-kfa-php56-ci2';
 const docker = async (args, timeout = 180000) => (await exec('docker', args, { maxBuffer: 64 * 1024 * 1024, timeout })).stdout;
 /** Synthetic legacy operator (ref_users 9102 = the KOSIPA account linked to synth_kfa_operator). */
 export const LEGACY_LOGIN = { id: 9102, username: 'synth_kfa_k_operator' };
 
+/** Inspect layout only; never read legacy configuration or credentials. */
+export async function resolveLegacySource(repositoryRoot, env = process.env) {
+  const override = env.KOSIPA_LEGACY_SOURCE_DIR;
+  const candidates = override === undefined
+    ? [resolve(repositoryRoot, 'legacy/kosipa'), resolve(repositoryRoot, 'kosipa')]
+    : [override];
+  for (const candidate of candidates) {
+    try {
+      if (!candidate) continue;
+      const source = await realpath(candidate);
+      const entries = await Promise.all(['application', 'system', 'vendor', 'index.php'].map((name) => stat(resolve(source, name))));
+      if (entries.slice(0, 3).every((entry) => entry.isDirectory()) && entries[3].isFile()) return source;
+    } catch {
+      // Missing, inaccessible or incomplete candidates are not usable source trees.
+    }
+  }
+  throw new Error(override === undefined ? 'KFA_LEGACY_SOURCE_NOT_FOUND' : 'KFA_INVALID_LEGACY_SOURCE');
+}
+
 export async function startLegacyRuntime() {
   if (process.env.KOSIPA_FA01 !== '1') throw new Error('KFA_LEGACY_RUNTIME_DISABLED');
+  const source = await resolveLegacySource(root);
   const config = await loadConfig();
   const suffix = randomBytes(5).toString('hex');
   const network = `kfa-legacy-${suffix}`, name = `kfa-legacy-${suffix}`, user = `kfa_legacy_${suffix}`, password = randomBytes(18).toString('hex');
