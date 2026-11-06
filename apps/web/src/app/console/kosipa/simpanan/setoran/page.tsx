@@ -16,6 +16,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Setoran Simpanan · KOSIPA · KKISI TB2' };
 
 const STATUS_LABEL: Record<string, string> = { POSTING: 'Menunggu persetujuan', APPROVED: 'Disetujui', REJECTED: 'Ditolak', ALL: 'Semua status' };
+/** Short labels for the table's status badge (the column is narrow; the filter keeps the full wording). */
+const BADGE_LABEL: Record<string, string> = { POSTING: 'Menunggu', APPROVED: 'Disetujui', REJECTED: 'Ditolak' };
 
 /** Voluntary-savings deposits (FA-03C T07): create (maker), approve/reject (another officer, FD-35), filter by status and month. */
 export default async function SavingsDepositsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -69,7 +71,7 @@ export default async function SavingsDepositsPage({ searchParams }: { searchPara
                   <td><strong>{r.member.name || '—'}</strong><br /><small>{maskIdentifier(r.member.nik)}</small></td>
                   <td>{r.paymentType || '—'}</td><td className="num">{rupiah(r.amount)}</td>
                   <td>{r.createdBy || '—'}{!r.native && <><br /><small>layar lama</small></>}</td>
-                  <td><StatusBadge value={r.status} label={STATUS_LABEL[r.status] ?? r.status} /></td>
+                  <td><StatusBadge value={r.status} label={BADGE_LABEL[r.status] ?? r.status} /></td>
                   <td><DepositActions id={r.id} version={r.version} amount={r.amount} member={r.member.name} docNo={r.docNo} canApprove={r.canApprove} canReject={r.canReject}
                     isOwn={r.makerConsoleUserId === auth.ctx.userId} csrfToken={csrfToken} writable={data.writable} /></td>
                 </tr>

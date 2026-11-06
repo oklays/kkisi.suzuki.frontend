@@ -39,7 +39,7 @@ Implementation workspace: `feat/kosipa-full-access-completion`, isolated from ma
 | TASK-115 Member register/profile/status/deactivate. | unchecked | partial | Register, profile and status commands with synthetic-stack repository, writer grants, fence/ownership feature, legacy read compatibility (MC12), HTTP routes and console UI (T03–T05) exist and pass synthetic DB/HTTP/browser suites; production writer, activation, real-data UAT and the remaining member scope (limits, imports, deduction edits, delete refusal UI) absent. |
 | TASK-116 Staged imports (members, limits). | unchecked | missing | No staged imports/limits command. |
 | TASK-117 Deduction configuration + request decisions (mobile, public link, savings changes). | unchecked | missing | No config/request decisions. |
-| TASK-118 Savings documents (payroll, deposit, opening balance). | unchecked | missing | No savings document lifecycle. |
+| TASK-118 Savings documents (payroll, deposit, opening balance). | unchecked | partial | Voluntary-savings cash/transfer deposit (create, maker != checker approval, rejection) native on the synthetic stack (FA-03C T07); payroll documents, opening balances, other products, production activation absent. |
 | TASK-119 Withdrawals (staff + mobile processing). | unchecked | missing | No withdrawal lifecycle. |
 | TASK-120 Savings reversal. | unchecked | missing | No savings reversal. |
 | TASK-121 Loan product configuration and exact calculations (flat/annuity, fees, due-day clamp, ratio). | unchecked | partial | Exact schedule/ratio primitives pre-exist; product/rate/fee/date/parity implementation missing. |
@@ -78,7 +78,7 @@ Implementation workspace: `feat/kosipa-full-access-completion`, isolated from ma
 | WI-07 Members: register, profile, status, deactivate | partial | TASK-115 | Register/profile/status with HTTP and UI proven on the synthetic stack only (T04/T05); production activation and owner UAT remain. |
 | WI-08 Member imports and credit limits | missing | TASK-116 | No staged imports/limits command. |
 | WI-09 Payroll deduction configuration and request decisions | missing | TASK-117 | No config/request decisions. |
-| WI-10 Savings documents (payroll, deposit, opening balance) | missing | TASK-118 | No savings document lifecycle. |
+| WI-10 Savings documents (payroll, deposit, opening balance) | partial | TASK-118 | Voluntary-savings deposit native on the synthetic stack (T07); payroll documents and opening balances remain. |
 | WI-11 Withdrawals (staff + mobile) | missing | TASK-119 | No withdrawal lifecycle. |
 | WI-12 Savings reversal | missing | TASK-120 | No savings reversal. |
 | WI-13 Loan products, application and simulation | partial | TASK-121, TASK-122 | Exact schedule/ratio primitives pre-exist; product/rate/fee/date/parity implementation missing.; Loans API is GET only; no application writer/page. |

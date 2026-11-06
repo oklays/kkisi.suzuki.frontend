@@ -105,6 +105,7 @@ try {
   assert.deepEqual(after.map((d) => d.doc_status), ['APPROVED', 'REJECTED']);
   assert.deepEqual((await q('SELECT doc_status, tgl_cair IS NOT NULL AS paid FROM trans_simpanan_dtl WHERE doc_no = ?', [a.doc_no])).map((l) => [l.doc_status, Number(l.paid)]), [['APPROVED', 1]]);
   await c.goto(`${PAGE}?status=ALL`);
+  assert.equal((await q('SELECT payment_type FROM trans_simpanan WHERE id = ?', [b.id]))[0].payment_type, 'CASH', 'the form returns to its default method after a save');
   await c.locator(`tr[data-deposit-id="${a.id}"]`).getByText('Disetujui').waitFor();
   await c.locator(`tr[data-deposit-id="${b.id}"]`).getByText('Ditolak').waitFor();
   await shot(c, '03-all');

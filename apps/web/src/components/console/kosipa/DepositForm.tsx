@@ -51,7 +51,7 @@ export function DepositForm({ csrfToken, today, monthStart, canSubmit }: { csrfT
       const docNo = (r.data as { docNo?: string })?.docNo ?? '';
       const text = `Setoran ${docNo} disimpan dan menunggu persetujuan petugas lain.`;
       setMessage({ kind: 'ok', text });
-      setAmount(''); setRemarks(''); setBankName(''); setBankAccount(''); setMember(null); setNik('');
+      setAmount(''); setRemarks(''); setBankName(''); setBankAccount(''); setPaymentType('CASH'); setMember(null); setNik('');
       router.refresh();
     } else setMessage({ kind: 'error', text: DEPOSIT_MESSAGES[r.code] ?? 'Setoran tidak dapat disimpan.' });
   }
