@@ -1,0 +1,5881 @@
+{
+  "baseline": "4118c410",
+  "auditedAt": "2026-11-06",
+  "method": "static source inspection; no runtime or production acceptance inferred",
+  "ownerBaseline": "verified legacy business parity with security/integrity corrections",
+  "requirements": [
+    {
+      "id": "REQ-101",
+      "text": "Keep the legacy inventory complete and current.",
+      "source_line": 15,
+      "tasks": [
+        "TASK-102",
+        "TASK-103",
+        "TASK-141"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "inventory_tool",
+        "checkpoint"
+      ],
+      "gap": "Static inventory exists; required regenerating/failing drift checker is absent. G-01 source equality remains external.",
+      "modules": [
+        "apps/web/scripts/kosipa-inventory-check.mjs",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-inventory-check.mjs",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-102",
+      "text": "Maintain the legacy ↔ Next.js gap analysis.",
+      "source_line": 18,
+      "tasks": [
+        "TASK-103",
+        "TASK-141"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "masters",
+        "checkpoint"
+      ],
+      "gap": "Gap-analysis source is stale: says no master writers; F52 now has five native master slices.",
+      "modules": [
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+        "packages/domain/src/kosipa/master.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-103",
+      "text": "Enforce one writer per feature.",
+      "source_line": 21,
+      "tasks": [
+        "TASK-107",
+        "TASK-113"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "ownership",
+        "uow",
+        "gates"
+      ],
+      "gap": "Five controller fences and native flags exist; all-writer exclusion for members/financial contexts remains unimplemented; FD-22 open.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+        "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-104",
+      "text": "No legacy runtime dependency.",
+      "source_line": 24,
+      "tasks": [
+        "TASK-107"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "master_commands",
+        "master_writer"
+      ],
+      "gap": "Existing native master command path has no PHP URL/session/procedure runtime call. Missing native feature families are tracked separately; full replacement remains incomplete.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+        "packages/application/src/kosipa/commands/master.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+          "exists": true,
+          "line": 61
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-105",
+      "text": "Uniform command pipeline.",
+      "source_line": 27,
+      "tasks": [
+        "TASK-106",
+        "TASK-107",
+        "TASK-108"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "pipeline",
+        "uow",
+        "master_writer"
+      ],
+      "gap": "Real transactional pipeline serves five masters; all remaining contexts lack integrated commands.",
+      "modules": [
+        "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+        "packages/application/src/kosipa/commands/pipeline.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        },
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+          "exists": true,
+          "line": 61
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-106",
+      "text": "Server-side document lifecycle.",
+      "source_line": 30,
+      "tasks": [
+        "TASK-108"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "state",
+        "pipeline"
+      ],
+      "gap": "Server state machine exists but financial document commands do not invoke it; TASK-108 checked does not close lifecycle integration.",
+      "modules": [
+        "packages/application/src/kosipa/commands/pipeline.ts",
+        "packages/domain/src/kosipa/document-state.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-107",
+      "text": "Document numbering.",
+      "source_line": 33,
+      "tasks": [
+        "TASK-109",
+        "TASK-122"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "numbering",
+        "number_writer",
+        "number_domain"
+      ],
+      "gap": "Reusable registry allocation exists; first real member/financial command integration, FD-23 deviations and FD-02 legacy uniqueness remain.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-document-number.ts",
+        "packages/application/src/kosipa/document-numbering.ts",
+        "packages/domain/src/kosipa/document-number.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/document-numbering.ts",
+          "exists": true,
+          "line": 26
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-document-number.ts",
+          "exists": true,
+          "line": 45
+        },
+        {
+          "path": "packages/domain/src/kosipa/document-number.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-108",
+      "text": "Register a member.",
+      "source_line": 38,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "member_command",
+        "nik"
+      ],
+      "gap": "No registration command/API/form/writer; canonical-NIK helper alone is insufficient.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts",
+        "packages/domain/src/kosipa/nik.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/domain/src/kosipa/nik.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-109",
+      "text": "Update a member profile.",
+      "source_line": 41,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "member_command",
+        "members_read"
+      ],
+      "gap": "No profile mutation or atomic field restrictions/privacy-safe before-after contract.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts",
+        "packages/application/src/kosipa/member-360.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/member-360.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-110",
+      "text": "Change member status.",
+      "source_line": 44,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "member_command"
+      ],
+      "gap": "No native status command, wallet mirror update, user_id token revocation, or reactivation policy; FD-08/25 open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-111",
+      "text": "Deactivate instead of delete.",
+      "source_line": 47,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "member_command"
+      ],
+      "gap": "No native deactivation/history guard; FD-07 remains open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-112",
+      "text": "Staged imports (members, limits).",
+      "source_line": 50,
+      "tasks": [
+        "TASK-116"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "import_command"
+      ],
+      "gap": "No staged member/limit upload, preview, confirmed transactional apply or per-row errors.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member-import.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member-import.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-113",
+      "text": "Payroll deduction configuration.",
+      "source_line": 53,
+      "tasks": [
+        "TASK-117"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "deduction_command",
+        "request_command",
+        "public_intake"
+      ],
+      "gap": "Intake creates OPEN requests only; native decisions and one-active-config transaction absent.",
+      "modules": [
+        "apps/web/src/infrastructure/public-savings/service.ts",
+        "packages/application/src/kosipa/commands/deduction.ts",
+        "packages/application/src/kosipa/commands/request-decision.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/deduction.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/request-decision.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "apps/web/src/infrastructure/public-savings/service.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-114",
+      "text": "Savings documents (payroll, cash/transfer deposit, opening balance).",
+      "source_line": 58,
+      "tasks": [
+        "TASK-118"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "savings_command"
+      ],
+      "gap": "No native header/line lifecycle, one-time saldo effect, immutable approved lines, receipt/payout date command.",
+      "modules": [
+        "packages/application/src/kosipa/commands/savings-document.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-115",
+      "text": "Withdrawals with server balance.",
+      "source_line": 61,
+      "tasks": [
+        "TASK-119"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "withdrawal_command",
+        "savings_read"
+      ],
+      "gap": "Recorded savings read is not locked authoritative balance; native staff/mobile withdrawal absent; D2/B1 open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/withdrawal.ts",
+        "packages/application/src/kosipa/savings.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/withdrawal.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/savings.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-116",
+      "text": "Savings reversal.",
+      "source_line": 64,
+      "tasks": [
+        "TASK-120"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "savings_reversal"
+      ],
+      "gap": "No reversal document/reason/checker path.",
+      "modules": [
+        "packages/application/src/kosipa/commands/savings-reversal.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-reversal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-117",
+      "text": "Member exit settlement.",
+      "source_line": 67,
+      "tasks": [
+        "TASK-130"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "exit_command"
+      ],
+      "gap": "No atomic loan+savings+membership exit transaction; FD-13 open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/exit.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/exit.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-118",
+      "text": "Loan application for every product.",
+      "source_line": 72,
+      "tasks": [
+        "TASK-121",
+        "TASK-122"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "schedule",
+        "loan_command"
+      ],
+      "gap": "Exact simulation/ratio primitives exist; product authority/fees/date schedule/application/persisted salary snapshot absent; D1/D6/B1 open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-application.ts",
+        "packages/domain/src/kosipa/loan-schedule.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/loan-application.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-119",
+      "text": "Loan approval and rejection.",
+      "source_line": 75,
+      "tasks": [
+        "TASK-123"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "loan_decision",
+        "state"
+      ],
+      "gap": "No native approve/reject/checker command preserving maker.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-decision.ts",
+        "packages/domain/src/kosipa/document-state.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-decision.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-120",
+      "text": "Disbursement with rollover netting.",
+      "source_line": 78,
+      "tasks": [
+        "TASK-124"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "loan_disbursement",
+        "schedule"
+      ],
+      "gap": "No native disbursement/rollover netting, one-time unpaid schedule persistence; FD-06/11 open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-disbursement.ts",
+        "packages/domain/src/kosipa/loan-schedule.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-121",
+      "text": "Schedule immutability.",
+      "source_line": 81,
+      "tasks": [
+        "TASK-124"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "state",
+        "loan_disbursement"
+      ],
+      "gap": "No native schedule edit command currently exists; settlement-only immutable persistence not implemented.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-disbursement.ts",
+        "packages/domain/src/kosipa/document-state.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-122",
+      "text": "Early settlement and over-kredit.",
+      "source_line": 84,
+      "tasks": [
+        "TASK-125"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "loan_settlement"
+      ],
+      "gap": "No server payoff and checker settlement; product formula FD-11 unresolved.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-settlement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-settlement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-123",
+      "text": "Cancel, void and reverse instead of delete.",
+      "source_line": 87,
+      "tasks": [
+        "TASK-123",
+        "TASK-125"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "loan_decision",
+        "loan_settlement"
+      ],
+      "gap": "No cancel/void/reversal commands or compatible compensating representation; FD-14 open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-decision.ts",
+        "packages/application/src/kosipa/commands/loan-settlement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-decision.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/loan-settlement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-124",
+      "text": "Loan documents.",
+      "source_line": 90,
+      "tasks": [
+        "TASK-126"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "document_storage"
+      ],
+      "gap": "No protected attachment storage/upload/delete/download lifecycle.",
+      "modules": [
+        "apps/web/src/infrastructure/kosipa/document-storage.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/kosipa/document-storage.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-125",
+      "text": "Payroll batch lifecycle.",
+      "source_line": 95,
+      "tasks": [
+        "TASK-128",
+        "TASK-129"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "payroll_read",
+        "payroll_domain",
+        "payroll_command",
+        "payroll_generator"
+      ],
+      "gap": "Read and pure batch settlement plan exist; batch mutations, approval, exceptions persistence and native generation absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/payroll-generate.ts",
+        "packages/application/src/kosipa/commands/payroll.ts",
+        "packages/application/src/kosipa/payroll.ts",
+        "packages/domain/src/kosipa/payroll-settlement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/payroll.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/domain/src/kosipa/payroll-settlement.ts",
+          "exists": true,
+          "line": 14
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/payroll.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/payroll-generate.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-126",
+      "text": "PPOB member billing.",
+      "source_line": 98,
+      "tasks": [
+        "TASK-133"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "ppob_command"
+      ],
+      "gap": "No native bill generation/process/order reconciliation/payroll component command.",
+      "modules": [
+        "packages/application/src/kosipa/commands/ppob-bill.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/ppob-bill.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-127",
+      "text": "SHU lifecycle.",
+      "source_line": 101,
+      "tasks": [
+        "TASK-132"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "shu_domain",
+        "shu_command"
+      ],
+      "gap": "Largest-remainder allocator exists; SHU CRUD/generation/approval/financial effect not implemented; FD-10 open.",
+      "modules": [
+        "packages/application/src/kosipa/commands/shu.ts",
+        "packages/domain/src/kosipa/shu-allocation.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/shu-allocation.ts",
+          "exists": true,
+          "line": 12
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/shu.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-128",
+      "text": "Mobile and public-link request decisions.",
+      "source_line": 104,
+      "tasks": [
+        "TASK-117",
+        "TASK-127"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "request_command",
+        "public_intake"
+      ],
+      "gap": "Native locked request decision/conversion absent for savings, withdrawal and loans.",
+      "modules": [
+        "apps/web/src/infrastructure/public-savings/service.ts",
+        "packages/application/src/kosipa/commands/request-decision.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/request-decision.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "apps/web/src/infrastructure/public-savings/service.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-129",
+      "text": "KOSIPA reference masters.",
+      "source_line": 107,
+      "tasks": [
+        "TASK-114"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "masters",
+        "master_commands",
+        "master_writer"
+      ],
+      "gap": "5/17 masters implemented; 12 missing including COA-backed products/rates. No hard delete offered in implemented slice.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+        "packages/application/src/kosipa/commands/master.ts",
+        "packages/domain/src/kosipa/master.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+          "exists": true,
+          "line": 61
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-130",
+      "text": "Write capability grants.",
+      "source_line": 110,
+      "tasks": [
+        "TASK-110"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "grants",
+        "grant_domain",
+        "capabilities"
+      ],
+      "gap": "Two-admin explicit grant lifecycle implemented; grantable list contains only kosipa.master.manage, so remaining command capabilities unavailable.",
+      "modules": [
+        "packages/application/src/console/kosipa-grants.ts",
+        "packages/domain/src/console/capabilities.ts",
+        "packages/domain/src/console/kosipa-grants.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 73
+        },
+        {
+          "path": "packages/domain/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 36
+        },
+        {
+          "path": "packages/domain/src/console/capabilities.ts",
+          "exists": true,
+          "line": 59
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-131",
+      "text": "Remaining report parity.",
+      "source_line": 115,
+      "tasks": [
+        "TASK-134"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "reports",
+        "report_export"
+      ],
+      "gap": "Five report families/CSV available; legacy outstanding/cash/product/transaction/savings totals parity and B1 remain.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-report.repository.ts",
+        "packages/application/src/kosipa/report-export.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-report.repository.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/report-export.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-132",
+      "text": "Authenticated printed documents.",
+      "source_line": 118,
+      "tasks": [
+        "TASK-134"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "public_pdf",
+        "payroll_read"
+      ],
+      "gap": "Authenticated request PDF and payroll member detail are limited equivalents; official nota/slip/card/settlement/form print families absent.",
+      "modules": [
+        "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+        "packages/application/src/kosipa/payroll.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/payroll.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-133",
+      "text": "Read-after-write consistency.",
+      "source_line": 121,
+      "tasks": [
+        "TASK-137"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "master_commands",
+        "checkpoint"
+      ],
+      "gap": "Master UI refresh exists; no all-feature list/detail/dashboard/report invalidation integration or current comprehensive browser evidence.",
+      "modules": [
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+        "packages/application/src/kosipa/commands/master.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-134",
+      "text": "Computed loan status.",
+      "source_line": 124,
+      "tasks": [
+        "TASK-111"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "loan_read",
+        "loan_reader",
+        "payroll_domain"
+      ],
+      "gap": "Loan reader still returns stored status_bayar; domain loansFullyPaid helper is not wired into read model. Last-settlement native writer absent.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+        "packages/domain/src/kosipa/loan-read.ts",
+        "packages/domain/src/kosipa/payroll-settlement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-read.ts",
+          "exists": true,
+          "line": 91
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+          "exists": true,
+          "line": 23
+        },
+        {
+          "path": "packages/domain/src/kosipa/payroll-settlement.ts",
+          "exists": true,
+          "line": 14
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-135",
+      "text": "Dashboard and notifications.",
+      "source_line": 127,
+      "tasks": [
+        "TASK-135"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "dashboard"
+      ],
+      "gap": "Console widgets exist; verified KOSIPA KPI definitions, notification mutation and budget evidence incomplete.",
+      "modules": [
+        "apps/web/src/components/console/DashboardClientWidgets.tsx"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/components/console/DashboardClientWidgets.tsx",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-136",
+      "text": "Business settings.",
+      "source_line": 130,
+      "tasks": [
+        "TASK-135"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "settings_command"
+      ],
+      "gap": "No native config command with second confirmation and audited before/after.",
+      "modules": [
+        "packages/application/src/kosipa/commands/settings.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/settings.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-137",
+      "text": "PPOB sales operations stay on HOLD.",
+      "source_line": 133,
+      "tasks": [
+        "TASK-135"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "ppob_command",
+        "capabilities"
+      ],
+      "gap": "IAK mutation remains absent as intended HOLD; dedicated read-only PPOB visibility/decision boundary is not a complete feature.",
+      "modules": [
+        "packages/application/src/kosipa/commands/ppob-bill.ts",
+        "packages/domain/src/console/capabilities.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/ppob-bill.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/domain/src/console/capabilities.ts",
+          "exists": true,
+          "line": 59
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-138",
+      "text": "Characterization and reconciliation harness.",
+      "source_line": 136,
+      "tasks": [
+        "TASK-102",
+        "TASK-104",
+        "TASK-138"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "runtime",
+        "runtime_tests",
+        "reconcile_tool"
+      ],
+      "gap": "Synthetic real-PHP five-master harness exists; WP01-30 goldens, all-feature reconciliation and real production definitions missing.",
+      "modules": [
+        "apps/web/scripts/kosipa-reconcile.mjs",
+        "apps/web/tests/kosipa-legacy-runtime.test.mjs",
+        "integration/kosipa-full-access/legacy-runtime/runtime.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "integration/kosipa-full-access/legacy-runtime/runtime.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "apps/web/tests/kosipa-legacy-runtime.test.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "apps/web/scripts/kosipa-reconcile.mjs",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-139",
+      "text": "Performance baselines and targets.",
+      "source_line": 139,
+      "tasks": [
+        "TASK-112",
+        "TASK-141"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "perf_tool",
+        "gates"
+      ],
+      "gap": "No recorded full-access baseline/target p50/p95/query-count benchmark against legacy staging.",
+      "modules": [
+        "apps/web/scripts/kosipa-perf-baseline.mjs",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-perf-baseline.mjs",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-140",
+      "text": "Kill switch and rollback per feature.",
+      "source_line": 142,
+      "tasks": [
+        "TASK-107",
+        "TASK-113",
+        "TASK-140",
+        "TASK-142"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "ownership",
+        "fence",
+        "gates"
+      ],
+      "gap": "Kill switch/fence covers five masters; every feature rollback rehearsal/legacy data compatibility/owner UAT missing.",
+      "modules": [
+        "apps/web/scripts/kosipa-legacy-fence.mjs",
+        "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "apps/web/scripts/kosipa-legacy-fence.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-141",
+      "text": "No silent new financial features.",
+      "source_line": 145,
+      "tasks": [
+        "TASK-101",
+        "TASK-142"
+      ],
+      "status": "equivalent",
+      "evidence_keys": [
+        "decisions",
+        "master_commands"
+      ],
+      "gap": "No financial GL/period/interest/SHU-pay command added; guardrail respected by existing scope. Future decisions still required.",
+      "modules": [
+        "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+        "packages/application/src/kosipa/commands/master.ts"
+      ],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "REQ-142",
+      "text": "Legacy compatibility of written data.",
+      "source_line": 148,
+      "tasks": [
+        "TASK-104",
+        "TASK-131",
+        "TASK-141"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "master_writer",
+        "runtime_tests"
+      ],
+      "gap": "Five-master source/fixture compatibility exists; no financial/procedure parity or source/DDL production identity.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+        "apps/web/tests/kosipa-legacy-runtime.test.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+          "exists": true,
+          "line": 61
+        },
+        {
+          "path": "apps/web/tests/kosipa-legacy-runtime.test.mjs",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-101",
+      "text": "Money is exact; quantise to the column scale half-up only at the points defined in [05](05_BUSINESS_RULES_AND_FINANCIAL_LOGIC.md); totals derive from stored lines. **Enforcement Layer**: Domain + repository post-check.",
+      "source_line": 153,
+      "tasks": [
+        "TASK-118"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "money",
+        "schedule"
+      ],
+      "gap": "Exact primitives exist; savings/lending writers and column-scale readback rules absent.",
+      "modules": [
+        "packages/domain/src/kosipa/loan-schedule.ts",
+        "packages/domain/src/kosipa/savings-monetary.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/savings-monetary.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-102",
+      "text": "Σ schedule principal = principal; one instalment per month; due day clamped (FD-04). **Enforcement Layer**: Domain.",
+      "source_line": 154,
+      "tasks": [
+        "TASK-121"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "schedule"
+      ],
+      "gap": "Principal/month sequence primitives exist; due-date clamping/integrated product schedule parity absent.",
+      "modules": [
+        "packages/domain/src/kosipa/loan-schedule.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-103",
+      "text": "An instalment is paid only by a recorded settlement event. **Enforcement Layer**: Domain + repository.",
+      "source_line": 155,
+      "tasks": [
+        "TASK-124"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "loan_disbursement"
+      ],
+      "gap": "No settlement-only persistence path.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-disbursement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-104",
+      "text": "LUNAS ⇔ all instalments paid (FD-05). **Enforcement Layer**: Domain.",
+      "source_line": 156,
+      "tasks": [
+        "TASK-111"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "payroll_domain",
+        "loan_reader"
+      ],
+      "gap": "loansFullyPaid exists only in settlement planner; loan reads use stored repayment.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+        "packages/domain/src/kosipa/payroll-settlement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/payroll-settlement.ts",
+          "exists": true,
+          "line": 14
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+          "exists": true,
+          "line": 23
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-105",
+      "text": "Maker ≠ checker for approve/disburse/reverse/settle/payroll/exit/SHU (UCKW:BR008, FD-17). **Enforcement Layer**: Domain + use case.",
+      "source_line": 157,
+      "tasks": [
+        "TASK-118",
+        "TASK-123"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "state",
+        "grants"
+      ],
+      "gap": "Pure maker-checker and two-admin grants exist; no financial approve/disburse/reverse/settle commands.",
+      "modules": [
+        "packages/application/src/console/kosipa-grants.ts",
+        "packages/domain/src/kosipa/document-state.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        },
+        {
+          "path": "packages/application/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 73
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-106",
+      "text": "Approved and later documents are immutable; correction by reversal (UCKW:BR009). **Enforcement Layer**: Domain + repository.",
+      "source_line": 158,
+      "tasks": [
+        "TASK-118",
+        "TASK-120"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "state",
+        "savings_reversal"
+      ],
+      "gap": "Pure immutability rule exists; financial locked-row enforcement/reversal missing.",
+      "modules": [
+        "packages/application/src/kosipa/commands/savings-reversal.ts",
+        "packages/domain/src/kosipa/document-state.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/savings-reversal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-107",
+      "text": "Rollover settles old loans in the disbursement transaction with server amounts. **Enforcement Layer**: Repository.",
+      "source_line": 159,
+      "tasks": [
+        "TASK-124"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "loan_disbursement"
+      ],
+      "gap": "Rollover not implemented.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-disbursement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-108",
+      "text": "Payroll settlement is batch-scoped; shortfalls are exceptions (D4). **Enforcement Layer**: Domain.",
+      "source_line": 160,
+      "tasks": [
+        "TASK-128"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "payroll_domain",
+        "payroll_command"
+      ],
+      "gap": "Pure batch plan exists; no write transaction.",
+      "modules": [
+        "packages/application/src/kosipa/commands/payroll.ts",
+        "packages/domain/src/kosipa/payroll-settlement.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/payroll-settlement.ts",
+          "exists": true,
+          "line": 14
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/payroll.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-109",
+      "text": "Withdrawal availability per type policy (D2), checked at entry and approval. **Enforcement Layer**: Domain + lock.",
+      "source_line": 161,
+      "tasks": [
+        "TASK-119"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "withdrawal_command"
+      ],
+      "gap": "Native entry/approval balance policy enforcement absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/withdrawal.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/withdrawal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-110",
+      "text": "Exit approval is atomic across lending, savings and membership. **Enforcement Layer**: Repository.",
+      "source_line": 162,
+      "tasks": [
+        "TASK-130"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "exit_command"
+      ],
+      "gap": "Atomic exit absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/exit.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/exit.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-111",
+      "text": "No hard delete of members or financial documents with history (FD-07). **Enforcement Layer**: Use case.",
+      "source_line": 163,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "member_command"
+      ],
+      "gap": "History-sensitive no-delete commands absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-112",
+      "text": "Non-AKTIVE status zeroes limits and wallet mirror once and revokes tokens by `user_id`. **Enforcement Layer**: Repository.",
+      "source_line": 164,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "member_command"
+      ],
+      "gap": "Native status side effects absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-113",
+      "text": "Salary changes only through the member command; loans store a snapshot. **Enforcement Layer**: Use case.",
+      "source_line": 165,
+      "tasks": [
+        "TASK-115",
+        "TASK-122"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "member_command",
+        "loan_command"
+      ],
+      "gap": "No profile or loan application mutations to enforce salary ownership/snapshot.",
+      "modules": [
+        "packages/application/src/kosipa/commands/loan-application.ts",
+        "packages/application/src/kosipa/commands/member.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/loan-application.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-114",
+      "text": "Deduction ratio per D1, never silently approved. **Enforcement Layer**: Domain.",
+      "source_line": 166,
+      "tasks": [
+        "TASK-121"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "schedule"
+      ],
+      "gap": "Ratio evaluator exists, policy threshold D1 and command enforcement absent.",
+      "modules": [
+        "packages/domain/src/kosipa/loan-schedule.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-115",
+      "text": "SHU allocation by largest remainder to a configured unit (FD-10 for the effect). **Enforcement Layer**: Domain.",
+      "source_line": 167,
+      "tasks": [
+        "TASK-132"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "shu_domain",
+        "shu_command"
+      ],
+      "gap": "Pure allocator exists; no integrated SHU transaction.",
+      "modules": [
+        "packages/application/src/kosipa/commands/shu.ts",
+        "packages/domain/src/kosipa/shu-allocation.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/shu-allocation.ts",
+          "exists": true,
+          "line": 12
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/shu.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-116",
+      "text": "Document numbers unique per type with legacy format. **Enforcement Layer**: Repository.",
+      "source_line": 168,
+      "tasks": [
+        "TASK-109"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "numbering",
+        "number_writer"
+      ],
+      "gap": "Registry uniqueness exists for native claims; no integrated document commands or legacy exclusion/FD-02 approval.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-document-number.ts",
+        "packages/application/src/kosipa/document-numbering.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/document-numbering.ts",
+          "exists": true,
+          "line": 26
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-document-number.ts",
+          "exists": true,
+          "line": 45
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-117",
+      "text": "Exactly one writer per feature; transfer all-or-nothing per feature. **Enforcement Layer**: Deployment + data switch (FD-03).",
+      "source_line": 169,
+      "tasks": [
+        "TASK-113"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "ownership",
+        "uow"
+      ],
+      "gap": "Controller gate limited to five masters; full context all-writer ownership unresolved.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+        "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-118",
+      "text": "Bulk actions are N independent commands with per-item results. **Enforcement Layer**: Use case.",
+      "source_line": 170,
+      "tasks": [
+        "TASK-116"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "import_command"
+      ],
+      "gap": "No independent per-item bulk command execution/results.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member-import.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member-import.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-119",
+      "text": "Store obligation for payroll M = Kredit sales of M−1 net of their returns (OD-3). **Enforcement Layer**: Domain.",
+      "source_line": 171,
+      "tasks": [
+        "TASK-129"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "store_credit",
+        "payroll_read",
+        "payroll_generator"
+      ],
+      "gap": "Previous-month returns-aware reconciliation exists; native payroll generator absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/payroll-generate.ts",
+        "packages/application/src/kosipa/payroll.ts",
+        "packages/domain/src/kosipa/store-credit.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/store-credit.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/payroll.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/payroll-generate.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "BR-120",
+      "text": "`biaya_suku_bunga` is a monthly percentage parsed as an exact decimal (D6). **Enforcement Layer**: Domain.",
+      "source_line": 172,
+      "tasks": [
+        "TASK-121"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "schedule"
+      ],
+      "gap": "Schedule accepts basis points; authoritative monthly decimal-rate parser/product config D6 not implemented.",
+      "modules": [
+        "packages/domain/src/kosipa/loan-schedule.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-101",
+      "text": "NIK 1–20 alphanumeric, canonical uniqueness on create/import. **Constraints**: `canonicalNik`.",
+      "source_line": 175,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "nik",
+        "member_command"
+      ],
+      "gap": "Canonical helper exists; create/import unique locks and writes absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts",
+        "packages/domain/src/kosipa/nik.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/nik.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-102",
+      "text": "Enumerations: member status ∈ {AKTIVE, LUAR BIASA, KONTRAK, RESIGN, PENSIUN}; group ∈ {ANGGOTA, NON ANGGOTA, BMP, KOPERASI}; document statuses per [07 §6](07_TARGET_ARCHITECTURE.md#6-legacy-compatibility-contracts). **Constraints**: exact match, no free text.",
+      "source_line": 176,
+      "tasks": [
+        "TASK-114"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "masters",
+        "state"
+      ],
+      "gap": "Master validation exists; member/import/document enum commands absent.",
+      "modules": [
+        "packages/domain/src/kosipa/document-state.ts",
+        "packages/domain/src/kosipa/master.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-103",
+      "text": "Amounts: decimal string, ≥ 0, ≤ 10^13, at most the column scale; parser `parseRupiahInput` on UI. **Constraints**: reject ambiguous separators.",
+      "source_line": 177,
+      "tasks": [
+        "TASK-118"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "money"
+      ],
+      "gap": "Monetary helper exists; all financial UI/command amount bounds/column scales not integrated.",
+      "modules": [
+        "packages/domain/src/kosipa/savings-monetary.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/savings-monetary.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-104",
+      "text": "Loan: term 1–360, monthly rate 0–100 exact decimal, method ∈ {Flat, Anuitas}, fee % 0–100, due day 1–31, disbursement date ≥ approval date. **Constraints**: domain `loanSchedule` validation.",
+      "source_line": 178,
+      "tasks": [
+        "TASK-121"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "schedule",
+        "masters"
+      ],
+      "gap": "Term/math validation exists; full product fee/date/due-day validation lacks native command.",
+      "modules": [
+        "packages/domain/src/kosipa/loan-schedule.ts",
+        "packages/domain/src/kosipa/master.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-105",
+      "text": "Dates ISO `YYYY-MM-DD` in Asia/Jakarta; `doc_date` not in the future; back-dating within FD-14 limit. **Constraints**: server clock.",
+      "source_line": 179,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "number_domain",
+        "member_command"
+      ],
+      "gap": "Numbering clock/period validation exists; member/financial doc-date and approved FD-14 backdate limits absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member.ts",
+        "packages/domain/src/kosipa/document-number.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/document-number.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-106",
+      "text": "Payroll period `YYYY-MM`; one batch per period × `kd_group`. **Constraints**: lock + check.",
+      "source_line": 180,
+      "tasks": [
+        "TASK-128"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "payroll_command"
+      ],
+      "gap": "Period/group batch lock+uniqueness absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/payroll.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/payroll.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-107",
+      "text": "Imports ≤ 5 MB, ≤ 5,000 rows, header must match template (UCKW:VAL004). **Constraints**: staged validation.",
+      "source_line": 181,
+      "tasks": [
+        "TASK-116"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "import_command"
+      ],
+      "gap": "No import size/row/template limits.",
+      "modules": [
+        "packages/application/src/kosipa/commands/member-import.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member-import.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-108",
+      "text": "Reasons 5–200 printable characters for reject/reverse/override/status change. **Constraints**: trimmed.",
+      "source_line": 182,
+      "tasks": [
+        "TASK-120"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "grant_domain",
+        "master_commands"
+      ],
+      "gap": "Grant/master reason parsing exists; all reject/reverse/override/status commands missing.",
+      "modules": [
+        "packages/application/src/kosipa/commands/master.ts",
+        "packages/domain/src/console/kosipa-grants.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 36
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-109",
+      "text": "Idempotency key = UUID v4; request hash = SHA-256 of canonical payload. **Constraints**: 409 on hash mismatch.",
+      "source_line": 183,
+      "tasks": [
+        "TASK-106"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "pipeline"
+      ],
+      "gap": "UUID key parser and SHA-256 canonical payload in current native pipeline; does not imply missing commands exist.",
+      "modules": [
+        "packages/application/src/kosipa/commands/pipeline.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-110",
+      "text": "Writes to `double` columns are verified by reading back and comparing at 2 decimals. **Constraints**: post-condition.",
+      "source_line": 184,
+      "tasks": [
+        "TASK-118"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "savings_command"
+      ],
+      "gap": "No financial double-column writer/readback comparison.",
+      "modules": [
+        "packages/application/src/kosipa/commands/savings-document.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-111",
+      "text": "Files: PDF/JPG/PNG ≤ 5 MB, content-type sniffed. **Constraints**: loan documents.",
+      "source_line": 185,
+      "tasks": [
+        "TASK-126"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "document_storage"
+      ],
+      "gap": "No attachment MIME sniff/size validation.",
+      "modules": [
+        "apps/web/src/infrastructure/kosipa/document-storage.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/kosipa/document-storage.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "VAL-112",
+      "text": "Identifiers in URLs: doc no `^[A-Z0-9\\-]{1,30}$`, numeric ids ≤ 2^31−1. **Constraints**: parse before query.",
+      "source_line": 186,
+      "tasks": [
+        "TASK-107"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "command_http",
+        "loan_read"
+      ],
+      "gap": "Master numeric URL IDs validated; existing loan document read parser permits lower case/underscore length50, differing from VAL-112 upper-case/hyphen length30 contract.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+        "packages/domain/src/kosipa/loan-read.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+          "exists": true,
+          "line": 27
+        },
+        {
+          "path": "packages/domain/src/kosipa/loan-read.ts",
+          "exists": true,
+          "line": 91
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-101",
+      "text": "Every command checks its capability server-side; the UI only reflects it. **Tenant Isolation Rule**: KOSIPA has no branch tenancy (UCKW:BR002); scope = cooperative, enforced by capability, not by branch.",
+      "source_line": 189,
+      "tasks": [
+        "TASK-110",
+        "TASK-136"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "pipeline",
+        "capabilities"
+      ],
+      "gap": "Per-command master capability enforced; all other command families absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/pipeline.ts",
+        "packages/domain/src/console/capabilities.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        },
+        {
+          "path": "packages/domain/src/console/capabilities.ts",
+          "exists": true,
+          "line": 59
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-102",
+      "text": "Write capabilities come only from explicit grants (FD-16); identity links and legacy menus grant view only. **Tenant Isolation Rule**: grants are per console user.",
+      "source_line": 190,
+      "tasks": [
+        "TASK-110"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "grant_domain",
+        "capabilities"
+      ],
+      "gap": "Current writes derive only from active explicit grants; role monitoring adds reads only.",
+      "modules": [
+        "packages/domain/src/console/capabilities.ts",
+        "packages/domain/src/console/kosipa-grants.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 36
+        },
+        {
+          "path": "packages/domain/src/console/capabilities.ts",
+          "exists": true,
+          "line": 59
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-103",
+      "text": "All SQL parameterised (`Prisma.sql`); no string-built SQL. **Tenant Isolation Rule**: n/a.",
+      "source_line": 191,
+      "tasks": [
+        "TASK-136"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "master_writer",
+        "loan_reader"
+      ],
+      "gap": "Reviewed readers/master writers use Prisma parameter binding; full cross-feature security suite not implemented.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+          "exists": true,
+          "line": 61
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+          "exists": true,
+          "line": 23
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-104",
+      "text": "Maker/checker identities from the authenticated session, never from the body. **Tenant Isolation Rule**: n/a.",
+      "source_line": 192,
+      "tasks": [
+        "TASK-110",
+        "TASK-136"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "command_http",
+        "pipeline",
+        "grants"
+      ],
+      "gap": "Current master/grant identities come from authenticated actor/session.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+        "packages/application/src/console/kosipa-grants.ts",
+        "packages/application/src/kosipa/commands/pipeline.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+          "exists": true,
+          "line": 27
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        },
+        {
+          "path": "packages/application/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 73
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-105",
+      "text": "CSRF/Origin check on every state change; commands accept POST/PATCH only. **Tenant Isolation Rule**: n/a.",
+      "source_line": 193,
+      "tasks": [
+        "TASK-107",
+        "TASK-136"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "command_http"
+      ],
+      "gap": "Current master POST/PATCH handlers call guard csrf:true; absent command families remain unimplemented.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-command-http.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+          "exists": true,
+          "line": 27
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-106",
+      "text": "PII masked by default; unmask requires `kosipa.member.pii` and is audited. **Tenant Isolation Rule**: n/a.",
+      "source_line": 194,
+      "tasks": [
+        "TASK-115"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "masking",
+        "members_read"
+      ],
+      "gap": "Read masking exists; complete PII unmask capability/audit acceptance not proven in this static audit.",
+      "modules": [
+        "packages/application/src/kosipa/member-360.ts",
+        "packages/domain/src/kosipa/masking.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/masking.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/member-360.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-107",
+      "text": "One least-privilege DB account per context; production grants only via reviewed SQL (OD-4). **Tenant Isolation Rule**: writer accounts cannot read/write unrelated schemas.",
+      "source_line": 195,
+      "tasks": [
+        "TASK-114",
+        "TASK-139"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "writer_guard",
+        "ledger_sql"
+      ],
+      "gap": "Separate synthetic scoped writer exists; all context accounts/production reviews and pool registry absent.",
+      "modules": [
+        "apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts",
+        "docs/migration/sql/kosipa-command-ledger-production.sql"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts",
+          "exists": true,
+          "line": 13
+        },
+        {
+          "path": "docs/migration/sql/kosipa-command-ledger-production.sql",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-108",
+      "text": "Session and identity link re-validated on every request; revoked link stops the next command. **Tenant Isolation Rule**: n/a.",
+      "source_line": 196,
+      "tasks": [
+        "TASK-107",
+        "TASK-136"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "command_http"
+      ],
+      "gap": "Current master request resolves fresh identity link and grant source.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-command-http.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+          "exists": true,
+          "line": 27
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-109",
+      "text": "Client-supplied balances, statuses, payoffs and remaining amounts are never trusted. **Tenant Isolation Rule**: n/a.",
+      "source_line": 197,
+      "tasks": [
+        "TASK-119",
+        "TASK-136"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "pipeline",
+        "master_commands",
+        "withdrawal_command"
+      ],
+      "gap": "Masters reject extra fields; financial balances/payoffs/remaining amounts commands absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/master.ts",
+        "packages/application/src/kosipa/commands/pipeline.ts",
+        "packages/application/src/kosipa/commands/withdrawal.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/withdrawal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-110",
+      "text": "Files and printed documents served only through authenticated routes, never from a public path. **Tenant Isolation Rule**: n/a.",
+      "source_line": 198,
+      "tasks": [
+        "TASK-126",
+        "TASK-134"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "public_pdf",
+        "document_storage"
+      ],
+      "gap": "Request PDF is a slice; protected attachment and official print families absent.",
+      "modules": [
+        "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+        "apps/web/src/infrastructure/kosipa/document-storage.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "apps/web/src/infrastructure/kosipa/document-storage.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-111",
+      "text": "Error responses expose only stable codes; logs and audit details contain no NIK, name, phone, address, salary or bank number. **Tenant Isolation Rule**: n/a.",
+      "source_line": 199,
+      "tasks": [
+        "TASK-108",
+        "TASK-136"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "pipeline",
+        "command_http"
+      ],
+      "gap": "Stable current command errors/audit summaries exist; global feature suite/PII audit proof missing; disabled ownership returns before pipeline audit event is created.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+        "packages/application/src/kosipa/commands/pipeline.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        },
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+          "exists": true,
+          "line": 27
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "SEC-112",
+      "text": "Destructive actions require typed confirmation and a reason (05 §4). **Tenant Isolation Rule**: n/a.",
+      "source_line": 200,
+      "tasks": [
+        "TASK-115",
+        "TASK-136"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "master_commands",
+        "member_command"
+      ],
+      "gap": "Master reason path exists; financial/member typed confirmation+reason missing.",
+      "modules": [
+        "packages/application/src/kosipa/commands/master.ts",
+        "packages/application/src/kosipa/commands/member.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-101",
+      "text": "Performance targets of [06 §3.1](06_LEGACY_ANOMALIES_AND_PERFORMANCE.md#31-performance-targets-proposed--baselines-first-prd-61) on the staging copy, after a recorded baseline.",
+      "source_line": 203,
+      "tasks": [
+        "TASK-112"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "perf_tool"
+      ],
+      "gap": "No full baseline/target evidence.",
+      "modules": [
+        "apps/web/scripts/kosipa-perf-baseline.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-perf-baseline.mjs",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-102",
+      "text": "Total pools ≤ `MAX_CONNECTION_BUDGET` (12); writer pool ≤ 2; only enabled writers count (B5/B8 before production).",
+      "source_line": 204,
+      "tasks": [
+        "TASK-139"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "writer_guard",
+        "budget"
+      ],
+      "gap": "Master pool capped2 locally; production total-budget registry does not count KOSIPA writer.",
+      "modules": [
+        "apps/web/src/infrastructure/db/deployment-guard.ts",
+        "apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts",
+          "exists": true,
+          "line": 13
+        },
+        {
+          "path": "apps/web/src/infrastructure/db/deployment-guard.ts",
+          "exists": true,
+          "line": 136
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-103",
+      "text": "Write transactions ≤ 15 s, lock waits capped (`capLockWait`), no network or file IO inside a transaction.",
+      "source_line": 205,
+      "tasks": [
+        "TASK-107"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "uow"
+      ],
+      "gap": "Current UOW has 15s transaction timeout, capped lock wait and no file/network IO.",
+      "modules": [
+        "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-104",
+      "text": "Domain money/state functions have 100% branch coverage of rule branches (UCKW:NFR004).",
+      "source_line": 206,
+      "tasks": [
+        "TASK-121"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "schedule",
+        "state"
+      ],
+      "gap": "Existing pure rule branches have tests; no complete all-rules 100% branch report.",
+      "modules": [
+        "packages/domain/src/kosipa/document-state.ts",
+        "packages/domain/src/kosipa/loan-schedule.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-105",
+      "text": "Commands are idempotent under retry; deadlocks retried once automatically.",
+      "source_line": 207,
+      "tasks": [
+        "TASK-106",
+        "TASK-107",
+        "TASK-136"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "uow",
+        "retry"
+      ],
+      "gap": "Idempotency/retries exist; max3 attempts is two automatic retries, while spec says one; cross-context suite absent.",
+      "modules": [
+        "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        },
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 60
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-106",
+      "text": "WCAG 2.1 AA for new forms/dialogs; tested at 375/768/1440 px (UCKW:NFR005).",
+      "source_line": 208,
+      "tasks": [
+        "TASK-137"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "checkpoint"
+      ],
+      "gap": "Local master/UI viewport evidence historical; checkpoint explicitly says axe not configured and no automated accessibility claim.",
+      "modules": [
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md"
+      ],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-107",
+      "text": "POS checkout latency unaffected (no KOSIPA work on `/pos` routes) (UCKW:NFR006).",
+      "source_line": 209,
+      "tasks": [
+        "TASK-137"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "ownership",
+        "checkpoint"
+      ],
+      "gap": "KOSIPA routing separate and historical POS smoke exists; measured unaffected checkout latency not supplied.",
+      "modules": [
+        "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "NFR-108",
+      "text": "Read paths execute zero write statements (asserted in tests).",
+      "source_line": 210,
+      "tasks": [
+        "TASK-111"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "loan_reader"
+      ],
+      "gap": "Reviewed read repositories contain bounded SELECT only; required all-read statement assertion acceptance remains open.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+          "exists": true,
+          "line": 23
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "OBS-101",
+      "text": "Command ledger row for every committed command with the fields of [08 §7](08_AUTHORIZATION_AND_AUDIT_DESIGN.md#7-audit-trail-design) (FD-01).",
+      "source_line": 213,
+      "tasks": [
+        "TASK-105"
+      ],
+      "status": "exact",
+      "evidence_keys": [
+        "uow",
+        "ledger"
+      ],
+      "gap": "Current master effect and ledger append share one transaction; owner tamper-evidence FD-01c remains separate production gate.",
+      "modules": [
+        "apps/web/db/kosipa/001_command_ledger.sql.tpl",
+        "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        },
+        {
+          "path": "apps/web/db/kosipa/001_command_ledger.sql.tpl",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "OBS-102",
+      "text": "Console audit event for every denied/failed command, PII unmask, grant change and export.",
+      "source_line": 214,
+      "tasks": [
+        "TASK-108"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "pipeline",
+        "grants",
+        "report_export"
+      ],
+      "gap": "Most current denial/failure/grant/export events exist; ownership flag refusal occurs before event helper and is not audited by runKosipaCommand.",
+      "modules": [
+        "packages/application/src/console/kosipa-grants.ts",
+        "packages/application/src/kosipa/commands/pipeline.ts",
+        "packages/application/src/kosipa/report-export.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        },
+        {
+          "path": "packages/application/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 73
+        },
+        {
+          "path": "packages/application/src/kosipa/report-export.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "OBS-103",
+      "text": "Structured, PII-free logs with request id; metrics for latency, lock wait, refusals by code, replays.",
+      "source_line": 215,
+      "tasks": [
+        "TASK-108"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "pipeline"
+      ],
+      "gap": "Only optional failure logging visible in pipeline; requested latency/lock/refusal/replay metric set absent.",
+      "modules": [
+        "packages/application/src/kosipa/commands/pipeline.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "OBS-104",
+      "text": "Reconciliation report per feature during parity/cutover (counts, sums, mismatches, gate status).",
+      "source_line": 216,
+      "tasks": [
+        "TASK-138"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "reconcile_tool"
+      ],
+      "gap": "No per-feature reconciliation report generator/cutover report.",
+      "modules": [
+        "apps/web/scripts/kosipa-reconcile.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-reconcile.mjs",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "OBS-105",
+      "text": "Monthly review of reversals, denials and failures by a named owner (FD-18).",
+      "source_line": 217,
+      "tasks": [
+        "TASK-138"
+      ],
+      "status": "missing",
+      "evidence_keys": [
+        "decisions"
+      ],
+      "gap": "No named reviewer/retention-approved monthly review record; FD-18 open.",
+      "modules": [
+        "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md"
+      ],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-101",
+      "text": "No DDL or trigger on the business database without an approved decision (FD-01, FD-02); proposals are additive with tested rollback SQL.",
+      "source_line": 220,
+      "tasks": [
+        "TASK-101",
+        "TASK-105"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "ledger_sql",
+        "decisions",
+        "gates"
+      ],
+      "gap": "Local approved additive foundation/rollback exists; proposed FD-22 business triggers remain unapproved and production gates open.",
+      "modules": [
+        "docs/migration/sql/kosipa-command-ledger-production.sql",
+        "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md"
+      ],
+      "evidence": [
+        {
+          "path": "docs/migration/sql/kosipa-command-ledger-production.sql",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-102",
+      "text": "No backfill or silent correction of historical data; anomalies (`ANO-K23/K26/K31/K34/K38`, duplicates) are reported for finance decisions.",
+      "source_line": 221,
+      "tasks": [
+        "TASK-138"
+      ],
+      "status": "equivalent",
+      "evidence_keys": [
+        "loan_read",
+        "decisions"
+      ],
+      "gap": "Current reads flag anomalies without repair; no backfill performed in audited source scope.",
+      "modules": [
+        "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+        "packages/domain/src/kosipa/loan-read.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-read.ts",
+          "exists": true,
+          "line": 91
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-103",
+      "text": "Staging for parity contains the production view/procedure definitions (B1) before any parity claim (UCKW:MIG001).",
+      "source_line": 222,
+      "tasks": [
+        "TASK-102",
+        "TASK-140"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "b1_export",
+        "restore_report"
+      ],
+      "gap": "Exporter exists; latest restore report says 10 missing routine bodies, candidate inactive.",
+      "modules": [
+        "apps/web/scripts/kosipa-b1-schema-export.sh",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/manual-uat/DATABASE_RESTORE_VALIDATION.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-b1-schema-export.sh",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/manual-uat/DATABASE_RESTORE_VALIDATION.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-104",
+      "text": "Cutover per feature follows [11](11_CUTOVER_AND_ROLLBACK_PLAN.md): eight gates, legacy switch (FD-03) by reviewed SQL, rollback rehearsed.",
+      "source_line": 223,
+      "tasks": [
+        "TASK-113",
+        "TASK-140"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "fence",
+        "gates"
+      ],
+      "gap": "Only synthetic master rehearsal; eight-gate full feature cutover absent.",
+      "modules": [
+        "apps/web/scripts/kosipa-legacy-fence.mjs",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-legacy-fence.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-105",
+      "text": "Production DB users/grants/switch rows changed only by the operator from reviewed SQL (OD-4).",
+      "source_line": 224,
+      "tasks": [
+        "TASK-113",
+        "TASK-139"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "ledger_sql",
+        "gates"
+      ],
+      "gap": "Review SQL exists; operator production provisioning/switch evidence not established by this audit.",
+      "modules": [
+        "docs/migration/sql/kosipa-command-ledger-production.sql",
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md"
+      ],
+      "evidence": [
+        {
+          "path": "docs/migration/sql/kosipa-command-ledger-production.sql",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-106",
+      "text": "Data written by Next.js stays readable by legacy until legacy retirement (REQ-142), so rollback never needs data conversion.",
+      "source_line": 225,
+      "tasks": [
+        "TASK-131"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "master_writer",
+        "runtime_tests"
+      ],
+      "gap": "Five-master fixture compatibility; all financial/procedure production parity absent.",
+      "modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+        "apps/web/tests/kosipa-legacy-runtime.test.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+          "exists": true,
+          "line": 61
+        },
+        {
+          "path": "apps/web/tests/kosipa-legacy-runtime.test.mjs",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-107",
+      "text": "Payroll generation stays on the legacy procedure until the native generator proves parity on staging with real definitions (OD-2, FD-20).",
+      "source_line": 226,
+      "tasks": [
+        "TASK-129"
+      ],
+      "status": "partial",
+      "evidence_keys": [
+        "payroll_generator",
+        "payroll_read"
+      ],
+      "gap": "Native generator absent, legacy remains source; three-period parity and removal of dependency not achieved.",
+      "modules": [
+        "packages/application/src/kosipa/commands/payroll-generate.ts",
+        "packages/application/src/kosipa/payroll.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/payroll-generate.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/payroll.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "MIG-108",
+      "text": "Destructive tests run only on synthetic databases; no real member data in fixtures.",
+      "source_line": 227,
+      "tasks": [
+        "TASK-104"
+      ],
+      "status": "equivalent",
+      "evidence_keys": [
+        "runtime",
+        "checkpoint"
+      ],
+      "gap": "Harness constrained to synthetic stack and source fixtures; no destructive suite run by this read-only audit.",
+      "modules": [
+        "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+        "integration/kosipa-full-access/legacy-runtime/runtime.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "integration/kosipa-full-access/legacy-runtime/runtime.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "TASK-101",
+      "title": "Owner/finance decision session on FD-01…FD-21 and inherited D1–D6.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Decision register exists; many FD/D/B choices remain open; read monitoring FD-26 does not approve financial policy.",
+      "requirements": [
+        "MIG-101",
+        "REQ-141"
+      ],
+      "stated_modules": [
+        "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md"
+      ],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/12_DECISION_REGISTER.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-102",
+      "title": "Operator evidence intake G-01…G-10 (source hashes, view/procedure bodies, triggers/indexes/`sql_mode`, production menu/grants, row counts).",
+      "document_checkbox": "partial",
+      "status": "partial",
+      "gap": "Synthetic exporter ready; actual complete routine/source/ownership intake missing.",
+      "requirements": [
+        "MIG-103",
+        "REQ-101",
+        "REQ-138"
+      ],
+      "stated_modules": [
+        "docs/migration/operator-handoff-schema-evidence.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-b1-schema-export.sh",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/manual-uat/DATABASE_RESTORE_VALIDATION.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-103",
+      "title": "Inventory drift check tool.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "Required inventory checker absent.",
+      "requirements": [
+        "REQ-101",
+        "REQ-102"
+      ],
+      "stated_modules": [
+        "apps/web/scripts/kosipa-inventory-check.mjs",
+        "docs/superpowers/specs/kosipa-full-access/02A_LEGACY_METHOD_WRITE_INDEX.md"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-inventory-check.mjs",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-104",
+      "title": "Characterization harness and golden files for WP-01…WP-30.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Real-PHP five-master harness is a slice; all WP01-30 scenario/golden suite absent despite unchecked task.",
+      "requirements": [
+        "MIG-108",
+        "REQ-138",
+        "REQ-142"
+      ],
+      "stated_modules": [
+        "integration/kosipa-full-access/legacy-runtime/*",
+        "integration/kosipa-full-access/scenarios/*.json"
+      ],
+      "evidence": [
+        {
+          "path": "integration/kosipa-full-access/legacy-runtime/runtime.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "apps/web/tests/kosipa-legacy-runtime.test.mjs",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-105",
+      "title": "Command ledger DDL and rollback (local only; production review SQL).",
+      "document_checkbox": "checked-local-only",
+      "status": "exact",
+      "gap": "Local foundation implemented; production provisioning and FD-01c remain.",
+      "requirements": [
+        "MIG-101",
+        "OBS-101"
+      ],
+      "stated_modules": [
+        "apps/web/db/kosipa/001_command_ledger.sql",
+        "docs/migration/sql/kosipa-command-ledger-production.sql"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/db/kosipa/001_command_ledger.sql.tpl",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/migration/sql/kosipa-command-ledger-production.sql",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-106",
+      "title": "Domain command primitives (request hash, idempotency outcome, error codes).",
+      "document_checkbox": "checked-local-only",
+      "status": "exact",
+      "gap": "Current command primitives implemented; historical tests not rerun here.",
+      "requirements": [
+        "NFR-105",
+        "REQ-105",
+        "VAL-109"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/command.ts",
+        "packages/domain/tests/kosipa-command.test.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-107",
+      "title": "Unit of work + lock helpers + ownership gate + flags.",
+      "document_checkbox": "checked-local-only",
+      "status": "partial",
+      "gap": "Local master foundation implemented; retry-count mismatch and unregistered remaining contexts.",
+      "requirements": [
+        "NFR-103",
+        "NFR-105",
+        "REQ-103",
+        "REQ-104",
+        "REQ-105",
+        "REQ-140",
+        "SEC-105",
+        "SEC-108",
+        "VAL-112"
+      ],
+      "stated_modules": [
+        "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+        "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+        "apps/web/src/infrastructure/console/kosipa-command-http.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/db/kosipa-unit-of-work.ts",
+          "exists": true,
+          "line": 84
+        },
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-ownership.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+          "exists": true,
+          "line": 27
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-108",
+      "title": "Command pipeline use case + audit emission.",
+      "document_checkbox": "checked-local-only",
+      "status": "partial",
+      "gap": "Pipeline exists; document lifecycle integration and full structured metrics/disabled-denial audit missing.",
+      "requirements": [
+        "OBS-102",
+        "OBS-103",
+        "REQ-105",
+        "REQ-106",
+        "SEC-111"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/pipeline.ts",
+        "packages/application/tests/kosipa-commands-pipeline.test.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/pipeline.ts",
+          "exists": true,
+          "line": 50
+        },
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-109",
+      "title": "Transaction-safe native document-number allocation (local reusable foundation).",
+      "document_checkbox": "checked-local-only",
+      "status": "exact",
+      "gap": "Reusable local foundation complete within revised task title; real command integration/FD23/FD02 remain.",
+      "requirements": [
+        "BR-116",
+        "REQ-107"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/document-number.ts",
+        "packages/application/src/kosipa/document-numbering.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-document-number.ts",
+        "apps/web/db/kosipa/005_document_number_registry.sql.tpl"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/document-numbering.ts",
+          "exists": true,
+          "line": 26
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-document-number.ts",
+          "exists": true,
+          "line": 45
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-110",
+      "title": "Write capability vocabulary and grant store.",
+      "document_checkbox": "checked-local-only",
+      "status": "exact",
+      "gap": "Local grants lifecycle complete; master-only grantable scope and production gate remain.",
+      "requirements": [
+        "REQ-130",
+        "SEC-101",
+        "SEC-102",
+        "SEC-104"
+      ],
+      "stated_modules": [
+        "packages/domain/src/console/capabilities.ts",
+        "packages/domain/src/console/kosipa-grants.ts",
+        "packages/application/src/console/kosipa-grants.ts",
+        "apps/web/db/console/004_kosipa_grants.sql",
+        "apps/web/src/app/api/console/kosipa-grants/**",
+        "apps/web/src/app/console/settings/akses-kosipa/page.tsx"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 73
+        },
+        {
+          "path": "packages/domain/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 36
+        },
+        {
+          "path": "packages/domain/src/console/capabilities.ts",
+          "exists": true,
+          "line": 59
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-111",
+      "title": "Read-model corrections (computed loan status; zero writes in reads).",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Existing read files do not implement computed all-paid LUNAS; no read-write assertion suite.",
+      "requirements": [
+        "BR-104",
+        "NFR-108",
+        "REQ-134"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/loan-read.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-read.ts",
+          "exists": true,
+          "line": 91
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+          "exists": true,
+          "line": 23
+        },
+        {
+          "path": "packages/domain/src/kosipa/payroll-settlement.ts",
+          "exists": true,
+          "line": 14
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-112",
+      "title": "Performance baseline and index proposal.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "Benchmark script and measured full-access baseline absent.",
+      "requirements": [
+        "NFR-101",
+        "REQ-139"
+      ],
+      "stated_modules": [
+        "apps/web/scripts/kosipa-perf-baseline.mjs",
+        "docs/migration/sql/kosipa-full-access-indexes-production.sql"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-perf-baseline.mjs",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-113",
+      "title": "Legacy switch generator and staging rehearsal.",
+      "document_checkbox": "partial",
+      "status": "partial",
+      "gap": "Equivalent named fence generator exists; five-master synthetic rehearsal only, all-writer member fence unproven.",
+      "requirements": [
+        "BR-117",
+        "MIG-104",
+        "MIG-105",
+        "REQ-103",
+        "REQ-140"
+      ],
+      "stated_modules": [
+        "apps/web/scripts/kosipa-legacy-switch.mjs",
+        "docs/migration/sql/kosipa-legacy-switch-<group>.sql"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-legacy-fence.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "apps/web/tests/kosipa-legacy-runtime.test.mjs",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-114",
+      "title": "Masters domain + commands + writer + pages.",
+      "document_checkbox": "partial",
+      "status": "partial",
+      "gap": "Five of seventeen masters; twelve outstanding.",
+      "requirements": [
+        "REQ-129",
+        "SEC-107",
+        "VAL-102"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/master.ts",
+        "packages/application/src/kosipa/commands/master.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+        "apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts",
+        "apps/web/src/app/api/kosipa/master/[type]/**",
+        "apps/web/src/app/console/kosipa/master/[type]/page.tsx",
+        "apps/web/scripts/setup-kosipa-master-write.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/master.ts",
+          "exists": true,
+          "line": 32
+        },
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-master-write.repository.ts",
+          "exists": true,
+          "line": 61
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-115",
+      "title": "Member register/profile/status/deactivate.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "Plan only; all member native mutations unavailable.",
+      "requirements": [
+        "BR-111",
+        "BR-112",
+        "BR-113",
+        "REQ-108",
+        "REQ-109",
+        "REQ-110",
+        "REQ-111",
+        "SEC-106",
+        "SEC-112",
+        "VAL-101",
+        "VAL-105"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/member-command.ts",
+        "packages/application/src/kosipa/commands/member.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-member-write.repository.ts",
+        "apps/web/src/infrastructure/db/prisma-kosipa-member-write.ts",
+        "apps/web/src/app/api/kosipa/members/**",
+        "apps/web/src/app/console/kosipa/anggota/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-116",
+      "title": "Staged imports (members, limits).",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No staged imports/limits command.",
+      "requirements": [
+        "BR-118",
+        "REQ-112",
+        "VAL-107"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/import.ts",
+        "packages/application/src/kosipa/commands/member-import.ts",
+        "apps/web/src/app/console/kosipa/anggota/impor/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member-import.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-117",
+      "title": "Deduction configuration + request decisions (mobile, public link, savings changes).",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No config/request decisions.",
+      "requirements": [
+        "REQ-113",
+        "REQ-128"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/deduction.ts",
+        "packages/application/src/kosipa/commands/request-decision.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-savings-config-write.repository.ts",
+        "apps/web/src/app/console/kosipa/pengajuan/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/deduction.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/request-decision.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-118",
+      "title": "Savings documents (payroll, deposit, opening balance).",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No savings document lifecycle.",
+      "requirements": [
+        "BR-101",
+        "BR-105",
+        "BR-106",
+        "REQ-114",
+        "VAL-103",
+        "VAL-110"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/savings-document.ts",
+        "packages/application/src/kosipa/commands/savings-document.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-savings-write.repository.ts",
+        "apps/web/src/infrastructure/db/prisma-kosipa-savings-write.ts",
+        "apps/web/src/app/api/kosipa/savings-documents/**",
+        "apps/web/src/app/console/kosipa/simpanan/dokumen/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-119",
+      "title": "Withdrawals (staff + mobile processing).",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No withdrawal lifecycle.",
+      "requirements": [
+        "BR-109",
+        "REQ-115",
+        "SEC-109"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/withdrawal.ts",
+        "apps/web/src/app/api/kosipa/withdrawals/**",
+        "apps/web/src/app/console/kosipa/simpanan/penarikan/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/withdrawal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-120",
+      "title": "Savings reversal.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No savings reversal.",
+      "requirements": [
+        "BR-106",
+        "REQ-116",
+        "VAL-108"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/savings-reversal.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-reversal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-121",
+      "title": "Loan product configuration and exact calculations (flat/annuity, fees, due-day clamp, ratio).",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Exact schedule/ratio primitives pre-exist; product/rate/fee/date/parity implementation missing.",
+      "requirements": [
+        "BR-102",
+        "BR-114",
+        "BR-120",
+        "NFR-104",
+        "REQ-118",
+        "VAL-104"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/loan-product.ts",
+        "packages/domain/src/kosipa/loan-schedule.ts",
+        "packages/domain/src/kosipa/disbursement.ts",
+        "packages/domain/tests/kosipa-loan-*.test.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-122",
+      "title": "Loan application command + pages.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "Loans API is GET only; no application writer/page.",
+      "requirements": [
+        "BR-113",
+        "REQ-107",
+        "REQ-118"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/loan-application.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-lending-write.repository.ts",
+        "apps/web/src/infrastructure/db/prisma-kosipa-lending-write.ts",
+        "apps/web/src/app/api/kosipa/loans/route.ts",
+        "apps/web/src/app/console/kosipa/pinjaman/baru/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-application.ts",
+          "exists": false,
+          "line": null
+        },
+        {
+          "path": "apps/web/src/app/api/kosipa/loans/route.ts",
+          "exists": true,
+          "line": 9
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-123",
+      "title": "Loan approve/reject/cancel/void.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No loan lifecycle decisions.",
+      "requirements": [
+        "BR-105",
+        "REQ-119",
+        "REQ-123"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/loan-decision.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-decision.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-124",
+      "title": "Disbursement with schedule-once and rollover settlement.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No disbursement/rollover persistence.",
+      "requirements": [
+        "BR-103",
+        "BR-107",
+        "REQ-120",
+        "REQ-121"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/loan-disbursement.ts",
+        "packages/application/src/kosipa/commands/loan-rollover.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-125",
+      "title": "Early settlement, over-kredit, loan reversal.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No early settlement/reversal.",
+      "requirements": [
+        "REQ-122",
+        "REQ-123"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/loan-settlement.ts",
+        "packages/application/src/kosipa/commands/loan-reversal.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-settlement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-126",
+      "title": "Loan document attachments.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No attachments lifecycle.",
+      "requirements": [
+        "REQ-124",
+        "SEC-110",
+        "VAL-111"
+      ],
+      "stated_modules": [
+        "apps/web/src/infrastructure/kosipa/document-storage.ts",
+        "apps/web/src/app/api/kosipa/loans/[docNo]/documents/**"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/kosipa/document-storage.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-127",
+      "title": "Mobile loan request conversion.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No mobile loan conversion.",
+      "requirements": [
+        "REQ-128"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/request-decision.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/request-decision.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-128",
+      "title": "Payroll batch lifecycle with batch-scoped settlement.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Read/plan helpers exist, no payroll batch writer.",
+      "requirements": [
+        "BR-108",
+        "REQ-125",
+        "VAL-106"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/payroll.ts",
+        "apps/web/src/infrastructure/repositories/kosipa-payroll-write.repository.ts",
+        "apps/web/src/infrastructure/db/prisma-kosipa-payroll-write.ts",
+        "apps/web/src/app/console/kosipa/payroll/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/payroll-settlement.ts",
+          "exists": true,
+          "line": 14
+        },
+        {
+          "path": "packages/application/src/kosipa/payroll.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/payroll.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-129",
+      "title": "Native payroll generator (after B1).",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No native generator; B1/parity open.",
+      "requirements": [
+        "BR-119",
+        "MIG-107",
+        "REQ-125"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/payroll-generator.ts",
+        "packages/application/src/kosipa/commands/payroll-generate.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/payroll-generate.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-130",
+      "title": "Member exit settlement.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No atomic exit.",
+      "requirements": [
+        "BR-110",
+        "REQ-117"
+      ],
+      "stated_modules": [
+        "packages/domain/src/kosipa/exit-settlement.ts",
+        "packages/application/src/kosipa/commands/exit.ts",
+        "apps/web/src/app/console/kosipa/keluar/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/exit.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-131",
+      "title": "Compatibility tests (legacy pages + procedure read Next.js rows).",
+      "document_checkbox": "partial",
+      "status": "partial",
+      "gap": "Five-master PHP slice; financial/procedure definitions incomplete.",
+      "requirements": [
+        "MIG-106",
+        "REQ-142"
+      ],
+      "stated_modules": [
+        "integration/kosipa-full-access/compatibility/*.test.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/tests/kosipa-legacy-runtime.test.mjs",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/manual-uat/DATABASE_RESTORE_VALIDATION.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-132",
+      "title": "SHU lifecycle.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Allocator only; SHU lifecycle absent.",
+      "requirements": [
+        "BR-115",
+        "REQ-127"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/shu.ts",
+        "apps/web/src/app/console/kosipa/shu/**"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/shu-allocation.ts",
+          "exists": true,
+          "line": 12
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/shu.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-133",
+      "title": "PPOB member billing.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No native billing.",
+      "requirements": [
+        "REQ-126"
+      ],
+      "stated_modules": [
+        "packages/application/src/kosipa/commands/ppob-bill.ts"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/ppob-bill.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-134",
+      "title": "Report parity (outstanding/cash per product, transaction cash, savings outstanding) and authenticated prints.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Existing report/CSV/request PDF slices; remaining report families/official print parity absent.",
+      "requirements": [
+        "REQ-131",
+        "REQ-132",
+        "SEC-110"
+      ],
+      "stated_modules": [
+        "apps/web/src/infrastructure/repositories/kosipa-report.repository.ts",
+        "apps/web/src/app/console/kosipa/laporan/**",
+        "apps/web/src/app/api/kosipa/**/pdf"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-report.repository.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/report-export.ts",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-135",
+      "title": "Dashboard KPIs, notifications, business settings.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Widgets only; verified KOSIPA dashboard, notification mutation and settings absent.",
+      "requirements": [
+        "REQ-135",
+        "REQ-136",
+        "REQ-137"
+      ],
+      "stated_modules": [
+        "apps/web/src/components/console/DashboardClientWidgets.tsx",
+        "packages/application/src/kosipa/commands/settings.ts"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/components/console/DashboardClientWidgets.tsx",
+          "exists": true,
+          "line": 1
+        },
+        {
+          "path": "packages/application/src/kosipa/commands/settings.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-136",
+      "title": "Security and concurrency suite across all commands.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Master-focused security/concurrency evidence exists; suite across absent commands cannot pass.",
+      "requirements": [
+        "NFR-105",
+        "SEC-101",
+        "SEC-103",
+        "SEC-104",
+        "SEC-105",
+        "SEC-108",
+        "SEC-109",
+        "SEC-111",
+        "SEC-112"
+      ],
+      "stated_modules": [
+        "apps/web/tests/console-kosipa-security-http.test.mjs",
+        "apps/web/tests/kosipa-concurrency-db.test.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/console/kosipa-command-http.ts",
+          "exists": true,
+          "line": 27
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-137",
+      "title": "Read-after-write and UI states.",
+      "document_checkbox": "unchecked",
+      "status": "partial",
+      "gap": "Historical master browser/UI evidence exists; all-feature refresh/accessibility/POS latency coverage absent.",
+      "requirements": [
+        "NFR-106",
+        "NFR-107",
+        "REQ-133"
+      ],
+      "stated_modules": [
+        "apps/web/tests/console-kosipa-write-browser.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-138",
+      "title": "Reconciliation reports and audit review job.",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No report/review job.",
+      "requirements": [
+        "MIG-102",
+        "OBS-104",
+        "OBS-105",
+        "REQ-138"
+      ],
+      "stated_modules": [
+        "apps/web/scripts/kosipa-reconcile.mjs"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/scripts/kosipa-reconcile.mjs",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-139",
+      "title": "Connection budget and writer account review SQL.",
+      "document_checkbox": "partial",
+      "status": "partial",
+      "gap": "Synthetic pool2 guard/review docs; production registry, all context grants/intake absent.",
+      "requirements": [
+        "MIG-105",
+        "NFR-102",
+        "SEC-107"
+      ],
+      "stated_modules": [
+        "apps/web/src/infrastructure/db/deployment-guard.ts",
+        "apps/web/scripts/setup-kosipa-<ctx>-write.mjs",
+        "docs/migration/sql/kosipa-<ctx>-writer-production.sql"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/db/prisma-kosipa-master-write.ts",
+          "exists": true,
+          "line": 13
+        },
+        {
+          "path": "apps/web/src/infrastructure/db/deployment-guard.ts",
+          "exists": true,
+          "line": 136
+        },
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-140",
+      "title": "Cutover rehearsal per feature group on staging (gates 1–8).",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "No all-group staging rehearsal and accepted rollback evidence.",
+      "requirements": [
+        "MIG-103",
+        "MIG-104",
+        "REQ-140"
+      ],
+      "stated_modules": [
+        "docs/superpowers/specs/kosipa-full-access/11_CUTOVER_AND_ROLLBACK_PLAN.md"
+      ],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-141",
+      "title": "Full verification run.",
+      "document_checkbox": "partial",
+      "status": "partial",
+      "gap": "Historical local foundation verification, not current full programme verification.",
+      "requirements": [
+        "REQ-101",
+        "REQ-102",
+        "REQ-139",
+        "REQ-142"
+      ],
+      "stated_modules": [],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/CHECKPOINT_REPORT.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "TASK-142",
+      "title": "Owner UAT checklist per feature group (not production).",
+      "document_checkbox": "unchecked",
+      "status": "missing",
+      "gap": "Per-feature owner UAT checklist/filled acceptance absent.",
+      "requirements": [
+        "REQ-140",
+        "REQ-141"
+      ],
+      "stated_modules": [
+        "docs/superpowers/specs/kosipa-full-access/owner-uat-checklist.md"
+      ],
+      "evidence": [
+        {
+          "path": "docs/superpowers/specs/kosipa-full-access/fa-03a/PRODUCTION_READINESS_GATES.md",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "production_acceptance": "not established"
+    }
+  ],
+  "work_items": [
+    {
+      "id": "WI-01",
+      "title": "Write foundation (command pipeline)",
+      "status": "partial",
+      "tasks": [
+        "TASK-105",
+        "TASK-106",
+        "TASK-107",
+        "TASK-108",
+        "TASK-109"
+      ],
+      "remaining": "Local foundation implemented; production provisioning and FD-01c remain.; Current command primitives implemented; historical tests not rerun here.; Local master foundation implemented; retry-count mismatch and unregistered remaining contexts.; Pipeline exists; document lifecycle integration and full structured metrics/disabled-denial audit missing.; Reusable local foundation complete within revised task title; real command integration/FD23/FD02 remain.",
+      "dependencies": [
+        "B6",
+        "FD-01",
+        "FD-03",
+        "WI-01"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-02",
+      "title": "Write capability grants",
+      "status": "partial",
+      "tasks": [
+        "TASK-110"
+      ],
+      "remaining": "Local grants lifecycle complete; master-only grantable scope and production gate remain.",
+      "dependencies": [
+        "FD-16",
+        "FD-17",
+        "WI-01",
+        "WI-02"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-03",
+      "title": "Characterization and reconciliation harness",
+      "status": "partial",
+      "tasks": [
+        "TASK-102",
+        "TASK-103",
+        "TASK-104",
+        "TASK-131",
+        "TASK-138"
+      ],
+      "remaining": "Synthetic exporter ready; actual complete routine/source/ownership intake missing.; Required inventory checker absent.; Real-PHP five-master harness is a slice; all WP01-30 scenario/golden suite absent despite unchecked task.; Five-master PHP slice; financial/procedure definitions incomplete.; No report/review job.",
+      "dependencies": [
+        "B1",
+        "G-01",
+        "G-03",
+        "G-108",
+        "WI-03"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-04",
+      "title": "Read-model corrections and performance baseline",
+      "status": "partial",
+      "tasks": [
+        "TASK-111",
+        "TASK-112"
+      ],
+      "remaining": "Existing read files do not implement computed all-paid LUNAS; no read-write assertion suite.; Benchmark script and measured full-access baseline absent.",
+      "dependencies": [
+        "FD-02",
+        "FD-05",
+        "WI-04"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-05",
+      "title": "Legacy switch tooling (FD-03)",
+      "status": "partial",
+      "tasks": [
+        "TASK-113",
+        "TASK-140"
+      ],
+      "remaining": "Equivalent named fence generator exists; five-master synthetic rehearsal only, all-writer member fence unproven.; No all-group staging rehearsal and accepted rollback evidence.",
+      "dependencies": [
+        "FD-03",
+        "G-07",
+        "WI-05"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-06",
+      "title": "KOSIPA reference masters",
+      "status": "partial",
+      "tasks": [
+        "TASK-114"
+      ],
+      "remaining": "Five of seventeen masters; twelve outstanding.",
+      "dependencies": [
+        "WI-01",
+        "WI-02",
+        "WI-05",
+        "WI-06"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-07",
+      "title": "Members: register, profile, status, deactivate",
+      "status": "missing",
+      "tasks": [
+        "TASK-115"
+      ],
+      "remaining": "Plan only; all member native mutations unavailable.",
+      "dependencies": [
+        "D3",
+        "FD-07",
+        "FD-08",
+        "WI-06",
+        "WI-07"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-08",
+      "title": "Member imports and credit limits",
+      "status": "missing",
+      "tasks": [
+        "TASK-116"
+      ],
+      "remaining": "No staged imports/limits command.",
+      "dependencies": [
+        "FD-21",
+        "WI-07",
+        "WI-08"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-09",
+      "title": "Payroll deduction configuration and request decisions",
+      "status": "missing",
+      "tasks": [
+        "TASK-117"
+      ],
+      "remaining": "No config/request decisions.",
+      "dependencies": [
+        "WI-07",
+        "WI-09"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-10",
+      "title": "Savings documents (payroll, deposit, opening balance)",
+      "status": "missing",
+      "tasks": [
+        "TASK-118"
+      ],
+      "remaining": "No savings document lifecycle.",
+      "dependencies": [
+        "B1",
+        "FD-12",
+        "FD-14",
+        "WI-07",
+        "WI-10"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-11",
+      "title": "Withdrawals (staff + mobile)",
+      "status": "missing",
+      "tasks": [
+        "TASK-119"
+      ],
+      "remaining": "No withdrawal lifecycle.",
+      "dependencies": [
+        "D2",
+        "WI-10",
+        "WI-11"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-12",
+      "title": "Savings reversal",
+      "status": "missing",
+      "tasks": [
+        "TASK-120"
+      ],
+      "remaining": "No savings reversal.",
+      "dependencies": [
+        "FD-14",
+        "WI-10",
+        "WI-12"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-13",
+      "title": "Loan products, application and simulation",
+      "status": "partial",
+      "tasks": [
+        "TASK-121",
+        "TASK-122"
+      ],
+      "remaining": "Exact schedule/ratio primitives pre-exist; product/rate/fee/date/parity implementation missing.; Loans API is GET only; no application writer/page.",
+      "dependencies": [
+        "B1",
+        "D1",
+        "D6",
+        "FD-04",
+        "WI-04",
+        "WI-06",
+        "WI-13"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-14",
+      "title": "Loan approval, rejection, cancel, void",
+      "status": "missing",
+      "tasks": [
+        "TASK-123"
+      ],
+      "remaining": "No loan lifecycle decisions.",
+      "dependencies": [
+        "FD-14",
+        "FD-17",
+        "WI-13",
+        "WI-14"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-15",
+      "title": "Disbursement, schedule, rollover",
+      "status": "missing",
+      "tasks": [
+        "TASK-124"
+      ],
+      "remaining": "No disbursement/rollover persistence.",
+      "dependencies": [
+        "FD-04",
+        "FD-06",
+        "FD-11",
+        "WI-13",
+        "WI-14",
+        "WI-15"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-16",
+      "title": "Early settlement, over-kredit, loan reversal",
+      "status": "missing",
+      "tasks": [
+        "TASK-125"
+      ],
+      "remaining": "No early settlement/reversal.",
+      "dependencies": [
+        "FD-11",
+        "FD-14",
+        "WI-13",
+        "WI-15",
+        "WI-16"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-17",
+      "title": "Mobile loan request conversion",
+      "status": "missing",
+      "tasks": [
+        "TASK-127"
+      ],
+      "remaining": "No mobile loan conversion.",
+      "dependencies": [
+        "WI-13",
+        "WI-14",
+        "WI-17"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-18",
+      "title": "Payroll batch (native lifecycle; generation still legacy)",
+      "status": "partial",
+      "tasks": [
+        "TASK-128"
+      ],
+      "remaining": "Read/plan helpers exist, no payroll batch writer.",
+      "dependencies": [
+        "D4",
+        "D5",
+        "FD-20",
+        "WI-10",
+        "WI-15",
+        "WI-18"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-19",
+      "title": "Native payroll generator",
+      "status": "missing",
+      "tasks": [
+        "TASK-129"
+      ],
+      "remaining": "No native generator; B1/parity open.",
+      "dependencies": [
+        "B1",
+        "D5",
+        "G-107",
+        "WI-18",
+        "WI-19"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-20",
+      "title": "Member exit settlement",
+      "status": "missing",
+      "tasks": [
+        "TASK-130"
+      ],
+      "remaining": "No atomic exit.",
+      "dependencies": [
+        "FD-13",
+        "WI-07",
+        "WI-11",
+        "WI-16",
+        "WI-20"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-21",
+      "title": "SHU",
+      "status": "partial",
+      "tasks": [
+        "TASK-132"
+      ],
+      "remaining": "Allocator only; SHU lifecycle absent.",
+      "dependencies": [
+        "B1",
+        "FD-10",
+        "WI-10",
+        "WI-21"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-22",
+      "title": "PPOB member billing",
+      "status": "missing",
+      "tasks": [
+        "TASK-133"
+      ],
+      "remaining": "No native billing.",
+      "dependencies": [
+        "G-05",
+        "WI-18",
+        "WI-22"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-23",
+      "title": "Report parity and printed documents",
+      "status": "partial",
+      "tasks": [
+        "TASK-134"
+      ],
+      "remaining": "Existing report/CSV/request PDF slices; remaining report families/official print parity absent.",
+      "dependencies": [
+        "B1",
+        "WI-04",
+        "WI-23"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-24",
+      "title": "Dashboard, notifications, business settings, loan documents",
+      "status": "partial",
+      "tasks": [
+        "TASK-126",
+        "TASK-135"
+      ],
+      "remaining": "No attachments lifecycle.; Widgets only; verified KOSIPA dashboard, notification mutation and settings absent.",
+      "dependencies": [
+        "FD-09",
+        "G-02",
+        "WI-02",
+        "WI-24",
+        "WI-25"
+      ],
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "WI-25",
+      "title": "PPOB sales operations (F49)",
+      "status": "hold",
+      "tasks": [
+        "TASK-135"
+      ],
+      "remaining": "External IAK integration remains explicitly HOLD under REQ-137; owner decision needed to expand scope.",
+      "dependencies": [
+        "FD PPOB integration"
+      ],
+      "production_acceptance": "not established"
+    }
+  ],
+  "legacy_features": [
+    {
+      "id": "F01",
+      "title": "Member directory / search",
+      "source_line": 49,
+      "status": "equivalent",
+      "work_items": [
+        "WI-07"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/member-360.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Directory/search read exists; no mutation implied.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F02",
+      "title": "Register member",
+      "source_line": 50,
+      "status": "missing",
+      "work_items": [
+        "WI-07"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Register+initial deductions+QR not implemented.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F03",
+      "title": "Edit member profile, employment, limits, status",
+      "source_line": 51,
+      "status": "missing",
+      "work_items": [
+        "WI-07",
+        "WI-08",
+        "WI-09"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Profile/status/limit/deduction commands absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F04",
+      "title": "Delete member",
+      "source_line": 52,
+      "status": "missing",
+      "work_items": [
+        "WI-07"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Deactivation/history guard absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F05",
+      "title": "Bulk member import (Excel)",
+      "source_line": 53,
+      "status": "missing",
+      "work_items": [
+        "WI-08"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member-import.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Staged member import absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F06",
+      "title": "Credit-limit import (`limit_toko`, `limit_ppob`, `gaji_minus`)",
+      "source_line": 54,
+      "status": "missing",
+      "work_items": [
+        "WI-08"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member-import.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Credit limit single/batch imports and wallet side effect absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F07",
+      "title": "ID card + QR",
+      "source_line": 55,
+      "status": "missing",
+      "work_items": [
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Member ID card/QR template edit/print absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F08",
+      "title": "Org lookups (divisi, bagian, jabatan)",
+      "source_line": 56,
+      "status": "partial",
+      "work_items": [
+        "WI-06",
+        "WI-07"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        }
+      ],
+      "gap": "Bagian/list display exists; dedicated division/job dependent form lookup parity incomplete.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F09",
+      "title": "Member 360 tabs: savings, loans, store",
+      "source_line": 57,
+      "status": "equivalent",
+      "work_items": [
+        "WI-07",
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/member-360.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Member360 tabs exist; recorded amounts only, official balance B1 remains.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F10",
+      "title": "Mobile user admin (status, token revoke)",
+      "source_line": 58,
+      "status": "missing",
+      "work_items": [
+        "WI-07"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/member.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Mobile user status/token administration absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F11",
+      "title": "Mobile user list (dormant)",
+      "source_line": 59,
+      "status": "missing",
+      "work_items": [
+        "WI-07"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/member-360.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Dormant mobile user-list capability has no dedicated migration/retire decision/task mapping.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F12",
+      "title": "Savings document (header + member lines): create, edit, add/edit/delete line, bulk lines, upload, delete",
+      "source_line": 65,
+      "status": "missing",
+      "work_items": [
+        "WI-10"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Header/lines/import/bulk actions absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F13",
+      "title": "Savings approve / reject",
+      "source_line": 66,
+      "status": "missing",
+      "work_items": [
+        "WI-10"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Approve/reject and once-only saldo effect absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F14",
+      "title": "Payroll savings & opening balance (Saldo Awal)",
+      "source_line": 67,
+      "status": "missing",
+      "work_items": [
+        "WI-10"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Payroll/opening savings document lifecycle absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F15",
+      "title": "Cash/transfer deposit (Setor TF/Tunai) incl. bulk approve",
+      "source_line": 68,
+      "status": "missing",
+      "work_items": [
+        "WI-10"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Cash/transfer/bulk approval absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F16",
+      "title": "Withdrawal document (Penarikan)",
+      "source_line": 69,
+      "status": "missing",
+      "work_items": [
+        "WI-11"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/withdrawal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Staff withdrawal server-balance lifecycle absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F17",
+      "title": "Member savings card / Kas Anggota",
+      "source_line": 70,
+      "status": "partial",
+      "work_items": [
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/savings.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Recorded ledger exists; official card balance and authenticated print absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F18",
+      "title": "Payroll deduction master (Master Potongan Payroll)",
+      "source_line": 71,
+      "status": "missing",
+      "work_items": [
+        "WI-09"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/deduction.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Deduction config CRUD/import absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F19",
+      "title": "Member exit settlement (Hak & Kewajiban)",
+      "source_line": 72,
+      "status": "missing",
+      "work_items": [
+        "WI-20"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/exit.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Atomic exit statement/lifecycle absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F20",
+      "title": "Savings documents v2 (`simpanan_new_c`) incl. notification",
+      "source_line": 73,
+      "status": "retire",
+      "work_items": [
+        "WI-10"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/savings-document.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Duplicate controller retired; legitimate behavior/notifications must be accounted in canonical savings scope.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F21",
+      "title": "GL journal from savings (`insert_to_input_jurnal*`, `ajax_add_tarik`)",
+      "source_line": 74,
+      "status": "not_live",
+      "work_items": [],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/document-state.ts",
+          "exists": true,
+          "line": 35
+        }
+      ],
+      "gap": "Unwired GL; FD-09 decision explicitly prevents silent new posting.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F22",
+      "title": "Loan application (create)",
+      "source_line": 82,
+      "status": "missing",
+      "work_items": [
+        "WI-13"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-application.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "No application for any product.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F23",
+      "title": "Loan simulation",
+      "source_line": 83,
+      "status": "partial",
+      "work_items": [
+        "WI-13"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-schedule.ts",
+          "exists": true,
+          "line": 32
+        }
+      ],
+      "gap": "Pure exact simulation only; no authorized UI/product/view parity.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F24",
+      "title": "Schedule generation",
+      "source_line": 84,
+      "status": "missing",
+      "work_items": [
+        "WI-15"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "No once-only native persisted schedule.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F25",
+      "title": "Loan edit + disbursement (pencairan)",
+      "source_line": 85,
+      "status": "missing",
+      "work_items": [
+        "WI-15"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "No loan edit/disbursement command.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F26",
+      "title": "Loan approve / reject / bulk \"posting\" / publish",
+      "source_line": 86,
+      "status": "missing",
+      "work_items": [
+        "WI-14"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-decision.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Approve/reject/bulk publish/posting semantics absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F27",
+      "title": "Loan delete / bulk delete",
+      "source_line": 87,
+      "status": "missing",
+      "work_items": [
+        "WI-14",
+        "WI-16"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-decision.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Cancel/void/reversal equivalents absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F28",
+      "title": "Loan documents",
+      "source_line": 88,
+      "status": "missing",
+      "work_items": [
+        "WI-24"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/kosipa/document-storage.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Attachment create/remove/protected retrieval absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F29",
+      "title": "Rollover link (old loans netted into new)",
+      "source_line": 89,
+      "status": "missing",
+      "work_items": [
+        "WI-15"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-disbursement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Rollover links/netting absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F30",
+      "title": "Loan bulk import",
+      "source_line": 90,
+      "status": "missing",
+      "work_items": [
+        "WI-08",
+        "WI-13"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-application.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Loan import absent AND lacks explicit standalone task/WI acceptance; member import does not cover it.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F31",
+      "title": "Status refresh on list view",
+      "source_line": 91,
+      "status": "missing",
+      "work_items": [
+        "WI-04"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-loan.repository.ts",
+          "exists": true,
+          "line": 23
+        }
+      ],
+      "gap": "Computed replacement not wired; reader uses stored status_bayar.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F32",
+      "title": "Recalculate all statuses",
+      "source_line": 92,
+      "status": "retire",
+      "work_items": [
+        "WI-04"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-read.ts",
+          "exists": true,
+          "line": 91
+        }
+      ],
+      "gap": "Unsafe bulk refresh retired; read-derived replacement F31 still missing.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F33",
+      "title": "Early settlement (Pelunasan) + undo",
+      "source_line": 93,
+      "status": "missing",
+      "work_items": [
+        "WI-16"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-settlement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Checker early settlement and compensating undo absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F34",
+      "title": "Over-kredit / roll-over closing",
+      "source_line": 94,
+      "status": "missing",
+      "work_items": [
+        "WI-16"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/loan-settlement.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Over-kredit closing absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F35",
+      "title": "Active loan card, outstanding per member",
+      "source_line": 95,
+      "status": "equivalent",
+      "work_items": [
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/loan-read.ts",
+          "exists": true,
+          "line": 91
+        }
+      ],
+      "gap": "Recorded loan list/detail/schedule equivalent exists; official outstanding parity B1 remains.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F36",
+      "title": "Loan print (form, kartu, PDF)",
+      "source_line": 96,
+      "status": "missing",
+      "work_items": [
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Loan form/card/cashbon/PDF print absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F37",
+      "title": "Payroll batch create / edit header",
+      "source_line": 102,
+      "status": "missing",
+      "work_items": [
+        "WI-18"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/payroll.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Batch create/edit absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F38",
+      "title": "Generate matrix (simulation)",
+      "source_line": 103,
+      "status": "partial",
+      "work_items": [
+        "WI-19"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/payroll.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Read and returns-aware reconciliation only; no native generation.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F39",
+      "title": "Matrix line add / edit / delete / delete all / totals",
+      "source_line": 104,
+      "status": "missing",
+      "work_items": [
+        "WI-18"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/payroll.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Matrix line CRUD/bulk/totals absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F40",
+      "title": "Upload TOKO deductions / full matrix",
+      "source_line": 105,
+      "status": "missing",
+      "work_items": [
+        "WI-18"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/payroll.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "TOKO deductions/full-matrix staged upload absent; task acceptance needs explicit line/import scope.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F41",
+      "title": "Approve batch + instalment settlement",
+      "source_line": 106,
+      "status": "partial",
+      "work_items": [
+        "WI-18"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/payroll-settlement.ts",
+          "exists": true,
+          "line": 14
+        }
+      ],
+      "gap": "Pure batch settlement planner exists; no approval transaction.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F42",
+      "title": "Payroll slip print",
+      "source_line": 107,
+      "status": "partial",
+      "work_items": [
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/payroll.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Member payroll detail is read equivalent; authenticated rendered/print slip missing, so inventory Existing overstates print parity.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F43",
+      "title": "PPOB member billing (Tagihan)",
+      "source_line": 108,
+      "status": "missing",
+      "work_items": [
+        "WI-22"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/ppob-bill.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Native bills lifecycle/order reconciliation absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F44",
+      "title": "SHU document create/edit, base list generation, allocation, detail edit, upload, delete, process",
+      "source_line": 114,
+      "status": "partial",
+      "work_items": [
+        "WI-21"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/shu-allocation.ts",
+          "exists": true,
+          "line": 12
+        }
+      ],
+      "gap": "Allocation helper only; document/generation/import/approval absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F45",
+      "title": "Savings deduction change request approval",
+      "source_line": 120,
+      "status": "partial",
+      "work_items": [
+        "WI-09"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/public-savings/service.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Public secure-link OPEN request intake only; approval/reject/cancel/config effects absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F46",
+      "title": "Mobile withdrawal processing",
+      "source_line": 121,
+      "status": "missing",
+      "work_items": [
+        "WI-11"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/withdrawal.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Mobile withdrawal conversion/decision absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F47",
+      "title": "Mobile loan application processing",
+      "source_line": 122,
+      "status": "missing",
+      "work_items": [
+        "WI-17"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/request-decision.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Mobile loan conversion absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F48",
+      "title": "Duplicate mobile controllers under `simpanan/`",
+      "source_line": 123,
+      "status": "retire",
+      "work_items": [
+        "WI-09",
+        "WI-11"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/request-decision.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "Duplicate mobile controllers retired in favor of canonical request commands, which are missing.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F49",
+      "title": "PPOB products, sales approve/reject/status check, purchases, sales report",
+      "source_line": 129,
+      "status": "hold",
+      "work_items": [
+        "WI-25"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/kosipa/commands/ppob-bill.ts",
+          "exists": false,
+          "line": null
+        }
+      ],
+      "gap": "PPOB/IAK mutations intentionally HOLD; no complete native sales integration.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F50",
+      "title": "Reports: savings cash, loan cash, outstanding per product (2 duplicate families), bank, kasbon, pembiayaan, transaction cash, Excel export",
+      "source_line": 130,
+      "status": "partial",
+      "work_items": [
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/infrastructure/repositories/kosipa-report.repository.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Five report families/CSV exist; remaining legacy families and totals parity absent.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F51",
+      "title": "Dashboard KPIs + notifications",
+      "source_line": 131,
+      "status": "partial",
+      "work_items": [
+        "WI-24"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/components/console/DashboardClientWidgets.tsx",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Console widgets only; verified KOSIPA KPI/notification read-update parity incomplete.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F52",
+      "title": "KOSIPA reference masters (17): jenis simpanan / pinjaman / pembiayaan (with COA account), jenis dokumen, jenis pembayaran, suku bunga, periode angsuran, rekening bank, bagian, lokasi, divisi, jabatan, cabang, daftar pajak, mata uang, kategori beban, master surat",
+      "source_line": 137,
+      "status": "partial",
+      "work_items": [
+        "WI-06"
+      ],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        }
+      ],
+      "gap": "5/17 implemented natively; 12 masters outstanding.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F53",
+      "title": "TOKO catalog masters written by KOSIPA (brand, kategori barang, satuan) + `barang_c` list",
+      "source_line": 138,
+      "status": "retire",
+      "work_items": [],
+      "evidence": [
+        {
+          "path": "packages/domain/src/kosipa/master.ts",
+          "exists": true,
+          "line": 16
+        }
+      ],
+      "gap": "TOKO owns catalog masters; dormant m_barang HOLD sub-scope must remain explicit.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F54",
+      "title": "Staff users, groups & access rights, menu admin, profile/password, password reset, login/logout, access log, business settings",
+      "source_line": 139,
+      "status": "partial",
+      "work_items": [
+        "WI-02",
+        "WI-24"
+      ],
+      "evidence": [
+        {
+          "path": "packages/application/src/console/kosipa-grants.ts",
+          "exists": true,
+          "line": 73
+        }
+      ],
+      "gap": "Console auth/identity/grants exist; settings absent; legacy login/menu/md5 intentionally retire. Staff-user/group administration parity needs explicit review.",
+      "production_acceptance": "not established"
+    },
+    {
+      "id": "F55",
+      "title": "Public settings API, root print documents (8), error pages",
+      "source_line": 140,
+      "status": "partial",
+      "work_items": [
+        "WI-23"
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/src/app/api/kosipa/savings-applications/[id]/pdf/route.ts",
+          "exists": true,
+          "line": 1
+        }
+      ],
+      "gap": "Request PDF is a protected slice; business public-setting replacement/root print families/error retirement incomplete.",
+      "production_acceptance": "not established"
+    }
+  ],
+  "counts": {
+    "requirements_total": 107,
+    "requirements_by_kind": {
+      "REQ": 42,
+      "BR": 20,
+      "VAL": 12,
+      "SEC": 12,
+      "NFR": 8,
+      "OBS": 5,
+      "MIG": 8
+    },
+    "requirements_by_status": {
+      "partial": 62,
+      "exact": 8,
+      "missing": 34,
+      "equivalent": 3
+    },
+    "tasks_total": 42,
+    "tasks_document_checkboxes": {
+      "unchecked": 30,
+      "partial": 6,
+      "checked-local-only": 6
+    },
+    "tasks_audit_status": {
+      "partial": 18,
+      "missing": 20,
+      "exact": 4
+    },
+    "work_items_total": 25,
+    "work_items_WI01_WI23": 23,
+    "work_items_status": {
+      "partial": 11,
+      "missing": 13,
+      "hold": 1
+    },
+    "legacy_features_total": 55,
+    "legacy_features_status": {
+      "equivalent": 3,
+      "missing": 33,
+      "partial": 13,
+      "retire": 4,
+      "not_live": 1,
+      "hold": 1
+    },
+    "native_masters_implemented": 5,
+    "native_masters_missing": 12,
+    "native_financial_command_families_implemented": 0,
+    "production_acceptance_established_by_audit": 0,
+    "status_inconsistencies": 16
+  },
+  "owner_decisions_after_baseline": [
+    {
+      "id": "FD-27",
+      "scope": "verified legacy business parity with security/integrity corrections"
+    },
+    {
+      "id": "FD-28",
+      "scope": "bank/status single authorized operator, reason+audit mandatory; financial maker-checker unchanged"
+    },
+    {
+      "id": "FD-29",
+      "scope": "IAK sales in scope for sandbox, no automatic paid production transactions"
+    }
+  ]
+}

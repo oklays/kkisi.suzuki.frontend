@@ -24,6 +24,18 @@ OD-1 … OD-6 and UCKW:BR001–BR013 — see [05 §1](05_BUSINESS_RULES_AND_FINA
 
 The owner explicitly authorized KOSIPA access for all roles except KASIR, a new production administrator account for monitoring, and redeployment to .178. The scope is read access: under `KOSIPA_READ_ACCESS_MODE=non-cashier`, active non-cashier roles receive the five existing view capabilities; KASIR/CASHIER, inactive and unknown roles are denied. Role mode does not fabricate a legacy actor or confer writes, exports or grant administration. The original linked policy remains the default outside this mode. The authorization includes additive provisioning of the reviewed isolated console audit store and a separate `monitor_admin` login using existing role 2; it does not authorize financial-data changes or resolve FD-22/FD-23. See [design](../kosipa-production-role-access/design.md) and [verification](../kosipa-production-role-access/verification.md).
 
+### FD-27 — full replacement execution baseline (owner, 6 November 2026)
+
+The owner requested completion of all pending Full Access work so the native application replaces Legacy KOSIPA, and selected **verified legacy business parity with security and integrity corrections**. This authorizes implementation and verification of the complete existing inventory, not merely monitoring. It does not silently approve proposed changes to normal monetary formulas, schedules, SHU financial effects, GL posting or period closing. Runtime and production acceptance remain separate from a completed local checkpoint. See [complete baseline](completion/STATUS.md).
+
+### FD-28 — bank and member-status control (owner, 6 November 2026)
+
+The owner selected **one authorized operator, matching legacy, with mandatory reason and audit** for bank-account and member-status changes. This resolves that subset of FD-17; it does not remove maker/checker separation for the financial approval/disbursement/reversal/settlement/payroll/exit/SHU commands in BR-105. Do not add an unrequested second approver to these member operations.
+
+### FD-29 — PPOB/IAK sales included with sandbox verification (owner, 6 November 2026)
+
+The owner explicitly included WI-25/F49 in the replacement scope: implement and test using the provider sandbox, **without automatic paid production transactions**. Member PPOB billing/payroll remains separately required. The earlier HOLD is superseded for implementation/sandbox verification only; production paid execution is not an automated acceptance test or a side effect of provisioning/deployment. Preserve fail-closed environment/credential separation, per-action authorization and replay protection.
+
 ## 3. Open decisions (new)
 
 | ID | Decision | Options | Recommendation | Blocks | Owner |

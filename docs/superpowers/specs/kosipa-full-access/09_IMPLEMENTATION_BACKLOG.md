@@ -1,6 +1,6 @@
 # 09 — Implementation backlog (dependency-ordered)
 
-Status: **PROPOSED, not started.** No work item may start before its decisions are approved; none may be activated in production before its cutover gates in [11](11_CUTOVER_AND_ROLLBACK_PLAN.md). Atomic tasks per work item are in [tasks.md](tasks.md).
+Status update 6 Nov 2026: local foundation and five masters exist; member and financial command families remain pending. [Full audited baseline](completion/STATUS.md) enumerates every item. Owner decisions FD-27/28/29 authorize verified-parity implementation, single-operator bank/status controls and IAK sandbox scope. Historical baseline: **PROPOSED, not started.** No work item may start before its decisions are approved; none may be activated in production before its cutover gates in [11](11_CUTOVER_AND_ROLLBACK_PLAN.md). Atomic tasks per work item are in [tasks.md](tasks.md).
 
 Path conventions (existing repo layout): domain `packages/domain/src/kosipa/`, use cases `packages/application/src/kosipa/commands/`, writers `apps/web/src/infrastructure/repositories/kosipa-<ctx>-write.repository.ts`, writer clients `apps/web/src/infrastructure/db/prisma-kosipa-<ctx>-write.ts`, API `apps/web/src/app/api/kosipa/**`, pages `apps/web/src/app/console/kosipa/**`, local grant scripts `apps/web/scripts/setup-kosipa-<ctx>-write.mjs`, production review SQL `docs/migration/sql/kosipa-<ctx>-writer-production.sql`, tests in each package's `tests/`.
 

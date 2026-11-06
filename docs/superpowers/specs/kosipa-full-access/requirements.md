@@ -130,9 +130,9 @@ Read side, documents, operations
 - `REQ-136`: Business settings.
   - **EARS Acceptance Criteria**: WHEN business settings change, THE SYSTEM SHALL require `kosipa.config.manage` with a second confirmation and SHALL audit before/after.
   - **Traceability**: F54 (`bisnis_c`).
-- `REQ-137`: PPOB sales operations stay on HOLD.
-  - **EARS Acceptance Criteria**: WHILE FD for PPOB is open, THE SYSTEM SHALL provide read-only PPOB visibility only and SHALL NOT call IAK.
-  - **Traceability**: F49.
+- `REQ-137`: PPOB/IAK sales integration and sandbox verification (FD-29, owner 6 Nov 2026).
+  - **EARS Acceptance Criteria**: WHEN an authorised user exercises a supported legacy PPOB sales operation in the configured sandbox, THE SYSTEM SHALL execute it through the native provider adapter with per-action permission, server-validated values, auditable request identity, replay protection and status reconciliation. THE SYSTEM SHALL keep sandbox and production credentials/targets separate and SHALL NOT initiate paid production transactions automatically during testing, provisioning or deployment. Without a verified configuration, THE SYSTEM SHALL fail closed.
+  - **Traceability**: F49, WI-25, owner scope decision FD-29. The earlier implementation HOLD is superseded; member PPOB billing remains REQ-126.
 - `REQ-138`: Characterization and reconciliation harness.
   - **EARS Acceptance Criteria**: WHEN a feature is proposed for cutover, THE SYSTEM SHALL have passing characterization tests of the legacy behaviour on a synthetic staging database and a reconciliation report showing zero unexplained differences.
   - **Traceability**: PRD §10.
