@@ -86,6 +86,9 @@ async function request(controller, action, values, { error = false } = {}) {
 async function scenario(run) {
   const cleanup = [];
   const owned = new Set();
+  const userIds = new Set(), tokenIds = new Set();
+  // Numeric binding also detects coercion aliases; string binding matches the quoted legacy predicate.
+  const reachableTokens = (id) => sql('SELECT id FROM oauth_access_tokens WHERE id=? OR id=? OR user_id=?', [id,String(id),id]);
   const own = async () => {
     for (;;) {
       const nik = `S${randomBytes(4).toString('hex').toUpperCase()}`;
@@ -104,11 +107,35 @@ async function scenario(run) {
     const result = await sql(`INSERT INTO \`${table}\` (${keys.map((k) => `\`${k}\``).join(',')}) VALUES (${keys.map(() => '?').join(',')})`, Object.values(values));
     const id = values.id ?? result.insertId;
     cleanup.push(() => sql(`DELETE FROM \`${table}\` WHERE id=?`, [id]));
+    if (table === 'users') userIds.add(Number(id));
+    if (table === 'oauth_access_tokens') tokenIds.add(String(id));
     return id;
   };
-  const user = async (m) => insert('users', { nik: m.nik, ktp: m.nik, name: `SYNTH OLD ${m.nik}`, phone: m.nik, image: '', email: `old-${m.nik}@example.invalid`, password: 'synthetic-unused', persetujuan: 1, wallet_balance: 9, wallet_balance_ppob: 8, is_active: 1, is_delete: 0, admin_verifikasi: 1, temporary_token: 'SYNTH', bagian: 'SYNTH OLD BAGIAN', lokasi: 'SYNTH OLD LOKASI', no_rek: 'SYNTH OLD REK', bank_rek: 'SYNTH OLD BANK', kd_group: 'SYNTH OLD GROUP' });
+  const user = async (m) => {
+    const [{ next }] = await sql("SELECT AUTO_INCREMENT AS next FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users'");
+    const start=Number(next);
+    assert.ok(Number.isSafeInteger(start) && start>0 && Number.isSafeInteger(start+999),'KFA_USER_ID_RANGE');
+    for (let id=start;id<start+1000;id++) {
+      if ((await sql('SELECT id FROM users WHERE id=?',[id])).length || (await reachableTokens(id)).length) continue;
+      return insert('users', { id, nik: m.nik, ktp: `SYNTH-OLD-${m.nik}`, name: `SYNTH OLD ${m.nik}`, phone: `SYNTH-OLD-${m.nik}`, street_address: 'SYNTH OLD STREET', image: '', email: `old-${m.nik}@example.invalid`, password: 'synthetic-unused', persetujuan: 1, wallet_balance: 9, wallet_balance_ppob: 8, is_active: 1, is_delete: 0, admin_verifikasi: 1, temporary_token: 'SYNTH', bagian: 'SYNTH OLD BAGIAN', lokasi: 'SYNTH OLD LOKASI', no_rek: 'SYNTH OLD REK', bank_rek: 'SYNTH OLD BANK', kd_group: 'SYNTH OLD GROUP' });
+    }
+    throw new Error('KFA_NO_SAFE_SYNTHETIC_USER_ID');
+  };
   const deduction = (m, patch = {}) => insert('m_simpanan_aktif', { nik_kar: m.nik, nama_kar: `SYNTH OLD ${m.nik}`, kd_group: 'SYNTH OLD', jenis_simpanan: 'SIMPANAN POKOK', potongan_old: 0, potongan_payroll: 77, is_mobile: 0, status: 1, ...patch });
-  try { await run({ own, member, insert, user, deduction }); }
+  const update = async (ctl, m, patch = {}) => {
+    const values={ ...m.form, id:String(m.id), ...patch };
+    if (values.status_anggota !== 'AKTIVE') {
+      const users=await sql('SELECT id FROM users WHERE nik=?',[values.nik_kar]);
+      assert.ok(users.length<=1,'KFA_AMBIGUOUS_USER');
+      for (const u of users) {
+        const id=Number(u.id);
+        assert.ok(userIds.has(id),'KFA_UNOWNED_USER');
+        for (const token of await reachableTokens(id)) assert.ok(tokenIds.has(token.id),'KFA_UNOWNED_TOKEN');
+      }
+    }
+    return request(ctl,'ajax_update',values);
+  };
+  try { await run({ own, member, insert, user, deduction, update }); }
   finally {
     const errors=[];
     for (const f of cleanup.reverse()) { try { await f(); } catch (e) { errors.push(e); } }
@@ -122,7 +149,6 @@ async function scenario(run) {
 const row = async (table, id) => (await sql(`SELECT * FROM \`${table}\` WHERE id=?`, [id]))[0];
 const memberByNik = async (nik) => (await sql('SELECT * FROM m_anggota WHERE nik_kar=?', [nik]));
 const configs = (nik) => sql('SELECT * FROM m_simpanan_aktif WHERE nik_kar=? ORDER BY jenis_simpanan,id', [nik]);
-const update = (ctl, m, patch = {}) => request(ctl, 'ajax_update', { ...m.form, id: String(m.id), ...patch });
 const strict = (enabled) => execFileSync('docker', ['exec', container, 'php', '-r', 'file_put_contents("/tmp/kfa-member-sql-mode", $argv[1]);', enabled ? 'STRICT_ALL_TABLES' : LEGACY_SQL_MODE], { encoding: 'utf8' });
 
 for (const ctl of controllers) {
@@ -158,14 +184,14 @@ for (const ctl of controllers) {
       await assert.rejects(sql('INSERT INTO m_anggota (nik_kar,gaji,surat_kuasa) VALUES (?,0,0)', [nik]), /Field 'gaji_minus' doesn't have a default value/);
     } finally { await sql('SET SESSION sql_mode=?', [LEGACY_SQL_MODE]); }
   }));
-  test(`MC04 ${ctl}: create/edit copy tgl_masuk into tgl_karyawan; empty optional dates become NULL`, options, async () => scenario(async ({ own }) => {
+  test(`MC04 ${ctl}: create/edit copy tgl_masuk into tgl_karyawan; empty optional dates become NULL`, options, async () => scenario(async ({ own,update }) => {
     const nik = await own(); await request(ctl, 'ajax_add', form(nik, { tgl_karyawan: '2020-01-02', tgl_masuk: '2021-03-04' }));
     let [m] = await memberByNik(nik); assert.deepEqual([m.tgl_karyawan,m.tgl_masuk,m.tgl_daftar,m.tgl_lahir,m.tgl_keluar], ['2021-03-04','2021-03-04',null,null,null]);
     await update(ctl, { id: m.id, form: form(nik) }, { tgl_karyawan: '2022-05-06', tgl_masuk: '2023-07-08' });
     [m] = await memberByNik(nik); assert.deepEqual([m.tgl_karyawan,m.tgl_masuk], ['2023-07-08','2023-07-08']);
     await update(ctl, { id: m.id, form: form(nik) }); [m] = await memberByNik(nik); assert.deepEqual([m.tgl_karyawan,m.tgl_masuk], [null,null]);
   }));
-  test(`MC05 ${ctl}: mismatched id/NIK corrupts another member's mobile profile and deductions`, options, async () => scenario(async ({ member,user,deduction }) => {
+  test(`MC05 ${ctl}: mismatched id/NIK corrupts another member's mobile profile and deductions`, options, async () => scenario(async ({ member,user,deduction,update }) => {
     const a = await member(), b = await member(); const ua = await user(a), ub = await user(b); await deduction(a); await deduction(b);
     const beforeA = await row('users',ua), beforeB = await row('m_anggota',b.id), configA = await configs(a.nik);
     await update(ctl, a, { nik_kar: b.nik, sim_pokok: '432', nama_kar: `SYNTH WRONG ${a.nik}`, ktp: `SYNTH${a.nik}` });
@@ -173,15 +199,19 @@ for (const ctl of controllers) {
     assert.deepEqual(await row('m_anggota',b.id), beforeB); assert.deepEqual(await row('users',ua),beforeA);
     assert.equal((await row('users',ub)).name, `SYNTH WRONG ${a.nik}`); assert.equal(Number((await configs(b.nik))[0].potongan_payroll),432); assert.deepEqual(await configs(a.nik),configA);
   }));
-  test(`MC06 ${ctl}: exactly five profile fields mirror; wallet uses gaji_minus or limits; bank/group/location stay unchanged`, options, async () => scenario(async ({ member,user }) => {
+  test(`MC06 ${ctl}: exactly five profile fields mirror; wallet uses gaji_minus or limits; bank/group/location stay unchanged`, options, async () => scenario(async ({ member,user,update }) => {
     const m = await member(); const id = await user(m); const initial = await row('users',id);
+    const mirrors = { ktp:'ktp', name:'nama_kar', phone:'no_telp', email:'email', street_address:'alamat_tinggal' };
+    for (const [key,field] of Object.entries(mirrors)) assert.notEqual(initial[key],m.form[field],`${key} must differ before the mirror write`);
     await update(ctl,m,{ limit_toko:'123',limit_ppob:'45' });
-    let u = await row('users',id); assert.deepEqual([u.ktp,u.name,u.phone,u.email,u.street_address],[m.form.ktp,m.form.nama_kar,m.form.no_telp,m.form.email,m.form.alamat_tinggal]);
+    let u = await row('users',id);
+    for (const key of Object.keys(mirrors)) assert.notEqual(u[key],initial[key],`${key} must actually change`);
+    assert.deepEqual([u.ktp,u.name,u.phone,u.email,u.street_address],[m.form.ktp,m.form.nama_kar,m.form.no_telp,m.form.email,m.form.alamat_tinggal]);
     assert.deepEqual([Number(u.wallet_balance),Number(u.wallet_balance_ppob)],[123,45]);
     for (const k of ['bagian','lokasi','no_rek','bank_rek','kd_group']) assert.equal(u[k],initial[k]);
     await update(ctl,m,{ gaji_minus:'67',limit_toko:'123',limit_ppob:'45' }); u=await row('users',id); assert.deepEqual([Number(u.wallet_balance),Number(u.wallet_balance_ppob)],[67,0]);
   }));
-  for (const status of ['LUAR BIASA','KONTRAK','RESIGN','PENSIUN']) test(`MC07 ${ctl} AKTIVE→${status}: positive gaji_minus recredits disabled wallet (legacy defect)`, options, async () => scenario(async ({ member,user,deduction }) => {
+  for (const status of ['LUAR BIASA','KONTRAK','RESIGN','PENSIUN']) test(`MC07 ${ctl} AKTIVE→${status}: positive gaji_minus recredits disabled wallet (legacy defect)`, options, async () => scenario(async ({ member,user,deduction,update }) => {
     const m=await member(); const id=await user(m); await deduction(m); const configBefore=await configs(m.nik);
     await update(ctl,m,{ status_anggota:status,gaji:'1000',gaji_minus:'67',limit_toko:'123',limit_ppob:'45',tgl_keluar:'2026-01-01' });
     const saved=await row('m_anggota',m.id),u=await row('users',id);
@@ -189,7 +219,7 @@ for (const ctl of controllers) {
     assert.deepEqual([u.is_active,u.admin_verifikasi,u.is_delete,u.temporary_token,Number(u.wallet_balance),Number(u.wallet_balance_ppob)],[0,0,1,'',67,0]);
     assert.deepEqual(await configs(m.nik),configBefore);
   }));
-  test(`MC08 ${ctl}: differing token predicates with multiple owned tokens and unrelated id trap`, options, async () => scenario(async ({ member,user,insert }) => {
+  test(`MC08 ${ctl}: differing token predicates with multiple owned tokens and unrelated id trap`, options, async () => scenario(async ({ member,user,insert,update }) => {
     const a=await member(),b=await member();const ua=await user(a),ub=await user(b);
     const ids=[`SYNTH-${a.nik}-1`,`SYNTH-${a.nik}-2`,String(ua),`SYNTH-${b.nik}-1`];
     assert.equal((await sql('SELECT id FROM oauth_access_tokens WHERE id=?',[String(ua)])).length,0,'trap id must be unused');
@@ -198,13 +228,54 @@ for (const ctl of controllers) {
     const remaining=(await sql('SELECT id FROM oauth_access_tokens WHERE user_id IN (?,?) ORDER BY id',[ua,ub])).map((r)=>r.id).sort();
     assert.deepEqual(remaining, (ctl.startsWith('master/') ? [ids[2],ids[3]] : [ids[0],ids[1],ids[3]]).sort());
   }));
-  test(`MC09 ${ctl}: status transition without mobile user succeeds without phantom users/tokens`, options, async () => scenario(async ({ member }) => {
+  test(`MC07/08 preservation ${ctl}: allocation skips numeric token ids, coercion aliases and orphan user_id`, options, async () => scenario(async ({ member,user,update }) => {
+    const [{ next }] = await sql("SELECT AUTO_INCREMENT AS next FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users'");
+    const start=Number(next);
+    assert.ok(Number.isSafeInteger(start) && start>0);
+    const tokens=[{id:String(start),user_id:null},{id:`${start}SYNTH`,user_id:null},{id:`SYNTH-ORPHAN-${start}`,user_id:start+1},{id:`${start+2}SYNTH`,user_id:null}];
+    const inserted=[];
+    try {
+      assert.equal((await sql('SELECT id FROM users WHERE id BETWEEN ? AND ?',[start,start+2])).length,0);
+      for (const token of tokens) {
+        assert.equal((await sql('SELECT id FROM oauth_access_tokens WHERE id=?',[token.id])).length,0);
+        await sql('INSERT INTO oauth_access_tokens (id,user_id,client_id,revoked,name) VALUES (?,?,1,0,?)',[token.id,token.user_id,'SYNTH PRESERVE']);
+        inserted.push(token.id);
+      }
+      const before=await Promise.all(tokens.map((t)=>row('oauth_access_tokens',t.id)));
+      const m=await member(),id=await user(m);
+      // RED must stop here, before the unsafe legacy deletion can run.
+      assert.ok(id>start+2,'allocator must skip all token collision candidates before any legacy call');
+      await update(ctl,m,{status_anggota:'RESIGN'});
+      assert.deepEqual(await Promise.all(tokens.map((t)=>row('oauth_access_tokens',t.id))),before);
+    } finally {
+      for (const id of inserted) await sql('DELETE FROM oauth_access_tokens WHERE id=? AND name=?',[id,'SYNTH PRESERVE']);
+    }
+  }));
+  test(`MC07/08 boundary ${ctl}: new unowned token collision refuses status request before any write`, options, async () => scenario(async ({ member,user,update }) => {
+    const m=await member(),id=await user(m),token=`SYNTH-BOUNDARY-${m.nik}`;
+    const tokens=[String(id),token];
+    const inserted=[];
+    try {
+      for (const key of tokens) {
+        assert.equal((await sql('SELECT id FROM oauth_access_tokens WHERE id=?',[key])).length,0);
+        await sql('INSERT INTO oauth_access_tokens (id,user_id,client_id,revoked,name) VALUES (?,?,1,0,?)',[key,key===token?id:null,'SYNTH PRESERVE']);
+        inserted.push(key);
+      }
+      const before=await Promise.all(tokens.map((key)=>row('oauth_access_tokens',key))),memberBefore=await row('m_anggota',m.id),userBefore=await row('users',id);
+      await assert.rejects(update(ctl,m,{status_anggota:'RESIGN'}),/KFA_UNOWNED_TOKEN/);
+      assert.deepEqual(await Promise.all(tokens.map((key)=>row('oauth_access_tokens',key))),before);
+      assert.deepEqual(await row('m_anggota',m.id),memberBefore);assert.deepEqual(await row('users',id),userBefore);
+    } finally {
+      for (const key of inserted) await sql('DELETE FROM oauth_access_tokens WHERE id=? AND name=?',[key,'SYNTH PRESERVE']);
+    }
+  }));
+  test(`MC09 ${ctl}: status transition without mobile user succeeds without phantom users/tokens`, options, async () => scenario(async ({ member,update }) => {
     const m=await member();await update(ctl,m,{status_anggota:'PENSIUN',gaji_minus:'12',limit_toko:'10',limit_ppob:'9'});
     const saved=await row('m_anggota',m.id);assert.deepEqual([saved.status_anggota,Number(saved.limit_toko),Number(saved.limit_ppob),Number(saved.gaji_minus)],['PENSIUN',0,0,12]);
     assert.equal((await sql('SELECT id FROM users WHERE nik=?',[m.nik])).length,0);
     assert.equal((await sql('SELECT t.id FROM oauth_access_tokens t JOIN users u ON t.user_id=u.id WHERE u.nik=?',[m.nik])).length,0);
   }));
-  test(`MC10 ${ctl}: zero deduction leaves existing config; positive changes all duplicates without refreshing inactive status/name/group`, options, async () => scenario(async ({ member,deduction }) => {
+  test(`MC10 ${ctl}: zero deduction leaves existing config; positive changes all duplicates without refreshing inactive status/name/group`, options, async () => scenario(async ({ member,deduction,update }) => {
     const m=await member();await deduction(m,{status:0});await deduction(m,{status:1,potongan_payroll:88});const before=await configs(m.nik);
     await update(ctl,m,{sim_pokok:'0'});assert.deepEqual(await configs(m.nik),before);assert.equal(Number((await row('m_anggota',m.id)).sim_pokok),0);
     await update(ctl,m,{sim_pokok:'222',nama_kar:`SYNTH NEW ${m.nik}`,kd_group:'SYNTH NEW'});
