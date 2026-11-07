@@ -20,7 +20,12 @@ docker inspect -f '{{.State.Running}}' kkisi-staging 2>/dev/null | grep -q true 
 [ -f "$LOCAL/config.json" ] || die "no public savings staging: pnpm pss:setup"
 [ -d "$ROOT/apps/web/.next" ] || die "no build: pnpm build"
 [ -z "$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null)" ] || die "port $PORT is in use"
-(cd "$DEVLOCAL_DIR" && node scripts/lib/dev-local-preflight.mjs >/dev/null) || die "DEV LOCAL preflight refused the profile"
+disable_native_writers() {
+  export DATABASE_URL_KOSIPA_MASTER_WRITE='' DATABASE_URL_KOSIPA_MEMBER_WRITE='' DATABASE_URL_KOSIPA_SAVINGS_WRITE=''
+  export KOSIPA_MASTER_WRITES_ENABLED=false KOSIPA_MEMBER_WRITES_ENABLED=false KOSIPA_SAVINGS_WRITES_ENABLED=false
+}
+disable_native_writers
+(cd "$DEVLOCAL_DIR" && node "$ROOT/apps/web/scripts/lib/dev-local-preflight.mjs" --public-savings-console >/dev/null) || die "DEV LOCAL preflight refused the profile"
 (cd "$ROOT" && node integration/public-savings/staging.mjs status >/dev/null) || die "public savings staging sentinel check failed"
 
 # Synthetic mapping for the DEV LOCAL personas only:
@@ -35,6 +40,7 @@ fi
 chmod 600 "$POLICY"
 
 set -a; . "$DEVLOCAL_DIR/.env.dev-local"; set +a
+disable_native_writers
 export APP_ORIGIN="http://127.0.0.1:$PORT" PSS_LOCAL_STAGING=1 PSS_OPERATOR_AUTH=CONSOLE PSS_OPERATOR_POLICY_FILE="$POLICY" PSS_LOCAL_DIRECTORY="$LOCAL"
 cd "$ROOT/apps/web"
 echo "console-local: http://127.0.0.1:$PORT/console/kosipa/simpanan-sukarela (sign in as synth_koperasi)"

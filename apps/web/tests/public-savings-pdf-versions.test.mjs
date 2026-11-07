@@ -118,7 +118,7 @@ test('an unknown or malformed template version fails closed, and an unrepresenta
 test('version registry: new submissions pin v2, v1 stays registered, and each version names its own renderer', () => {
   assert.equal(CURRENT_PDF_TEMPLATE, 'kkisi-pss-a4/v2');
   assert.equal(LEGACY_PDF_TEMPLATE, 'kkisi-pss-a4/v1');
-  assert.deepEqual(Object.keys(PDF_TEMPLATES), ['kkisi-pss-a4/v1', 'kkisi-pss-a4/v2']);
+  assert.deepEqual(Object.keys(PDF_TEMPLATES), ['kkisi-pss-a4/v1', 'kkisi-pss-a4/v2', 'kkisi-pss-wajib-a4/v1', 'kkisi-pss-wajib-a4/v2']);
   assert.equal(PDF_TEMPLATES['kkisi-pss-a4/v1'].renderer, 'pdf-lib-1.17.1/kkisi-pss-v1');
   assert.notEqual(PDF_TEMPLATES['kkisi-pss-a4/v1'].renderer, PDF_TEMPLATES['kkisi-pss-a4/v2'].renderer);
 });
@@ -130,7 +130,8 @@ test('version binding: retries render with the persisted version, new submission
   assert.match(service, /renderSubmissionPdf\(\{[^}]*templateVersion:env\.templateVersion/);
   assert.match(service, /artifact\.rendererVersion!==env\.rendererVersion\)deny\('PDF_TEMPLATE_UNSUPPORTED'\)/);
   // Only a brand-new submission may choose a version, and it chooses the current one from the registry.
-  assert.equal((service.match(/templateVersion:/g) ?? []).length, 3, 'envelope type, appendSubmission and the render job are the only places');
+  assert.match(service, /savingsType==='SIMPANAN WAJIB'\?WAJIB_PDF_TEMPLATE/);
+  assert.match(service, /templateVersion:template\.templateVersion,rendererVersion:template\.rendererVersion/);
   assert.match(service, /templateVersion:CURRENT_PDF_TEMPLATE,rendererVersion:PDF_TEMPLATES\[CURRENT_PDF_TEMPLATE\]\.renderer/);
   assert.doesNotMatch(service, /kkisi-pss-a4\/v[0-9]/, 'no hard-coded template literal in the service');
 });

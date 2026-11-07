@@ -1,19 +1,22 @@
-import {publicSavingsStagingEnabled} from '../../features/public-savings/flags.ts';
+import {publicSavingsStagingEnabled,publicSavingsReplicaUatEnabled} from '../../features/public-savings/flags.ts';
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 export interface StagingConfig {
-  mode: 'LOCAL_SYNTHETIC'; host: '127.0.0.1'; port: number; database: 'kkisi_public_savings'; installationId: string;
+  mode: 'LOCAL_SYNTHETIC' | 'LOCAL_REPLICA_UAT'; host: '127.0.0.1'; port: number; database: 'kkisi_public_savings' | 'kkisi_staging'; installationId: string;
   app: {user:string;password:string}; legacy:{user:string;password:string};
   encryptionKeyHex:string; hashKey:string; operatorKey:string;
 }
 /** An intentionally local-only activation boundary. Production integration must supply a separately verified deployment adapter. */
 export function validateStagingConfig(input: unknown): StagingConfig {
   const c=input as StagingConfig;
-  if (!c || c.mode!=='LOCAL_SYNTHETIC' || c.host!=='127.0.0.1' || c.database!=='kkisi_public_savings'
-    || !Number.isInteger(c.port) || c.port<3310 || c.port>3399 || !/^[0-9a-f]{32}$/.test(c.installationId)
-    || !c.app || !['pss_app','pss_public'].includes(c.app.user) || c.app.password.length<16 || !c.legacy || c.legacy.user!=='pss_legacy'
+  const synthetic=c?.mode==='LOCAL_SYNTHETIC' && c.database==='kkisi_public_savings' && Number.isInteger(c.port) && c.port>=3310 && c.port<=3399
+    && ['pss_app','pss_public'].includes(c.app?.user) && c.legacy?.user==='pss_legacy';
+  const replica=c?.mode==='LOCAL_REPLICA_UAT' && publicSavingsReplicaUatEnabled() && c.port===3307 && c.database==='kkisi_staging'
+    && c.app?.user==='pss_replica_public' && c.legacy?.user==='pss_replica_legacy';
+  if (!c || (!synthetic&&!replica) || c.host!=='127.0.0.1' || !/^[0-9a-f]{32}$/.test(c.installationId)
+    || typeof c.app?.password!=='string' || c.app.password.length<16 || typeof c.legacy?.password!=='string' || c.legacy.password.length<16
     || ![c.encryptionKeyHex,c.hashKey,c.operatorKey].every(k=>typeof k==='string' && /^[0-9a-f]{64}$/.test(k))) throw new Error('STAGING_CONFIGURATION_INVALID');
   return c;
 }

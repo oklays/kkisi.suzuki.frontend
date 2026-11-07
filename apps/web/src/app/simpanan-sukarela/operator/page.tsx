@@ -6,4 +6,4 @@ import '@/components/public-savings/public-savings.css';
 
 export const metadata: Metadata = {title:'Local Staging Operator | KKISI',robots:{index:false,follow:false},referrer:'no-referrer'};
 export const dynamic = 'force-dynamic';
-export default function PublicSavingsOperatorPage() {if(!publicSavingsStagingEnabled())notFound();return <OperatorWorkbench />;}
+export default function PublicSavingsOperatorPage() {if(!publicSavingsStagingEnabled()||process.env.PSS_OPERATOR_AUTH==='CONSOLE')notFound();return <OperatorWorkbench />;}

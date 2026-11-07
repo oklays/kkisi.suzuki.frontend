@@ -51,3 +51,99 @@ test('role-policy lookup outage removes KOSIPA access while retaining independen
   assert.equal(access.kosipa, 'unavailable');
   assert.deepEqual([...access.capabilities], ['toko.products.view']);
 });
+
+function roleWriter(overrides = {}) {
+  const calls = [];
+  const kosipa = {
+    roleWriteGrantsEnabled: true,
+    links: { async activeForConsoleUser(id) { calls.push(['link', id]); return { externalUserId: 9102, status: 'active' }; } },
+    kosipa: { async kosipaUser(id) { calls.push(['user', id]); return { id, active: true, activeGroups: 1 }; }, async allowedMenuUrls() { throw new Error('fenced menus must not control role entitlement or actor'); } },
+    grants: { async activeCapabilities(id) { calls.push(['grant', id]); return ['kosipa.master.manage', 'kosipa.loan.disburse', 'kosipa.future.manage']; } },
+    grantAdmins: new Set([23]),
+    exportPolicy: { enabled: true, allowedUserIds: new Set([23]) },
+    ...overrides,
+  };
+  const permissions = { async grantedAmong() { return new Set(['users_edit', 'items_view']); }, async kosipaRoleAccess() { return 'allowed'; } };
+  return { sources: { permissions, kosipa }, calls };
+}
+
+test('explicit role write opt-in resolves a real actor and implemented per-user grants independently of fenced menus', async () => {
+  const f = roleWriter();
+  const access = await resolveConsoleAccess(f.sources, subject);
+  assert.equal(access.kosipa, 'role');
+  assert.equal(access.kosipaUserId, 9102);
+  assert.deepEqual([...access.capabilities].filter(c => c.startsWith('kosipa.')).sort(), [...KOSIPA_CAPABILITIES, 'kosipa.master.manage'].sort());
+  assert.equal(access.capabilities.has('iam.kosipa.grant'), true);
+  assert.deepEqual(f.calls, [['link', 23], ['user', 9102], ['grant', 23]]);
+});
+
+test('role write opt-out makes no identity or grant lookup even with configured grants', async () => {
+  const f = roleWriter({ roleWriteGrantsEnabled: false });
+  const access = await resolveConsoleAccess(f.sources, subject);
+  assert.equal(access.kosipaUserId, null);
+  assert.deepEqual(f.calls, []);
+  assert.deepEqual([...access.capabilities].filter(c => c.startsWith('kosipa.')).sort(), [...KOSIPA_CAPABILITIES].sort());
+});
+
+test('valid role actor without an active per-user grant receives no writes', async () => {
+  const f = roleWriter({ grants: { async activeCapabilities() { return []; } } });
+  const access = await resolveConsoleAccess(f.sources, subject);
+  assert.equal(access.kosipaUserId, 9102);
+  assert.equal(access.capabilities.has('kosipa.master.manage'), false);
+});
+
+for (const state of ['missing', 'revoked', 'inactive', 'ungrouped']) {
+  test(`role monitoring survives ${state} identity without fabricating an actor or writes`, async () => {
+    const f = roleWriter();
+    if (state === 'missing') f.sources.kosipa.links.activeForConsoleUser = async () => null;
+    if (state === 'revoked') f.sources.kosipa.links.activeForConsoleUser = async () => ({ externalUserId: 9102, status: 'revoked' });
+    if (state === 'inactive' || state === 'ungrouped') f.sources.kosipa.kosipa.kosipaUser = async () => ({ id: 9102, active: state !== 'inactive', activeGroups: state === 'ungrouped' ? 0 : 1 });
+    const access = await resolveConsoleAccess(f.sources, subject);
+    assert.equal(access.kosipa, 'role');
+    assert.equal(access.kosipaUserId, null);
+    assert.equal(access.kosipaWriteUnavailable, undefined);
+    assert.equal(access.capabilities.has('kosipa.master.manage'), false);
+    assert.equal(access.capabilities.has('iam.kosipa.grant'), true, 'admin does not require its own command identity');
+  });
+}
+
+for (const dependency of ['link', 'user', 'grant']) {
+  test(`${dependency} outage retains role views but removes command and grant administration access`, async () => {
+    const f = roleWriter();
+    const fail = async () => { throw new Error('private database error'); };
+    if (dependency === 'link') f.sources.kosipa.links.activeForConsoleUser = fail;
+    if (dependency === 'user') f.sources.kosipa.kosipa.kosipaUser = fail;
+    if (dependency === 'grant') f.sources.kosipa.grants.activeCapabilities = fail;
+    const access = await resolveConsoleAccess(f.sources, subject);
+    assert.equal(access.kosipa, 'role');
+    assert.equal(access.kosipaUserId, null);
+    assert.equal(access.kosipaWriteUnavailable, true);
+    assert.deepEqual([...access.capabilities].filter(c => c.startsWith('kosipa.')).sort(), [...KOSIPA_CAPABILITIES].sort());
+    assert.equal(access.capabilities.has('iam.kosipa.grant'), false);
+  });
+}
+
+test('grant administration needs both IAM and server allowlist and a working grant store, even when unlinked', async () => {
+  for (const missing of ['iam', 'allowlist', 'store']) {
+    const f = roleWriter();
+    if (missing === 'iam') f.sources.permissions.grantedAmong = async () => new Set();
+    if (missing === 'allowlist') f.sources.kosipa.grantAdmins = new Set();
+    if (missing === 'store') delete f.sources.kosipa.grants;
+    const access = await resolveConsoleAccess(f.sources, subject);
+    assert.equal(access.capabilities.has('iam.kosipa.grant'), false);
+  }
+  const f = roleWriter({ links: { async activeForConsoleUser() { return null; } }, grants: { async activeCapabilities() { throw new Error('down'); } } });
+  const access = await resolveConsoleAccess(f.sources, subject);
+  assert.equal(access.kosipaWriteUnavailable, true, 'even unlinked administrators must fail closed on grant lookup outages');
+  assert.equal(access.capabilities.has('iam.kosipa.grant'), false);
+});
+
+test('role denial takes precedence over explicit write opt-in, existing grants and admin allowlist', async () => {
+  const f = roleWriter();
+  f.sources.permissions.kosipaRoleAccess = async () => 'denied';
+  const access = await resolveConsoleAccess(f.sources, subject);
+  assert.equal(access.kosipa, 'restricted');
+  assert.equal(access.kosipaUserId, null);
+  assert.equal(access.capabilities.has('iam.kosipa.grant'), false);
+  assert.deepEqual(f.calls, []);
+});

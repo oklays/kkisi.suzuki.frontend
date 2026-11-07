@@ -41,3 +41,14 @@ test('actual Nodemailer SMTP wire works against an isolated loopback capture onl
  assert.equal(messages.length,2);assert.match(messages[0],/123456/);assert.match(messages[1],/APP-123/);assert.match(messages[1].replace(/\r\n[ \t]+/g,' '),/Message-ID: <public-savings\.[a-f0-9]{64}@example\.invalid>/i);
  }finally{for(const socket of sockets)socket.destroy();await new Promise(resolve=>server.close(resolve));}
 });
+
+test('SMTP copy applies to both savings types without labeling Wajib as Sukarela',async()=>{
+ const messages=[];
+ const provider=createSmtpDeliveryProvider(config,()=>({async sendMail(message){messages.push(message);return {accepted:[message.to],rejected:[]};},close(){}}));
+ await provider.deliver(otp);
+ await provider.deliver({id:'confirmation-generic',kind:'SUBMISSION_CONFIRMATION',destination:otp.destination,reference:'APP-123'});
+ assert.equal(messages[0].subject,'Kode verifikasi simpanan');
+ assert.equal(messages[1].subject,'Bukti penerimaan pengajuan simpanan');
+ assert.match(messages[1].text,/Pengajuan simpanan telah diterima\./);
+ for(const message of messages)assert.doesNotMatch(`${message.subject}\n${message.text}`,/sukarela|wajib/i);
+});

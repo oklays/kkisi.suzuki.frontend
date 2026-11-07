@@ -1,6 +1,6 @@
-import { IAM_PERMISSION_SLUGS, KOSIPA_CAPABILITIES, TOKO_PERMISSION_SLUGS, iamCapabilities, tokoCapabilities, type Capability, type CapabilitySet } from '@koperasi/domain/console/capabilities';
+import { GRANTABLE_KOSIPA_CAPABILITIES, IAM_PERMISSION_SLUGS, KOSIPA_CAPABILITIES, TOKO_PERMISSION_SLUGS, iamCapabilities, tokoCapabilities, type Capability, type CapabilitySet } from '@koperasi/domain/console/capabilities';
 import { writeCapabilitiesFromGrants } from '@koperasi/domain/console/kosipa-grants';
-import { resolveKosipaCapabilities, type IdentityPorts } from './identity-links.ts';
+import { resolveKosipaActor, resolveKosipaCapabilities, type IdentityPorts } from './identity-links.ts';
 import type { KosipaGrantStore } from './kosipa-grants.ts';
 
 /** Read port: which of the given slugs the role holds, answered in one query. A store failure must throw (never "none"). */
@@ -25,14 +25,15 @@ export async function resolveConsoleCapabilities(source: PermissionSetSource, su
 export type ExportPolicy = { enabled: boolean; allowedUserIds: ReadonlySet<number> };
 
 export type KosipaAccessState = 'disabled' | 'unlinked' | 'linked' | 'role' | 'restricted' | 'unavailable';
-/** `kosipaUserId` = the active KOSIPA account behind the link (the actor id written to the command ledger); null when none. */
-export type ConsoleAccess = { capabilities: CapabilitySet; kosipa: KosipaAccessState; kosipaUserId: number | null };
+/** `kosipaUserId` = verified legacy command actor, null when absent. `kosipaWriteUnavailable` marks an opted-in command lookup outage while role views remain usable. */
+export type ConsoleAccess = { capabilities: CapabilitySet; kosipa: KosipaAccessState; kosipaUserId: number | null; kosipaWriteUnavailable?: true };
 
 /**
  * KOSIPA write grants (FD-16). `grants` = the console-store grant table; `grantAdmins` = explicit deployment allow-list of console user
  * ids who may manage grants (on top of iam.link.manage). Both absent -> no write capability and no grant administration.
+ * `roleWriteGrantsEnabled` opts role monitoring into independent command identity/grants; server configuration only.
  */
-export type KosipaWriteSources = { grants?: Pick<KosipaGrantStore, 'activeCapabilities'>; grantAdmins?: ReadonlySet<number> };
+export type KosipaWriteSources = { roleWriteGrantsEnabled?: boolean; grants?: Pick<KosipaGrantStore, 'activeCapabilities'>; grantAdmins?: ReadonlySet<number> };
 
 /**
  * Full console access: TOKO + administration from the legacy permission table (one query) and, when KOSIPA reading is
@@ -53,7 +54,20 @@ export async function resolveConsoleAccess(
     if (roleAccess === 'denied') return { capabilities, kosipa: 'restricted', kosipaUserId: null };
     if (roleAccess === 'allowed') {
       for (const cap of KOSIPA_CAPABILITIES) capabilities.add(cap);
-      return { capabilities, kosipa: 'role', kosipaUserId: null };
+      if (!sources.kosipa.roleWriteGrantsEnabled) return { capabilities, kosipa: 'role', kosipaUserId: null };
+      // Role monitoring is independent of command dependencies and of fenced legacy menus.
+      try {
+        const actor = await resolveKosipaActor(sources.kosipa, subject.userId);
+        const grants = sources.kosipa.grants ? await sources.kosipa.grants.activeCapabilities(subject.userId) : [];
+        if (actor.kosipaUserId !== null) {
+          const implemented = grants.filter(cap => (GRANTABLE_KOSIPA_CAPABILITIES as readonly string[]).includes(cap));
+          for (const cap of writeCapabilitiesFromGrants(implemented, capabilities)) capabilities.add(cap);
+        }
+        if (sources.kosipa.grants && capabilities.has('iam.link.manage') && sources.kosipa.grantAdmins?.has(subject.userId)) capabilities.add('iam.kosipa.grant');
+        return { capabilities, kosipa: 'role', kosipaUserId: actor.kosipaUserId };
+      } catch {
+        return { capabilities, kosipa: 'role', kosipaUserId: null, kosipaWriteUnavailable: true };
+      }
     }
     // Grant administration remains an independently approved linked-policy feature.
     if (sources.kosipa.grants && capabilities.has('iam.link.manage') && sources.kosipa.grantAdmins?.has(subject.userId)) capabilities.add('iam.kosipa.grant');

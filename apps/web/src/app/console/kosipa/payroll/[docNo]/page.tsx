@@ -37,7 +37,7 @@ export default async function PayrollBatchPage({ params, searchParams }: { param
   return (
     <div className="console-page">
       <Link prefetch={false} className="console-back" href={`/console/kosipa/payroll${qs({ periode: one(sp.periode), status: one(sp.status), grup: one(sp.grup) })}`}><ArrowLeft size={16} aria-hidden="true" />Kembali ke daftar batch</Link>
-      <KosipaPageHeader title={<> Batch {docNo} </>}><p>Data payroll KOSIPA, baca saja.</p></KosipaPageHeader>
+      <KosipaPageHeader title={<> Batch {docNo} </>} tail={[{ label: docNo, icon: 'batch' }]}><p>Data payroll KOSIPA, baca saja.</p></KosipaPageHeader>
       {failed && <FeedbackState kind="error" title={<> Batch tidak dapat dibaca </>} reset={base}><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {batch && (<>
         <section className="console-card" aria-labelledby="sec-ringkasan">

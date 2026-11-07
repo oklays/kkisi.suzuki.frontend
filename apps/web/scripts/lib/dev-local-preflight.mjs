@@ -6,6 +6,15 @@ const local = parse('.env.local'); const profile = parse('.env.dev-local');
 const eff = { ...local, ...profile };
 const ALLOWED = new Set(['kkisi_devlocal_staging', 'kkisi_auth_staging', 'kkisi_console_staging']);
 const problems = []; const report = [];
+// This dedicated console uses its own sentinel-verified public savings writer, not native KOSIPA writers.
+if (process.argv.includes('--public-savings-console')) {
+  for (const area of ['MASTER', 'MEMBER', 'SAVINGS']) {
+    const dsn = `DATABASE_URL_KOSIPA_${area}_WRITE`, flag = `KOSIPA_${area}_WRITES_ENABLED`;
+    if (process.env[dsn] !== '' || process.env[flag] !== 'false') problems.push(`${area}: public savings console requires the native writer disabled in the runtime`);
+    eff[dsn] = ''; eff[flag] = 'false';
+  }
+}
+
 if (eff.APP_ENV && eff.APP_ENV !== 'local') problems.push('APP_ENV must be unset or local');
 for (const [k, v] of Object.entries(eff).filter(([k]) => /^DATABASE_URL/.test(k))) {
   if (!v) { report.push(`${k}: (unset)`); continue; }

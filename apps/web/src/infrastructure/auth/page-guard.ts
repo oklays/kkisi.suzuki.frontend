@@ -3,9 +3,8 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AuthError } from '@koperasi/domain/auth/errors';
 import { safeNextPath } from '@koperasi/domain/auth/redirect';
-import type { CapabilitySet } from '@koperasi/domain/console/capabilities';
 import { validateSession, type AuthContext } from '@koperasi/application/auth/validate-session';
-import { resolveConsoleAccess, type KosipaAccessState } from '@koperasi/application/console/capabilities';
+import { resolveConsoleAccess, type ConsoleAccess } from '@koperasi/application/console/capabilities';
 import { kosipaServices } from '../console/services.ts';
 import { warehousePreviewEnabled } from '../warehouse/preview-flag.ts';
 import { getContainer } from './container.ts';
@@ -42,7 +41,7 @@ export async function requirePagePermission(permission: string | readonly string
 }
 
 export type ConsoleAuth =
-  | { kind: 'ok'; ctx: AuthContext; services: AuthServices; capabilities: CapabilitySet; kosipa: KosipaAccessState; kosipaUserId: number | null }
+  | ({ kind: 'ok'; ctx: AuthContext; services: AuthServices } & ConsoleAccess)
   | { kind: 'unavailable' };
 
 /** One validation + capability resolution per request, shared by the console layout and its page. */
@@ -53,7 +52,7 @@ const loadConsoleSession = cache(async (): Promise<ConsoleAuth | 'login'> => {
     const ctx = await validateSession(container.services.deps, jar.get(container.services.config.cookieName)?.value ?? null);
     const kosipa = kosipaServices();
     const access = await resolveConsoleAccess({ permissions: container.capabilities, kosipa, features: { warehousePreview: warehousePreviewEnabled() } }, { userId: ctx.userId, roleId: ctx.roleId, canSwitchBranch: ctx.canSwitchBranch });
-    return { kind: 'ok', ctx, services: container.services, capabilities: access.capabilities, kosipa: access.kosipa, kosipaUserId: access.kosipaUserId };
+    return { kind: 'ok', ctx, services: container.services, ...access };
   } catch (error) {
     if (error instanceof AuthError && error.code === 'UNAUTHENTICATED') return 'login';
     return { kind: 'unavailable' };

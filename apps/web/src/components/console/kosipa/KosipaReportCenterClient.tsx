@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { PageBreadcrumbs } from '../PageBreadcrumbs';
 import {
   AlertTriangle,
   ArrowRight,
@@ -209,13 +210,7 @@ export function KosipaReportCenterClient({ data }: { data: KosipaReportCenterDat
       {/* 1. PAGE INTRODUCTION / HERO SECTION */}
       <header className="kosipa-rc-hero">
         <div className="kosipa-rc-hero-copy">
-          <p className="kosipa-rc-eyebrow">
-            <span>KOSIPA</span>
-            <span className="kosipa-rc-eyebrow-sep" aria-hidden="true">
-              /
-            </span>
-            <span>Administrasi koperasi</span>
-          </p>
+          <PageBreadcrumbs />
           <h1>Laporan KOSIPA</h1>
           <p className="kosipa-rc-subtitle">
             Pusat laporan terintegrasi untuk monitoring, analisis, dan akses cepat seluruh laporan

@@ -1,11 +1,14 @@
 import Link from 'next/link';
+import { PageBreadcrumbs } from '../PageBreadcrumbs';
+import type { TailCrumb } from '../breadcrumb-trail';
 import { ArrowRight, CircleAlert, CircleHelp, Inbox, LockKeyhole, Search, ShieldCheck } from 'lucide-react';
 import { Children, cloneElement, isValidElement, type ReactNode, type ReactElement } from 'react';
 
-export function KosipaPageHeader({ title, children, review = false }: { title: ReactNode; children: ReactNode; review?: boolean }) {
+/** `editable`: the page can change data through native commands (member register/edit), so the read-only badge would be wrong. */
+export function KosipaPageHeader({ title, children, review = false, editable = false, tail }: { title: ReactNode; children: ReactNode; review?: boolean; editable?: boolean; /** Crumbs after the registered page, e.g. the record this page shows. */ tail?: readonly TailCrumb[] }) {
   return <header className="console-page-head kosipa-page-head">
-    <div className="kosipa-eyebrow">KOSIPA <span>/</span> Administrasi koperasi</div>
-    <div className="kosipa-title-row"><h1 tabIndex={-1}>{title}</h1><Provenance kind={review ? 'review' : 'readonly'} /></div>
+    <PageBreadcrumbs tail={tail} />
+    <div className="kosipa-title-row"><h1 tabIndex={-1}>{title}</h1>{!editable && <Provenance kind={review ? 'review' : 'readonly'} />}</div>
     <div className="kosipa-page-purpose">{children}</div>
   </header>;
 }
@@ -39,13 +42,13 @@ export function FinancialTable({ columns, children, label }: { columns: readonly
       }));
     }));
   });
-  return <div className="kosipa-table-frame"><div className="kosipa-table-scroll" role="region" aria-label={label} tabIndex={0}>
+  return <div className="kosipa-table-frame"><div className="kosipa-table-scroll" role="region" aria-label={label} tabIndex={0} suppressHydrationWarning>
       <table className="console-table kosipa-table"><caption className="console-visually-hidden">{label}</caption>
         <thead><tr>{columns.map((column, i) => <th key={column.key ?? i} scope="col" className={column.numeric ? 'num' : undefined} style={{ minWidth: column.minWidth ?? (typeof column.label === 'string' && /^(Nama|Jenis|NIK|Dokumen|Tanggal|Jatuh tempo)/.test(column.label) ? (/^Nama/.test(column.label) ? 170 : 120) : undefined) }} data-priority={column.priority} data-type={column.type}>
           {column.help ? <abbr title={column.help}>{column.label}</abbr> : column.label}
         </th>)}</tr></thead>{body}
       </table>
-  </div><p className="kosipa-table-hint" hidden><ArrowRight size={13} aria-hidden="true" />Geser tabel untuk melihat kolom lainnya.</p></div>;
+  </div><p className="kosipa-table-hint" hidden suppressHydrationWarning><ArrowRight size={13} aria-hidden="true" />Geser tabel untuk melihat kolom lainnya.</p></div>;
 }
 
 export function FilterContext({ filters, reset, privateReset = false }: { filters: readonly { label: string; value: string }[]; reset: string; privateReset?: boolean }) {

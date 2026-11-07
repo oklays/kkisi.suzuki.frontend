@@ -1,6 +1,6 @@
 # 03 — CRUD gap analysis: legacy KOSIPA vs current Next.js
 
-Baseline: branch `feat/currency-rupiah-standard` (HEAD `0af0dd77`, 30 Oct 2026). The existing read-only implementation is treated as correct unless evidence says otherwise (PRD §1.1); no rewrite is proposed for it.
+Historical baseline: branch `feat/currency-rupiah-standard` (HEAD `0af0dd77`, 30 Oct 2026). Updated source inventory 6 Nov 2026 at `4118c410`; full execution baseline and current limits are in [completion/STATUS.md](completion/STATUS.md). The existing read-only implementation is treated as correct unless evidence says otherwise (PRD §1.1); no rewrite is proposed for it.
 
 ## 1. What Next.js KOSIPA does today (E1, verified in code)
 
@@ -17,20 +17,20 @@ Baseline: branch `feat/currency-rupiah-standard` (HEAD `0af0dd77`, 30 Oct 2026).
 | Public secure link for Simpanan Sukarela deduction requests (operator issue/revoke link, member submits) | `/console/kosipa/simpanan-sukarela`, `/api/kosipa/public-savings-links/**`, `/api/kosipa/savings-applications/**` | `infrastructure/public-savings/service.ts` | **yes — `trans_simpanan_pengajuan` (OPEN request) + `pss_*` tables** (behind `PSS_*` flags) |
 | Pure domain rules ready but unused by writes | — | `document-state.ts`, `loan-schedule.ts`, `payroll-settlement.ts`, `shu-allocation.ts`, `journal.ts`, `savings.ts` | — |
 
-Conclusion: **read coverage is broad; the only KOSIPA business-table write is the public-link request intake.** No KOSIPA approval, financial posting, master-data or member write exists.
+Current conclusion: **read coverage is broad; five reference-master command families and the shared command/numbering/grant foundation exist for the isolated synthetic stack.** Production remains monitoring-only; native member/financial operational commands are absent at this baseline. Public-link request intake is a separate guarded business write, not savings approval/posting. Five-master routes are `/console/kosipa/master/[type]` and `/api/kosipa/master/[type]/**`; two-administrator grant tooling exists at `/console/settings/akses-kosipa` and `/api/console/kosipa-grants/**`. Neither a local test nor deployed source means full replacement acceptance.
 
 ## 2. Coverage counts (55 legacy features, [02 §4](02_LEGACY_FUNCTION_INVENTORY.md#4-function-inventory-matrix))
 
-| Status in Next.js | Count | Features |
+| Audited source status at 4118c410 | Count | Features |
 |---|---|---|
-| Existing (read parity for the feature's purpose) | 4 | F01, F09, F35, F42 |
-| Partial | 8 | F08, F17, F23, F38, F45, F50, F51, F54 |
-| Missing (to build) | 37 | F02–F07, F10–F16, F18, F19, F22, F24–F31, F33, F34, F36, F37, F39–F41, F43, F44, F46, F47, F52, F55 |
-| RETIRE (not migrated, reason in 02/09) | 4 | F20, F32, F48, F53 |
-| Not a live legacy feature (decision FD-09) | 1 | F21 |
-| HOLD (P3 decision) | 1 | F49 |
+| equivalent | 3 | F01, F09, F35 |
+| partial | 13 | F08, F17, F23, F38, F41, F42, F44, F45, F50, F51, F52, F54, F55 |
+| missing | 33 | F02, F03, F04, F05, F06, F07, F10, F11, F12, F13, F14, F15, F16, F18, F19, F22, F24, F25, F26, F27, F28, F29, F30, F31, F33, F34, F36, F37, F39, F40, F43, F46, F47 |
+| retire | 4 | F20, F32, F48, F53 |
+| not_live | 1 | F21 |
+| hold | 1 | F49 |
 
-By operation type, counted from the Type column of [02 §4](02_LEGACY_FUNCTION_INVENTORY.md#4-function-inventory-matrix) over the 44 write features (a feature can carry several types): Create 23 · Update 24 (one hidden, F31) · Delete 19 (all become cancel/void/reverse/deactivate) · Approve 15 · Reject 4 · Import 11 · Calculate 8 · Reverse 1 · Reconcile 1 · Cancel 1 · Other 2. Next.js covers **0** of the 44 write features natively (F45 has intake only).
+These are static source-scope labels, not production acceptance. FD-29 subsequently brings the former HOLD F49 into implementation/sandbox scope; it remains pending work and is not excluded from the replacement goal. Each of all 55 features has its source mapping and remaining gap in [coverage-baseline.json](completion/coverage-baseline.json).
 
 ## 3. Side-by-side gap table
 
@@ -45,8 +45,8 @@ By operation type, counted from the Type column of [02 §4](02_LEGACY_FUNCTION_I
 | SHU | F44 | — | Entire feature | WI-21 |
 | Reports | 14 legacy report controllers + Excel (F50) | 5 report families + data quality + CSV | Outstanding/kas per product, transaction cash; Excel→CSV parity | WI-23 |
 | Dashboard | KPIs + notifications (F51) | Console landing widgets | KOSIPA KPIs with verified definitions | WI-24 |
-| Masters | 17 KOSIPA masters (F52) | — | CRUD + deactivate | WI-06 |
-| IAM | KOSIPA users/groups/menus/profile/settings (F54) | Identity links + view capabilities | Write capability grants (FD-16); business settings | WI-02, WI-24 |
+| Masters | 17 KOSIPA masters (F52) | Five synthetic CRUD slices: lokasi, bagian, jenis dokumen, rekening bank, periode angsuran | Remaining twelve or explicit disposition; compatibility, access and production cutover | WI-06 |
+| IAM | KOSIPA users/groups/menus/profile/settings (F54) | Identity links, view capabilities and local two-admin grant workflow | Role-mode write actor/grants, production grant activation, remaining administration/business settings | WI-02, WI-24 |
 | Platform | API settings + root prints (F55) | — | Authenticated print routes | WI-23 |
 
 ## 4. Differences in behaviour that are intentional (not gaps)

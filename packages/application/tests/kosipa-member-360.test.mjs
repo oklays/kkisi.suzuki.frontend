@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readMember360, searchMembers, parseMemberSearch } from '../src/kosipa/member-360.ts';
+import { readMember360, searchMembers, parseMemberSearch, listMemberDirectory, readMemberCounts } from '../src/kosipa/member-360.ts';
 
 const RP = (n) => n * 100;
 const member = { id: 4410, nik: '00123', name: 'SYNTH SATU', group: 'ANGGOTA', status: 'AKTIVE', employment: 'TETAP', exitOn: null, joinedOn: '2020-01-01', division: 'D', section: 'S',
@@ -110,4 +110,60 @@ test('360 payroll: not queried without the payroll capability; a failing payroll
   const v = await readMember360({ reader: reader().value, audit: { async append() {} }, now, payroll: failing }, { userId: 7, capabilities: ALL, requestId: 'q' }, 4410);
   assert.deepEqual(v.payroll, { state: 'unavailable', reason: 'READ_FAILED' });
   assert.equal(v.savings.state, 'ok'); assert.equal(v.storeCredit.state, 'ok');
+});
+
+function directoryReader(total = 23) {
+  const rows = Array.from({ length: total }, (_, i) => ({ ...member, id: i + 1 }));
+  const calls = [];
+  return { calls, value: { ...reader().value,
+    async listMembers(f) { calls.push(f); return { items: rows.slice(f.offset, f.offset + f.limit), total: rows.length }; },
+    async counts() { return { total: 9276, active: 5459, nonMember: 6297 }; } } };
+}
+
+test('directory: default = status AKTIVE, 10 per page, no other filter; needs member view', async () => {
+  const d = directoryReader();
+  await assert.rejects(listMemberDirectory(d.value, new Set(), {}), { code: 'FORBIDDEN' });
+  await assert.rejects(readMemberCounts(d.value, new Set()), { code: 'FORBIDDEN' });
+  const first = await listMemberDirectory(d.value, ALL, {});
+  assert.deepEqual({ page: first.page, pageCount: first.pageCount, total: first.total, n: first.items.length, size: first.pageSize, queryTooShort: first.queryTooShort }, { page: 1, pageCount: 3, total: 23, n: 10, size: 10, queryTooShort: false });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: null, status: 'AKTIVE', employment: null, limit: 10, offset: 0 });
+  assert.deepEqual(first.selected, { q: '', grup: 'SEMUA', status: 'AKTIVE', karyawan: 'SEMUA' });
+  assert.deepEqual(await readMemberCounts(d.value, ALL), { total: 9276, active: 5459, nonMember: 6297 });
+});
+
+test('directory: filters are allow-listed, "SEMUA" removes a filter, unknown values fall back, KOSONG means a missing employment type', async () => {
+  const d = directoryReader();
+  await listMemberDirectory(d.value, ALL, { grup: 'non anggota', status: 'SEMUA', karyawan: 'kosong' });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: 'NON ANGGOTA', status: null, employment: 'KOSONG', limit: 10, offset: 0 });
+  await listMemberDirectory(d.value, ALL, { grup: "ANGGOTA' OR 1=1 --", status: 'DROP TABLE', karyawan: ['TETAP'] });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: null, status: 'AKTIVE', employment: null, limit: 10, offset: 0 }, 'unknown values never reach the reader');
+  await listMemberDirectory(d.value, ALL, { status: 'RESIGN', karyawan: 'TETAP', grup: 'BMP' });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: 'BMP', status: 'RESIGN', employment: 'TETAP', limit: 10, offset: 0 });
+});
+
+test('directory: search keeps the NIK/name semantics and combines with filters; one character is "too short" and reads nothing', async () => {
+  const d = directoryReader();
+  await listMemberDirectory(d.value, ALL, { q: ' 00123 ', status: 'SEMUA' });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: ['00123', '123'], nameLike: null, group: null, status: null, employment: null, limit: 10, offset: 0 });
+  await listMemberDirectory(d.value, ALL, { q: 'Budi 50%_x', grup: 'ANGGOTA' });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: 'Budi 50\\%\\_x', group: 'ANGGOTA', status: 'AKTIVE', employment: null, limit: 10, offset: 0 });
+  const before = d.calls.length;
+  const short = await listMemberDirectory(d.value, ALL, { q: 'a' });
+  assert.deepEqual({ tooShort: short.queryTooShort, items: short.items.length, total: short.total }, { tooShort: true, items: 0, total: 0 });
+  assert.equal(d.calls.length, before, 'no database read for an invalid search');
+});
+
+test('directory: pagination and page size are server-side; untrusted page numbers fall back or clamp; total and pages follow the same filtered set', async () => {
+  const d = directoryReader();
+  const third = await listMemberDirectory(d.value, ALL, { page: '3' });
+  assert.deepEqual({ page: third.page, n: third.items.length, first: third.items[0].id }, { page: 3, n: 3, first: 21 });
+  const clamped = await listMemberDirectory(d.value, ALL, { page: '999' });
+  assert.deepEqual({ page: clamped.page, n: clamped.items.length }, { page: 3, n: 3 }, 'beyond the last page shows the last page');
+  for (const bad of ['0', '-1', 'abc', '1; DROP', '1.5', ['2'], '99999999', null, 7, undefined]) assert.equal((await listMemberDirectory(d.value, ALL, { page: bad })).page, 1, String(bad));
+  const big = await listMemberDirectory(d.value, ALL, { size: '25' });
+  assert.deepEqual({ size: big.pageSize, pages: big.pageCount, n: big.items.length }, { size: 25, pages: 1, n: 23 });
+  assert.equal((await listMemberDirectory(d.value, ALL, { size: '1000' })).pageSize, 10);
+  assert.equal((await listMemberDirectory(d.value, ALL, { size: '7' })).pageSize, 10);
+  const empty = await listMemberDirectory(directoryReader(0).value, ALL, { page: '4' });
+  assert.deepEqual({ page: empty.page, pageCount: empty.pageCount, n: empty.items.length }, { page: 1, pageCount: 1, n: 0 });
 });

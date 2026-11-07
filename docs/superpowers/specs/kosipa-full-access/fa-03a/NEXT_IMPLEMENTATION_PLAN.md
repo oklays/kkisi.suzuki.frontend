@@ -12,7 +12,7 @@ Date: 30 October 2026. Status: **plan only. No member mutation is implemented or
 | Deactivate instead of delete (REQ-111); FD-07 removal policy remains open | Exit settlement (WI-20; maker ≠ checker) |
 | Identity linking of a member with a smartkkisi account (read and verify only) | Savings and loan balances (never written by member commands) |
 
-## 2. `m_anggota` field classes (from the actual table, 73 columns)
+## 2. `m_anggota` field classes (from the actual table, 72 columns)
 
 | Class | Columns | Native rule |
 |---|---|---|
@@ -20,7 +20,7 @@ Date: 30 October 2026. Status: **plan only. No member mutation is implemented or
 | **Profile** (REQ-109) | `nama_kar`, `ktp`, `email`, `jenis_kel`, `tgl_lahir`, `tempat_lahir`, the address set (`alamat` … `kode_pos_tinggal`), `no_telp`, `no_telp1`, `status_rumah`, `pendidikan`, `status_nikah`, `nama_istri`, `ibu_kandung`, `npwp` | `kosipa.member.update`; PII masked unless `kosipa.member.pii`; ledger records `changed: true` only, never values |
 | **Employment** (REQ-109) | `divisi`, `dept`, `bagian`, `lokasi`, `jabatan`, `kd_group`, `tgl_karyawan`, `tgl_masuk`, `status_karyawan` | `bagian` and `lokasi` must be **active master names** (stored by name, FA-02 contract); `kd_group` ∈ VAL-102 groups |
 | **Bank** (REQ-109) | `no_rek`, `bank_rek`, `nama_rek` | `kosipa.member.update`, plus a reason. Used for withdrawals and disbursement, so FD-17 decides whether maker-checker applies |
-| **Financial-linked** (never in profile commands) | `sim_wajib`, `sim_pokok`, `sim_sukarela` (balance mirrors), `gaji`, `limit_toko`, `limit_toko_old`, `limit_ppob`, `gaji_minus`, `limit_persen`, `batas_pinjaman`, `status_pot_pokok`/`_wajib`/`_sukarela`, `surat_kuasa`, `persetujuan` | Refused with `FIELD_NOT_ALLOWED` in register and update. Server-controlled status zeroing is REQ-110. Limits, deductions and savings mirrors belong to later commands; salary (`gaji`) is deferred from FA-03B and must later use a member command (BR-113), never a loan command |
+| **Financial-linked** (never in profile commands) | `sim_wajib`, `sim_pokok`, `sim_sukarela` (configured/current payroll deductions, not cumulative savings balances), `gaji`, `limit_toko`, `limit_toko_old`, `limit_ppob`, `gaji_minus`, `limit_persen`, `batas_pinjaman`, `status_pot_pokok`/`_wajib`/`_sukarela`, `surat_kuasa`, `persetujuan` | Refused with `FIELD_NOT_ALLOWED` in register and update. Server-controlled status zeroing is REQ-110. Limits, deductions and savings mirrors belong to later commands; salary (`gaji`) is deferred from FA-03B and must later use a member command (BR-113), never a loan command |
 | **Status** | `status_anggota`, `tgl_keluar` | `kosipa.member.status` only (REQ-110/111) |
 | **Credentials and files** | `password`, `foto_profile`, `foto_ktp`, `foto_ttd`, `foto_kk`, `foto_bukti_biaya_sekolah` | Never written natively in FA-03B (smartkkisi and legacy upload flows own them) |
 | **Audit** | `cd`, `cd_usr`, `ud`, `ud_usr` | Written as legacy does (KOSIPA display name), like the masters |
@@ -38,7 +38,7 @@ Date: 30 October 2026. Status: **plan only. No member mutation is implemented or
 
 | Application | What it holds | Native rule |
 |---|---|---|
-| smartkkisi `users` | `nik`, `name`, `ktp`, `email`, `phone`, `bagian`, `lokasi`, `no_rek`, `bank_rek`, `kd_group`, `wallet_balance`, `wallet_balance_ppob`, `is_active`, `is_delete` | Link by NIK (read-only verification). **Profile sync direction is decision FD-24 (new):** (a) native updates `m_anggota` only, and smartkkisi keeps its own copy (legacy KOSIPA behaviour); (b) native mirrors the overlapping fields into `users`. Status: FD-08 is open; option (a) recommends wallet mirror + token revocation by `user_id`, required by REQ-110 once the contract is resolved |
+| smartkkisi `users` | `nik`, `name`, `ktp`, `email`, `phone`, `bagian`, `lokasi`, `no_rek`, `bank_rek`, `kd_group`, `wallet_balance`, `wallet_balance_ppob`, `is_active`, `is_delete` | Link by NIK (read-only verification). **Profile sync direction is decision FD-24 (new):** (a) native updates `m_anggota` only, and smartkkisi keeps its own copy (a change from legacy KOSIPA behavior); (b) native mirrors the recovered legacy subset into existing `users`: `ktp`, `name`, `phone`, `email`, `street_address`. Both legacy member controllers already mirror that subset; they do not mirror bank/group/location fields. Any wider mirror remains a separate policy choice. Status: FD-08 is open; option (a) recommends wallet mirror + token revocation by `user_id`, required by REQ-110 once the contract is resolved |
 | TOKO | live reads of limits and status by NIK at POS; **writes** on pension (`Pos.php:448`); `Member_model` CRUD | The TOKO member menu must be disabled by the TOKO owner at cutover (`ANO-T03`). The `Pos.php:448` pension path must be disabled or routed to the native status command before native owns status |
 | Console identity link | console user ↔ KOSIPA `ref_users` | Unchanged; members are not console users |
 

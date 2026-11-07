@@ -10,7 +10,7 @@ const S = DOCUMENT_NUMBER_SCHEMES;
 
 test('schemes reproduce the verified legacy conventions (prefix, minimum width, strategy, period source)', () => {
   assert.deepEqual(Object.values(S).map((s) => `${s.prefix}/${s.width}/${s.strategy}/${s.period}`),
-    ['REG/4/period-sequence/clock', 'DBT/4/period-sequence/clock', 'PIN/5/row-id/clock', 'KAS/5/row-id/clock', 'POT/5/row-id/document']);
+    ['REG/4/period-sequence/clock', 'DBT/4/period-sequence/clock', 'PIN/5/row-id/clock', 'KAS/5/row-id/clock', 'POT/5/row-id/document', 'TFCSH/5/row-id/clock']);
   assert.equal(documentNumberScheme('loan').prefix, 'PIN');
   for (const bad of ['', 'LOAN', 'shu', '__proto__', 'constructor']) assert.equal(code(() => documentNumberScheme(bad)), 'NUMBERING_SCHEME_UNKNOWN', bad);
 });

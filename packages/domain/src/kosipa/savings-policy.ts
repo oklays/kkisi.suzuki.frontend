@@ -80,7 +80,29 @@ export const PSS_POLICY_V1: ApprovedPublicSavingsPolicy = deepFreeze({
   },
 });
 
-const REGISTRY: Readonly<Record<string, ApprovedPublicSavingsPolicy>> = Object.freeze({ [PSS_POLICY_V1_VERSION]: PSS_POLICY_V1 });
+export const PSS_WAJIB_POLICY_V1_VERSION = 'KKISI-PSW-2026-V1@1.0.0';
+export type PublicSavingsType = 'SIMPANAN SUKARELA' | 'SIMPANAN WAJIB';
+export const isPublicSavingsType = (value: unknown): value is PublicSavingsType => value === 'SIMPANAN SUKARELA' || value === 'SIMPANAN WAJIB';
+
+/** Owner approved the existing Sukarela system and rules for Wajib in the project conversation, 2026-11-07. */
+export const PSS_WAJIB_POLICY_V1: ApprovedPublicSavingsPolicy = deepFreeze({
+  ...PSS_POLICY_V1,
+  policyVersion: PSS_WAJIB_POLICY_V1_VERSION,
+  approval: {
+    approverRole: 'Authorized Project & Business Owner (self-declared in the project conversation)',
+    approvedAt: '2026-11-07',
+    scope: 'Public Simpanan Wajib using the same approved Public Simpanan Sukarela system and business rules',
+    evidenceRef: 'Project conversation 2026-11-07: owner approved "sama sistem nya" for "SIMPANAN WAJIB" (no external record identifier available)',
+  },
+});
+
+export function policyForSavingsType(value: unknown): ApprovedPublicSavingsPolicy | undefined {
+  return value === 'SIMPANAN SUKARELA' ? PSS_POLICY_V1 : value === 'SIMPANAN WAJIB' ? PSS_WAJIB_POLICY_V1 : undefined;
+}
+
+const REGISTRY: Readonly<Record<string, ApprovedPublicSavingsPolicy>> = Object.freeze({
+  [PSS_POLICY_V1_VERSION]: PSS_POLICY_V1, [PSS_WAJIB_POLICY_V1_VERSION]: PSS_WAJIB_POLICY_V1,
+});
 
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object') { for (const key of Object.keys(value)) deepFreeze((value as Record<string, unknown>)[key]); Object.freeze(value); }

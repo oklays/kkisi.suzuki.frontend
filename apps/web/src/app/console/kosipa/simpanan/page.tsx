@@ -28,6 +28,7 @@ export default async function SavingsSearchPage({ searchParams }: { searchParams
     <div className="console-page">
       <KosipaPageHeader title={<> Simpanan </>}>
         <p>Pilih anggota untuk melihat mutasi simpanan tercatat. Saldo resmi belum tersedia.</p>
+        <p>Untuk membuat, menyetujui, atau menolak setoran, buka <Link prefetch={false} className="mform-link" href="/console/kosipa/simpanan/setoran">Setoran simpanan</Link>.</p>
       </KosipaPageHeader>
       <form className="console-search" action="/console/kosipa/simpanan" method="post" data-kosipa-private role="search">
         <label htmlFor="savings-q">NIK atau nama anggota</label>

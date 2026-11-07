@@ -1,4 +1,5 @@
 /** Pure translation against documented LOCAL schema 09A; no legacy writer or profile/ledger side effects. */
+import { isPublicSavingsType, type PublicSavingsType } from '@koperasi/domain/kosipa/savings-policy';
 import type { SubmissionSnapshot } from '@koperasi/domain/kosipa/savings-snapshot';
 import type { ChangeRequestState } from '@koperasi/domain/kosipa/savings-lifecycle';
 
@@ -13,7 +14,7 @@ export interface LegacyMemberSnapshot {
   readonly groupCode: string;
 }
 export interface LegacySubmissionRow {
-  doc_no: string; doc_date: string; doc_status: 'OPEN'; jenis_simpanan: 'SIMPANAN SUKARELA';
+  doc_no: string; doc_date: string; doc_status: 'OPEN'; jenis_simpanan: PublicSavingsType;
   nik_kar: string; nama: string; phone: string | null; bank: null; norek: null; bagian: string; lokasi: string;
   potongan_old: string | null; potongan: string; awal_potong_bulan: string; awal_potong_tahun: string;
   remarks: null; posting_date: null; created_at: string; cd_usr: string; updated_at: string; ud_usr: string;
@@ -24,6 +25,9 @@ export type LegacyMappingResult = { readonly ok: true; readonly value: LegacySub
 const fail = (field: string): LegacyMappingResult => ({ ok: false, error: { code: 'LEGACY_INCOMPATIBLE', field } });
 // Reject controls/unrepresentable characters; never truncate or silently transcode Latin1 columns.
 const text = (value: unknown, max: number): value is string => typeof value === 'string' && value.length > 0 && value.length <= max && /^[\u0020-\u007e\u00a0-\u00ff]+$/u.test(value) && value.trim() === value;
+// Descriptive master columns (m_anggota.nama_kar, m_bagian.name_bagian, ...) carry trailing blanks in production and the
+// legacy mobile writer copies them verbatim; keep them byte-identical so legacy joins on the name still match.
+const paddedText = (value: unknown, max: number): value is string => typeof value === 'string' && value.length <= max && text(value.replace(/ +$/u, ''), max);
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const safeWhole = (value: unknown): value is string => typeof value === 'string' && /^(0|[1-9][0-9]*)$/u.test(value) && value.length <= 16 && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER);
 const originalWhole = (value: unknown): string | null | undefined => {
@@ -51,11 +55,14 @@ export function mapLegacySubmission(input: { reference: string; member: LegacyMe
   const { reference, member: m, snapshot: s, signatureRef, createdAt, actor } = input;
   if (typeof reference !== 'string' || !/^PSS[0-9a-f]{32}00000$/u.test(reference)) return fail('reference');
   if (!record(m)) return fail('member');
-  for (const [key, max] of [['id', 128], ['nik', 10], ['name', 50], ['sectionId', 128], ['sectionName', 100], ['branch', 100], ['groupCode', 50]] as const) {
+  for (const [key, max] of [['id', 128], ['nik', 10], ['sectionId', 128]] as const) {
     if (!text(m[key], max)) return fail(`member.${key}`);
   }
-  if (m.phone !== null && !text(m.phone, 50)) return fail('member.phone');
-  if (!record(s) || s.contractVersion !== 'pss-snapshot/v2' || s.memberRef !== m.id || s.sectionId !== m.sectionId || s.savingsType !== 'SIMPANAN SUKARELA') return fail('snapshot.binding');
+  for (const [key, max] of [['name', 50], ['sectionName', 100], ['branch', 100], ['groupCode', 50]] as const) {
+    if (!paddedText(m[key], max)) return fail(`member.${key}`);
+  }
+  if (m.phone !== null && !paddedText(m.phone, 50)) return fail('member.phone');
+  if (!record(s) || s.contractVersion !== 'pss-snapshot/v2' || s.memberRef !== m.id || s.sectionId !== m.sectionId || !isPublicSavingsType(s.savingsType)) return fail('snapshot.binding');
   const old = originalWhole(s.originalDeduction);
   if (old === undefined) return fail('snapshot.originalDeduction');
   if (!safeWhole(s.requestedAmount) || s.requestedAmount === '0') return fail('snapshot.requestedAmount');
@@ -65,7 +72,7 @@ export function mapLegacySubmission(input: { reference: string; member: LegacyMe
   if (!sqlDateTime(createdAt)) return fail('createdAt');
   if (!text(actor, 50)) return fail('actor');
   return { ok: true, value: {
-    doc_no: reference, doc_date: createdAt.slice(0, 10), doc_status: 'OPEN', jenis_simpanan: 'SIMPANAN SUKARELA',
+    doc_no: reference, doc_date: createdAt.slice(0, 10), doc_status: 'OPEN', jenis_simpanan: s.savingsType,
     nik_kar: m.nik, nama: m.name, phone: m.phone, bank: null, norek: null, bagian: m.sectionName, lokasi: m.branch,
     potongan_old: old, potongan: s.requestedAmount, awal_potong_bulan: String(p.month).padStart(2, '0'), awal_potong_tahun: String(p.year),
     remarks: null, posting_date: null, created_at: createdAt, cd_usr: actor, updated_at: createdAt, ud_usr: actor,

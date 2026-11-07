@@ -58,9 +58,13 @@ export async function preflight(){const db=await connect('admin');try{return awa
 /** Only scratch fixture is mutable: no application or actual legacy schema can be passed to this function. */
 export async function validateMigration(){
  const config=await loadConfig(),db=await connect('admin');
- const source=await readFile(resolve(root,'integration/public-savings/migrations/001_public_savings.sql'),'utf8');
- const statements=sqlStatements(source),checksum=digest(source);
- if(statements.some(sql=>/^(?:CREATE|DROP|ALTER|TRUNCATE)\s+(?:TABLE\s+)?(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:m_|trans_)/i.test(sql)))throw new Error('MIGRATION_TOUCHES_LEGACY_TABLES');
+ const migrations=[];
+ for(const version of ['001_public_savings','002_wajib_savings']){
+  const source=await readFile(resolve(root,`integration/public-savings/migrations/${version}.sql`),'utf8');
+  migrations.push({version,statements:sqlStatements(source),checksum:digest(source)});
+ }
+ const checksum=migrations[0].checksum;
+ if(migrations.some(({statements})=>statements.some(sql=>/^(?:CREATE|DROP|ALTER|TRUNCATE)\s+(?:TABLE\s+)?(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:m_|trans_)/i.test(sql))))throw new Error('MIGRATION_TOUCHES_LEGACY_TABLES');
  try{
   const [existing]=await db.execute('SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=?',[scratch]);
   if(existing.length){await db.query(`USE ${scratch}`);const [sentinel]=await db.query('SELECT id,mode FROM pss_installation');if(sentinel.length!==1||sentinel[0].id!==config.installationId||sentinel[0].mode!=='LOCAL_SYNTHETIC')throw new Error('MIGRATION_SCRATCH_SENTINEL_MISMATCH');await db.query(`USE ${config.database}`);await db.query(`DROP DATABASE ${scratch}`);}
@@ -68,16 +72,33 @@ export async function validateMigration(){
   const representative=await readFile(resolve(root,'integration/public-savings/schema.sql'),'utf8');
   for(const statement of sqlStatements(representative).filter(sql=>/^CREATE TABLE (m_|trans_)/.test(sql)))await db.query(statement);
   const before=await inspectLegacy(db);if(!before.ok)throw new Error('MIGRATION_PREFLIGHT_FAILED');
-  // Simulate interrupted DDL by applying only the first half. Recover by rerunning exact version.
-  for(const statement of statements.slice(0,Math.floor(statements.length/2)))await db.query(statement);
-  for(const statement of statements)await db.query(statement);
-  await db.execute("INSERT INTO pss_installation VALUES(?,'LOCAL_SYNTHETIC') ON DUPLICATE KEY UPDATE mode=VALUES(mode)",[config.installationId]);
-  await db.execute("INSERT INTO pss_schema_migration VALUES('001_public_savings',?,UTC_TIMESTAMP())",[checksum]);
-  const [signature]=await db.query("SELECT checksum FROM pss_schema_migration WHERE version='001_public_savings'");if(signature[0].checksum!==checksum)throw new Error('MIGRATION_CHECKSUM_MISMATCH');
-  for(const statement of statements)await db.query(statement);
+  // Each version recovers interrupted DDL and reruns before the next version is applied.
+  for(const {version,statements,checksum:versionChecksum} of migrations){
+   for(const statement of statements.slice(0,Math.floor(statements.length/2)))await db.query(statement);
+   for(const statement of statements)await db.query(statement);
+   await db.execute("INSERT INTO pss_installation VALUES(?,'LOCAL_SYNTHETIC') ON DUPLICATE KEY UPDATE mode=VALUES(mode)",[config.installationId]);
+   await db.execute('INSERT INTO pss_schema_migration VALUES(?,?,UTC_TIMESTAMP())',[version,versionChecksum]);
+   const [signature]=await db.execute('SELECT checksum FROM pss_schema_migration WHERE version=?',[version]);
+   if(signature[0].checksum!==versionChecksum)throw new Error('MIGRATION_CHECKSUM_MISMATCH');
+   for(const statement of statements)await db.query(statement);
+  }
+  const [versions]=await db.query('SELECT version,checksum FROM pss_schema_migration ORDER BY version');
+  if(JSON.stringify(versions)!==JSON.stringify(migrations.map(({version,checksum})=>({version,checksum}))))throw new Error('MIGRATION_SEQUENCE_MISMATCH');
+  const [columns]=await db.query("SELECT DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pss_link' AND COLUMN_NAME='savings_type'");
+  if(columns.length!==1||columns[0].DATA_TYPE!=='varchar'||Number(columns[0].CHARACTER_MAXIMUM_LENGTH)!==50||columns[0].IS_NULLABLE!=='NO')throw new Error('MIGRATION_TYPE_BINDING_MISSING');
+  await db.beginTransaction();
+  try{
+   const id='0'.repeat(32);
+   await db.execute("INSERT INTO pss_link(id,member_id,token_hash,contact_version,expires_ms,state,created_ms) VALUES(?,1,?,'migration-check',1,'ISSUED',1)",[id,'0'.repeat(64)]);
+   const [[link]]=await db.execute('SELECT savings_type FROM pss_link WHERE id=?',[id]);
+   if(link.savings_type!=='SIMPANAN SUKARELA')throw new Error('MIGRATION_TYPE_DEFAULT_CHANGED');
+   let refused=false;
+   try{await db.execute("UPDATE pss_link SET savings_type='SIMPANAN WAJIB' WHERE id=?",[id]);}catch(error){if(error.sqlMessage==='IMMUTABLE_LINK_BINDING')refused=true;else throw error;}
+   if(!refused)throw new Error('MIGRATION_TYPE_BINDING_MUTABLE');
+  }finally{await db.rollback();}
   const after=await inspectLegacy(db);if(!after.ok||after.legacySignature!==before.legacySignature)throw new Error('MIGRATION_LEGACY_SIGNATURE_CHANGED');
   const [routines]=await db.query("SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA=DATABASE() AND ROUTINE_NAME IN ('pss_legacy_transition','pss_mobile_create','pss_mobile_mutate')");if(routines.length!==3)throw new Error('MIGRATION_COMMAND_MISSING');
-  return{ok:true,mode:'LOCAL_SYNTHETIC',target:scratch,checksum,legacySignature:after.legacySignature,interruptedRecovery:true,rerun:true,legacyTablesUnchanged:true,commands:3};
+  return{ok:true,mode:'LOCAL_SYNTHETIC',target:scratch,checksum,migrations:versions,typeBindingVerified:true,legacySignature:after.legacySignature,interruptedRecovery:true,rerun:true,legacyTablesUnchanged:true,commands:3};
  }finally{await db.end();}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){try{const result=process.argv[2]==='validate-migration'?await validateMigration():await preflight();console.log(JSON.stringify(result,null,2));if(!result.ok)process.exitCode=1;}catch(error){console.error(/^(?:MIGRATION_|LOCAL_)/.test(error.message)?error.message:'LOCAL_PREFLIGHT_FAILED');process.exitCode=1;}}

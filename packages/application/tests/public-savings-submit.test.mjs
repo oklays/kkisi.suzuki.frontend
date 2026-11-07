@@ -140,3 +140,17 @@ test('ports expose no payroll processing, approval, profile/config mutation or g
   const src = readFileSync(new URL('../src/kosipa/public-savings.ts', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   assert.doesNotMatch(src, /approve|payroll\w*\(|process\w*\(|updateProfile|updateConfig|execute\w*\(|query\w*\(|raw\w*\(/i);
 });
+
+test('a trusted policy version selection cannot be satisfied by a different approved policy', async () => {
+  const h = harness(); h.deps.policyVersion = 'KKISI-PSW-2026-V1@1.0.0';
+  const result = await submitPublicSavingsChange(h.deps, command());
+  assert.equal(code(result), 'POLICY_UNAPPROVED'); assert.deepEqual(h.committed, []);
+});
+
+test('trusted replica simulation passes labeled evidence through build and locked recheck only with explicit deps',async()=>{
+ const simulationLock=locked({eligibility:{...facts,contact:{...facts.contact,status:'SIMULATED_LOCAL_CAPTURE',provenanceRef:'local-replica-simulation:member-1'}},calendar:{source:'LOCAL_REPLICA_SIMULATION_CALENDAR',verified:false,periods:[{year:2026,month:11,state:'OPEN'}]}});
+ const cmd=command({snapshotInput:snapshotInput({verification:{proofRef:'proof-1',contactVersion:'c3',method:'LOCAL_CAPTURE_SIMULATION'}})});
+ const absent=harness({lock:simulationLock});assert.equal(code(await submitPublicSavingsChange(absent.deps,cmd)),'INVALID_INPUT');assert.deepEqual(absent.committed,[]);
+ const local=harness({lock:simulationLock});local.deps.simulation='LOCAL_REPLICA_UAT';assert.equal(code(await submitPublicSavingsChange(local.deps,cmd)),'OK');assert.equal(local.committed.length,3);
+ const unknown=harness({lock:simulationLock});unknown.deps.simulation='UNKNOWN';assert.equal(code(await submitPublicSavingsChange(unknown.deps,cmd)),'INVALID_INPUT');assert.deepEqual(unknown.committed,[]);
+});

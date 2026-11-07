@@ -15,6 +15,7 @@ const MAX_PIXELS = MAX_BYTES / 4;
 const MAX_ARTIFACT_BYTES = 8 * MAX_BYTES;
 const MAGIC = Buffer.from('PSSART01');
 const PNG_MAGIC = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+export const WAJIB_PDF_TEMPLATE = Object.freeze({ templateVersion: 'kkisi-pss-wajib-a4/v2' as const, rendererVersion: PDF_TEMPLATES['kkisi-pss-wajib-a4/v2'].renderer });
 const REF = /^pss-(signature|pdf)-[0-9a-f]{32}$/u;
 const digest = (bytes: Uint8Array | string) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 function fail(code: string): never { throw new Error(code); }
@@ -137,10 +138,13 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
 
   async function renderSubmissionPdf(input: SubmissionPdfInput) {
     // The persisted envelope names the template; no version means the original layout. Unknown versions fail closed.
-    const templateVersion = input.templateVersion ?? LEGACY_PDF_TEMPLATE;
+    const wajib = input.snapshot.savingsType === 'SIMPANAN WAJIB';
+    const templateVersion = input.templateVersion ?? (wajib ? WAJIB_PDF_TEMPLATE.templateVersion : LEGACY_PDF_TEMPLATE);
     if (!isPdfTemplate(templateVersion)) fail('PDF_TEMPLATE_UNSUPPORTED');
+    if (wajib !== templateVersion.startsWith('kkisi-pss-wajib-a4/')) fail('PDF_TEMPLATE_UNSUPPORTED');
     const template = PDF_TEMPLATES[templateVersion];
     const RENDERER_VERSION: string = template.renderer;
+
     // Copy synchronously before I/O so later caller mutations cannot change the evidence being rendered.
     const evidence = structuredClone(input);
     const { snapshot, member } = evidence;
@@ -162,7 +166,7 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
       const submittedAt = new Date(snapshot.submittedAtEpochMs);
       doc.setCreationDate(submittedAt); doc.setModificationDate(submittedAt);
       doc.setCreator(RENDERER_VERSION); doc.setProducer(RENDERER_VERSION);
-      doc.setTitle('Pengajuan Simpanan Sukarela - Belum Disetujui');
+      doc.setTitle(wajib ? 'Pengajuan Simpanan Wajib - Belum Disetujui' : 'Pengajuan Simpanan Sukarela - Belum Disetujui');
       const regular = await doc.embedFont(StandardFonts.Helvetica);
       const bold = await doc.embedFont(StandardFonts.HelveticaBold);
       const blue = rgb(0, 0.2, 0.6), ink = rgb(0.12, 0.16, 0.22), gray = rgb(0.4, 0.44, 0.49);
@@ -192,7 +196,7 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
       const field = (label: string, value: string) => wrapped(`${label}: ${value}`);
       page.drawRectangle({ x: 0, y: H - 9, width: W, height: 9, color: blue });
       line('KKISI  /  KOSIPA', 11, true, blue);
-      line('PENGAJUAN SIMPANAN SUKARELA', 18, true);
+      line(wajib ? 'PENGAJUAN SIMPANAN WAJIB' : 'PENGAJUAN SIMPANAN SUKARELA', 18, true);
       line('PENGAJUAN / BELUM DISETUJUI', 10, true, blue);
       y -= 5; field('Referensi', evidence.reference);
       field('Diajukan (UTC)', submittedAt.toISOString().replace('T', ' ').replace('.000Z', ' UTC'));

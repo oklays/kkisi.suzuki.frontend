@@ -1,3 +1,4 @@
+import {isPublicSavingsType} from '@koperasi/domain/kosipa/savings-policy';
 import {randomUUID} from 'node:crypto';
 import {createPublicSavingsService,PublicSavingsServiceError} from './service.ts';
 import {authorizePublicSavingsOperator,loadPublicSavingsOperatorPolicy,type PublicSavingsOperatorActor} from './operator-authorization.ts';
@@ -61,10 +62,10 @@ export async function handlePublicSavingsRequest(request:Request,operation:Publi
   }else if(operation==='receipt')result=await service.receipt(token,proof);
   else if(operation==='pdf'||operation==='application-pdf'){
    const pdf=operation==='pdf'?await service.pdf(token,proof):await service.operatorPdf(string(recordId,50),operator);
-   return new Response(Buffer.from(pdf),{headers:{...common,'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="pengajuan-simpanan-sukarela.pdf"'}});
+   return new Response(Buffer.from(pdf),{headers:{...common,'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="pengajuan-simpanan.pdf"'}});
   }else if(operation==='members')result=await service.listMembers(url.searchParams.get('query')??'',operator);
   else if(operation==='links-list')result=await service.listLinks(operator,listQuery(url));
-  else if(operation==='links-create'){const input=strictObject(JSON.parse(new TextDecoder().decode(bytes)),['memberRef']);result=await service.issueLink(string(input.memberRef),operator);}
+  else if(operation==='links-create'){const raw:unknown=JSON.parse(new TextDecoder().decode(bytes));const hasType=!!raw&&typeof raw==='object'&&Object.hasOwn(raw,'savingsType');const input=strictObject(raw,hasType?['memberRef','savingsType']:['memberRef']);const savingsType=hasType?input.savingsType:'SIMPANAN SUKARELA';if(!isPublicSavingsType(savingsType))throw new PublicSavingsServiceError('INVALID_INPUT');result=hasType?await service.issueLink(string(input.memberRef),operator,savingsType):await service.issueLink(string(input.memberRef),operator);}
   else if(operation==='links-revoke'){await service.revokeLink(string(recordId),revokeReason!,operator);result={state:'REVOKED'};}
   else if(operation==='applications')result=await service.listApplications(operator,listQuery(url));
   else return fail('NOT_FOUND',404);

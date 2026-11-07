@@ -40,7 +40,10 @@ export default async function MemberSavingsPage({ params, searchParams }: { para
   return (
     <div className="console-page">
       <Link prefetch={false} className="console-back" href="/console/kosipa/simpanan"><ArrowLeft size={16} aria-hidden="true" />Kembali ke pencarian</Link>
-      <KosipaPageHeader title={<> Buku simpanan </>}><p>{data ? `${data.member.name || 'Anggota'} · NIK ${data.member.nik || '—'} · mutasi tercatat, baca saja` : 'Data KOSIPA, baca saja.'}</p></KosipaPageHeader>
+      <KosipaPageHeader title={<> Buku simpanan </>} tail={[{ label: data?.member.name || 'Buku simpanan', icon: 'book' }]}>
+        <p>{data ? `${data.member.name || 'Anggota'} · NIK ${data.member.nik || '—'} · mutasi tercatat, baca saja` : 'Data KOSIPA, baca saja.'}</p>
+        <p>Untuk membuat, menyetujui, atau menolak setoran, buka <Link prefetch={false} className="mform-link" href="/console/kosipa/simpanan/setoran">Setoran simpanan</Link>.</p>
+      </KosipaPageHeader>
       {failed && <FeedbackState kind="error" title={<> Buku simpanan tidak dapat dibaca </>} reset={base}><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {data && (<>
         <ContextNotice title="Saldo resmi belum tersedia" expandable><p>Jumlah berikut adalah mutasi tercatat, bukan saldo. Saldo awal dan definisi saldo resmi belum diverifikasi. Status dokumen menentukan apakah mutasi berlaku.</p></ContextNotice>

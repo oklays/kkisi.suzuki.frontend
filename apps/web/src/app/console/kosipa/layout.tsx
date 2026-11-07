@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { PrivateWorkspace } from '@/components/console/kosipa/PrivateWorkspace';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
-import { syntheticKosipaEnvironment, readOnlyKosipaUatEnvironment } from '@/components/console/kosipa/presentation';
+import { LocalReplicaBanner } from '@/components/console/kosipa/MembershipUI';
+import { syntheticKosipaEnvironment, readOnlyKosipaUatEnvironment, localStagingReplicaEnvironment, replicaDatabaseName } from '@/components/console/kosipa/presentation';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import './kosipa.css';
@@ -14,6 +15,7 @@ export default async function KosipaLayout({ children }: { children: ReactNode }
   return <div className="kosipa-module" key={`${auth.ctx.userId}:${auth.ctx.companyId}`}>
     {syntheticKosipaEnvironment(process.env) && <p className="kosipa-environment" role="note"><span aria-hidden="true" />DATA SINTETIS — UNTUK PENGUJIAN <small>DEV Local</small></p>}
     {readOnlyKosipaUatEnvironment(process.env) && <p className="kosipa-environment" role="note"><span aria-hidden="true" />DATA SALINAN PRODUKSI — HANYA BACA <small>Snapshot lama · refresh lengkap menunggu ekspor prosedur</small></p>}
+    {localStagingReplicaEnvironment(process.env) && <LocalReplicaBanner database={replicaDatabaseName(process.env)} />}
     <PrivateWorkspace>{children}</PrivateWorkspace>
   </div>;
 }

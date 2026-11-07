@@ -6,6 +6,8 @@ Audit 30 Oct 2026 (Asia/Jakarta). Sources: local legacy copy `kosipa/` (read-onl
 
 **Approved production read-access update, 6 Nov 2026:** the owner requested KOSIPA access for every role except KASIR, a separate monitoring administrator and deployment to .178. The [scoped role-access design](../kosipa-production-role-access/design.md) introduces explicit `non-cashier` read mode with no legacy identity impersonation. Active non-cashier roles receive the five view capabilities; KASIR/CASHIER roles are denied on pages/APIs. Master and financial writes remain gated. A separate console audit store and the `monitor_admin` account (existing Admin Koperasi role) have been provisioned and validated; runtime activation evidence is recorded by the release process. This does not complete the pending production-to-local database replication.
 
+**Full replacement execution, 6 Nov 2026:** the owner has now requested all pending Full Access work, with verified legacy business parity and security/integrity corrections. Bank/status changes retain one authorized operator with reason/audit; PPOB/IAK sales are in scope for sandbox verification without automatic paid production transactions (FD-27/28/29). [The complete baseline](completion/STATUS.md) tracks 107 requirements, 42 tasks, 25 work items and 55 features. Source/runtime discovery corrected an important premise: member `sim_*` columns are configured/current payroll deductions, not cumulative savings balances. Native member/financial command activation is still incomplete; no full-replacement acceptance is claimed.
+
 ## 1. Systems and databases
 
 | System | Stack | Role for KOSIPA data | Writes KOSIPA tables? |

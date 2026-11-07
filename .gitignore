@@ -23,3 +23,6 @@ node_modules/
 # Private legacy vulnerability register (never commit to the public repository)
 docs/superpowers/specs/unified-console-kosipa-warehouse/legacy-anomalies.md
 docs/superpowers/specs/kosipa-full-access/private-legacy-security-findings.md
+
+.claude
+.agents

@@ -55,15 +55,16 @@ test('the service can only target the loopback synthetic database', () => {
   for (const patch of [{ host: '10.0.0.5' }, { port: 3306 }, { database: 'n1608204_smart_kopkar' }, { mode: 'PRODUCTION' }]) assert.throws(() => validateStagingConfig({ ...base, ...patch }), /STAGING_CONFIGURATION_INVALID/u);
 });
 
-test('no application code mutates legacy financial tables; public intake only inserts an OPEN header', async () => {
+test('public savings never mutates legacy financial tables and application code never applies its schema', async () => {
   const files = [];
   async function walk(dir) { for (const e of await readdir(dir, { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) await walk(p); else if (/\.(ts|tsx)$/u.test(e.name)) files.push(p); } }
   await walk(SRC);
   const writers = [];
   for (const file of files) {
     const text = await readFile(file, 'utf8');
-    if (/UPDATE\s+`?(m_anggota|m_simpanan_aktif|trans_simpanan_pengajuan)\b/iu.test(text) || /INSERT\s+INTO\s+`?(m_anggota|m_simpanan_aktif)\b/iu.test(text)) writers.push(relative(SRC, file));
-    if (/trans_simpanan_pengajuan/u.test(text) && /INSERT\s+INTO/iu.test(text)) assert.equal(relative(SRC, file), 'infrastructure/public-savings/service.ts');
+    const publicSavings = /(?:^|\/)(?:public-savings|simpanan-sukarela)(?:\/|$)/u.test(relative(SRC, file));
+    if (publicSavings && (/UPDATE\s+`?(m_anggota|m_simpanan_aktif|trans_simpanan_pengajuan)\b/iu.test(text) || /INSERT\s+INTO\s+`?(m_anggota|m_simpanan_aktif)\b/iu.test(text))) writers.push(relative(SRC, file));
+    if (publicSavings && /trans_simpanan_pengajuan/u.test(text) && /INSERT\s+INTO/iu.test(text)) assert.equal(relative(SRC, file), 'infrastructure/public-savings/service.ts');
     assert.doesNotMatch(text, /001_public_savings|CREATE\s+(OR\s+REPLACE\s+)?TRIGGER/iu, `${relative(SRC, file)} must not apply schema`);
   }
   assert.deepEqual(writers, []);

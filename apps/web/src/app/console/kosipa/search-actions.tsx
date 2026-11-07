@@ -20,7 +20,7 @@ export async function searchKosipa(path: string, form: FormData) {
   if (auth.kind !== 'ok') return <KosipaNotice state="unavailable" />;
   const params: Record<string, string> = {};
   if (!form.has('_reset')) {
-    for (const key of ['q', 'status', 'cair', 'bayar', 'periode', 'grup', 'after', 'all']) {
+    for (const key of ['q', 'status', 'cair', 'bayar', 'periode', 'grup', 'karyawan', 'size', 'page', 'after', 'all']) {
       const value = form.get(key);
       if (typeof value === 'string') params[key] = value.slice(0, key === 'after' ? 512 : 50);
     }

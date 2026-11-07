@@ -24,6 +24,52 @@ OD-1 … OD-6 and UCKW:BR001–BR013 — see [05 §1](05_BUSINESS_RULES_AND_FINA
 
 The owner explicitly authorized KOSIPA access for all roles except KASIR, a new production administrator account for monitoring, and redeployment to .178. The scope is read access: under `KOSIPA_READ_ACCESS_MODE=non-cashier`, active non-cashier roles receive the five existing view capabilities; KASIR/CASHIER, inactive and unknown roles are denied. Role mode does not fabricate a legacy actor or confer writes, exports or grant administration. The original linked policy remains the default outside this mode. The authorization includes additive provisioning of the reviewed isolated console audit store and a separate `monitor_admin` login using existing role 2; it does not authorize financial-data changes or resolve FD-22/FD-23. See [design](../kosipa-production-role-access/design.md) and [verification](../kosipa-production-role-access/verification.md).
 
+### FD-27 — full replacement execution baseline (owner, 6 November 2026)
+
+The owner requested completion of all pending Full Access work so the native application replaces Legacy KOSIPA, and selected **verified legacy business parity with security and integrity corrections**. This authorizes implementation and verification of the complete existing inventory, not merely monitoring. It does not silently approve proposed changes to normal monetary formulas, schedules, SHU financial effects, GL posting or period closing. Runtime and production acceptance remain separate from a completed local checkpoint. See [complete baseline](completion/STATUS.md).
+
+### FD-28 — bank and member-status control (owner, 6 November 2026)
+
+The owner selected **one authorized operator, matching legacy, with mandatory reason and audit** for bank-account and member-status changes. This resolves that subset of FD-17; it does not remove maker/checker separation for the financial approval/disbursement/reversal/settlement/payroll/exit/SHU commands in BR-105. Do not add an unrequested second approver to these member operations.
+
+### FD-29 — PPOB/IAK sales included with sandbox verification (owner, 6 November 2026)
+
+The owner explicitly included WI-25/F49 in the replacement scope: implement and test using the provider sandbox, **without automatic paid production transactions**. Member PPOB billing/payroll remains separately required. The earlier HOLD is superseded for implementation/sandbox verification only; production paid execution is not an automated acceptance test or a side effect of provisioning/deployment. Preserve fail-closed environment/credential separation, per-action authorization and replay protection.
+
+### FD-30 — member reactivation (owner, 6 November 2026; resolves FD-25)
+
+The owner selected reactivation of the **member only**. Activation and verification of the mobile account require a separate authorized action. A member reactivation must not restore previous limits, mobile flags, verification or tokens automatically; the member's three credit ceilings remain zero. Require the authorized operator, reason and audit under FD-28. This permits non-AKTIVE → AKTIVE membership transitions without pretending that the separate mobile identity has been reactivated.
+
+### FD-31 — expired employment contracts (owner, 6 November 2026; resolves D3 behavior)
+
+The owner selected **deny credit, with member-status changes performed by an authorized operator with reason and audit**. An expired contract lookup must not silently convert the member to PENSIUN or write limits/mobile flags/tokens. Preserve the existing POS eligibility boundary: for employment KONTRAK, a missing expiry date or a Jakarta business date on/after `tgl_keluar` denies credit. The competing legacy TOKO lookup write must be excluded at ownership cutover; no automatic retirement job is authorized by this decision.
+
+### FD-32 — financial parameters on product masters (owner, 6 November 2026)
+
+For Jenis Simpanan, Jenis Pinjaman and Jenis Pembiayaan the owner selected **legacy parity**: an authorized operator may edit rates, fees, COA accounts and `lock_1angsuran`, including on products already referenced by transactions, with **mandatory reason and audit**, and the UI must warn that legacy screens/reports and running loans read the current master value. **Product codes are immutable once referenced.** No second approver. Evidence: [remaining masters contract](fa-03b/REMAINING_MASTERS_CONTRACT.md).
+
+### FD-33 — dormant/broken master dispositions (owner, 6 November 2026)
+
+**RETIRE from KOSIPA** (document evidence, no native writer, legacy controllers stay fenced/unlisted): Divisi (`app_jobsection`), Master Surat (`m_surat`), Cabang (`db_cabang`, absent in production), Jabatan (`app_joblevel`). Daftar Pajak, Mata Uang, Kategori Beban and Jenis Pembayaran are retired from KOSIPA; their `db_*` tables remain owned and maintained by TOKO.
+
+### FD-34 — Suku Bunga (owner, 6 November 2026)
+
+Implement natively with legacy parity, keyed by the consumed `field` (`tgl_tempo`), after a read-only production row count. The reader ignores `is_active`; the UI must not claim deactivation has an effect.
+
+### FD-35 — maker ≠ checker for savings deposits (owner, 7 November 2026)
+
+A savings deposit is created by an operator holding `kosipa.savings.prepare` and approved by a DIFFERENT person holding `kosipa.savings.approve` (BR-105 / FD-17 a). Legacy let one person do both. Documents created by legacy (no native maker in the ledger) may be approved natively (FD-17 c).
+
+### FD-36 — savings deposit document date (owner, 7 November 2026)
+
+The deposit date must lie in the CURRENT Jakarta month and not after today. Legacy accepted any date; the savings card groups balances by document month/year, so earlier periods must not change silently.
+
+### FD-37 — cancelling a pending savings deposit (owner, 7 November 2026)
+
+A deposit that is not yet approved is cancelled by REJECTION with a mandatory reason (header and lines `REJECTED`, rows kept, never counted: every balance view filters `doc_status = 'APPROVED'`). The legacy hard delete is not offered (FD-14 option a).
+
+**Evidence for FD-12 (savings status authority), 7 Nov 2026:** every captured production savings balance view — `v_kartu_simpanan`, `v_trans_simpanan_total`, `v_trans_simpanan_outstanding`, `v_trans_simpanan_kas_new`, `v_trans_simpanan_saldo_awal`, `v_saldo_awal`, `v_mobile_simpanan_sukarela` — filters on the HEADER `trans_simpanan.doc_status = 'APPROVED'` and sums `kredit + kredit_cash − debit` of the lines; line `doc_status` is not read. Native savings documents therefore keep header and lines in the same status (REQ-114) and treat the header as authoritative for balances. FD-12 itself (how to read legacy rows whose line status diverges) stays open for the reversal work.
+
 ## 3. Open decisions (new)
 
 | ID | Decision | Options | Recommendation | Blocks | Owner |
@@ -56,8 +102,8 @@ The owner explicitly authorized KOSIPA access for all roles except KASIR, a new 
 |---|---|---|---|---|
 | FD-22 | Business-table ownership triggers vs verified exclusion of every competing writer | SQL generator and synthetic prototype only; five masters plus five member-profile UPDATE columns. Requires explicit exception to the business-trigger prohibition. Current member prototype does not cover INSERT/DELETE/status/bank fields. See [ownership](fa-03a/SHARED_WRITE_OWNERSHIP.md) | native member activation | Owner + operator + application maintainers |
 | FD-23 | Approve numbering family scope and legacy-format deviations | Local implementation uses REG/DBT period sequence, PIN/KAS/POT row ID; PIN first-of-month and REG/DBT ≥1000 padding differences are documented, not approved. Registry uniqueness protects native claims; FD-02 and exclusion of legacy concurrent writers still apply | first document/member registration command | Owner + finance + operator |
-| FD-24 | Member-profile synchronization with smartkkisi `users` | (a) update `m_anggota` only, preserving legacy behavior; (b) mirror an explicitly approved overlapping field set. No native member profile command exists | membership profile contract | Owner + smartkkisi maintainer |
-| FD-25 | Reactivation transition and limit restoration | Decide whether non-AKTIVE → AKTIVE is allowed and define checks; no automatic restoration policy approved | member status command | Owner + finance |
+| FD-24 | Member-profile synchronization with smartkkisi `users` | Source/runtime correction: both legacy member controllers already mirror exactly ktp/name/phone/email/street_address into an existing user. Updating `m_anggota` only changes legacy behavior. FD-27 supplies the verified-parity implementation baseline; account creation, broader mirroring and external writer exclusion still need their own contracts | member profile implementation and verified smartkkisi activation boundary | Owner + smartkkisi maintainer |
+| FD-25 | Reactivation transition and limit restoration | Resolved by FD-30: member-only reactivation, zero credit ceilings; mobile activation/verification separate | implementation and verification remain | Owner |
 
 FD-01c remains **open**, separate from implemented FD-01b. The hash-chain/off-host-anchor outline in [production gates](fa-03a/PRODUCTION_READINESS_GATES.md#5-fd-01c--owner-bypass-and-the-pending-tamper-evidence-decision) is a candidate, not an approved architecture or completed control. FD-07, FD-08 and FD-17 recommendations above remain open; the FA-03B plan does not silently adopt them.
 
@@ -70,7 +116,7 @@ The owner's FA-01 instruction set FD-01, FD-03 and FD-16 as the **implementation
 | FD-03 | The fence is verified per controller ([FD-03 verification](fa-01/FD-03-legacy-fence-verification.md)). The SQL generator was rehearsed on the synthetic stack. A separate native ownership flag was added. **FA-01.5:** native commands now fail closed (`LEGACY_ACTIVE`) whenever a fenced row is enabled again, with share locks against a racing `adm_menu_c`. | The operator fences per feature and drains in-flight legacy requests first. Confirm the smartkkisi admin panel never writes the five masters ([shared writers](fa-01.5/SHARED_WRITER_OWNERSHIP.md)). |
 | FD-16 | Option (b). A `console_kosipa_grant` table, a grants API and the `/console/settings/akses-kosipa` page. Grant administrators = `iam.link.manage` plus the allow-list `KOSIPA_GRANT_ADMIN_USER_IDS`. Only capabilities with existing commands are grantable (`kosipa.master.manage`). **FA-01.5:** two-administrator confirmation (request, then approval by another administrator within 24 h), enforced by the application and the console store. | Production console store (B6) and the real administrator list. |
 
-Inherited and still open: D1 (ratio), D2 (withdrawal policy), D3 (expiry), D4 (short payroll), D6 (loan rule authority), B1 (views/procedures), B3 (indexes/triggers/sql_mode), B4 (single-writer mechanism → FD-03 proposes it), B5/B8 (connections), B6 (console store production), B10 (real roles/menu).
+Inherited and still open: D1 (ratio), D2 (withdrawal policy), D4 (short payroll), D6 (loan rule authority), B1 (views/procedures), B3 (indexes/triggers/sql_mode), B4 (single-writer mechanism → FD-03 proposes it), B5/B8 (connections), B6 (console store production), B10 (real roles/menu). D3 expiry behavior is resolved by FD-31; implementation and legacy-writer exclusion still need verification. Historical evidence requirements are not closed merely by a business decision.
 
 ## 4. Recommended changes (pending approval)
 All "Proposed" behaviour in [05](05_BUSINESS_RULES_AND_FINANCIAL_LOGIC.md) (R-01…R-23), [06](06_LEGACY_ANOMALIES_AND_PERFORMANCE.md) fixes, [07](07_TARGET_ARCHITECTURE.md), [08](08_AUTHORIZATION_AND_AUDIT_DESIGN.md), [11](11_CUTOVER_AND_ROLLBACK_PLAN.md).

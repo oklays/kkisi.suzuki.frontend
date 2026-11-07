@@ -112,3 +112,21 @@ test('B-14 escalation: pending longer than two Asia/Jakarta business days (weeke
   assert.equal(isEscalationDue(fri, Date.UTC(2026, 9, 27, 3, 1), [], P), true, 'Tue 10:01: longer than two business days');
   assert.equal(isEscalationDue(fri, Date.UTC(2026, 9, 27, 3, 1), ['2026-10-26'], P), false, 'Monday holiday not counted');
 });
+
+
+test('Wajib snapshot preserves its actual savings type and rejects cross-policy binding', async () => {
+  const { PSS_WAJIB_POLICY_V1 } = await import('../src/kosipa/savings-policy.ts');
+  assert.ok(PSS_WAJIB_POLICY_V1);
+  const r = buildSubmissionSnapshot(input({ savingsType: 'SIMPANAN WAJIB' }), PSS_WAJIB_POLICY_V1);
+  assert.equal(r.ok, true); assert.equal(r.value.savingsType, 'SIMPANAN WAJIB');
+  assert.equal(r.value.policyVersion, PSS_WAJIB_POLICY_V1.policyVersion);
+  err(buildSubmissionSnapshot(input(), PSS_WAJIB_POLICY_V1), 'INVALID_INPUT', 'savingsType');
+  err(buildSubmissionSnapshot(input({ savingsType: 'UNKNOWN' }), PSS_WAJIB_POLICY_V1), 'INVALID_INPUT', 'savingsType');
+});
+
+test('snapshot labels local capture simulation and rejects it outside trusted local context',()=>{
+ const simulated=input({verification:{proofRef:'proof-1',contactVersion:'c3',method:'LOCAL_CAPTURE_SIMULATION'}});
+ err(buildSubmissionSnapshot(simulated,P),'INVALID_INPUT','verification');
+ const r=buildSubmissionSnapshot(simulated,P,'LOCAL_REPLICA_UAT');assert.equal(r.ok,true);assert.equal(r.value.verification.method,'LOCAL_CAPTURE_SIMULATION');
+ err(buildSubmissionSnapshot(simulated,P,'UNKNOWN'),'INVALID_INPUT','simulation');
+});

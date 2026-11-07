@@ -83,9 +83,14 @@ export async function listIdentityLinks(ports: Pick<IdentityPorts, 'links'>, act
  * capabilities. Anything missing yields no KOSIPA access; store/reader failures propagate (callers fail closed).
  */
 export async function resolveKosipaCapabilities(ports: Pick<IdentityPorts, 'links' | 'kosipa'>, consoleUserId: number): Promise<{ linked: boolean; kosipaUserId: number | null; capabilities: Set<Capability> }> {
+  const actor = await resolveKosipaActor(ports, consoleUserId);
+  return { ...actor, capabilities: actor.kosipaUserId === null ? new Set() : kosipaCapabilitiesFromMenus(await ports.kosipa.allowedMenuUrls(actor.kosipaUserId)) };
+}
+
+/** Real command identity, independent of legacy menu activation; failures propagate to the authorization boundary. */
+export async function resolveKosipaActor(ports: Pick<IdentityPorts, 'links' | 'kosipa'>, consoleUserId: number): Promise<{ linked: boolean; kosipaUserId: number | null }> {
   const link = await ports.links.activeForConsoleUser(consoleUserId);
-  if (!link) return { linked: false, kosipaUserId: null, capabilities: new Set() };
+  if (!link || link.status === 'revoked') return { linked: false, kosipaUserId: null };
   const user = await ports.kosipa.kosipaUser(link.externalUserId);
-  if (!user?.active || user.activeGroups < 1) return { linked: true, kosipaUserId: null, capabilities: new Set() };
-  return { linked: true, kosipaUserId: user.id, capabilities: kosipaCapabilitiesFromMenus(await ports.kosipa.allowedMenuUrls(user.id)) };
+  return { linked: true, kosipaUserId: user?.active && user.activeGroups > 0 ? user.id : null };
 }

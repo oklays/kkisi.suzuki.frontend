@@ -45,9 +45,9 @@ export function createSmtpDeliveryProvider(config: SmtpDeliveryConfig = {}, crea
     const mail: Mail.Options = {
       from, to: message.destination, envelope: { from, to: [message.destination] },
       messageId: `<public-savings.${digest}@${from.split('@')[1]}>`,
-      subject: message.kind === 'OTP' ? 'Kode verifikasi simpanan sukarela' : 'Bukti penerimaan pengajuan simpanan sukarela',
+      subject: message.kind === 'OTP' ? 'Kode verifikasi simpanan' : 'Bukti penerimaan pengajuan simpanan',
       text: message.kind === 'OTP' ? `Kode verifikasi Anda: ${message.code}\nBerlaku sampai ${new Date(message.expiresAt!).toISOString()}. Jangan bagikan kode ini.`
-        : `Pengajuan simpanan sukarela telah diterima.\nReferensi: ${message.reference}\nPengajuan masih menunggu proses koperasi melalui KOSIPA CI2.`,
+        : `Pengajuan simpanan telah diterima.\nReferensi: ${message.reference}\nPengajuan masih menunggu proses koperasi melalui KOSIPA CI2.`,
       disableFileAccess: true, disableUrlAccess: true,
     };
     let transport: Transport | undefined, timer: ReturnType<typeof setTimeout> | undefined;

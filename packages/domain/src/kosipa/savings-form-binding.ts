@@ -1,9 +1,11 @@
 /** B-06/B-10 readonly form binding. Facts come from a trusted read port, never the public payload.
  * Validation of these injected facts does not attest actual legacy mapping (O-02/O-05/O-06 remain external gates).
  */
-import { resolveApprovedPolicy } from './savings-policy.ts';
+import { resolveApprovedPolicy, isPublicSavingsType, policyForSavingsType, type PublicSavingsType } from './savings-policy.ts';
 import type { PublicSavingsErrorCode } from './savings-application.ts';
 import { fail, isText, plain, type PssResult } from './savings-shared.ts';
+
+export { isPublicSavingsType, policyForSavingsType, type PublicSavingsType } from './savings-policy.ts';
 
 export const PUBLIC_SAVINGS_TYPE = 'SIMPANAN SUKARELA';
 export type FormBindingError = PublicSavingsErrorCode | 'AUTHORITATIVE_FORM_UNVERIFIED' | 'FORM_CHANGED';
@@ -11,7 +13,7 @@ export type FormBindingError = PublicSavingsErrorCode | 'AUTHORITATIVE_FORM_UNVE
 export interface ReviewedSavingsForm {
   readonly memberRef: string;
   readonly sectionId: string;
-  readonly savingsType: typeof PUBLIC_SAVINGS_TYPE;
+  readonly savingsType: PublicSavingsType;
   readonly formVersion: string;
   readonly consentTextVersion: string;
 }
@@ -30,10 +32,10 @@ export function resolveSavingsFormFacts(input: unknown, memberRef: string, polic
   if (!isText(memberRef, 128)) return fail('INVALID_INPUT', 'memberRef');
   const f = plain(input, ['contractVersion', 'referenceStatus', 'sourceEvidenceRef', ...FIELDS]);
   if (!f || f.contractVersion !== 'pss-form-facts/v1' || f.referenceStatus !== 'VERIFIED' || !isText(f.sourceEvidenceRef, 256)
-    || f.memberRef !== memberRef || !isText(f.sectionId, 128) || f.savingsType !== PUBLIC_SAVINGS_TYPE
+    || f.memberRef !== memberRef || !isText(f.sectionId, 128) || !isPublicSavingsType(f.savingsType) || policyForSavingsType(f.savingsType)?.policyVersion !== approved.value.policyVersion
     || !isText(f.formVersion, 64) || !isText(f.consentTextVersion, 64)) return fail('AUTHORITATIVE_FORM_UNVERIFIED');
   return { ok: true, value: Object.freeze({ contractVersion: 'pss-form-facts/v1', referenceStatus: 'VERIFIED', sourceEvidenceRef: f.sourceEvidenceRef,
-    memberRef, sectionId: f.sectionId, savingsType: PUBLIC_SAVINGS_TYPE, formVersion: f.formVersion, consentTextVersion: f.consentTextVersion }) };
+    memberRef, sectionId: f.sectionId, savingsType: f.savingsType, formVersion: f.formVersion, consentTextVersion: f.consentTextVersion }) };
 }
 
 export function validateSavingsFormBinding(reviewed: unknown, current: unknown, memberRef: string, policy: unknown): PssResult<AuthoritativeSavingsForm, FormBindingError> {

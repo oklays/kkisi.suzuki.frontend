@@ -4,6 +4,10 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {loadConfig,connect} from './staging.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
 const day=86400000;
+export function projectOtpCaptures(captures,{latest=false}={}){
+ const result=captures.filter(x=>x.kind==='OTP').map(x=>({challengeRef:x.id,code:x.code,expiresAt:x.expiresAt})).sort((a,b)=>b.expiresAt-a.expiresAt||(a.challengeRef<b.challengeRef?-1:a.challengeRef>b.challengeRef?1:0));
+ return latest?result.slice(0,1):result;
+}
 export function retentionCutoffs(now){if(!Number.isSafeInteger(now)||now<0)throw new Error('INVALID_TIME');return {tombstoneBefore:now-90*day,securityLogBefore:now-180*day,deleteFinancialEvidence:false};}
 /** Synthetic weekday calendar. Actual operational holiday calendar must be supplied before deployment. */
 export function businessDaysElapsed(from,to){let days=0;const start=Math.floor((from+7*3600000)/day),end=Math.floor((to+7*3600000)/day);for(let date=start+1;date<=end;date++){const weekday=new Date(date*day).getUTCDay();if(weekday!==0&&weekday!==6)days++;}return days;}
@@ -46,7 +50,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).hr
  if(command==='reconcile')result=await reconcile();else if(command==='dispatch')result=await dispatch();else if(command==='maintenance')result=await maintenance({apply:process.argv.includes('--apply')});else if(command==='escalate')result=await queueEscalations();else if(command==='retry')result=await retry(process.argv[3]);else if(command==='capture'){
   const {readLocalCaptures}=await import('../../apps/web/src/infrastructure/public-savings/providers.ts');
   // Deliberately explicit local manual-testing command. No HTTP endpoint exposes codes.
-  const captures=await readLocalCaptures(await loadConfig(),resolve(root,'.local/public-savings/capture'));result=captures.filter(x=>x.kind==='OTP').map(x=>({challengeRef:x.id,code:x.code,expiresAt:x.expiresAt}));
+  const captures=await readLocalCaptures(await loadConfig(),resolve(root,'.local/public-savings/capture'));result=projectOtpCaptures(captures,{latest:process.argv.includes('--latest')});
  }else throw new Error('UNKNOWN_OPERATION');
  console.log(JSON.stringify(result,null,2));
 }catch{console.error('LOCAL_OPERATION_FAILED');process.exitCode=1;}}

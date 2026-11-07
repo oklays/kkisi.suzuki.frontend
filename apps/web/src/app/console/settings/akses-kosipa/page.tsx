@@ -11,7 +11,12 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Hak Ubah KOSIPA · KKISI TB2' };
 
 const jakarta = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' });
-const CAPABILITY_LABEL: Record<string, string> = { 'kosipa.master.manage': 'Kelola master data KOSIPA' };
+const CAPABILITY_LABEL: Record<string, string> = {
+  'kosipa.master.manage': 'Kelola master data KOSIPA',
+  'kosipa.member.create': 'Daftarkan anggota baru',
+  'kosipa.member.update': 'Ubah profil anggota',
+  'kosipa.member.status': 'Ubah status anggota',
+};
 
 export default async function KosipaAccessPage() {
   if (!consoleEnabled()) notFound();

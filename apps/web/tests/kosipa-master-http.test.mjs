@@ -88,7 +88,7 @@ test('read-only page data: GET needs member view; returns rows with versions and
   assert.equal(r.headers.get('cache-control'), 'no-store');
   const none = fixture({ menus: [] });
   assert.equal((await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/lokasi', { cookie: s.cookie }), 'lokasi', deps(none))).status, 403);
-  assert.equal((await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/suku-bunga', { cookie: s.cookie }), 'suku-bunga', deps(viewer))).status, 404, 'masters without native commands do not exist here');
+  assert.equal((await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/divisi', { cookie: s.cookie }), 'divisi', deps(viewer))).status, 404, 'masters retired by FD-33 have no native route');
 });
 
 test('granted operator: 201 create, 200 replay, 409 key reuse, 400/422 validation, PATCH update, 409 stale, deactivate with reason', async () => {
@@ -182,4 +182,70 @@ test('writer guard: only the isolated FA-01 synthetic database; never staging, D
   for (const ledger of [undefined, '', 'kkisi_kfa_synthetic', 'kkisi_staging', 'kkisi_kfa_ledger`; DROP', 'smart_kopkar']) {
     assert.throws(() => validateKosipaLedgerDatabase({ ...base, KOSIPA_LEDGER_DATABASE: ledger }), { code: 'WRITE_NOT_CONFIGURED' }, String(ledger));
   }
+});
+
+test('writer guard: the local COPY of production (kkisi_staging) is reachable only with the explicit opt-in, never in production or on a lookalike target', () => {
+  const dsn = 'mysql://kosipa_master_w:pw@127.0.0.1:3307/kkisi_staging?connection_limit=2';
+  const base = { KOSIPA_MASTER_WRITES_ENABLED: 'true', DATABASE_URL_KOSIPA_MASTER_WRITE: dsn, DATABASE_URL: 'mysql://kkisi_read:pw@127.0.0.1:3307/kkisi_staging', KOSIPA_LEDGER_DATABASE: 'kkisi_staging_ledger' };
+  const optIn = { ...base, KOSIPA_LOCAL_STAGING_WRITES: 'true' };
+  assert.equal(validateKosipaMasterWriteConfig(optIn), dsn);
+  assert.equal(validateKosipaLedgerDatabase(optIn), 'kkisi_staging_ledger');
+  for (const change of [
+    { KOSIPA_LOCAL_STAGING_WRITES: undefined }, { KOSIPA_LOCAL_STAGING_WRITES: '1' }, { KOSIPA_LOCAL_STAGING_WRITES: 'false' },
+    { APP_ENV: 'production' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://kosipa_master_w:pw@db.example.com:3307/kkisi_staging?connection_limit=2' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://kosipa_master_w:pw@127.0.0.1:3307/kkisi_devlocal_staging?connection_limit=2' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://kosipa_master_w:pw@127.0.0.1:3306/kkisi_staging?connection_limit=2' },
+    { DATABASE_URL_KOSIPA_MASTER_WRITE: 'mysql://root:pw@127.0.0.1:3307/kkisi_staging?connection_limit=2' },
+  ]) assert.throws(() => validateKosipaMasterWriteConfig({ ...optIn, ...change }), { code: 'WRITE_NOT_CONFIGURED' }, JSON.stringify(change));
+  for (const ledger of ['kkisi_staging', 'kkisi_kfa_ledger', 'smart_kopkar']) assert.throws(() => validateKosipaLedgerDatabase({ ...optIn, KOSIPA_LEDGER_DATABASE: ledger }), { code: 'WRITE_NOT_CONFIGURED' }, ledger);
+  assert.throws(() => validateKosipaLedgerDatabase({ ...base, KOSIPA_LEDGER_DATABASE: 'kkisi_staging_ledger' }), { code: 'WRITE_NOT_CONFIGURED' }, 'ledger without opt-in');
+});
+
+const rolePermissions = { ...permissions, async kosipaRoleAccess() { return 'allowed'; } };
+
+test('role command HTTP forwards opt-in and real linked actor despite fenced legacy menus; revocation applies next request', async () => {
+  const s = await signedIn(23, 2); const f = fixture({ menus: [] });
+  const d = deps(f, { permissions: rolePermissions });
+  const originalCreate = f.ports.masters.create;
+  f.ports.masters.create = async (definition, envelope, fields) => {
+    assert.equal(envelope.actorConsoleUserId, 23);
+    assert.equal(envelope.actorKosipaUserId, 9102, 'ledger actor comes from the verified legacy link');
+    return originalCreate(definition, envelope, fields);
+  };
+  assert.equal((await create(s, f, valid(), {}, d)).status, 403, 'monitoring default');
+  f.ports.roleWriteGrantsEnabled = true;
+  assert.equal((await create(s, f, valid(), {}, d)).status, 201);
+  f.state.grants = [];
+  assert.equal((await create(s, f, valid(), {}, d)).status, 403);
+  assert.deepEqual(f.writes, ['master.lokasi.create']);
+});
+
+for (const dependency of ['identity', 'grant']) {
+  test(`role command HTTP returns code-only 503 on ${dependency} outage while master monitoring stays available`, async () => {
+    const s = await signedIn(23, 2); const f = fixture({ menus: [] });
+    f.ports.roleWriteGrantsEnabled = true;
+    const fail = async () => { throw new Error('private connection string'); };
+    if (dependency === 'identity') f.ports.links.activeForConsoleUser = fail;
+    else f.ports.grants.activeCapabilities = fail;
+    const d = deps(f, { permissions: rolePermissions });
+    const response = await create(s, f, valid(), {}, d);
+    assert.equal(response.status, 503);
+    assert.deepEqual(await bodyOf(response), { error: 'KOSIPA_UNAVAILABLE' });
+    const list = await handleListMaster(s.world.services, makeRequest('/api/kosipa/master/lokasi', { cookie: s.cookie }), 'lokasi', d);
+    assert.equal(list.status, 200);
+    assert.equal((await bodyOf(list)).canManage, false);
+    assert.deepEqual(f.writes, []);
+  });
+}
+
+test('role command HTTP denies a cashier before looking up existing grants or links', async () => {
+  const s = await signedIn(); const f = fixture();
+  f.ports.roleWriteGrantsEnabled = true;
+  let lookups = 0;
+  f.ports.links.activeForConsoleUser = f.ports.grants.activeCapabilities = async () => { lookups++; throw new Error('must not query'); };
+  const response = await create(s, f, valid(), {}, deps(f, { permissions: { ...permissions, async kosipaRoleAccess() { return 'denied'; } } }));
+  assert.equal(response.status, 403);
+  assert.equal(lookups, 0);
+  assert.deepEqual(f.writes, []);
 });

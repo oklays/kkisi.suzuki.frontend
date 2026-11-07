@@ -37,7 +37,7 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
   return (
     <div className="console-page">
       <Link prefetch={false} className="console-back" href={`/console/kosipa/pinjaman${qs(context)}`}><ArrowLeft size={16} aria-hidden="true" />Kembali ke daftar pinjaman</Link>
-      <KosipaPageHeader title={<> Pinjaman {docNo} </>}><p>Data pinjaman KOSIPA, baca saja. Nilai di bawah adalah nilai yang tercatat.</p></KosipaPageHeader>
+      <KosipaPageHeader title={<> Pinjaman {docNo} </>} tail={[{ label: docNo, icon: 'detail' }]}><p>Data pinjaman KOSIPA, baca saja. Nilai di bawah adalah nilai yang tercatat.</p></KosipaPageHeader>
       {failed && <FeedbackState kind="error" title={<> Pinjaman tidak dapat dibaca </>} reset={base}><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {detail && l && h && (<>
         <section className="console-card" aria-labelledby="sec-pinjaman">

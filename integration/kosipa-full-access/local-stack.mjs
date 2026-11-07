@@ -8,11 +8,11 @@
  * Accounts are the application's least-privilege set, created from the repository templates. Secrets are random, live only in
  * .local/kosipa-fa01/ (mode 600, gitignored) and apps/web/.env.kosipa-fa01 (mode 600, gitignored), and are never printed.
  * Never reads the repository .env files, never connects to port 3307, never runs DDL outside this container.
- *   node integration/kosipa-full-access/local-stack.mjs setup|status|reset|stop
+ *   node integration/kosipa-full-access/local-stack.mjs setup|status|reset|stop|member-tables
  */
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -72,6 +72,65 @@ export async function rootConnection(config, database = DB) {
   return db;
 }
 
+/** SHOW CREATE comparison ignores only qualification, CREATE's existence clause, whitespace and instance counters. */
+export function assertMemberTableShape(expected, actual) {
+  const normalize = (sql) => sql.replace(/CREATE TABLE IF NOT EXISTS/g, 'CREATE TABLE')
+    .replace(/`[^`]+`\.`/g, '`').replace(/ AUTO_INCREMENT=\d+/g, '').replace(/;\s*$/, '').replace(/\s+/g, ' ').trim();
+  if (normalize(expected) !== normalize(actual)) fail('KFA_MEMBER_TABLE_SHAPE_MISMATCH');
+}
+
+/** Additive only: fixed loopback port, installation sentinel before DDL, never invokes setup/reset. */
+export async function applyMemberSideTables() {
+  const config = await loadConfig();
+  const db = await rootConnection(config); // verifies installation before any CREATE
+  try {
+    const source = await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/member-side-tables.sql'), 'utf8');
+    const statements = source.split(';').map((s) => s.trim()).filter(Boolean);
+    const names = ['m_simpanan_aktif', 'oauth_access_tokens'];
+    if (statements.length !== names.length) fail('KFA_INVALID_MEMBER_FIXTURE');
+    // Validate all existing shapes before creating either missing table.
+    const missing = [];
+    for (const [i, name] of names.entries()) {
+      if (!statements[i].startsWith(`CREATE TABLE IF NOT EXISTS \`__KOSIPA_DB__\`.\`${name}\` (`)) fail('KFA_INVALID_MEMBER_FIXTURE');
+      const [found] = await db.query('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?', [DB, name]);
+      if (found.length) {
+        const [[row]] = await db.query(`SHOW CREATE TABLE \`${name}\``);
+        assertMemberTableShape(statements[i], row['Create Table']);
+      } else missing.push(i);
+    }
+    for (const i of missing) await db.query(statements[i].replaceAll('__KOSIPA_DB__', DB));
+    for (const [i, name] of names.entries()) {
+      const [[row]] = await db.query(`SHOW CREATE TABLE \`${name}\``);
+      assertMemberTableShape(statements[i], row['Create Table']);
+    }
+    return { mode: 'LOCAL_SYNTHETIC', port: PORT, tables: names, created: missing.length };
+  } finally { await db.end(); }
+}
+
+/** Additive (FA-03B T06): product-master + chart-of-accounts tables (structure from the production capture) and their synthetic rows. Never resets. */
+export async function applyProductMasters() {
+  const config = await loadConfig();
+  const db = await rootConnection(config); // verifies installation before any DDL
+  try {
+    const statements = (await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/product-master-tables.sql'), 'utf8'))
+      .split('\n').filter((l) => !/^\s*--/.test(l)).join('\n').split(';').map((s) => s.trim()).filter(Boolean);
+    const names = ['m_acc_coa', 'm_jenis_pembiayaan', 'm_jenis_pinjaman', 'm_jenis_simpanan', 'm_suku_bunga'];
+    if (statements.length !== names.length) fail('KFA_INVALID_PRODUCT_FIXTURE');
+    let created = 0;
+    for (const [i, name] of names.entries()) {
+      if (!statements[i].startsWith(`CREATE TABLE IF NOT EXISTS \`__KOSIPA_DB__\`.\`${name}\` (`)) fail('KFA_INVALID_PRODUCT_FIXTURE');
+      const [found] = await db.query('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?', [DB, name]);
+      if (!found.length) { await db.query(statements[i].replaceAll('__KOSIPA_DB__', DB)); created++; }
+      const [[row]] = await db.query(`SHOW CREATE TABLE \`${name}\``);
+      assertMemberTableShape(statements[i], row['Create Table']);
+    }
+    const seed = (await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/product-master-seed.sql'), 'utf8'))
+      .split('\n').filter((l) => !/^\s*--/.test(l)).join('\n').split(';').map((s) => s.trim()).filter(Boolean);
+    for (const st of seed) { if (!/^INSERT IGNORE INTO /.test(st)) fail('KFA_INVALID_PRODUCT_FIXTURE'); await db.query(st.replaceAll('__KOSIPA_DB__', DB)); }
+    return { mode: 'LOCAL_SYNTHETIC', port: PORT, tables: names, created };
+  } finally { await db.end(); }
+}
+
 const template = async (path, map) => { let sql = await readFile(resolve(root, path), 'utf8'); for (const [k, v] of Object.entries(map)) sql = sql.replaceAll(k, v); return sql; };
 
 async function applySchema(config) {
@@ -84,6 +143,8 @@ async function applySchema(config) {
     business,
     await template('integration/kosipa-full-access/fixtures/legacy-structure.sql', { __KOSIPA_DB__: DB }),
     await template('integration/kosipa-full-access/fixtures/legacy-runtime-structure.sql', { __KOSIPA_DB__: DB }),
+    await template('integration/kosipa-full-access/fixtures/member-side-tables.sql', { __KOSIPA_DB__: DB }),
+    await template('integration/kosipa-full-access/fixtures/product-master-tables.sql', { __KOSIPA_DB__: DB }),
     `CREATE TABLE \`${DB}\`._kfa_installation (id CHAR(32) PRIMARY KEY, mode VARCHAR(20) NOT NULL); INSERT INTO \`${DB}\`._kfa_installation VALUES (${quote(config.installationId)}, 'LOCAL_SYNTHETIC');`,
     await template('apps/web/db/kosipa/001_command_ledger.sql.tpl', { __LEDGER_DB__: LEDGER_DB }),
     await template('apps/web/db/kosipa/005_document_number_registry.sql.tpl', { __LEDGER_DB__: LEDGER_DB }),
@@ -97,6 +158,7 @@ async function applySchema(config) {
     await template('apps/web/db/console/002_console_grants.sql.tpl', { __AUTH_HOST__: '%', __AUTH_PW__: pw('console') }),
     await template('apps/web/db/console/005_kosipa_grants_grants.sql.tpl', { __CONSOLE_USER__: 'kkisi_console', __HOST__: '%' }),
     await template('apps/web/db/kosipa/002_master_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: pw('masterWrite') }),
+    await template('apps/web/db/kosipa/006_member_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: pw('memberWrite') }),
     await template('apps/web/db/kosipa/003_cpanel_model_writer.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: pw('cpanelModel') }),
     // TASK-109 test writer: the privileges a future document writer needs for numbering (read the numbered column; claim in the ledger database).
     `CREATE USER IF NOT EXISTS 'kfa_numbering_w'@'%' IDENTIFIED BY ${quote(pw('numbering'))}; ALTER USER 'kfa_numbering_w'@'%' IDENTIFIED BY ${quote(pw('numbering'))} WITH MAX_USER_CONNECTIONS 4;
@@ -167,10 +229,16 @@ async function writeAppEnv(config) {
     DATABASE_URL_AUTH: dsn(config, 'auth', AUTH_DB, 2),
     DATABASE_URL_CONSOLE: dsn(config, 'console', CONSOLE_DB, 1),
     DATABASE_URL_KOSIPA_MASTER_WRITE: dsn(config, 'masterWrite', DB, 2),
+    DATABASE_URL_KOSIPA_MEMBER_WRITE: dsn(config, 'memberWrite', DB, 2),
+    DATABASE_URL_KOSIPA_SAVINGS_WRITE: dsn(config, 'savingsWrite', DB, 2),
     CONSOLE_ENABLED: 'true', KOSIPA_READ_ENABLED: 'true',
     KOSIPA_WRITE_GRANTS_ENABLED: 'true', KOSIPA_GRANT_ADMIN_USER_IDS: GRANT_ADMINS.join(','),
     KOSIPA_MASTER_WRITES_ENABLED: 'true', KOSIPA_LEDGER_DATABASE: LEDGER_DB,
-    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran',
+    KOSIPA_MEMBER_WRITES_ENABLED: 'true',
+    KOSIPA_SAVINGS_WRITES_ENABLED: 'true',
+    // Deterministic per installation (synthetic only): HMAC key of the opaque member versions.
+    KOSIPA_MEMBER_VERSION_SECRET: createHash('sha256').update(`member-version:${config.authSecret}`).digest('hex'),
+    KOSIPA_WRITE_OWNERSHIP: 'master.lokasi,master.bagian,master.jenis_dokumen,master.rekening_bank,master.periode_angsuran,master.jenis_simpanan,master.jenis_pinjaman,master.jenis_pembiayaan,master.suku_bunga,member,savings.deposit',
   };
   await writeFile(envPath, Object.entries(lines).map(([k, v]) => `${k}="${v}"`).join('\n') + '\n', { mode: 0o600 });
   await chmod(envPath, 0o600);
@@ -184,6 +252,45 @@ async function waitReady(config) {
   fail('KFA_DATABASE_NOT_READY');
 }
 
+/** Backfill accounts added after the config was first written (additive; never rotates an existing password). */
+async function ensureAccounts(config) {
+  const wanted = { cpanelModel: 'kosipa_cpanel_w', numbering: 'kfa_numbering_w', memberWrite: 'kosipa_member_w', savingsWrite: 'kosipa_savings_w' };
+  let changed = false;
+  for (const [key, user] of Object.entries(wanted)) if (!config.accounts[key]) { config.accounts[key] = { user, password: secret() }; changed = true; }
+  if (changed) await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+  await chmod(configPath, 0o600);
+}
+
+/** Additive (FA-03C T07): the savings writer account + grants and the fenced legacy Setor Simpanan menu. Never resets data. */
+export async function applySavingsWriter() {
+  const config = await loadConfig();
+  await ensureAccounts(config);
+  const db = await rootConnection(config);
+  try {
+    const seed = (await readFile(resolve(root, 'integration/kosipa-full-access/fixtures/savings-seed.sql'), 'utf8')).split('\n').filter((l) => !/^\s*--/.test(l)).join('\n').split(';').map((s) => s.trim()).filter(Boolean);
+    for (const st of seed) { if (!/^INSERT IGNORE INTO /.test(st)) fail('KFA_INVALID_SAVINGS_FIXTURE'); await db.query(st.replaceAll('__KOSIPA_DB__', DB)); }
+  } finally { await db.end(); }
+  await adminSql(config, await template('apps/web/db/kosipa/007_savings_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: config.accounts.savingsWrite.password }));
+  return { mode: config.mode, port: PORT, account: config.accounts.savingsWrite.user };
+}
+
+/** Additive: re-applies ONLY the master writer's grants (FA-03B T06 product masters extend them). Never resets data. */
+export async function applyMasterWriter() {
+  const config = await loadConfig();
+  (await rootConnection(config)).end();
+  await adminSql(config, await template('apps/web/db/kosipa/002_master_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: config.accounts.masterWrite.password }));
+  return { mode: config.mode, port: PORT, account: config.accounts.masterWrite.user };
+}
+
+/** Additive: creates/refreshes ONLY the member writer account (FA-03B T04) on the existing synthetic stack. Never resets data. */
+export async function applyMemberWriter() {
+  const config = await loadConfig();
+  await ensureAccounts(config);
+  (await rootConnection(config)).end();                  // refuses unless the sentinel matches this installation
+  await adminSql(config, await template('apps/web/db/kosipa/006_member_writer_grants.sql.tpl', { __KOSIPA_DB__: DB, __LEDGER_DB__: LEDGER_DB, __HOST__: '%', __PW__: config.accounts.memberWrite.password }));
+  return { mode: config.mode, port: PORT, account: config.accounts.memberWrite.user };
+}
+
 export async function setup() {
   await mkdir(local, { recursive: true, mode: 0o700 }); await chmod(local, 0o700);
   let config;
@@ -191,12 +298,12 @@ export async function setup() {
     if (error.code !== 'ENOENT') throw error;
     config = {
       mode: 'LOCAL_SYNTHETIC', port: PORT, installationId: randomBytes(16).toString('hex'), rootPassword: secret(), authSecret: randomBytes(48).toString('base64'),
-      accounts: { read: { user: 'kfa_read', password: secret() }, auth: { user: 'kkisi_auth', password: secret() }, console: { user: 'kkisi_console', password: secret() }, masterWrite: { user: 'kosipa_master_w', password: secret() }, cpanelModel: { user: 'kosipa_cpanel_w', password: secret() }, numbering: { user: 'kfa_numbering_w', password: secret() } },
+      accounts: { read: { user: 'kfa_read', password: secret() }, auth: { user: 'kkisi_auth', password: secret() }, console: { user: 'kkisi_console', password: secret() }, masterWrite: { user: 'kosipa_master_w', password: secret() }, cpanelModel: { user: 'kosipa_cpanel_w', password: secret() }, numbering: { user: 'kfa_numbering_w', password: secret() }, memberWrite: { user: 'kosipa_member_w', password: secret() }, savingsWrite: { user: 'kosipa_savings_w', password: secret() } },
       passwords: Object.fromEntries(Object.keys(USERS).map((n) => [n, randomBytes(12).toString('base64url')])),
     };
     await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
   }
-  if (!config.accounts.cpanelModel || !config.accounts.numbering) { config.accounts.cpanelModel ??= { user: 'kosipa_cpanel_w', password: secret() }; config.accounts.numbering ??= { user: 'kfa_numbering_w', password: secret() }; await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 }); }
+  await ensureAccounts(config);
   await chmod(configPath, 0o600);
   let exists = false; try { await run('docker', ['inspect', CONTAINER]); exists = true; } catch { /* first run */ }
   if (!exists) {
@@ -213,15 +320,17 @@ export async function setup() {
   try { const [rows] = await probe.query('SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?', [DB, '_kfa_installation']); installed = Number(rows[0].n) === 1; } finally { await probe.end(); }
   if (installed) (await rootConnection(config)).end();
   else { await applySchema(config); await seed(config); }
+  await applyProductMasters();
+  await applySavingsWriter();
   await writeAppEnv(config);
   return { mode: config.mode, port: PORT, database: DB, installationId: config.installationId, appEnv: 'apps/web/.env.kosipa-fa01' };
 }
 
 export async function reset() {
   const config = await loadConfig();
-  if (!config.accounts.cpanelModel || !config.accounts.numbering) { config.accounts.cpanelModel ??= { user: 'kosipa_cpanel_w', password: secret() }; config.accounts.numbering ??= { user: 'kfa_numbering_w', password: secret() }; await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 }); }
+  await ensureAccounts(config);
   (await rootConnection(config)).end();                  // refuses unless the sentinel matches this installation
-  await applySchema(config); await seed(config); await writeAppEnv(config);
+  await applySchema(config); await seed(config); await applyProductMasters(); await applySavingsWriter(); await writeAppEnv(config);
   return { reset: true };
 }
 
@@ -237,6 +346,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const command = process.argv[2] ?? 'status';
     if (command === 'setup') console.log(JSON.stringify(await setup()));
+    else if (command === 'savings-writer') console.log(JSON.stringify(await applySavingsWriter()));
+    else if (command === 'master-writer') console.log(JSON.stringify(await applyMasterWriter()));
+    else if (command === 'product-masters') console.log(JSON.stringify(await applyProductMasters()));
+    else if (command === 'member-writer') console.log(JSON.stringify(await applyMemberWriter()));
+    else if (command === 'member-tables') console.log(JSON.stringify(await applyMemberSideTables()));
     else if (command === 'reset') console.log(JSON.stringify(await reset()));
     else if (command === 'stop') console.log(JSON.stringify(await stop()));
     else if (command === 'status') { const config = await loadConfig(); const db = await rootConnection(config); try { const [[n]] = await db.query(`SELECT COUNT(*) AS ledger FROM \`${LEDGER_DB}\`.kosipa_command_ledger`); console.log(JSON.stringify({ mode: config.mode, port: PORT, ledgerRows: Number(n.ledger) })); } finally { await db.end(); } }

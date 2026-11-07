@@ -76,11 +76,12 @@ function domainRequire(id) {
   new Function('require','module','exports',output)(id=>id.endsWith('.ts')?domainRequire('@koperasi/domain/money/'+id.replace(/^\.\//,'').replace(/\.ts$/,'')):require(id),compiledModule,compiledModule.exports);
   return compiledModule.exports;
 }
-function loadComponent(filename) {
+function loadComponent(filename, reactOverride) {
   const file=resolve(dirname(fileURLToPath(import.meta.url)),'../src/components/public-savings',filename);
   const output=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
   const compiledModule={exports:{}};
-  const localRequire=id=>id.startsWith('../money/')?loadMoney(id.slice(9)):id.startsWith('./')?loadComponent(`${id.slice(2)}${id==='./client'?'.ts':'.tsx'}`):id.endsWith('.css')?{}:require(id);
+  const localRequire=id=>id==='react'&&reactOverride?reactOverride:id.startsWith('../money/')?loadMoney(id.slice(9)):id.startsWith('./')?loadComponent(`${id.slice(2)}${id==='./client'?'.ts':'.tsx'}`):id.endsWith('.css')?{}:require(id);
+
   new Function('require','module','exports',output)(localRequire,compiledModule,compiledModule.exports);
   return compiledModule.exports;
 }
@@ -88,7 +89,7 @@ function loadComponent(filename) {
 test('public initial render is accessible and contains no fabricated member or OTP success path', () => {
   const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
   const html=renderToStaticMarkup(React.createElement(loadComponent('PublicSavings.tsx').default));
-  assert.match(html,/<h1>Pengajuan simpanan sukarela<\/h1>/);
+  assert.match(html,/<h1>Pengajuan simpanan<\/h1>/);
   assert.match(html,/aria-label="Tahapan pengajuan"/);assert.match(html,/role="status"/);
   assert.doesNotMatch(html,/123456|SYNTH MEMBER|DEMO-SS|Gunakan contoh/);
 });
@@ -155,4 +156,40 @@ test('console workbench renders compact search, filters, pagination and no stagi
  const html=renderToStaticMarkup(React.createElement(loadComponent('ConsoleWorkbench.tsx').default,{csrfToken:'session-token'}));
  assert.match(html,/role="tablist"/);assert.match(html,/type="search"/);assert.match(html,/aria-label="Halaman"/);assert.match(html,/aria-label="Filter status"/);
  assert.match(html,/aria-live="polite"/);assert.doesNotMatch(html,/type="password"|LOCAL STAGING|session-token/);
+});
+
+test('issuance exposes labelled immutable savings type options while public submission never chooses a type',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ for(const filename of ['ConsoleWorkbench.tsx','OperatorWorkbench.tsx']){
+  const html=renderToStaticMarkup(React.createElement(loadComponent(filename).default,{csrfToken:'session-token'}));
+  assert.match(html,/Jenis simpanan/);assert.match(html,/<option value="SIMPANAN SUKARELA" selected="">SIMPANAN SUKARELA/);
+  assert.match(html,/<option value="SIMPANAN WAJIB">SIMPANAN WAJIB/);
+ }
+ const fields=freezeSubmission('150000',{...form,savingsType:'SIMPANAN WAJIB'},new Blob(['signature']),'key').fields;
+ assert.equal(fields.savingsType,undefined);
+});
+
+test('public Wajib rendering follows validated server type through verification, review and receipt',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ function render(state,serverForm,receipt=null,review=false){
+  const values={0:state,1:serverForm,6:'150000',9:review,11:receipt,13:'SIMPANAN WAJIB'};let index=0;
+  const component=loadComponent('PublicSavings.tsx',{...React,useState(initial){const position=index++;return [position in values?values[position]:typeof initial==='function'?initial():initial,()=>{}];}}).default;
+  return renderToStaticMarkup(React.createElement(component));
+ }
+ const wajibForm={...form,savingsType:'SIMPANAN WAJIB'};
+ for(const html of [render('VERIFICATION_REQUIRED',null),render('READY',wajibForm),render('READY',wajibForm,null,true),render('CONSUMED',null,{reference:'W-1',savingsType:'SIMPANAN WAJIB',artifactState:'READY'})]){
+  assert.match(html,/<h1>Pengajuan simpanan wajib<\/h1>/);assert.doesNotMatch(html,/simpanan sukarela|Potongan sukarela/i);
+ }
+ assert.match(render('READY',wajibForm),/<h2>Potongan wajib<\/h2>/);
+ assert.match(render('CONSUMED',null,{reference:'W-1',savingsType:'SIMPANAN WAJIB',artifactState:'READY'}),/<dt>Jenis simpanan<\/dt><dd>SIMPANAN WAJIB<\/dd>/);
+});
+
+test('replica UAT pages explicitly label local simulation without implying real contact verification',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ for(const filename of ['ConsoleWorkbench.tsx','PublicSavings.tsx']){
+  const Component=loadComponent(filename).default;
+  const html=renderToStaticMarkup(React.createElement(Component,{csrfToken:'session-token',mode:'LOCAL_REPLICA_UAT'}));
+  assert.match(html,/LOCAL REPLICA UAT/);assert.match(html,/SIMULASI/);assert.match(html,/OTP.*capture lokal/);assert.match(html,/bukan verifikasi kontak asli/);
+  const normal=renderToStaticMarkup(React.createElement(Component,{csrfToken:'session-token'}));assert.doesNotMatch(normal,/LOCAL REPLICA UAT/);
+ }
 });

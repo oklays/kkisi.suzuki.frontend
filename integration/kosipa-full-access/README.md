@@ -18,6 +18,12 @@ Secrets are random. They live only in `.local/kosipa-fa01/` and `apps/web/.env.k
 # 1. database stack (container, schemas, least-privilege accounts, synthetic seed; legacy master menus start FENCED)
 node integration/kosipa-full-access/local-stack.mjs setup      # status | reset | stop
 
+# 1a. (existing stacks) product masters FA-03B T06: tables + synthetic rows, then the master writer's extended grants — additive, never resets
+node integration/kosipa-full-access/local-stack.mjs product-masters && node integration/kosipa-full-access/local-stack.mjs master-writer
+
+# 1b. (existing stacks) member writer account for FA-03B T04 — additive, sentinel-checked, never resets data
+node apps/web/scripts/setup-kosipa-member-write.mjs     # same as: node integration/kosipa-full-access/local-stack.mjs member-writer
+
 # 2. Build the isolated legacy test image (cached after first build).
 docker build --platform linux/amd64 -t kkisi-kfa-php56-ci2 integration/kosipa-full-access/legacy-runtime
 
@@ -26,11 +32,12 @@ cd apps/web && KOSIPA_FA01=1 node --experimental-strip-types --test --test-concu
   tests/kosipa-foundation-db.test.mjs tests/kosipa-masters-db.test.mjs tests/kosipa-legacy-fence-db.test.mjs \
   tests/kosipa-migrations-rollback-db.test.mjs tests/kosipa-b1-export-db.test.mjs \
   tests/kosipa-document-number-db.test.mjs tests/kosipa-production-sql-static-db.test.mjs \
-  tests/kosipa-legacy-runtime.test.mjs && cd ../..
+  tests/kosipa-legacy-runtime.test.mjs tests/kosipa-member-write-db.test.mjs tests/kosipa-member-native-legacy-compat-db.test.mjs tests/kosipa-product-masters-db.test.mjs && cd ../..
 
 # 3. console on http://127.0.0.1:3230, built into apps/web/.next-kfa01 (never .next, never a running dev server)
 node integration/kosipa-full-access/app-server.mjs build && node integration/kosipa-full-access/app-server.mjs start
 cd apps/web && node tests/kosipa-master-browser.mjs && cd ../..   # E1–E9, screenshots in /private/tmp/kfa01-browser
+cd apps/web && node --experimental-strip-types tests/kosipa-member-browser.mjs && cd ../..   # member register/edit/status E1–E8 (fences the legacy member menus for the run, restores them)
 node integration/kosipa-full-access/app-server.mjs stop
 
 # 4. regression of the existing DEV LOCAL browser suites in an isolated runtime (:3203, apps/web/.next-devlocal; FA features off)
@@ -43,6 +50,18 @@ node integration/kosipa-full-access/app-server.mjs stop --profile devlocal
 ```
 
 The launcher refuses to start on an occupied port, and refuses to rebuild while that profile's server is running.
+
+## Legacy source layout
+
+The legacy runtime resolves the unchanged source from `KOSIPA_LEGACY_SOURCE_DIR` when explicitly set; otherwise it tries `legacy/kosipa`, then the historical `kosipa`, relative to the repository root. The selected directory must contain the `application`, `system`, and `vendor` directories and the `index.php` file. Resolution returns the real filesystem path, including when the existing source location is reached through a symlink.
+
+An invalid explicit override (including an empty value) fails closed with `KFA_INVALID_LEGACY_SOURCE`; it never falls back to another tree. If neither default contains a complete source tree, the runtime fails with `KFA_LEGACY_SOURCE_NOT_FOUND`. Validation happens after the `KOSIPA_FA01=1` enable gate and before loading synthetic stack configuration or creating any runtime resources. It inspects filesystem metadata only and never reads legacy `database.php` or `.env` contents.
+
+The source remains mounted read-only. The runtime still uses its generated synthetic development database override, internal-only Docker network and no published port. Source resolver tests need no database or containers:
+
+```bash
+node --test apps/web/tests/kosipa-legacy-source.test.mjs
+```
 
 ## Synthetic accounts
 

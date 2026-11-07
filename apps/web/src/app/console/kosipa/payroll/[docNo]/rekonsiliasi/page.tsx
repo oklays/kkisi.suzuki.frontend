@@ -37,7 +37,7 @@ export default async function PayrollReconciliationPage({ params, searchParams }
   return (
     <div className="console-page">
       <Link prefetch={false} className="console-back" href={base}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
-      <KosipaPageHeader title={<> Rekonsiliasi kredit toko </>} review>
+      <KosipaPageHeader title={<> Rekonsiliasi kredit toko </>} review tail={[{ label: docNo, href: `/console/kosipa/payroll/${encodeURIComponent(docNo)}`, icon: 'batch' }, { label: 'Rekonsiliasi', icon: 'reconcile' }]}>
         <p>Bandingkan komponen kredit toko pada payroll dengan belanja bersih retur. Selisih adalah informasi untuk tinjauan, bukan keputusan akuntansi.</p>
       </KosipaPageHeader>
       {failed && <FeedbackState kind="error" title={<> Rekonsiliasi tidak dapat dibaca </>}><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}

@@ -1,7 +1,9 @@
-import Link from 'next/link';
+import { PageBreadcrumbs } from '@/components/console/PageBreadcrumbs';
 import { notFound } from 'next/navigation';
 import { listMaster } from '@koperasi/application/kosipa/commands/master';
 import { MASTER_TYPES } from '@koperasi/domain/kosipa/master';
+import { isProductMasterType } from '@koperasi/domain/kosipa/product-master';
+import { ProductMasterListPage } from '../product-pages';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { MasterDataManager } from '@/components/console/kosipa/MasterDataManager';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
@@ -11,10 +13,12 @@ import { kosipaCommandServices } from '@/infrastructure/console/services';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Master Data KOSIPA · KKISI TB2' };
 
-/** One KOSIPA reference master (F52): Lokasi, Bagian, Jenis Dokumen, Rekening Bank, Periode Angsuran. Reached from /console/kosipa/master. */
+/** One KOSIPA master (F52): the five reference masters inline, the four product masters (FA-03B T06) as a list with create/edit pages. */
 export default async function KosipaMasterPage({ params }: { params: Promise<{ type: string }> }) {
   const { type } = await params;
-  if (!consoleEnabled() || !(MASTER_TYPES as readonly string[]).includes(type)) notFound();
+  if (!consoleEnabled()) notFound();
+  if (isProductMasterType(type)) return <ProductMasterListPage type={type} />;
+  if (!(MASTER_TYPES as readonly string[]).includes(type)) notFound();
   const auth = await requireConsoleSession({ next: `/console/kosipa/master/${type}` });
   if (auth.kind !== 'ok') return null;
   if (auth.kosipa !== 'linked' && auth.kosipa !== 'role') return <KosipaNotice state={auth.kosipa} />;
@@ -28,7 +32,7 @@ export default async function KosipaMasterPage({ params }: { params: Promise<{ t
   return (
     <div className="console-page">
       <header className="kosipa-page-head">
-        <p className="kosipa-eyebrow"><Link href="/console/kosipa/master">Master data</Link> <span>/</span> {def.title.replace('Master ', '')}</p>
+        <PageBreadcrumbs tail={[{ label: def.title.replace('Master ', ''), icon: 'detail' }]} />
         <div className="kosipa-title-row"><h1>{def.title}</h1><span className="kosipa-provenance">KOSIPA: {def.legacyController}</span></div>
       </header>
       <MasterDataManager definition={def} rows={data.rows} canManage={data.canManage} writable={data.writable} legacyActive={data.legacy === 'legacy-active'} csrfToken={auth.services.keys.csrfToken(auth.ctx.sidHash)} />

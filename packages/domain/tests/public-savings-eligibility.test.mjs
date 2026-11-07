@@ -89,3 +89,22 @@ test('B-04: December to January and leap-year boundaries order correctly', () =>
   const leap = resolveRequestedPeriod(cal([per(2028, 2, 'OPEN')]), { year: 2028, month: 2 }, PSS_POLICY_V1, Date.UTC(2028, 1, 28, 18));   // 2028-02-29 01:00 Jakarta
   assert.deepEqual(leap.value.requestedPeriod, { year: 2028, month: 2 });
 });
+
+test('replica contact simulation is explicit, attributable and confined to trusted local context',()=>{
+ const contact={status:'SIMULATED_LOCAL_CAPTURE',verifiedAtEpochMs:NOW,provenanceRef:'local-replica-simulation:member-1',changedSinceVerification:false};
+ const run=(c=contact,context)=>evaluateMembershipEligibility(facts({contact:c}),PSS_POLICY_V1,NOW,context);
+ err(run(),'CONTACT_UNTRUSTED');assert.equal(run(contact,'LOCAL_REPLICA_UAT').ok,true);
+ err(run(contact,'UNKNOWN'),'INVALID_INPUT');
+ err(run({...contact,provenanceRef:'membership-record:1'},'LOCAL_REPLICA_UAT'),'CONTACT_UNTRUSTED');
+ err(run({...contact,verifiedAtEpochMs:NOW+1},'LOCAL_REPLICA_UAT'),'CONTACT_UNTRUSTED');
+ err(run({...contact,verifiedAtEpochMs:NOW-181*DAY},'LOCAL_REPLICA_UAT'),'CONTACT_UNTRUSTED');
+});
+
+test('replica calendar stays explicitly unverified and requires trusted local context',()=>{
+ const calendar={source:'LOCAL_REPLICA_SIMULATION_CALENDAR',verified:false,periods:[per(2026,11,'OPEN')]};
+ const run=(c=calendar,context)=>resolveRequestedPeriod(c,{year:2026,month:11},PSS_POLICY_V1,NOW,context);
+ err(run(),'PERIOD_UNVERIFIED');assert.equal(run(calendar,'LOCAL_REPLICA_UAT').ok,true);
+ err(run(calendar,'UNKNOWN'),'INVALID_INPUT');err(run({...calendar,verified:true},'LOCAL_REPLICA_UAT'),'PERIOD_UNVERIFIED');
+ err(run({...calendar,source:'AUTHORITATIVE_KOSIPA_CI2_PAYROLL_CALENDAR'},'LOCAL_REPLICA_UAT'),'PERIOD_UNVERIFIED');
+ assert.equal(run({...calendar,source:'AUTHORITATIVE_KOSIPA_CI2_PAYROLL_CALENDAR',verified:true}).ok,true);
+});

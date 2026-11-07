@@ -6,9 +6,9 @@ import { connect,loadConfig } from '../staging.mjs';
 const enabled=process.env.PSS_INTEGRATION==='1';
 let sequence=10000+(process.pid%10000)*100;
 const hex=()=>randomBytes(16).toString('hex');
-async function member(){const id=++sequence;const nik=`T${String(id).padStart(9,'0')}`;const db=await connect('admin');try{await db.execute("INSERT INTO m_anggota(id,nik_kar,nama_kar,bagian,email,status_anggota,status_karyawan,sim_sukarela,kd_group) VALUES(?,?,'SYNTH CONTROL MEMBER',1,'control@example.invalid','AKTIVE','AKTIVE',100000,'SYNTH')",[id,nik]);await db.execute('INSERT INTO pss_member_control VALUES(?,NULL)',[id]);}finally{await db.end();}return{id,nik};}
-async function publicRequest(m,{ready=false}={}){const app=await connect();const reference=`PSS${hex()}00000`;try{await app.beginTransaction();await app.execute("SELECT member_id FROM pss_member_control WHERE member_id=? FOR UPDATE",[m.id]);await app.execute("INSERT INTO pss_application(reference,member_id,link_id,idempotency_key,request_hash,payload_hash,snapshot_cipher,snapshot_hash,created_ms,verified_ms) VALUES(?,?,?,?,?,?,?, ?,?,?)",[reference,m.id,hex(),hex(),'a'.repeat(64),'b'.repeat(64),'synthetic-cipher','c'.repeat(64),Date.now(),Date.now()-1000]);await app.execute('UPDATE pss_member_control SET active_reference=? WHERE member_id=? AND active_reference IS NULL',[reference,m.id]);await app.execute("INSERT INTO trans_simpanan_pengajuan(doc_no,doc_date,doc_status,jenis_simpanan,nik_kar,nama,bagian,potongan_old,potongan,awal_potong_bulan,awal_potong_tahun,cd_usr,status_notif,is_mobile,ttd) VALUES(?,CURRENT_DATE(),'OPEN','SIMPANAN SUKARELA',?,'SYNTH CONTROL MEMBER','SYNTHETIC DEPARTMENT',100000,150000,'11','2026','public-savings',0,0,'pss-signature-synthetic')",[reference,m.nik]);await app.commit();if(ready)await app.execute("UPDATE pss_application SET pdf_ref=?,pdf_digest=?,proof_status='READY' WHERE reference=?",[`pss-pdf-${hex()}`,'d'.repeat(64),reference]);}catch(error){await app.rollback();throw error;}finally{await app.end();}return reference;}
-async function facts(m,reference){const db=await connect('admin');try{const [h]=await db.execute('SELECT doc_status,potongan,cd_usr,ud_usr FROM trans_simpanan_pengajuan WHERE doc_no=?',[reference]);const [a]=await db.execute('SELECT doc_no,potongan_payroll,status FROM m_simpanan_aktif WHERE nik_kar=?',[m.nik]);const [p]=await db.execute('SELECT sim_sukarela FROM m_anggota WHERE id=?',[m.id]);const [r]=await db.execute('SELECT active_reference FROM pss_member_control WHERE member_id=?',[m.id]);return{header:h,active:a,member:p,reservation:r};}finally{await db.end();}}
+async function member(){const id=++sequence;const nik=`T${String(id).padStart(9,'0')}`;const db=await connect('admin');try{await db.execute("INSERT INTO m_anggota(id,nik_kar,nama_kar,bagian,email,status_anggota,status_karyawan,sim_sukarela,sim_wajib,kd_group) VALUES(?,?,'SYNTH CONTROL MEMBER',1,'control@example.invalid','AKTIVE','AKTIVE',100000,80000,'SYNTH')",[id,nik]);await db.execute('INSERT INTO pss_member_control VALUES(?,NULL)',[id]);}finally{await db.end();}return{id,nik};}
+async function publicRequest(m,{ready=false,type='SIMPANAN SUKARELA'}={}){const app=await connect();const reference=`PSS${hex()}00000`,link=hex();try{await app.beginTransaction();await app.execute("SELECT member_id FROM pss_member_control WHERE member_id=? FOR UPDATE",[m.id]);await app.execute("INSERT INTO pss_link(id,member_id,savings_type,token_hash,contact_version,expires_ms,state,created_ms) VALUES(?,?,?,?,'synthetic',?,'CONSUMED',?)",[link,m.id,type,hex()+hex(),Date.now()+60000,Date.now()]);await app.execute("INSERT INTO pss_application(reference,member_id,link_id,idempotency_key,request_hash,payload_hash,snapshot_cipher,snapshot_hash,created_ms,verified_ms) VALUES(?,?,?,?,?,?,?, ?,?,?)",[reference,m.id,link,hex(),'a'.repeat(64),'b'.repeat(64),'synthetic-cipher','c'.repeat(64),Date.now(),Date.now()-1000]);await app.execute('UPDATE pss_member_control SET active_reference=? WHERE member_id=? AND active_reference IS NULL',[reference,m.id]);await app.execute("INSERT INTO trans_simpanan_pengajuan(doc_no,doc_date,doc_status,jenis_simpanan,nik_kar,nama,bagian,potongan_old,potongan,awal_potong_bulan,awal_potong_tahun,cd_usr,status_notif,is_mobile,ttd) VALUES(?,CURRENT_DATE(),'OPEN',?,?,'SYNTH CONTROL MEMBER','SYNTHETIC DEPARTMENT',100000,150000,'11','2026','public-savings',0,0,'pss-signature-synthetic')",[reference,type,m.nik]);await app.commit();if(ready)await app.execute("UPDATE pss_application SET pdf_ref=?,pdf_digest=?,proof_status='READY' WHERE reference=?",[`pss-pdf-${hex()}`,'d'.repeat(64),reference]);}catch(error){await app.rollback();throw error;}finally{await app.end();}return reference;}
+async function facts(m,reference){const db=await connect('admin');try{const [h]=await db.execute('SELECT doc_status,potongan,cd_usr,ud_usr FROM trans_simpanan_pengajuan WHERE doc_no=?',[reference]);const [a]=await db.execute('SELECT doc_no,potongan_payroll,status FROM m_simpanan_aktif WHERE nik_kar=?',[m.nik]);const [p]=await db.execute('SELECT sim_sukarela,sim_wajib FROM m_anggota WHERE id=?',[m.id]);const [r]=await db.execute('SELECT active_reference FROM pss_member_control WHERE member_id=?',[m.id]);return{header:h,active:a,member:p,reservation:r};}finally{await db.end();}}
 const integration=(name,fn)=>test(name,{skip:!enabled},fn);
 
 test('fixture config is explicitly synthetic and loopback',async()=>{if(!enabled)return;const c=await loadConfig();assert.equal(c.mode,'LOCAL_SYNTHETIC');assert.equal(c.host,'127.0.0.1');assert.equal(c.port,3318);});
@@ -36,7 +36,7 @@ integration('the enrolled mobile command also refuses numeric-prefix department 
 
 integration('PUBLIC intake holding the member lock prevents a simultaneous MOBILE create before either header exists',async()=>{
  const m=await member(),app=await connect(),legacy=await connect('legacy'),admin=await connect('admin');
- const ref=`PSS${hex()}00000`;let mobile;
+ const ref=`PSS${hex()}00000`,link=hex();let mobile;
  try{
   await app.beginTransaction();
   await app.execute('SELECT member_id FROM pss_member_control WHERE member_id=? FOR UPDATE',[m.id]);
@@ -50,7 +50,8 @@ integration('PUBLIC intake holding the member lock prevents a simultaneous MOBIL
    await new Promise(resolve=>setTimeout(resolve,10));
   }
   assert.equal(waiting,true,'mobile connection must be observed waiting on the member row');
-  await app.execute('INSERT INTO pss_application(reference,member_id,link_id,idempotency_key,request_hash,payload_hash,snapshot_cipher,snapshot_hash,created_ms,verified_ms) VALUES(?,?,?,?,?,?,?,?,?,?)',[ref,m.id,hex(),hex(),'a'.repeat(64),'b'.repeat(64),'synthetic-cipher','c'.repeat(64),Date.now(),Date.now()-1000]);
+  await app.execute("INSERT INTO pss_link(id,member_id,savings_type,token_hash,contact_version,expires_ms,state,created_ms) VALUES(?,?,'SIMPANAN SUKARELA',?,'synthetic',?,'CONSUMED',?)",[link,m.id,hex()+hex(),Date.now()+60000,Date.now()]);
+  await app.execute('INSERT INTO pss_application(reference,member_id,link_id,idempotency_key,request_hash,payload_hash,snapshot_cipher,snapshot_hash,created_ms,verified_ms) VALUES(?,?,?,?,?,?,?,?,?,?)',[ref,m.id,link,hex(),'a'.repeat(64),'b'.repeat(64),'synthetic-cipher','c'.repeat(64),Date.now(),Date.now()-1000]);
   await app.execute('UPDATE pss_member_control SET active_reference=? WHERE member_id=?',[ref,m.id]);
   await app.execute("INSERT INTO trans_simpanan_pengajuan(doc_no,doc_status,jenis_simpanan,nik_kar,nama,potongan_old,potongan,awal_potong_bulan,awal_potong_tahun,cd_usr,status_notif,is_mobile) VALUES(?,'OPEN','SIMPANAN SUKARELA',?,'SYNTH CONTROL MEMBER',100000,150000,'11','2026','public-savings',0,0)",[ref,m.nik]);
   await app.commit();const result=await mobile;assert.equal(result.ok,false);assert.match(result.error.message,/PENDING_CONFLICT/);
@@ -77,10 +78,10 @@ integration('unmodified Laravel-style insert for an enrolled member shares the B
 integration('other savings types, unenrolled members and ordinary deletes keep existing legacy behaviour',async()=>{
  const m=await member(),admin=await connect('admin');const id=++sequence,nik=`U${String(id).padStart(9,'0')}`;
  try{
-  await admin.execute("INSERT INTO m_anggota(id,nik_kar,nama_kar,bagian,email,status_anggota,status_karyawan,sim_sukarela,kd_group) VALUES(?,?,'SYNTH UNENROLLED',1,'u@example.invalid','AKTIVE','AKTIVE',0,'SYNTH')",[id,nik]);
+  await admin.execute("INSERT INTO m_anggota(id,nik_kar,nama_kar,bagian,email,status_anggota,status_karyawan,sim_sukarela,sim_wajib,kd_group) VALUES(?,?,'SYNTH UNENROLLED',1,'u@example.invalid','AKTIVE','AKTIVE',0,0,'SYNTH')",[id,nik]);
   for(const ref of [mobileRef(),mobileRef()])await legacyHeader(admin,ref,nik);
-  const wajib=mobileRef();await legacyHeader(admin,wajib,m.nik,'SIMPANAN WAJIB');assert.equal((await facts(m,wajib)).reservation[0].active_reference,null);
-  await admin.execute("UPDATE trans_simpanan_pengajuan SET doc_status='APPROVED' WHERE doc_no=?",[wajib]);
+  const pokok=mobileRef();await legacyHeader(admin,pokok,m.nik,'SIMPANAN POKOK');assert.equal((await facts(m,pokok)).reservation[0].active_reference,null);
+  await admin.execute("UPDATE trans_simpanan_pengajuan SET doc_status='APPROVED' WHERE doc_no=?",[pokok]);
   const reserved=mobileRef();await legacyHeader(admin,reserved,m.nik);await admin.execute('DELETE FROM trans_simpanan_pengajuan WHERE doc_no=?',[reserved]);assert.equal((await facts(m,reserved)).reservation[0].active_reference,null);
  }finally{await admin.end();}
 });
@@ -102,4 +103,17 @@ integration('a broad principal cannot bind configuration to an unprocessed PUBLI
   await admin.execute("UPDATE m_simpanan_aktif SET potongan_payroll=175000 WHERE nik_kar=?",[m.nik]);assert.equal(Number((await facts(m,ref)).active[0].potongan_payroll),175000);
   const [audit]=await admin.execute("SELECT actor_ref FROM pss_audit WHERE reference=? AND event='LEGACY_APPROVE'",[ref]);assert.equal(audit[0].actor_ref,'legacy-checker');
  }finally{await admin.end();await legacy.end();}
+});
+
+for(const action of ['APPROVE','REJECT'])integration(`Wajib ${action} preserves Sukarela deduction and shares the member reservation`,async()=>{
+ const m=await member(),ref=await publicRequest(m,{ready:true,type:'SIMPANAN WAJIB'}),legacy=await connect('legacy'),admin=await connect('admin');
+ try{
+  await assert.rejects(legacyHeader(admin,mobileRef(),m.nik,'SIMPANAN SUKARELA'),/PENDING_CONFLICT/);
+  await legacy.execute('CALL pss_legacy_transition(?,?,?)',[ref,action,'legacy-checker']);
+  const result=await facts(m,ref);
+  assert.equal(Number(result.member[0].sim_sukarela),100000);
+  assert.equal(Number(result.member[0].sim_wajib),action==='APPROVE'?150000:80000);
+  assert.equal(result.active.length,action==='APPROVE'?1:0);
+  assert.equal(result.reservation[0].active_reference,action==='APPROVE'?ref:null);
+ }finally{await legacy.end();await admin.end();}
 });

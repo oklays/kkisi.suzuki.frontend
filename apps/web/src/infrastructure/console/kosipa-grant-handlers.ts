@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { ConsoleError } from '@koperasi/domain/console/identity-link';
-import { resolveConsoleAccess, type PermissionSetSource } from '@koperasi/application/console/capabilities';
+import { resolveConsoleAccess, type KosipaWriteSources, type PermissionSetSource } from '@koperasi/application/console/capabilities';
 import type { IdentityPorts } from '@koperasi/application/console/identity-links';
 import { decideKosipaGrant, listKosipaGrants, requestKosipaGrant, revokeKosipaGrant, type GrantActor, type GrantPorts, type KosipaGrantStore } from '@koperasi/application/console/kosipa-grants';
 import { errorResponse, guard, json, readJson, type AuthServices } from '../auth/http.ts';
 
-export type GrantDeps = { enabled: boolean; permissions: PermissionSetSource; ports: (IdentityPorts & { grants: KosipaGrantStore; grantAdmins: ReadonlySet<number> }) | null };
+export type GrantDeps = { enabled: boolean; permissions: PermissionSetSource; ports: (IdentityPorts & KosipaWriteSources & { grants: KosipaGrantStore; grantAdmins: ReadonlySet<number> }) | null };
 
 const STATUS: Record<string, number> = {
   FORBIDDEN: 403, SELF_APPROVAL: 403, CONSOLE_USER_NOT_FOUND: 404, GRANT_NOT_FOUND: 404,
@@ -19,8 +19,8 @@ async function actorFor(services: AuthServices, request: Request, deps: GrantDep
   const g = await guard(services, request, write ? { csrf: true } : {});
   if (!g.ok) return { response: g.response };
   if (!deps.ports) return { response: json(503, { error: 'CONSOLE_STORE_UNAVAILABLE' }) };
-  const { links, kosipa, grants, grantAdmins } = deps.ports;
-  const access = await resolveConsoleAccess({ permissions: deps.permissions, kosipa: { links, kosipa, grants, grantAdmins } }, { userId: g.ctx.userId, roleId: g.ctx.roleId, canSwitchBranch: g.ctx.canSwitchBranch });
+  const access = await resolveConsoleAccess({ permissions: deps.permissions, kosipa: deps.ports }, { userId: g.ctx.userId, roleId: g.ctx.roleId, canSwitchBranch: g.ctx.canSwitchBranch });
+  if (access.kosipaWriteUnavailable) return { response: json(503, { error: 'CONSOLE_STORE_UNAVAILABLE' }) };
   return { actor: { userId: g.ctx.userId, capabilities: access.capabilities, requestId: randomUUID() }, ports: { ...deps.ports, permissions: deps.permissions } };
 }
 

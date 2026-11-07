@@ -36,6 +36,9 @@ export const DOCUMENT_NUMBER_SCHEMES = {
   'loan': { key: 'loan', prefix: 'PIN', width: 5, strategy: 'row-id', period: 'clock', table: 'trans_pinjaman', column: 'doc_no', legacySource: 'pinjaman/models/pinjaman_m.php:551-573' },
   'savings-deposit': { key: 'savings-deposit', prefix: 'KAS', width: 5, strategy: 'row-id', period: 'clock', table: 'trans_simpanan', column: 'doc_no', legacySource: 'simpanan/models/simpanan_m.php:194-212' },
   'payroll-batch': { key: 'payroll-batch', prefix: 'POT', width: 5, strategy: 'row-id', period: 'document', table: 'trans_potongan_bulanan', column: 'doc_no', legacySource: 'payroll/controllers/matrix_c.php:443-458' },
+  // Voluntary-savings cash/transfer deposit (sim_setor_c). Legacy: n = RIGHT(last CASH/TRANSFER id, 5) + 1, clock month. Native: n = the new header's id
+  // (unique, never truncated to 5 digits; FD-23 pending, like KAS/PIN).
+  'savings-cash-transfer': { key: 'savings-cash-transfer', prefix: 'TFCSH', width: 5, strategy: 'row-id', period: 'clock', table: 'trans_simpanan', column: 'doc_no', legacySource: 'simpanan/models/sim_setor_m.php:273-297' },
 } as const satisfies Record<string, DocumentNumberScheme>;
 export type DocumentNumberSchemeKey = keyof typeof DOCUMENT_NUMBER_SCHEMES;
 

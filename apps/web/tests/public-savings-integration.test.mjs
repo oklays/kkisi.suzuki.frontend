@@ -36,8 +36,8 @@ async function fixture(t, serviceOptions = {}) {
   const [periods] = await admin.query("SELECT year,month FROM pss_calendar WHERE status='OPEN' AND locked=0 ORDER BY year,month");
   assert.ok(periods.length > 0, 'run local staging setup/seed first');
   const signature = await inkPng();
-  async function authorize(memberRef = String(id), destination = email, usingService = service) {
-    const link = await usingService.issueLink(memberRef);
+  async function authorize(memberRef = String(id), destination = email, usingService = service, savingsType = 'SIMPANAN SUKARELA') {
+    const link = await usingService.issueLink(memberRef, undefined, savingsType);
     const token = new URLSearchParams(new URL(link.url, 'http://127.0.0.1').hash.slice(1)).get('token');
     assert.ok(token && token.length >= 43);
     assert.equal(new URL(link.url, 'http://127.0.0.1').searchParams.has('token'), false, 'bearer must stay in the fragment');
@@ -518,4 +518,46 @@ test('operator lists are paginated server-side with search, status filter and br
  assert.equal((await f.service.listApplications(actor,{q:f.nik,status:'APPROVED'})).total,0);
  assert.equal((await f.service.listApplications(other,{q:f.nik})).total,0);
  assert.ok(apps.counts.OPEN>=1);await assert.rejects(()=>f.service.listApplications(actor,{status:'ASSISTED_REQUIRED'}),codeMatches(/INVALID_INPUT/));
+});
+
+test('Wajib link binds its type and policy, submits one Wajib header and never mutates Sukarela', { skip: !enabled }, async (t) => {
+  const f = await fixture(t);
+  const issued = await f.service.issueLink(String(f.id), undefined, 'SIMPANAN WAJIB');
+  assert.equal(issued.savingsType, 'SIMPANAN WAJIB');
+  await f.admin.execute('UPDATE m_anggota SET sim_wajib=100000 WHERE id=?', [f.id]);
+  await f.admin.execute("INSERT INTO m_simpanan_aktif(jenis_simpanan,nik_kar,nama_kar,kd_group,potongan_old,potongan_payroll,status,is_mobile) VALUES('SIMPANAN WAJIB',?,?,'SYNTH',100000,100000,1,1)", [f.nik, f.name]);
+  const auth = await f.authorize(String(f.id), f.email, f.service, 'SIMPANAN WAJIB');
+  assert.equal(auth.form.savingsType, 'SIMPANAN WAJIB');
+  assert.match(auth.form.consentText, /Simpanan Wajib/);
+  const result = await f.service.submit(auth.token, auth.proof, auth.command);
+  assert.equal(result.savingsType, 'SIMPANAN WAJIB');
+  const [headers] = await f.admin.execute('SELECT jenis_simpanan,doc_status FROM trans_simpanan_pengajuan WHERE doc_no=?', [result.reference]);
+  assert.deepEqual(headers.map(x=>({...x})), [{jenis_simpanan:'SIMPANAN WAJIB',doc_status:'OPEN'}]);
+  const text = await pdfText(await f.service.pdf(auth.token, auth.proof), t);
+  assert.match(text, /PENGAJUAN SIMPANAN WAJIB/);
+  assert.doesNotMatch(text, /PENGAJUAN SIMPANAN SUKARELA/);
+  const before = (await f.admin.execute('SELECT sim_wajib,sim_sukarela FROM m_anggota WHERE id=?', [f.id]))[0][0];
+  assert.equal(Number(before.sim_wajib), 100000); assert.equal(Number(before.sim_sukarela), 100000);
+  await assert.rejects(f.service.submit(auth.token, auth.proof, {...auth.command, consentVersion:'KKISI-PSS-CONSENT-v1', idempotencyKey:randomUUID()}));
+  await f.legacy.query('CALL pss_legacy_transition(?,?,?)', [result.reference, 'APPROVE', 'SYNTHETIC_WAJIB_REVIEWER']);
+  const after = (await f.admin.execute('SELECT sim_wajib,sim_sukarela FROM m_anggota WHERE id=?', [f.id]))[0][0];
+  assert.equal(Number(after.sim_wajib), 150000); assert.equal(Number(after.sim_sukarela), 100000);
+});
+
+test('a transient first database connection failure can recover without restarting the public service', {skip:!enabled}, async t=>{
+ const f=await fixture(t),net=await import('node:net'),sockets=new Set();let attempts=0;
+ const proxy=net.createServer(client=>{
+  if(++attempts===1){client.destroy();return;}
+  const upstream=net.createConnection({host:f.config.host,port:f.config.port});
+  for(const socket of [client,upstream]){sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>{client.destroy();upstream.destroy();});}
+  client.pipe(upstream);upstream.pipe(client);
+ });
+ await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(3338,'127.0.0.1',resolve);});
+ const {createPublicSavingsService}=await import('../src/infrastructure/public-savings/service.ts');
+ const service=createPublicSavingsService({...f.config,port:3338});
+ try{
+  await assert.rejects(()=>service.listMembers(f.nik));
+  const recovered=await service.listMembers(f.nik);
+  assert.equal(recovered.members[0]?.memberRef,String(f.id));
+ }finally{await service.close();for(const socket of sockets)socket.destroy();await new Promise(resolve=>proxy.close(resolve));}
 });

@@ -41,7 +41,11 @@
     "./console/identity-link": "./src/console/identity-link.ts",
     "./console/role-config": "./src/console/role-config.ts",
     "./console/landing-policy": "./src/console/landing-policy.ts",
-    "./warehouse": "./src/warehouse/index.ts"
+    "./warehouse": "./src/warehouse/index.ts",
+    "./kosipa/member-command": "./src/kosipa/member-command.ts",
+    "./kosipa/product-master": "./src/kosipa/product-master.ts",
+    "./kosipa/product-master-version": "./src/kosipa/product-master-version.ts",
+    "./kosipa/savings-deposit": "./src/kosipa/savings-deposit.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -49,6 +53,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "devDependencies": {
+    "@types/node": "22.20.4",
     "eslint": "9.39.5",
     "typescript": "5.9.3"
   }
