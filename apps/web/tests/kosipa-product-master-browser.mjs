@@ -57,9 +57,9 @@ try {
   console.log('P1. viewer: index shows the product group and the FD-33 retirements; product list is read-only; the form page is refused');
   const viewer = await session('viewer');
   await viewer.page.goto(`${base}/console/kosipa/master`);
-  await viewer.page.getByRole('heading', { name: 'Produk keuangan' }).waitFor();
+  await viewer.page.getByRole('heading', { name: 'Produk Keuangan' }).waitFor();
   for (const t of ['Master Jenis Simpanan', 'Master Jenis Pinjaman', 'Master Jenis Pembiayaan', 'Master Suku Bunga']) await viewer.page.getByText(t, { exact: true }).waitFor();
-  await viewer.page.getByText('Master yang dipensiunkan').waitFor();
+  await viewer.page.getByRole('heading', { name: 'Master Dipensiunkan' }).waitFor();
   await shot(viewer.page, '01-index');
   await viewer.page.goto(`${base}/console/kosipa/master/jenis-pembiayaan`);
   await viewer.page.locator('tr[data-product-id="1"]').waitFor();

@@ -62,7 +62,10 @@ export default async function SavingsDepositsPage({ searchParams }: { searchPara
         </form>
         <FlashNotice key={data.rows.map((r) => `${r.id}:${r.status}`).join(',')} />
         {data.rows.length === 0
-          ? <FeedbackState kind="empty" title={<> Belum ada setoran </>}><p>Tidak ada setoran {STATUS_LABEL[data.filter.status].toLowerCase()} pada bulan {data.filter.month}.</p></FeedbackState>
+          ? <FeedbackState kind="empty" title={<> Belum ada setoran </>}>
+              <p>Tidak ada setoran {STATUS_LABEL[data.filter.status].toLowerCase()} pada bulan {data.filter.month}.</p>
+              <p>Tombol Setujui dan Tolak tersedia pada setoran berstatus Menunggu sesuai hak akses Anda. Pilih bulan lain jika setoran dibuat pada bulan berbeda.</p>
+            </FeedbackState>
           : (
             <FinancialTable label="Daftar setoran simpanan" columns={[{ label: 'No. dokumen' }, { label: 'Tanggal' }, { label: 'Anggota' }, { label: 'Metode' }, { label: 'Nominal', numeric: true }, { label: 'Dibuat oleh' }, { label: 'Status' }, { label: 'Aksi' }]}>
               <tbody>{data.rows.map((r) => (

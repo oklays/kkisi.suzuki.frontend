@@ -63,11 +63,17 @@ try {
   await q("UPDATE ref_menu SET status = 0 WHERE url = 'simpanan/sim_setor_c'");
   console.log('D1. viewer without grants: the deposit page is listed in the navigation and is read-only');
   const v0 = await session('viewer');
-  await v0.page.goto(PAGE);
+  await v0.page.goto(`${base}/console/kosipa/simpanan`);
+  await v0.page.getByRole('heading', { name: 'Simpanan', exact: true }).waitFor();
+  await v0.page.locator('main').getByRole('link', { name: 'Setoran simpanan', exact: true }).click();
   await v0.page.locator('h1', { hasText: 'Setoran simpanan' }).waitFor();
   assert.ok(await v0.page.locator('#console-nav a[href="/console/kosipa/simpanan/setoran"]').count() >= 1, 'sidebar lists Setoran simpanan');
   assert.equal(await v0.page.locator('form[aria-label="Buat setoran simpanan"]').count(), 0);
   await v0.page.getByText('Hanya lihat').waitFor();
+  await v0.page.goto(`${base}/console/kosipa/simpanan/9101`);
+  await v0.page.getByRole('heading', { name: 'Buku simpanan', exact: true }).waitFor();
+  await v0.page.locator('main').getByRole('link', { name: 'Setoran simpanan', exact: true }).click();
+  await v0.page.locator('h1', { hasText: 'Setoran simpanan' }).waitFor();
   await v0.context.close();
 
   console.log('D2. two administrators grant: operator prepares, viewer approves');
@@ -77,6 +83,8 @@ try {
   console.log('D3. maker: unknown NIK is explained; a transfer deposit is saved as pending and cannot be approved by its maker');
   const op = await session('operator'); const p = op.page;
   await p.goto(PAGE);
+  await p.locator('h1', { hasText: 'Setoran simpanan' }).waitFor();
+  assert.equal(await p.locator('main').getByText('Mode baca saja', { exact: true }).count(), 0);
   await p.locator('#dep-nik').fill('TIDAKADA9'); await p.getByRole('button', { name: 'Cari' }).click();
   await p.getByRole('alert').filter({ hasText: 'tidak ditemukan' }).waitFor();
   await createDeposit(p, '125000', `E2E ${RUN} A`, true);
