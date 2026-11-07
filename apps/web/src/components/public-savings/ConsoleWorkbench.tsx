@@ -6,8 +6,8 @@ import { Ban, Check, ChevronLeft, ChevronRight, CircleAlert, Clock, Copy, FileDo
 import { downloadPdf, requestJson, rupiah, SavingsApiError } from './client';
 
 type Period = { year: number; month: number } | string;
-interface Application { reference: string; name: string; maskedIdentifier?: string; amount: string; originalAmount?: string | null; requestedPeriod: Period; status: string; artifactState: string; integrityState?: 'VALID' | 'INVALID'; createdAt?: number }
-interface LinkRow { linkRef: string; memberRef: string; memberName?: string; maskedIdentifier?: string; state: string; expiresAt: number; createdAt?: number }
+interface Application { savingsType: string; reference: string; name: string; maskedIdentifier?: string; amount: string; originalAmount?: string | null; requestedPeriod: Period; status: string; artifactState: string; integrityState?: 'VALID' | 'INVALID'; createdAt?: number }
+interface LinkRow { savingsType: string; linkRef: string; memberRef: string; memberName?: string; maskedIdentifier?: string; state: string; expiresAt: number; createdAt?: number }
 interface Member { memberRef: string; name: string; maskedIdentifier: string; sectionName: string }
 interface Page<T> { items: T[]; total: number; page: number; pageSize: number; counts: Record<string, number> }
 type Tab = 'applications' | 'links';
@@ -81,7 +81,7 @@ function pageWindow(page: number, pages: number): (number | '…')[] {
   return out;
 }
 
-export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
+export default function ConsoleWorkbench({ csrfToken, mode='LOCAL_SYNTHETIC' }: { csrfToken: string; mode?: 'LOCAL_SYNTHETIC'|'LOCAL_REPLICA_UAT' }) {
   const headers = useMemo(() => ({ 'X-CSRF-Token': csrfToken, 'Content-Type': 'application/json' }), [csrfToken]);
   // Console CSRF guard needs same-origin Referer and JSON type, including GET lookups bound to a mutating action.
   const call = useCallback(<T,>(path: string, init: RequestInit = {}) => requestJson<T>(path, { ...init, credentials: 'include', referrerPolicy: 'same-origin', headers: { ...headers, ...(init.headers as Record<string, string> | undefined) } }), [headers]);
@@ -97,12 +97,13 @@ export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
   const [toasts, setToasts] = useState<{ id: number; text: string; tone: 'ok' | 'error' }[]>([]);
   const [revoking, setRevoking] = useState<{ ref: string; reason: string; busy: boolean } | null>(null);
   const [downloading, setDownloading] = useState('');
+  const [savingsType, setSavingsType] = useState('SIMPANAN SUKARELA');
   const [issueOpen, setIssueOpen] = useState(false);
   const [memberQuery, setMemberQuery] = useState('');
   const [members, setMembers] = useState<Member[] | null>(null);
   const [memberBusy, setMemberBusy] = useState(false);
   const [issueError, setIssueError] = useState('');
-  const [issued, setIssued] = useState<{ linkRef: string; url: string; expiresAt: number; name: string } | null>(null);
+  const [issued, setIssued] = useState<{ linkRef: string; url: string; expiresAt: number; name: string; savingsType: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const toastSeq = useRef(0);
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ applications: null, links: null });
@@ -153,9 +154,9 @@ export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
   async function issue(member: Member) {
     setMemberBusy(true); setIssueError(''); setIssued(null); setCopied(false);
     try {
-      const body = await call<{ linkRef: string; url: string; expiresAt: number }>(`${base}/public-savings-links`, { method: 'POST', body: JSON.stringify({ memberRef: member.memberRef }) });
+      const body = await call<{ linkRef: string; url: string; expiresAt: number }>(`${base}/public-savings-links`, { method: 'POST', body: JSON.stringify({ memberRef: member.memberRef, savingsType }) });
       const url = new URL(body.url, window.location.origin); if (url.origin !== window.location.origin) throw new Error('LINK_ORIGIN_INVALID');
-      setIssued({ linkRef: body.linkRef, url: url.href, expiresAt: Number(body.expiresAt), name: member.name }); setMembers(null); setMemberQuery('');
+      setIssued({ linkRef: body.linkRef, url: url.href, expiresAt: Number(body.expiresAt), name: member.name, savingsType }); setMembers(null); setMemberQuery('');
       toast(`Tautan untuk ${member.name} diterbitkan.`); refresh();
     } catch (error) { setIssueError(staffMessage(error)); } finally { setMemberBusy(false); }
   }
@@ -187,11 +188,12 @@ export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
 
   return (
     <div className="pssc">
+      {mode==='LOCAL_REPLICA_UAT'&&<aside className="pssc-alert" role="note"><strong>LOCAL REPLICA UAT · SIMULASI</strong><span>Data anggota berasal dari replika lokal. OTP simulasi tersedia pada terminal operator (capture lokal), tidak dikirim ke kontak anggota; bukan verifikasi kontak asli. Pengajuan ini hanya simulasi lokal dan bukan persetujuan keuangan.</span></aside>}
       <header className="pssc-head">
         <div className="pssc-head-copy">
           <span className="pssc-eyebrow">KOSIPA <i aria-hidden="true">/</i> Simpanan sukarela</span>
           <h1>Pengajuan simpanan sukarela</h1>
-          <p>Terbitkan tautan pengajuan mandiri dan pantau bukti yang masuk. Persetujuan potongan tetap diproses di KOSIPA CI2.</p>
+          <p>Terbitkan tautan pengajuan Simpanan Sukarela atau Wajib dan pantau bukti yang masuk. Persetujuan potongan tetap diproses di KOSIPA CI2.</p>
         </div>
         <div className="pssc-head-actions">
           <span className="pssc-session"><ShieldCheck size={14} aria-hidden="true" /> Sesi konsol · cabang aktif</span>
@@ -215,10 +217,11 @@ export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
         <div className="pssc-issue-inner">
           <div className="pssc-issue-body">
             <form className="pssc-issue-search" onSubmit={searchMembers} role="search">
+              <label htmlFor="pssc-savings-type">Jenis simpanan</label><select id="pssc-savings-type" value={savingsType} disabled={memberBusy} tabIndex={issueOpen ? 0 : -1} onChange={(e) => setSavingsType(e.target.value)}><option value="SIMPANAN SUKARELA">SIMPANAN SUKARELA</option><option value="SIMPANAN WAJIB">SIMPANAN WAJIB</option></select>
               <label htmlFor="pssc-member">Cari anggota <small>NIK atau ID, pencocokan tepat</small></label>
               <div className="pssc-field">
                 <UserRound size={15} aria-hidden="true" />
-                <input id="pssc-member" autoComplete="off" spellCheck={false} placeholder="mis. SYN0000001" value={memberQuery} onChange={(e) => { setMemberQuery(e.target.value); setIssueError(''); }} tabIndex={issueOpen ? 0 : -1} />
+                <input id="pssc-member" autoComplete="off" spellCheck={false} placeholder={mode==='LOCAL_REPLICA_UAT'?'Masukkan NIK anggota':'mis. SYN0000001'} value={memberQuery} onChange={(e) => { setMemberQuery(e.target.value); setIssueError(''); }} tabIndex={issueOpen ? 0 : -1} />
                 <button type="submit" className="pssc-btn pssc-btn-primary pssc-btn-sm" disabled={memberBusy} tabIndex={issueOpen ? 0 : -1}>{memberBusy ? <LoaderCircle size={14} className="pssc-spin" aria-hidden="true" /> : <Search size={14} aria-hidden="true" />} Cari</button>
               </div>
               {issueError && <p className="pssc-alert" data-tone="error" role="alert"><CircleAlert size={14} aria-hidden="true" />{issueError}</p>}
@@ -234,7 +237,7 @@ export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
             {issued ? (
               <div className="pssc-ticket" role="status">
                 <div className="pssc-ticket-top"><span><Check size={13} aria-hidden="true" /> Tautan diterbitkan</span><small>{issued.linkRef.slice(0, 8)}</small></div>
-                <strong className="pssc-ticket-name">{issued.name}</strong>
+                <strong className="pssc-ticket-name">{issued.name}</strong><p>{issued.savingsType}</p>
                 <div className="pssc-ticket-url"><input readOnly value={issued.url} aria-label="Tautan privat anggota" onFocus={(e) => e.target.select()} tabIndex={issueOpen ? 0 : -1} />
                   <button type="button" className="pssc-btn pssc-btn-soft pssc-btn-sm" data-done={copied} onClick={() => void copyIssued()} tabIndex={issueOpen ? 0 : -1}>{copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}{copied ? 'Disalin' : 'Salin'}</button></div>
                 <div className="pssc-ticket-foot"><Clock size={12} aria-hidden="true" /> Berlaku sampai {when(issued.expiresAt)} · {remaining(issued.expiresAt, now)}</div>
@@ -290,7 +293,7 @@ export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
                 return (
                   <tr key={a.reference} style={{ '--i': i } as CSSProperties}>
                     <td><code title={a.reference}>{a.reference.slice(0, 11)}…{a.reference.slice(-9, -5)}</code><small>{when(a.createdAt)}</small></td>
-                    <td><strong>{a.name}</strong>{a.maskedIdentifier && <small>{a.maskedIdentifier}</small>}</td>
+                    <td><strong>{a.name}</strong><small>{a.savingsType}</small>{a.maskedIdentifier && <small>{a.maskedIdentifier}</small>}</td>
                     <td className="num">{a.integrityState === 'INVALID' ? '—' : <><strong>{rupiah(a.amount)}</strong>{a.originalAmount !== undefined && <small>dari {a.originalAmount === null ? 'belum ada' : rupiah(a.originalAmount)}</small>}</>}</td>
                     <td>{period(a.requestedPeriod)}</td>
                     <td><Pill tone={s.tone}>{s.label}</Pill></td>
@@ -309,7 +312,7 @@ export default function ConsoleWorkbench({ csrfToken }: { csrfToken: string }) {
                 const rows = [(
                   <tr key={l.linkRef} style={{ '--i': i } as CSSProperties} data-open={open}>
                     <td><code title={l.linkRef}>{l.linkRef.slice(0, 8)}</code><small>{when(l.createdAt)}</small></td>
-                    <td><strong>{l.memberName ?? `Anggota ${l.memberRef}`}</strong><small>{l.maskedIdentifier ?? `ID ${l.memberRef}`}</small></td>
+                    <td><strong>{l.memberName ?? `Anggota ${l.memberRef}`}</strong><small>{l.savingsType}</small><small>{l.maskedIdentifier ?? `ID ${l.memberRef}`}</small></td>
                     <td><Pill tone={s.tone}>{s.label}</Pill></td>
                     <td>{when(l.expiresAt)}{l.state === 'ACTIVE' && <small className="pssc-timer">{remaining(l.expiresAt, now)}</small>}</td>
                     <td className="act">{l.state === 'ACTIVE' && <button type="button" className="pssc-btn pssc-btn-danger-ghost pssc-btn-xs" aria-expanded={open} onClick={() => setRevoking(open ? null : { ref: l.linkRef, reason: '', busy: false })}><Ban size={13} aria-hidden="true" /> {open ? 'Batal' : 'Cabut'}</button>}</td>

@@ -11,7 +11,7 @@ export type PeriodErrorCode = PublicSavingsErrorCode | 'PERIOD_UNVERIFIED';
 export type PayrollPeriodState = 'OPEN' | 'LOCKED' | 'POSTING' | 'CLOSED';
 export interface PayrollPeriod { readonly year: number; readonly month: number }
 export interface PayrollCalendarFacts {
-  readonly source: 'AUTHORITATIVE_KOSIPA_CI2_PAYROLL_CALENDAR';
+  readonly source: 'AUTHORITATIVE_KOSIPA_CI2_PAYROLL_CALENDAR' | 'LOCAL_REPLICA_SIMULATION_CALENDAR';
   readonly verified: boolean;
   readonly periods: readonly (PayrollPeriod & { readonly state: PayrollPeriodState })[];
 }
@@ -29,14 +29,16 @@ const validPeriod = (p: Record<string, unknown> | undefined): p is { year: numbe
   !!p && Number.isSafeInteger(p.year) && (p.year as number) >= 2000 && (p.year as number) <= 9999 && Number.isSafeInteger(p.month) && (p.month as number) >= 1 && (p.month as number) <= 12;
 const key = (p: PayrollPeriod) => p.year * 12 + (p.month - 1);
 
-export function resolveRequestedPeriod(calendar: unknown, intended: unknown, policy: unknown, nowEpochMs: number): PssResult<ResolvedPeriod, PeriodErrorCode> {
+export function resolveRequestedPeriod(calendar: unknown, intended: unknown, policy: unknown, nowEpochMs: number, context?: 'LOCAL_REPLICA_UAT'): PssResult<ResolvedPeriod, PeriodErrorCode> {
   const resolved = resolveApprovedPolicy(policy);
   if (!resolved.ok) return resolved;
+  if (context !== undefined && context !== 'LOCAL_REPLICA_UAT') return fail('INVALID_INPUT', 'simulation');
   if (!isEpochMs(nowEpochMs)) return fail('INVALID_INPUT', 'now');
   const want = plain(intended, ['year', 'month']);
   if (!validPeriod(want)) return fail('INVALID_INPUT', 'intendedPeriod');
   const cal = plain(calendar, ['source', 'verified', 'periods']);
-  if (!cal || cal.source !== resolved.value.rules.period.calendarSource || cal.verified !== true || !Array.isArray(cal.periods)) return fail('PERIOD_UNVERIFIED');
+  const simulated = context === 'LOCAL_REPLICA_UAT' && cal?.source === 'LOCAL_REPLICA_SIMULATION_CALENDAR' && cal.verified === false;
+  if (!cal || (!(cal.source === resolved.value.rules.period.calendarSource && cal.verified === true) && !simulated) || !Array.isArray(cal.periods)) return fail('PERIOD_UNVERIFIED');
   const seen = new Set<number>(); const open: PayrollPeriod[] = [];
   for (const raw of cal.periods) {
     const p = plain(raw, ['year', 'month', 'state']);

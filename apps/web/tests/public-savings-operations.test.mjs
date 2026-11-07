@@ -12,3 +12,12 @@ test('security cleanup is bounded and financial evidence deletion has no automat
  assert.equal(cutoffs.deleteFinancialEvidence,false);
  assert.throws(()=>retentionCutoffs(Number.NaN));
 });
+test('OTP capture projection sorts latest expiry first, resolves ties, and limits output safely',async()=>{
+ const {projectOtpCaptures}=await import('../../../integration/public-savings/operations.mjs');
+ const captures=[{kind:'OTP',id:'z',code:'synthetic-old',expiresAt:100,destination:'private'},{kind:'NOTICE',id:'notice',expiresAt:999},{kind:'OTP',id:'b',code:'synthetic-b',expiresAt:200,secret:'private'},{kind:'OTP',id:'a',code:'synthetic-a',expiresAt:200}];
+ const expected=[{challengeRef:'a',code:'synthetic-a',expiresAt:200},{challengeRef:'b',code:'synthetic-b',expiresAt:200},{challengeRef:'z',code:'synthetic-old',expiresAt:100}];
+ assert.deepEqual(projectOtpCaptures(captures),expected);
+ assert.deepEqual(projectOtpCaptures(captures,{latest:true}),expected.slice(0,1));
+ assert.deepEqual(projectOtpCaptures([],{latest:true}),[]);
+ assert.equal(captures[0].id,'z');
+});

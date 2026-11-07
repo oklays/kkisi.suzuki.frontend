@@ -13,3 +13,8 @@ export function publicSavingsStagingEnabled(env: Env = process.env): boolean {
 export function publicSavingsConsoleEnabled(env: Env = process.env): boolean {
   return publicSavingsStagingEnabled(env) && env.PSS_OPERATOR_AUTH === 'CONSOLE';
 }
+
+/** Existing-member UAT remains capture-only and requires its own local opt-in. */
+export function publicSavingsReplicaUatEnabled(env: Env = process.env): boolean {
+  return env.PSS_LOCAL_REPLICA_UAT === '1' && env.APP_ENV !== 'production';
+}

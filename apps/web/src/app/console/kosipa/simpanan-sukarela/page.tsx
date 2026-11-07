@@ -1,3 +1,4 @@
+import {loadStagingConfig} from '@/infrastructure/public-savings/security';
 import { notFound } from 'next/navigation';
 import ConsoleWorkbench from '@/components/public-savings/ConsoleWorkbench';
 import '@/components/public-savings/console-workbench.css';
@@ -26,5 +27,6 @@ export default async function PublicSavingsManagementPage() {
   } catch { unavailable = true; }
   if (unavailable) return <p role="alert">Konfigurasi akses pengajuan simpanan sukarela belum tersedia.</p>;
   if (!allowed) return <p role="alert">Akses pengajuan simpanan sukarela tidak tersedia untuk akun ini.</p>;
-  return <ConsoleWorkbench csrfToken={csrfToken} />;
+  const config=await loadStagingConfig();
+  return <ConsoleWorkbench csrfToken={csrfToken} mode={config.mode} />;
 }

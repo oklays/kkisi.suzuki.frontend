@@ -3,8 +3,7 @@
  * The snapshot is the single source for the receipt and the PDF; it is never rebuilt from a later member profile.
  * Image decoding/re-encoding and digests are infrastructure (CP1-T05); this module validates their descriptors only.
  */
-import { resolveApprovedPolicy } from './savings-policy.ts';
-import { PUBLIC_SAVINGS_TYPE } from './savings-form-binding.ts';
+import { resolveApprovedPolicy, isPublicSavingsType, policyForSavingsType, type PublicSavingsType } from './savings-policy.ts';
 import type { PublicSavingsErrorCode } from './savings-application.ts';
 import { fail, isEpochMs, isText, plain, type PssResult } from './savings-shared.ts';
 
@@ -16,7 +15,7 @@ export interface SubmissionSnapshot {
   readonly memberRef: string;
   /** Authoritative readonly echoes, resolved server-side and rechecked under lock. */
   readonly sectionId: string;
-  readonly savingsType: typeof PUBLIC_SAVINGS_TYPE;
+  readonly savingsType: PublicSavingsType;
   /** Authoritative legacy value, verbatim; null = positively verified first enrollment. */
   readonly originalDeduction: string | null;
   readonly requestedAmount: string;
@@ -38,16 +37,17 @@ const canonicalInteger = (v: unknown): v is string => typeof v === 'string' && /
 const legacyDecimal = (v: unknown): v is string => typeof v === 'string' && v.length <= 32 && /^(0|[1-9][0-9]*)(\.[0-9]+)?$/u.test(v);
 const positiveInt = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 
-export function buildSubmissionSnapshot(input: unknown, policy: unknown): PssResult<SubmissionSnapshot, SnapshotErrorCode> {
+export function buildSubmissionSnapshot(input: unknown, policy: unknown, context?: 'LOCAL_REPLICA_UAT'): PssResult<SubmissionSnapshot, SnapshotErrorCode> {
   const resolved = resolveApprovedPolicy(policy);
   if (!resolved.ok) return resolved;
+  if (context !== undefined && context !== 'LOCAL_REPLICA_UAT') return fail('INVALID_INPUT', 'simulation');
   const i = plain(input, INPUT_FIELDS, INPUT_FIELDS.filter((f) => f !== 'consent' && f !== 'signature'));
   if (!i) return fail('INVALID_INPUT');
   if (i.consent !== true) return fail('CONSENT_REQUIRED', 'consent');   // explicit affirmative act; nothing prechecked
   if (i.signature === undefined || i.signature === null) return fail('SIGNATURE_REQUIRED', 'signature');
   if (!isText(i.memberRef, 128)) return fail('INVALID_INPUT', 'memberRef');
   if (!isText(i.sectionId, 128)) return fail('INVALID_INPUT', 'sectionId');
-  if (i.savingsType !== PUBLIC_SAVINGS_TYPE) return fail('INVALID_INPUT', 'savingsType');
+  if (!isPublicSavingsType(i.savingsType) || policyForSavingsType(i.savingsType)?.policyVersion !== resolved.value.policyVersion) return fail('INVALID_INPUT', 'savingsType');
   if (i.originalDeduction !== null && !legacyDecimal(i.originalDeduction)) return fail('INVALID_INPUT', 'originalDeduction');
   if (!canonicalInteger(i.requestedAmount)) return fail('INVALID_INPUT', 'requestedAmount');
   const period = plain(i.requestedPeriod, ['year', 'month']);
@@ -56,13 +56,13 @@ export function buildSubmissionSnapshot(input: unknown, policy: unknown): PssRes
   if (!isText(i.consentTextVersion, 64) || !isText(i.formVersion, 64)) return fail('INVALID_INPUT', 'version');
   if (!isEpochMs(i.submittedAtEpochMs)) return fail('INVALID_INPUT', 'submittedAt');
   const v = plain(i.verification, ['proofRef', 'contactVersion', 'method']);
-  if (!v || !isText(v.proofRef, 128) || !isText(v.contactVersion, 64) || typeof v.method !== 'string' || !/^[A-Z_]+_CHANNEL_POSSESSION$/u.test(v.method)) return fail('INVALID_INPUT', 'verification');
+  if (!v || !isText(v.proofRef, 128) || !isText(v.contactVersion, 64) || typeof v.method !== 'string' || (!/^[A-Z_]+_CHANNEL_POSSESSION$/u.test(v.method) && !(context === 'LOCAL_REPLICA_UAT' && v.method === 'LOCAL_CAPTURE_SIMULATION'))) return fail('INVALID_INPUT', 'verification');
   const s = plain(i.signature, ['format', 'decodedBytes', 'width', 'height', 'contentDigest', 'storageRef']);
   const rules = resolved.value.rules.signature;
   if (!s || s.format !== rules.format || !positiveInt(s.decodedBytes) || s.decodedBytes > rules.maxDecodedBytes || !positiveInt(s.width) || !positiveInt(s.height)
     || !isText(s.contentDigest, 160) || !isText(s.storageRef, 256) || s.storageRef.includes('://')) return fail('SIGNATURE_INVALID', 'signature');   // private storage reference, never a public URL
   const snapshot: SubmissionSnapshot = {
-    contractVersion: 'pss-snapshot/v2', policyVersion: resolved.value.policyVersion, memberRef: i.memberRef, sectionId: i.sectionId, savingsType: PUBLIC_SAVINGS_TYPE, originalDeduction: i.originalDeduction as string | null,
+    contractVersion: 'pss-snapshot/v2', policyVersion: resolved.value.policyVersion, memberRef: i.memberRef, sectionId: i.sectionId, savingsType: i.savingsType, originalDeduction: i.originalDeduction as string | null,
     requestedAmount: i.requestedAmount, requestedPeriod: Object.freeze({ year: period.year as number, month: period.month as number }),
     effectivePeriodCondition: 'FIRST_ELIGIBLE_PAYROLL_CYCLE_AFTER_APPROVAL', consentTextVersion: i.consentTextVersion, formVersion: i.formVersion, consent: true,
     submittedAtEpochMs: i.submittedAtEpochMs,

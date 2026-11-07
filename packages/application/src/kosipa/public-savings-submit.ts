@@ -15,7 +15,11 @@ import { idempotencyDecision, type IdempotencyRequest } from '@koperasi/domain/k
 import type { PublicSavingsClock, PublicSavingsDigestPort, PublicSavingsPolicySource, PublicSavingsUnitOfWork, PublicSubmissionActivation, LockedSubmissionFacts } from './public-savings.ts';
 
 export interface SubmitDeps {
+  /** Trusted local adapter context; never copied from a public request. */
+  readonly simulation?: 'LOCAL_REPLICA_UAT';
   readonly policies: PublicSavingsPolicySource;
+  /** Selected by the trusted link adapter, never the public request body. */
+  readonly policyVersion?: string;
   readonly clock: PublicSavingsClock;
   readonly activation: PublicSubmissionActivation;
   readonly digest: PublicSavingsDigestPort;
@@ -33,14 +37,14 @@ class Rejection {
 const refuse = (r: { ok: false; error: { code: string; field?: string } }): never => { throw new Rejection(r); };
 const isUnknownCommit = (e: unknown) => typeof e === 'object' && e !== null && (e as { commitOutcome?: unknown }).commitOutcome === 'UNKNOWN';
 
-function recheck(locked: LockedSubmissionFacts, snapshot: SubmissionSnapshot, command: SubmitCommand, policy: unknown, now: number): void {
+function recheck(locked: LockedSubmissionFacts, snapshot: SubmissionSnapshot, command: SubmitCommand, policy: unknown, now: number, simulation?: 'LOCAL_REPLICA_UAT'): void {
   const link = evaluateLinkState(locked.link, { memberRef: command.memberRef, purpose: PUBLIC_SAVINGS_LINK_PURPOSE }, now, policy);
   if (!link.ok) refuse(link);
   const linkExpiry = (locked.link as { expiresAtEpochMs: number }).expiresAtEpochMs;
   const proof = evaluateVerificationProof(locked.proof, { memberRef: command.memberRef, linkRef: command.linkRef, contactVersion: locked.contactVersion, linkExpiresAtEpochMs: linkExpiry }, now, policy);
   if (!proof.ok) refuse(proof);
   if (snapshot.verification.contactVersion !== locked.contactVersion) refuse({ ok: false, error: { code: 'VERIFICATION_REQUIRED', field: 'contactVersion' } });
-  const eligibility = evaluateMembershipEligibility(locked.eligibility, policy, now);
+  const eligibility = evaluateMembershipEligibility(locked.eligibility, policy, now, simulation);
   if (!eligibility.ok) refuse(eligibility);
   const binding = validateSavingsFormBinding({ memberRef: snapshot.memberRef, sectionId: snapshot.sectionId, savingsType: snapshot.savingsType,
     formVersion: snapshot.formVersion, consentTextVersion: snapshot.consentTextVersion }, locked.form, command.memberRef, policy);
@@ -51,7 +55,7 @@ function recheck(locked: LockedSubmissionFacts, snapshot: SubmissionSnapshot, co
   if (reviewedOriginal !== snapshot.originalDeduction) refuse({ ok: false, error: { code: 'FORM_CHANGED', field: 'originalDeduction' } });
   const change = evaluateDeductionChange(current, snapshot.requestedAmount, policy);
   if (!change.ok) refuse(change);
-  const period = resolveRequestedPeriod(locked.calendar, snapshot.requestedPeriod, policy, now);
+  const period = resolveRequestedPeriod(locked.calendar, snapshot.requestedPeriod, policy, now, simulation);
   if (!period.ok) return refuse(period);
   if (period.value.requestedPeriod.year !== snapshot.requestedPeriod.year || period.value.requestedPeriod.month !== snapshot.requestedPeriod.month) {
     refuse({ ok: false, error: { code: 'FORM_CHANGED', field: 'requestedPeriod' } });
@@ -63,10 +67,12 @@ function recheck(locked: LockedSubmissionFacts, snapshot: SubmissionSnapshot, co
 export async function submitPublicSavingsChange(deps: SubmitDeps, command: SubmitCommand): Promise<SubmitResult> {
   if (deps.activation.publicSubmissionEnabled() !== true) return { ok: false, error: { code: 'ACTIVATION_BLOCKED' } };
   let policy: unknown;
-  try { policy = deps.policies.read(PSS_POLICY_V1_VERSION); } catch { return { ok: false, error: { code: 'DEPENDENCY_UNAVAILABLE' } }; }
+  const version = deps.policyVersion ?? PSS_POLICY_V1_VERSION;
+  try { policy = deps.policies.read(version); } catch { return { ok: false, error: { code: 'DEPENDENCY_UNAVAILABLE' } }; }
   const approved = resolveApprovedPolicy(policy);
   if (!approved.ok) return approved;
-  const built = buildSubmissionSnapshot(command.snapshotInput, policy);
+  if (approved.value.policyVersion !== version) return { ok: false, error: { code: 'POLICY_UNAPPROVED', field: 'policyVersion' } };
+  const built = buildSubmissionSnapshot(command.snapshotInput, policy, deps.simulation);
   if (!built.ok) return built;
   const snapshot = built.value;
   if (snapshot.memberRef !== command.memberRef) return { ok: false, error: { code: 'INVALID_INPUT', field: 'memberRef' } };
@@ -83,7 +89,7 @@ export async function submitPublicSavingsChange(deps: SubmitDeps, command: Submi
       if (decision.value.kind === 'REPLAY') return { ok: true, value: { kind: 'REPLAY', receiptRef: decision.value.receiptRef, submissionAuthorized: false } };
       const locked = await tx.lockFacts(command.memberRef, command.linkRef);
       // Re-read time after lock acquisition: waiting must not extend a link/proof lifetime.
-      recheck(locked, snapshot, command, policy, deps.clock.nowEpochMs());
+      recheck(locked, snapshot, command, policy, deps.clock.nowEpochMs(), deps.simulation);
       const { submissionRef } = await tx.appendSubmission(snapshot, fingerprint, [{ kind: 'NOTIFY_OPERATIONS', branch: locked.branch }, { kind: 'RENDER_PDF', snapshotDigest: fingerprint }]);
       await tx.consumeLink(command.linkRef, submissionRef);
       await tx.saveReceipt(request, submissionRef);

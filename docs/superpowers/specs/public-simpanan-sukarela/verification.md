@@ -214,3 +214,35 @@ Validation protocol after edits: skill validator + all-family requirement covera
 - **PASS documentation:** skill coverage validator20 functional REQ plus41 all-family traceability;30 Markdown files including prototype README,83 local links, no broken link/fence/table/whitespace issues; `git diff --check` clean. Existing docs updated in place; no new spec/application files in CP0.6.
 - **PASS preservation:** compared935 tracked/untracked non-env source/document files with initial snapshot. Only this feature's documentation changed; application/prototype/PHP/package/config/next-env hashes unchanged, no new repo files, HEAD/index unchanged. No staging/commit/push/merge/deploy or service restart.
 - **Gate result:** frontend GO within U-02; official CP1-T01 NO-GO for unsigned final rules/contracts and missing explicit start; integration NO-GO for DB/control/owner evidence; operational activation NO-GO for real all-writer proof/all P0 acceptance.0/6 parent P0 closed; no approved direction reopened. Matrix13, answer sheet15, nine-concern safety16, minimal gate17 and exact execution package06 align.
+
+
+## 7 November 2026 — Wajib extension and manual-testing recovery
+
+**Result: GO for local synthetic Wajib/Sukarela manual testing on port3204; actual-member operational activation remains NO-GO.** Owner explicitly requested Wajib and confirmed the same existing Sukarela system/rules in this conversation. Wajib uses separate policy `KKISI-PSW-2026-V1@1.0.0`, form/consent versions and `kkisi-pss-wajib-a4/v1`; existing Sukarela policy/template and serialized review shape remain intact.
+
+Confirmed causes and fixes:
+
+- The dedicated public-savings container was stopped. Main `.env.local` already carried opt-in flags pointing to the feature worktree's isolated data; flags were not the missing prerequisite there.
+- A failed first database readiness promise was cached permanently. A real TCP-disconnect regression reproduced the failure; failed checks now clear their cache and revalidate on retry, without bypassing the sentinel.
+- The console launcher inherited newer native KOSIPA writer DSNs. The explicit public-savings console mode disables only the three known native writers, checks the runtime disablement, and retains normal preflight validation for all other targets/unknown writers.
+- The original feature supported only Sukarela. Issuance now selects Wajib/Sukarela; immutable link type chooses policy, master/deduction, consent and snapshot. Public payloads cannot choose another type. Controlled local approval updates only the corresponding deduction column; reject leaves both unchanged.
+- Manual OTP capture now sorts newest expiry first and supports `--latest`. SMTP copy uses generic savings wording, avoiding a wrong Sukarela label for Wajib. No real delivery was enabled.
+
+| Executed command | Actual result | Evidence |
+|---|---|---|
+| `pnpm test` | domain295 PASS; application162 PASS; web435 PASS /109 SKIP /0 FAIL | `.local/public-savings/wajib-regression-final.log` |
+| `pnpm pss:test:integration` | **48/48 PASS**,0 skipped; real isolated MariaDB, including cross-channel/rollback/duplicate controls, Wajib-only approval writes and startup recovery | `.local/public-savings/wajib-integration-final.log` |
+| `PSS_BROWSER_URL=http://127.0.0.1:3204 node --experimental-strip-types apps/web/tests/public-savings-console-browser.mjs` | actual console login/issuance → OTP capture → mobile form/signature/consent/review → submission → private PDF → console OPEN row for **both Wajib and Sukarela**; unauthorized console denied;0 browser errors/0 external requests | `.local/public-savings/wajib-console-browser-final.log`; `/private/tmp/kkisi-public-savings-console-browser/results.json` and sibling masked screenshots/PDFs |
+| `pnpm typecheck` | PASS all three packages | `.local/public-savings/wajib-typecheck-final.log` |
+| ESLint for changed TS/TSX/MJS, including the new browser harness | PASS | `.local/public-savings/wajib-scoped-lint-final.log` |
+| `pnpm build` | PASS optimized build, then server restarted and browser suite rerun | `.local/public-savings/wajib-build-final.log` |
+| `node --test integration/public-savings/migration-drift.test.mjs` | PASS fixture/upgrade boundary and preservation checks | migration test suite |
+| `pnpm pss:migration:verify` | PASS ordered001→002 checksums, interrupted recovery/rerun, unchanged legacy signatures and live immutable type binding in allowlisted scratch | `.local/public-savings/wajib-migration-final.log` |
+
+The109 web skips belong to opt-in environment suites; they are not counted as passing. Public-savings DB guards were explicitly enabled in the separate48-case integration run. The original historical103-skip inventory is retained; this run is not a new claim of full external-runtime UAT.
+
+TDD evidence includes expected RED then GREEN for policy/version mismatch, Wajib binding, isolated launcher overlay, generic SMTP copy, latest OTP projection and recovery after the first DB connection fails. The initial broad control run exposed fixtures lacking the newly mandatory link binding and treating Wajib as an unrelated type; those fixtures now create bound links and use Pokok for the unrelated-type case. Final integration has0 failures. Scoped AI review found an upgrade seed overwriting an existing zero; fixed to initialize only a newly introduced fixture column and otherwise seed from actual existing positive values. No independent human review is claimed.
+
+`002_wajib_savings.sql` is additive;001 unchanged. Existing synthetic requests were preserved; no reset was used. This does not verify Wajib against a live CI2/Laravel workflow or authorize production migrations, payroll writes, external delivery, deployment, merge or push. Actual O-02/O-05/O-06 remain as recorded in20_CP2.
+
+For manual testing use `synth_koperasi`, **SIMPANAN WAJIB**, NIK `SYN0000002` or `SYN0000003`, and the [updated guide](../../../../integration/public-savings/README.md). `SYN0000001` already has an active request; the duplicate guard correctly prevents reuse. Runtime credentials, authorization URLs and OTPs remain private and uncommitted.

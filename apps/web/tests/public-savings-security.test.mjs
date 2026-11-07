@@ -21,3 +21,28 @@ test('token/code digests are purpose bound and comparison rejects malformed valu
  assert.equal(secretMatches(token,token),true);
  assert.equal(secretMatches(token,'x'),false);
 });
+
+test('replica UAT config requires separate opt-in and exact local database accounts',()=>{
+ const prior=process.env.PSS_LOCAL_REPLICA_UAT, priorApp=process.env.APP_ENV;
+ const replica={...config,mode:'LOCAL_REPLICA_UAT',port:3307,database:'kkisi_staging',app:{...config.app,user:'pss_replica_public'},legacy:{...config.legacy,user:'pss_replica_legacy'}};
+ try{
+  delete process.env.PSS_LOCAL_REPLICA_UAT;
+  assert.throws(()=>validateStagingConfig(replica),/STAGING_CONFIGURATION_INVALID/);
+  process.env.PSS_LOCAL_REPLICA_UAT='1';delete process.env.APP_ENV;
+  assert.equal(validateStagingConfig(replica).mode,'LOCAL_REPLICA_UAT');
+  for(const patch of [{host:'localhost'},{host:'remote.invalid'},{port:3318},{database:'production'},{database:'kkisi_public_savings'},{app:config.app},{legacy:config.legacy},{encryptionKeyHex:'a'.repeat(63)},{hashKey:'x'.repeat(64)},{mode:'PRODUCTION'}])assert.throws(()=>validateStagingConfig({...replica,...patch}),/STAGING_CONFIGURATION_INVALID/);
+  process.env.APP_ENV='production';assert.throws(()=>validateStagingConfig(replica),/STAGING_CONFIGURATION_INVALID/);
+ }finally{if(prior===undefined)delete process.env.PSS_LOCAL_REPLICA_UAT;else process.env.PSS_LOCAL_REPLICA_UAT=prior;if(priorApp===undefined)delete process.env.APP_ENV;else process.env.APP_ENV=priorApp;}
+});
+
+
+test('replica flag is independent from the existing staging and console gates and permits a local production build',async()=>{
+ const {publicSavingsReplicaUatEnabled,publicSavingsStagingEnabled,publicSavingsConsoleEnabled}=await import('../src/features/public-savings/flags.ts');
+ assert.equal(publicSavingsReplicaUatEnabled({}),false);
+ assert.equal(publicSavingsReplicaUatEnabled({PSS_LOCAL_REPLICA_UAT:'true'}),false);
+ assert.equal(publicSavingsReplicaUatEnabled({PSS_LOCAL_REPLICA_UAT:'1',NODE_ENV:'production',APP_ENV:'local'}),true);
+ assert.equal(publicSavingsReplicaUatEnabled({PSS_LOCAL_REPLICA_UAT:'1',APP_ENV:'production'}),false);
+ assert.equal(publicSavingsStagingEnabled({PSS_LOCAL_REPLICA_UAT:'1'}),false);
+ assert.equal(publicSavingsConsoleEnabled({PSS_LOCAL_STAGING:'1',PSS_LOCAL_REPLICA_UAT:'1'}),false);
+ assert.equal(publicSavingsConsoleEnabled({PSS_LOCAL_STAGING:'1',PSS_OPERATOR_AUTH:'CONSOLE'}),true);
+});

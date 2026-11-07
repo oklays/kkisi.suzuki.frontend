@@ -14,7 +14,7 @@ const PUBLIC_ROUTES = new Set(['src/app/api/auth/login/route.ts', 'src/app/api/a
 // Public pages: the login form, the landing page and the member "Segera Hadir" page. The last two are static and
 // must never read data or sessions (enforced below).
 const PUBLIC_PAGES = new Set(['src/app/login/page.tsx', 'src/app/page.tsx', 'src/app/anggota/page.tsx', 'src/app/simpanan-sukarela/page.tsx', 'src/app/simpanan-sukarela/operator/page.tsx']);
-const STATIC_PUBLIC = ['src/app/page.tsx', 'src/app/anggota/page.tsx', 'src/app/simpanan-sukarela/page.tsx', 'src/app/simpanan-sukarela/operator/page.tsx'];
+const STATIC_PUBLIC = ['src/app/page.tsx', 'src/app/anggota/page.tsx'];
 // Separate non-cookie authorization: public bearer+OTP proof, or a synthetic-local operator key.
 // Exact routes only; the dedicated adapter is checked below and its negative HTTP behavior has executable tests.
 const PSS_ROUTES = new Set([

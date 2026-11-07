@@ -8,6 +8,8 @@ export const PDF_TEMPLATES = {
   'kkisi-pss-a4/v1': { renderer: 'pdf-lib-1.17.1/kkisi-pss-v1', amounts: 'raw' },
   /** KKISI Rupiah document standard (`Rp100.000,25`) plus the requested amount in words (terbilang). */
   'kkisi-pss-a4/v2': { renderer: 'pdf-lib-1.17.1/kkisi-pss-v2', amounts: 'document' },
+  'kkisi-pss-wajib-a4/v1': { renderer: 'pdf-lib-1.17.1/kkisi-pss-v1', amounts: 'raw' },
+  'kkisi-pss-wajib-a4/v2': { renderer: 'pdf-lib-1.17.1/kkisi-pss-wajib-v2', amounts: 'document' },
 } as const;
 
 export type PdfTemplateVersion = keyof typeof PDF_TEMPLATES;

@@ -21,7 +21,7 @@ export interface MemberEligibilityFacts {
   readonly branch: 'VALID' | 'INVALID' | 'UNVERIFIED';
   readonly conflictingActiveSubmission: boolean | 'UNVERIFIED';
   readonly contact: {
-    readonly status: 'VERIFIED' | 'UNVERIFIED' | 'MISSING';
+    readonly status: 'VERIFIED' | 'UNVERIFIED' | 'MISSING' | 'SIMULATED_LOCAL_CAPTURE';
     readonly verifiedAtEpochMs: number | null;
     readonly provenanceRef: string;
     readonly changedSinceVerification: boolean;
@@ -31,9 +31,10 @@ export interface MemberEligibilityFacts {
 const FIELDS = ['membershipStatus', 'identity', 'identifierMappingConflict', 'payrollRoster', 'groupCode', 'activePayrollEligibleGroups', 'branch', 'conflictingActiveSubmission', 'contact'];
 const DAY_MS = 86400000;
 
-export function evaluateMembershipEligibility(input: unknown, policy: unknown, nowEpochMs: number): PssResult<{ readonly eligible: true; readonly policyVersion: string; readonly submissionAuthorized: false }, EligibilityErrorCode> {
+export function evaluateMembershipEligibility(input: unknown, policy: unknown, nowEpochMs: number, context?: 'LOCAL_REPLICA_UAT'): PssResult<{ readonly eligible: true; readonly policyVersion: string; readonly submissionAuthorized: false }, EligibilityErrorCode> {
   const resolved = resolveApprovedPolicy(policy);
   if (!resolved.ok) return resolved;
+  if (context !== undefined && context !== 'LOCAL_REPLICA_UAT') return fail('INVALID_INPUT', 'simulation');
   if (!isEpochMs(nowEpochMs)) return fail('INVALID_INPUT', 'now');
   const f = plain(input, FIELDS);
   if (!f) return fail('INVALID_INPUT', 'facts');
@@ -54,7 +55,8 @@ export function evaluateMembershipEligibility(input: unknown, policy: unknown, n
   if (f.conflictingActiveSubmission !== false) return fail('ASSISTED_REQUIRED', 'submission');
 
   const c = plain(f.contact, ['status', 'verifiedAtEpochMs', 'provenanceRef', 'changedSinceVerification']);
-  if (!c || c.status !== 'VERIFIED' || c.changedSinceVerification !== false || !isText(c.provenanceRef) || !isEpochMs(c.verifiedAtEpochMs)
+  const simulated = context === 'LOCAL_REPLICA_UAT' && c?.status === 'SIMULATED_LOCAL_CAPTURE' && typeof c.provenanceRef === 'string' && c.provenanceRef.startsWith('local-replica-simulation:');
+  if (!c || (c.status !== 'VERIFIED' && !simulated) || c.changedSinceVerification !== false || !isText(c.provenanceRef) || !isEpochMs(c.verifiedAtEpochMs)
     || c.verifiedAtEpochMs > nowEpochMs || nowEpochMs - c.verifiedAtEpochMs > rules.contactMaxAgeDays * DAY_MS) {
     return fail('CONTACT_UNTRUSTED', 'contact');   // staff-assisted verification; never a typed replacement number
   }

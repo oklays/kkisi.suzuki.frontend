@@ -1,5 +1,11 @@
 # Tasks index and traceability
 
+## Manual testing extension — 7 November 2026
+
+Owner confirmed the same Sukarela system/rules for **SIMPANAN WAJIB** in this conversation. Implemented as separate `KKISI-PSW-2026-V1@1.0.0`, immutable token type, type-matched authoritative deduction, consent/snapshot/PDF and controlled local approval. Existing Sukarela policy and historical evidence remain unchanged. `CP1-T01B/T02/T03/T05/T06/T07/T08` and `CP2-T01` now cover both types in isolated simulation; this does not close the actual-runtime O-02/O-05/O-06 gates below.
+
+The public-savings container was stopped and the console launcher rejected inherited native KOSIPA writer DSNs. Non-destructive setup now applies migration002 and seeds Wajib; the dedicated console explicitly disables the three unrelated native writers while retaining strict target preflight. Main checkout/user changes and its ordinary servers are preserved. Manual testing uses the feature worktree and port3204; see the updated [manual guide](../../../../integration/public-savings/README.md).
+
 ## Effective execution ledger —29 October2026
 
 Owner MASTER EXECUTION PROMPT authorizes completion under approved Policy v1.0.0, STG-01, additive local migrations/integration, tests and atomic local feature commits. It supersedes the historical approval-loop/status paragraphs retained below. No policy B-ID is reopened. No production activation/push/merge/deployment is authorized.

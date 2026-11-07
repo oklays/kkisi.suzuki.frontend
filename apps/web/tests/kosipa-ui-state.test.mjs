@@ -11,7 +11,7 @@ registerHooks({
  resolve(specifier,context,next){
   const stubs={
    'next/link':`import React from '${reactPath}';export default function Link({prefetch,children,...p}){return React.createElement('a',p,children)}`,
-   'next/navigation':'export function notFound(){throw new Error("NOT_FOUND")}',
+   'next/navigation':'export function usePathname(){return "/console/kosipa"} export function notFound(){throw new Error("NOT_FOUND")}',
    '@/infrastructure/auth/page-guard':'export async function requireConsoleSession(){return {kind:"ok",ctx:{userId:1},kosipa:"linked",capabilities:new Set(["kosipa.loan.view"])}}',
    '@/infrastructure/console/flags':'export function consoleEnabled(){return true}',
    '@/infrastructure/console/services':'export function kosipaServices(){return {now:()=>new Date()}}',

@@ -2,6 +2,63 @@
 
 Target: **LOCAL_SYNTHETIC**, MariaDB11.4, Docker container `kkisi-public-savings-integration`, database `kkisi_public_savings`, bound exclusively to `127.0.0.1:3318`. The Next application uses `127.0.0.1:3489`. No production database, notifications, payroll system or remote PHP endpoint is contacted.
 
+## Manual testing Wajib / Sukarela — 7 November 2026
+
+Owner confirmed: “sama sistem nya seperti potongan simpanan sukarela yang saat ini sudah dibuat, NAMUN ini untuk simpanan WAJIB”. The Wajib extension uses the same rules under its own approved policy `KKISI-PSW-2026-V1@1.0.0`; original Sukarela policy and historical PDFs retain their original versions. This extends **local simulation**, not operational member activation.
+
+Use the existing feature worktree:
+
+```sh
+cd ../kkisi.suzuki.web-worktrees/public-savings-e2e-20261029
+pnpm pss:setup        # start/reuse, additive upgrade, preserve existing requests
+pnpm build
+pnpm pss:console
+```
+
+1. Open <http://127.0.0.1:3204/console/kosipa/simpanan-sukarela>. The original menu/route name is retained; the issuer now selects **SIMPANAN WAJIB** or **SIMPANAN SUKARELA**.
+2. Sign in as `synth_koperasi`, password from the main checkout's ignored `apps/web/.env.dev-local-accounts.json` (`koperasi`). No password is included here.
+3. Click **Terbitkan tautan**, choose **SIMPANAN WAJIB**, and search exact NIK `SYN0000002` or `SYN0000003`. `SYN0000001` already has an active request in the retained test database; do not delete it to bypass duplicate protection.
+4. Click **Terbitkan** beside the synthetic member; copy **Tautan privat anggota**. Open the complete link in a private browser window on the same computer. The historical `/simpanan-sukarela` route serves both types; the type is bound to the token in the database, never chosen by a public URL/query/body.
+5. Click **Kirim kode verifikasi**. In another terminal, from the same feature worktree, run `pnpm pss:ops capture --latest`. Use the latest unexpired challenge's six-digit OTP. This is local capture only: nothing is sent to real email/SMS/WhatsApp.
+6. Verify that the form says **SIMPANAN WAJIB**. Enter `150000` (initial deduction `100000`), draw a signature, check the Wajib consent, review and submit. The inherited limits are Rp10,000–Rp5,000,000, increment Rp1,000; increase/decrease allowed, unchanged rejected, zero assisted.
+7. Download the PDF and confirm its **PENGAJUAN SIMPANAN WAJIB** title. Refresh the console: the application must show **SIMPANAN WAJIB / Menunggu proses**. Submission does not change deductions/balances or approve payroll.
+
+Links expire after48hours. Reissuing replaces the member's previous active link. A submitted active application prevents another change, including across Wajib/Sukarela. Use the other unused synthetic member for another test; never reset the database just to bypass the control.
+
+**Why the ordinary server looked inactive:** the dedicated public-savings container was stopped even though the main checkout already had the opt-in flags; a failed initial database readiness check was cached until restart; the console launcher additionally inherited newer native KOSIPA writer DSNs outside its isolated profile. Failed readiness checks can now retry safely. The launcher explicitly disables only those three native writers and validates the remaining targets. It does not weaken the ordinary DEV LOCAL preflight or activate a production endpoint.
+
+`127.0.0.1` links work only on this computer. They are not operational links to send to real members or another device. Real external UAT still requires the CI2/Laravel writer/print integration, approved deployment adapter/HTTPS, verified contact sources and configured delivery provider described below. Never expose this synthetic server with a tunnel.
+
+Migration `002_wajib_savings.sql` adds immutable link type binding and updates the local controlled command for the matching deduction column. Existing links default to Sukarela. `setup` applies the checksum-checked upgrade without reset; existing monetary values are retained. No production migration is executed.
+
+## Manual testing on the main app (:3000) with the production-copy replica — LOCAL_REPLICA_UAT
+
+Target: the ordinary DEV LOCAL app on `127.0.0.1:3000` against the local Docker replica `kkisi-staging` (`127.0.0.1:3307/kkisi_staging`) with the **existing registered members**. Mode `LOCAL_REPLICA_UAT` needs its own opt-in (`PSS_LOCAL_REPLICA_UAT=1`), is refused when `APP_ENV=production`, accepts only the exact loopback replica and the restricted `pss_replica_public` / `pss_replica_legacy` accounts, and keeps its private config/keys/captures in `.local/public-savings-replica/` (mode 0700/0600, git-ignored).
+
+One-time provisioning (already done on 7 Nov 2026; repeatable and non-destructive — a verified full `mariadb-dump` backup is taken before any SQL write):
+
+```sh
+pnpm pss:replica setup    # backup, migrations 001+002, restricted accounts
+pnpm pss:replica enroll   # auxiliary pss_* rows only; member/master/header digest is verified unchanged
+```
+
+`apps/web/.env.local` then needs `PSS_LOCAL_STAGING=1`, `PSS_LOCAL_REPLICA_UAT=1`, `PSS_OPERATOR_AUTH=CONSOLE`, `PSS_LOCAL_DIRECTORY` / `PSS_OPERATOR_POLICY_FILE` pointing at `.local/public-savings-replica`, and `KOSIPA_READ_ACCESS_MODE=non-cashier` (the previous profile is saved as `.local/public-savings-replica/env.local.before-replica-uat`). Restart `pnpm dev` after changing it.
+
+1. Sign in on <http://127.0.0.1:3000/login> with a console account of role 1 or 2 (the replica operator policy maps those roles to `STAFF_OPERATOR`; cashiers have no access).
+2. Open <http://127.0.0.1:3000/console/kosipa/simpanan-sukarela> (banner **LOCAL REPLICA UAT · SIMULASI**), click **Terbitkan tautan**, choose **SIMPANAN WAJIB**, search the member's exact NIK, then **Terbitkan** and copy **Tautan privat anggota**.
+3. Open the link in a private window on this computer, click **Kirim kode verifikasi**, then read the OTP with `pnpm pss:replica capture --latest`. The member's real email is never contacted: OTP delivery goes to encrypted local capture only.
+4. Fill the new deduction, draw the signature, tick consent, review and submit. The PDF says **PENGAJUAN SIMPANAN WAJIB** and carries the `LOCAL_CAPTURE_SIMULATION` marker; the console shows **SIMPANAN WAJIB / Menunggu proses**.
+
+Submission inserts exactly one OPEN `trans_simpanan_pengajuan` header (copied verbatim from the masters, including legacy trailing blanks in `bagian`/`nama`) and never changes `m_anggota` or `m_simpanan_aktif`. Members with an existing OPEN/POSTING request (mobile or public), without a unique active `SIMPANAN WAJIB` master that matches `m_anggota.sim_wajib`, or without an active `m_bagian` row are refused fail-closed — choose another member rather than editing data. Contact, roster and calendar facts in this mode are labelled simulation evidence (`SIMULATED_LOCAL_CAPTURE`, `LOCAL_REPLICA_SIMULATION_CALENDAR`, `lokasi=LOCAL_REPLICA_KOSIPA`), so it does not count as operational verification.
+
+Automated acceptance (logs in, issues a Wajib link for `manual-member.json`, completes OTP/signature/submit, checks the PDF and console row and that member/master rows are unchanged; never prints tokens, OTPs or credentials):
+
+```sh
+cd apps/web && PSS_LOCAL_REPLICA_UAT=1 node --experimental-strip-types tests/public-savings-replica-browser.mjs
+```
+
+After a successful run that member holds an active request, so point `manual-member.json` at another eligible member before re-running.
+
 ## Setup
 
 Run from this feature worktree, not the original checkout:

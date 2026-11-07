@@ -36,3 +36,9 @@ test('local operator key is accepted only for explicitly synthetic configuration
  const previous=process.env.PSS_OPERATOR_AUTH;delete process.env.PSS_OPERATOR_AUTH;
  try{for(const mode of ['LOCAL_SYNTHETIC','PRODUCTION']){const f=fixture({mode}),request=req();request.headers.set('x-pss-staging-operator','key');assert.equal((await f.handle(request,'links-list')).status,mode==='LOCAL_SYNTHETIC'?200:403);}}finally{if(previous!==undefined)process.env.PSS_OPERATOR_AUTH=previous;}
 });
+
+test('staff issue can explicitly bind Wajib while unknown kinds fail before the service', async()=>consoleMode(async()=>{
+ const f=fixture();assert.equal((await f.handle(req({memberRef:'member-1',savingsType:'SIMPANAN WAJIB'}),'links-create')).status,200);
+ assert.deepEqual(f.calls.find(c=>c.name==='issueLink').args,['member-1',{...f.actor,action:'ISSUE_LINK'},'SIMPANAN WAJIB']);
+ for(const savingsType of ['SIMPANAN POKOK','simpanan wajib',null]){const denied=fixture();assert.equal((await denied.handle(req({memberRef:'member-1',savingsType}),'links-create')).status,400);assert.equal(denied.calls.some(c=>c.name==='issueLink'),false);}
+}));

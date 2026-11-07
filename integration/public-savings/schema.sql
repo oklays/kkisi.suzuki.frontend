@@ -2,14 +2,14 @@
 CREATE TABLE pss_installation(id CHAR(32) PRIMARY KEY, mode VARCHAR(30) NOT NULL CHECK(mode='LOCAL_SYNTHETIC')) ENGINE=InnoDB;
 CREATE TABLE m_bagian(id BIGINT PRIMARY KEY,name_bagian VARCHAR(255) NOT NULL,status INT NOT NULL DEFAULT 1,id_lokasi BIGINT NULL) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 CREATE TABLE m_simpanan_mobile(id INT AUTO_INCREMENT PRIMARY KEY,jenis_simpanan VARCHAR(50) NULL,jasa DOUBLE(18,2) NULL,status_pengajuan INT NOT NULL,status_penarikan INT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-CREATE TABLE m_anggota(id BIGINT PRIMARY KEY,nik_kar VARCHAR(50) NOT NULL,nama_kar VARCHAR(50) NOT NULL,bagian VARCHAR(100) NOT NULL,no_telp VARCHAR(50) NULL,email VARCHAR(50) NULL,status_anggota VARCHAR(50) NOT NULL DEFAULT 'AKTIVE',status_karyawan VARCHAR(50) NOT NULL DEFAULT 'AKTIVE',tgl_keluar DATE NULL,sim_sukarela DOUBLE(18,2) NULL DEFAULT 0,kd_group VARCHAR(100) NOT NULL,foto_ttd VARCHAR(255) NULL,UNIQUE(nik_kar)) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE m_anggota(id BIGINT PRIMARY KEY,nik_kar VARCHAR(50) NOT NULL,nama_kar VARCHAR(50) NOT NULL,bagian VARCHAR(100) NOT NULL,no_telp VARCHAR(50) NULL,email VARCHAR(50) NULL,status_anggota VARCHAR(50) NOT NULL DEFAULT 'AKTIVE',status_karyawan VARCHAR(50) NOT NULL DEFAULT 'AKTIVE',tgl_keluar DATE NULL,sim_sukarela DOUBLE(18,2) NULL DEFAULT 0,sim_wajib DOUBLE(18,2) NULL DEFAULT 0,kd_group VARCHAR(100) NOT NULL,foto_ttd VARCHAR(255) NULL,UNIQUE(nik_kar)) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 CREATE TABLE trans_simpanan_pengajuan(id BIGINT AUTO_INCREMENT PRIMARY KEY,doc_no VARCHAR(50) NOT NULL UNIQUE,doc_date DATE NULL,doc_status VARCHAR(50) DEFAULT 'OPEN',jenis_simpanan VARCHAR(50) NULL,nik_kar VARCHAR(50) NULL,nama VARCHAR(50) NULL,phone VARCHAR(50) NULL,bank VARCHAR(50) NULL,norek VARCHAR(50) NULL,bagian VARCHAR(100) NULL,lokasi VARCHAR(100) NULL,potongan_old DOUBLE(18,2) NULL,potongan DOUBLE(18,2) NULL,awal_potong_bulan VARCHAR(50) NULL,awal_potong_tahun VARCHAR(50) NULL,remarks VARCHAR(50) NULL,posting_date DATETIME NULL,created_at DATETIME NULL,cd_usr VARCHAR(50) NULL,updated_at DATETIME NULL,ud_usr VARCHAR(50) NULL,status_notif INT NOT NULL,ttd VARCHAR(100) NULL,is_mobile INT NULL) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 CREATE TABLE m_simpanan_aktif(id BIGINT AUTO_INCREMENT PRIMARY KEY,doc_no VARCHAR(50) NULL,jenis_simpanan VARCHAR(255) NULL,nik_kar VARCHAR(10) NOT NULL,nama_kar VARCHAR(255) NULL,kd_group VARCHAR(50) NULL,potongan_old DOUBLE(18,2) NOT NULL,potongan_payroll DOUBLE(18,2) NULL,cash_tf DOUBLE(18,2) NULL,rek_nama VARCHAR(255) NULL,rek_bank VARCHAR(255) NULL,rek_no VARCHAR(50) NULL,status INT NULL,cd DATETIME NULL,ud DATETIME NULL,usr_cd VARCHAR(255) NULL,usr_ud VARCHAR(255) NULL,periode_start DATE NULL,periode_end DATE NULL,is_mobile INT NOT NULL,UNIQUE(nik_kar,jenis_simpanan)) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 CREATE TABLE pss_member_control(member_id BIGINT PRIMARY KEY,active_reference VARCHAR(50) NULL,FOREIGN KEY(member_id) REFERENCES m_anggota(id)) ENGINE=InnoDB;
 CREATE TABLE pss_member_evidence(member_id BIGINT PRIMARY KEY,contact_version VARCHAR(64) NOT NULL,contact_verified_ms BIGINT NOT NULL,eligible TINYINT NOT NULL,payroll_active TINYINT NOT NULL,branch VARCHAR(100) NOT NULL,deduction_evidence VARCHAR(20) NOT NULL DEFAULT 'CONFIG_VERIFIED' CHECK(deduction_evidence IN('CONFIG_VERIFIED','VERIFIED_NONE'))) ENGINE=InnoDB;
 CREATE TABLE pss_notification_recipient(branch VARCHAR(100) NOT NULL,role VARCHAR(30) NOT NULL,destination VARCHAR(100) NOT NULL,active TINYINT NOT NULL,PRIMARY KEY(branch,role)) ENGINE=InnoDB;
 CREATE TABLE pss_calendar(year INT NOT NULL,month INT NOT NULL,status VARCHAR(20) NOT NULL,locked TINYINT NOT NULL,PRIMARY KEY(year,month)) ENGINE=InnoDB;
-CREATE TABLE pss_link(id CHAR(32) PRIMARY KEY,member_id BIGINT NOT NULL,token_hash CHAR(64) NOT NULL UNIQUE,contact_version VARCHAR(64) NOT NULL,expires_ms BIGINT NOT NULL,state VARCHAR(20) NOT NULL,created_ms BIGINT NOT NULL,failed_attempts INT NOT NULL DEFAULT 0,consumed_reference VARCHAR(50) NULL,review_cipher LONGTEXT NULL,review_hash CHAR(64) NULL,revoked_ms BIGINT NULL,consumed_ms BIGINT NULL) ENGINE=InnoDB;
+CREATE TABLE pss_link(id CHAR(32) PRIMARY KEY,member_id BIGINT NOT NULL,savings_type VARCHAR(50) NOT NULL DEFAULT 'SIMPANAN SUKARELA',token_hash CHAR(64) NOT NULL UNIQUE,contact_version VARCHAR(64) NOT NULL,expires_ms BIGINT NOT NULL,state VARCHAR(20) NOT NULL,created_ms BIGINT NOT NULL,failed_attempts INT NOT NULL DEFAULT 0,consumed_reference VARCHAR(50) NULL,review_cipher LONGTEXT NULL,review_hash CHAR(64) NULL,revoked_ms BIGINT NULL,consumed_ms BIGINT NULL) ENGINE=InnoDB;
 CREATE TABLE pss_challenge(id CHAR(32) PRIMARY KEY,link_id CHAR(32) NOT NULL,code_hash CHAR(64) NULL,created_ms BIGINT NOT NULL,expires_ms BIGINT NOT NULL,used TINYINT NOT NULL DEFAULT 0,INDEX(link_id)) ENGINE=InnoDB;
 CREATE TABLE pss_proof(id CHAR(32) PRIMARY KEY,link_id CHAR(32) NOT NULL,proof_hash CHAR(64) NOT NULL UNIQUE,contact_version VARCHAR(64) NOT NULL,created_ms BIGINT NOT NULL,expires_ms BIGINT NOT NULL,INDEX(link_id)) ENGINE=InnoDB;
 CREATE TABLE pss_application(reference VARCHAR(50) PRIMARY KEY,member_id BIGINT NOT NULL,link_id CHAR(32) NOT NULL UNIQUE,idempotency_key VARCHAR(128) NOT NULL,request_hash CHAR(64) NOT NULL,payload_hash CHAR(64) NOT NULL,snapshot_cipher LONGTEXT NOT NULL,snapshot_hash CHAR(64) NOT NULL,pdf_ref VARCHAR(100) NULL,pdf_digest CHAR(64) NULL,proof_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',created_ms BIGINT NOT NULL,verified_ms BIGINT NOT NULL,UNIQUE(member_id,idempotency_key),FOREIGN KEY(member_id) REFERENCES m_anggota(id)) ENGINE=InnoDB;
@@ -18,9 +18,17 @@ CREATE TABLE pss_audit(id BIGINT AUTO_INCREMENT PRIMARY KEY,member_id BIGINT NOT
 -- Guard is writable only by the definer. Session variables are never authority.
 CREATE TABLE pss_command_guard(connection_id BIGINT PRIMARY KEY,reference VARCHAR(50) NOT NULL,action VARCHAR(20) NOT NULL) ENGINE=InnoDB;
 DELIMITER $$
+CREATE OR REPLACE TRIGGER pss_link_insert BEFORE INSERT ON pss_link FOR EACH ROW
+BEGIN
+ IF BINARY NEW.savings_type NOT IN('SIMPANAN SUKARELA','SIMPANAN WAJIB') THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='INVALID_SAVINGS_TYPE'; END IF;
+END$$
+CREATE OR REPLACE TRIGGER pss_link_update BEFORE UPDATE ON pss_link FOR EACH ROW
+BEGIN
+ IF NOT(BINARY NEW.savings_type<=>BINARY OLD.savings_type) OR NOT(NEW.member_id<=>OLD.member_id) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='IMMUTABLE_LINK_BINDING'; END IF;
+END$$
 -- Actual deployed CI2 (PHP 5.6) and Laravel (PHP 8.1) write these tables directly through a broad
 -- DML account. PUBLIC references are writable only inside a controlled command on this connection;
--- unenrolled legacy rows keep their existing behaviour, enrolled SUKARELA rows share the B-05 reservation.
+-- unenrolled legacy rows keep their existing behaviour, enrolled SUKARELA and WAJIB rows share the B-05 reservation.
 CREATE OR REPLACE TRIGGER pss_header_insert BEFORE INSERT ON trans_simpanan_pengajuan FOR EACH ROW
 main:BEGIN
  DECLARE v_member BIGINT DEFAULT NULL; DECLARE v_reserved VARCHAR(50) DEFAULT NULL; DECLARE v_count INT DEFAULT 0;
@@ -30,13 +38,13 @@ main:BEGIN
  END IF;
  IF EXISTS(SELECT 1 FROM pss_command_guard WHERE connection_id=CONNECTION_ID() AND reference=NEW.doc_no AND action='CREATE_MOBILE') THEN LEAVE main; END IF;
  IF EXISTS(SELECT 1 FROM pss_application WHERE reference=NEW.doc_no) OR NEW.doc_no REGEXP '^PSS[0-9a-f]{32}00000$' THEN
-  IF NOT EXISTS(SELECT 1 FROM pss_application a JOIN pss_member_control c ON c.member_id=a.member_id JOIN m_anggota m ON m.id=a.member_id WHERE a.reference=NEW.doc_no AND c.active_reference=NEW.doc_no AND BINARY m.nik_kar=BINARY NEW.nik_kar)
-   OR NOT(NEW.doc_status<=>'OPEN') OR NOT(NEW.jenis_simpanan<=>'SIMPANAN SUKARELA') OR NOT(NEW.is_mobile<=>0) THEN
+  IF NOT EXISTS(SELECT 1 FROM pss_application a JOIN pss_link l ON l.id=a.link_id JOIN pss_member_control c ON c.member_id=a.member_id JOIN m_anggota m ON m.id=a.member_id WHERE a.reference=NEW.doc_no AND c.active_reference=NEW.doc_no AND BINARY m.nik_kar=BINARY NEW.nik_kar AND BINARY l.savings_type=BINARY NEW.jenis_simpanan)
+   OR NOT(NEW.doc_status<=>'OPEN') OR NOT(NEW.is_mobile<=>0) THEN
    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PUBLIC_INSERT_BOUNDARY';
   END IF;
   LEAVE main;
  END IF;
- IF NOT(NEW.jenis_simpanan<=>'SIMPANAN SUKARELA') THEN LEAVE main; END IF;
+ IF NEW.jenis_simpanan IS NULL OR NEW.jenis_simpanan NOT IN('SIMPANAN SUKARELA','SIMPANAN WAJIB') THEN LEAVE main; END IF;
  SELECT COUNT(*) INTO v_count FROM m_anggota m JOIN pss_member_control c ON c.member_id=m.id WHERE BINARY m.nik_kar=BINARY NEW.nik_kar;
  IF v_count=0 THEN LEAVE main; END IF;
  IF v_count>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='AMBIGUOUS_MEMBER'; END IF;
@@ -113,7 +121,7 @@ main:BEGIN
  SELECT active_reference INTO v_reserved FROM pss_member_control WHERE member_id=v_member FOR UPDATE;
  SELECT id,nik_kar,doc_status,cd_usr,jenis_simpanan,potongan_old,potongan,CAST(awal_potong_bulan AS UNSIGNED),CAST(awal_potong_tahun AS UNSIGNED) INTO v_id,v_nik,v_status,v_maker,v_type,v_old,v_amount,v_month,v_year FROM trans_simpanan_pengajuan WHERE doc_no=p_reference FOR UPDATE;
  SELECT nama_kar,kd_group INTO v_name,v_group FROM m_anggota WHERE id=v_member AND BINARY nik_kar=BINARY v_nik FOR UPDATE;
- IF NOT(v_status<=>'OPEN') OR NOT(v_reserved<=>p_reference) OR v_type<>'SIMPANAN SUKARELA' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='INVALID_TRANSITION'; END IF;
+ IF NOT(v_status<=>'OPEN') OR NOT(v_reserved<=>p_reference) OR v_type IS NULL OR v_type NOT IN('SIMPANAN SUKARELA','SIMPANAN WAJIB') THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='INVALID_TRANSITION'; END IF;
  IF BINARY p_actor=BINARY v_maker THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MAKER_CHECKER_REQUIRED'; END IF;
  SELECT COUNT(*) INTO v_public FROM pss_application WHERE reference=p_reference;
  IF v_public>0 THEN
@@ -131,8 +139,13 @@ main:BEGIN
   ELSE
    UPDATE m_simpanan_aktif SET doc_no=p_reference,potongan_payroll=v_amount,status=1,ud=UTC_TIMESTAMP()+INTERVAL 7 HOUR,usr_ud=p_actor WHERE BINARY nik_kar=BINARY v_nik AND jenis_simpanan=v_type;
   END IF;
-  UPDATE m_anggota SET sim_sukarela=v_amount WHERE id=v_member AND BINARY nik_kar=BINARY v_nik;
-  IF ROW_COUNT()<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MEMBER_WRITE_FAILED'; END IF;
+  IF v_type='SIMPANAN WAJIB' THEN
+   UPDATE m_anggota SET sim_wajib=v_amount WHERE id=v_member AND BINARY nik_kar=BINARY v_nik;
+   IF ROW_COUNT()<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MEMBER_WRITE_FAILED'; END IF;
+  ELSE
+   UPDATE m_anggota SET sim_sukarela=v_amount WHERE id=v_member AND BINARY nik_kar=BINARY v_nik;
+   IF ROW_COUNT()<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='MEMBER_WRITE_FAILED'; END IF;
+  END IF;
  END IF;
  UPDATE trans_simpanan_pengajuan SET doc_status=CASE p_action WHEN 'APPROVE' THEN 'APPROVED' ELSE 'REJECTED' END,updated_at=UTC_TIMESTAMP()+INTERVAL 7 HOUR,ud_usr=p_actor WHERE id=v_id AND doc_status='OPEN';
  IF ROW_COUNT()<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HEADER_WRITE_FAILED'; END IF;

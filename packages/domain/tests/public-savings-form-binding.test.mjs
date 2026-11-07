@@ -47,3 +47,23 @@ test('revoked reference objects produce a typed closed result instead of an esca
   const { proxy, revoke } = Proxy.revocable({}, {}); revoke();
   error(resolveSavingsFormFacts(proxy, 'm1', PSS_POLICY_V1), 'AUTHORITATIVE_FORM_UNVERIFIED');
 });
+
+
+test('Wajib form facts require the independently registered Wajib policy', async () => {
+  const { PSS_WAJIB_POLICY_V1, policyForSavingsType, isPublicSavingsType, resolveApprovedPolicy } = await import('../src/kosipa/savings-policy.ts');
+  assert.ok(PSS_WAJIB_POLICY_V1);
+  assert.equal(policyForSavingsType('SIMPANAN WAJIB'), PSS_WAJIB_POLICY_V1);
+  assert.equal(policyForSavingsType('UNKNOWN'), undefined);
+  assert.equal(isPublicSavingsType('SIMPANAN WAJIB'), true);
+  assert.equal(isPublicSavingsType('simpanan wajib'), false);
+  assert.deepEqual(PSS_WAJIB_POLICY_V1.rules, PSS_POLICY_V1.rules);
+  assert.notEqual(PSS_WAJIB_POLICY_V1.policyVersion, PSS_POLICY_V1.policyVersion);
+  assert.equal(PSS_WAJIB_POLICY_V1.approval.approvedAt, '2026-11-07');
+  assert.equal(resolveApprovedPolicy(structuredClone(PSS_WAJIB_POLICY_V1)).ok, true);
+  assert.equal(resolveApprovedPolicy({ ...PSS_WAJIB_POLICY_V1, approval: { ...PSS_WAJIB_POLICY_V1.approval, evidenceRef: 'forged' } }).ok, false);
+  assert.ok(Object.isFrozen(PSS_WAJIB_POLICY_V1.rules.monetary));
+  const r = resolveSavingsFormFacts(facts({ savingsType: 'SIMPANAN WAJIB' }), 'm1', PSS_WAJIB_POLICY_V1);
+  assert.equal(r.ok, true); assert.equal(r.value.savingsType, 'SIMPANAN WAJIB');
+  error(resolveSavingsFormFacts(facts(), 'm1', PSS_WAJIB_POLICY_V1), 'AUTHORITATIVE_FORM_UNVERIFIED');
+  error(resolveSavingsFormFacts(facts({ savingsType: 'UNKNOWN' }), 'm1', PSS_WAJIB_POLICY_V1), 'AUTHORITATIVE_FORM_UNVERIFIED');
+});

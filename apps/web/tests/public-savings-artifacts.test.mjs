@@ -148,3 +148,25 @@ test('freezes render input before async reads and supports full consent on numbe
   assert.equal(text.includes('MUTATED CURRENT MEMBER'), false);
   assert.ok(Buffer.from(bytes).includes(Buffer.from('/Subtype /Image')));
 });
+
+test('Wajib uses a distinct immutable template and never renders a Sukarela title',async(t)=>{
+ const {parent,store}=await fixture(t);const sig=await store.stageSignature(await png());
+ const input={reference:'PSS-SYNTHETIC-WAJIB',snapshot:{...snapshot(sig),savingsType:'SIMPANAN WAJIB'},member:structuredClone(member),consentText:'Persetujuan simpanan wajib.',templateVersion:'kkisi-pss-wajib-a4/v1'};
+ const result=await store.renderSubmissionPdf(input);assert.equal(result.templateVersion,'kkisi-pss-wajib-a4/v1');
+ const bytes=await store.readPrivateArtifact(result.storageRef);const doc=await PDFDocument.load(bytes);
+ assert.equal(doc.getTitle(),'Pengajuan Simpanan Wajib - Belum Disetujui');
+ const file=join(parent,'wajib.pdf');await writeFile(file,bytes);const text=execFileSync('pdftotext',[file,'-'],{encoding:'utf8'});
+ assert.match(text,/PENGAJUAN SIMPANAN WAJIB/);assert.doesNotMatch(text,/SUKARELA/i);
+ await assert.rejects(()=>store.renderSubmissionPdf({...input,templateVersion:'kkisi-pss-a4/v1'}),/PDF_TEMPLATE_UNSUPPORTED/);
+});
+
+test('new Wajib documents use v2 Rupiah and terbilang while recorded Wajib v1 keeps raw amounts',async(t)=>{
+ const {parent,store}=await fixture(t);const sig=await store.stageSignature(await png());
+ const input={reference:'PSS-WAJIB-VERSIONS',snapshot:{...snapshot(sig),savingsType:'SIMPANAN WAJIB',requestedAmount:'150000'},member:structuredClone(member),consentText:'Persetujuan simpanan wajib.'};
+ const current=await store.renderSubmissionPdf(input);assert.equal(current.templateVersion,'kkisi-pss-wajib-a4/v2');assert.equal(current.rendererVersion,'pdf-lib-1.17.1/kkisi-pss-wajib-v2');
+ const historical=await store.renderSubmissionPdf({...input,templateVersion:'kkisi-pss-wajib-a4/v1'});assert.equal(historical.rendererVersion,'pdf-lib-1.17.1/kkisi-pss-v1');
+ for(const [label,result]of[['current',current],['historical',historical]]){
+  const file=join(parent,`${label}.pdf`);await writeFile(file,await store.readPrivateArtifact(result.storageRef));const text=execFileSync('pdftotext',[file,'-'],{encoding:'utf8'});
+  if(label==='current'){assert.match(text,/Rp150\.000/);assert.match(text,/Terbilang: Seratus lima puluh ribu rupiah/);}else{assert.match(text,/Potongan yang diminta \(Rp\): 150000/);assert.doesNotMatch(text,/Terbilang:/);}
+ }
+});

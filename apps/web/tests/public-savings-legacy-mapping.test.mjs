@@ -28,8 +28,20 @@ test('rejects incompatible identity, column lengths and text instead of truncati
   const input=valid();input.member.name='André';assert.equal(mapping.mapLegacySubmission(input).ok,true);
 });
 
+test('copies legacy trailing padding verbatim on descriptive columns but never on identity', () => {
+  // Production masters carry trailing blanks (e.g. m_bagian.name_bagian); the legacy mobile writer copies them as-is.
+  const input=valid();Object.assign(input.member,{name:'SYNTH MEMBER ',sectionName:'SYNTH SECTION ',branch:'SYNTH BRANCH  ',phone:'0812 ',groupCode:'SYNTH GROUP '});
+  const result=mapping.mapLegacySubmission(input);
+  assert.equal(result.ok,true);
+  assert.deepEqual([result.value.nama,result.value.bagian,result.value.lokasi,result.value.phone],['SYNTH MEMBER ','SYNTH SECTION ','SYNTH BRANCH  ','0812 ']);
+  for (const patch of [{nik:'001234567 '},{id:'123 '},{sectionId:'7 '},{name:' SYNTH MEMBER'},{sectionName:'   '},{name:'SYNTH\u0000 '},{name:'x'.repeat(50)+' '}]) {
+    const bad=valid();Object.assign(bad.member,patch);
+    assert.equal(mapping.mapLegacySubmission(bad).ok,false,JSON.stringify(patch));
+  }
+});
+
 test('rejects wrong types, fractional loss, numeric overflow, mismatched binding and invalid period', () => {
-  for(const patch of [{requestedAmount:150000},{requestedAmount:'0150000'},{requestedAmount:'1e5'},{requestedAmount:'9007199254740992'},{originalDeduction:'100000.50'},{originalDeduction:0},{memberRef:'124'},{sectionId:'8'},{savingsType:'SIMPANAN WAJIB'},{requestedPeriod:{year:2026,month:13}},{requestedPeriod:{year:10000,month:1}},{requestedPeriod:{year:'2026',month:11}}]) {
+  for(const patch of [{requestedAmount:150000},{requestedAmount:'0150000'},{requestedAmount:'1e5'},{requestedAmount:'9007199254740992'},{originalDeduction:'100000.50'},{originalDeduction:0},{memberRef:'124'},{sectionId:'8'},{savingsType:'UNKNOWN'},{requestedPeriod:{year:2026,month:13}},{requestedPeriod:{year:10000,month:1}},{requestedPeriod:{year:'2026',month:11}}]) {
     const input=valid();Object.assign(input.snapshot,patch);assert.equal(mapping.mapLegacySubmission(input).ok,false,JSON.stringify(patch));
   }
   for(const patch of [{createdAt:'2026-02-30 12:00:00'},{createdAt:'2026-10-29T12:00:00Z'},{actor:'x'.repeat(51)},{signatureRef:'https://example.com/private.png'},{signatureRef:'x'.repeat(101)},{signatureRef:'../private'},{reference:'x'.repeat(51)}]) assert.equal(mapping.mapLegacySubmission({...valid(),...patch}).ok,false,JSON.stringify(patch));
@@ -49,4 +61,11 @@ test('APPROVED remains blocking until independent posting confirmation', () => {
   for (const [raw,state] of [['OPEN','OPEN'],['POSTING','POSTING'],['APPROVED','APPROVED_NOT_POSTED'],['REJECTED','REJECTED'],['ELSE_LABEL_REJECTED','UNKNOWN'],[null,'UNKNOWN'],['POSTED_CONFIRMED','UNKNOWN'],['CANCELLED','UNKNOWN']]) assert.equal(mapping.mapLegacyRequestState(raw),state);
   assert.equal(mapping.mapLegacyRequestState('APPROVED',{postedConfirmed:true}),'POSTED_CONFIRMED');
   assert.equal(mapping.mapLegacyRequestState('OPEN',{postedConfirmed:true}),'UNKNOWN');
+});
+
+
+test('legacy submission uses the canonical Wajib type from its bound snapshot', () => {
+  const input = valid(); input.snapshot.savingsType = 'SIMPANAN WAJIB';
+  const r = mapping.mapLegacySubmission(input);
+  assert.equal(r.ok, true); assert.equal(r.value.jenis_simpanan, 'SIMPANAN WAJIB');
 });

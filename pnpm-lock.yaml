@@ -87,6 +87,9 @@ importers:
         version: 5.9.3
   packages/domain:
     devDependencies:
+      '@types/node':
+        specifier: 22.20.4
+        version: 22.20.4
       eslint:
         specifier: 9.39.5
         version: 9.39.5(jiti@2.7.0)

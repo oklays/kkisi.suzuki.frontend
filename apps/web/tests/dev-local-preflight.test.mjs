@@ -76,3 +76,22 @@ test('flag-states runs only on a throw-away :3202 instance, after the preflight,
   assert.match(body, /KOSIPA_READ_ENABLED=false/); assert.match(body, /CONSOLE_ENABLED=false/); assert.match(body, /wrong-password-for-outage-test/);
   assert.doesNotMatch(body, /mysql|MARIADB_ROOT|DROP |DELETE |INSERT |3200|3201|3000/, 'no database statement and no other server is touched');
 });
+
+const kosipaWriterOverlay = Object.fromEntries(['MASTER', 'MEMBER', 'SAVINGS'].flatMap((area) => [
+  [`DATABASE_URL_KOSIPA_${area}_WRITE`, ''], [`KOSIPA_${area}_WRITES_ENABLED`, 'false'],
+]));
+test('public savings console can exclude unrelated legacy writers only when the runtime explicitly disables each one', () => {
+  const local = { ...envLocal, ...Object.fromEntries(['MASTER', 'MEMBER', 'SAVINGS'].map((area) => [`DATABASE_URL_KOSIPA_${area}_WRITE`, L('legacy_writer', 'kkisi_staging')])) };
+  const args = ['--public-savings-console'];
+  const safe = run(goodProfile, local, args, kosipaWriterOverlay);
+  assert.equal(safe.code, 0, safe.out);
+  assert.doesNotMatch(safe.out, /legacy_writer|:x@/);
+  assert.equal(run(goodProfile, local).code, 1, 'normal DEV LOCAL guard remains strict');
+  assert.equal(run(goodProfile, local, args).code, 1, 'a flag cannot silently ignore active writers');
+  const missing = { ...kosipaWriterOverlay }; delete missing.KOSIPA_SAVINGS_WRITES_ENABLED;
+  assert.equal(run(goodProfile, local, args, missing).code, 1);
+  const foreign = run({ ...goodProfile, DATABASE_URL_AUTH: 'mysql://auth:x@remote.invalid:3306/auth' }, local, args, kosipaWriterOverlay);
+  assert.equal(foreign.code, 1, 'auth and other database targets are still checked');
+  const unknown = run(goodProfile, { ...local, DATABASE_URL_KOSIPA_FUTURE_WRITE: L('future', 'kkisi_staging') }, args, kosipaWriterOverlay);
+  assert.equal(unknown.code, 1, 'unrecognized writers are never ignored');
+});

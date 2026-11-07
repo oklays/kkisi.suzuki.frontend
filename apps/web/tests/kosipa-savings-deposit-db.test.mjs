@@ -39,7 +39,7 @@ const create = async (extra, hooks) => { const r = await createSavingsDeposit(po
 const header = async (id) => (await q('SELECT * FROM trans_simpanan WHERE id = ?', [id]))[0];
 const lines = async (docNo) => q('SELECT * FROM trans_simpanan_dtl WHERE doc_no = ? ORDER BY id', [docNo]);
 const ledger = async (command) => (await q(`SELECT * FROM \`${stack.LEDGER_DB}\`.kosipa_command_ledger WHERE command = ? ORDER BY id DESC LIMIT 1`, [command]))[0];
-const view = JSON.parse(readFileSync(new URL('../../../.local/kosipa-full-access-completion-20261106/view-contracts.json', import.meta.url), 'utf8'));
+const view = ENABLED ? JSON.parse(readFileSync(new URL('../../../.local/kosipa-full-access-completion-20261106/view-contracts.json', import.meta.url), 'utf8')) : null;
 const viewSelect = (name) => { const v = view.views?.[name] ?? view[name]; const sql = (v['Create View'] ?? v).replace(/`/g, ''); return sql.slice(sql.indexOf(' AS select ') + 4); };
 const kartu = async (nik) => q(`SELECT * FROM (${viewSelect('v_kartu_simpanan')}) k WHERE k.nik_kar = ? AND k.jenis_simpanan = 'SIMPANAN SUKARELA'`, [nik]);
 

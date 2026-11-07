@@ -1,7 +1,7 @@
 /** Disposable loopback-only MariaDB11.4 fixture. Never reads repository .env or production accounts. */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -68,16 +68,38 @@ export async function seed(){
   const now=Date.now();
   await db.execute("INSERT IGNORE INTO pss_notification_recipient VALUES('SYNTHETIC BRANCH','OPERATIONS','operations@example.invalid',1),('SYNTHETIC BRANCH','SUPERVISOR','operations-backup@example.invalid',1)");
   await db.execute("INSERT IGNORE INTO m_simpanan_mobile(id,jenis_simpanan,jasa,status_pengajuan,status_penarikan) VALUES(1,'SIMPANAN SUKARELA',0,1,1)");
+  await db.execute("INSERT IGNORE INTO m_simpanan_mobile(id,jenis_simpanan,jasa,status_pengajuan,status_penarikan) VALUES(2,'SIMPANAN WAJIB',0,1,1)");
   await db.execute("INSERT IGNORE INTO m_bagian VALUES(1,'SYNTHETIC DEPARTMENT',1,1)");
   for(let id=1;id<=3;id++){
-   await db.execute("INSERT IGNORE INTO m_anggota(id,nik_kar,nama_kar,bagian,no_telp,email,status_anggota,status_karyawan,sim_sukarela,kd_group) VALUES(?,?,?,1,NULL,?,'AKTIVE','AKTIVE',100000,'SYNTH')",[id,`SYN000000${id}`,`SYNTHETIC MEMBER ${id}`,`synthetic${id}@example.invalid`]);
+   await db.execute("INSERT IGNORE INTO m_anggota(id,nik_kar,nama_kar,bagian,no_telp,email,status_anggota,status_karyawan,sim_sukarela,sim_wajib,kd_group) VALUES(?,?,?,1,NULL,?,'AKTIVE','AKTIVE',100000,100000,'SYNTH')",[id,`SYN000000${id}`,`SYNTHETIC MEMBER ${id}`,`synthetic${id}@example.invalid`]);
    await db.execute('INSERT IGNORE INTO pss_member_control(member_id,active_reference) VALUES(?,NULL)',[id]);
    await db.execute("INSERT IGNORE INTO m_simpanan_aktif(doc_no,jenis_simpanan,nik_kar,nama_kar,kd_group,potongan_old,potongan_payroll,status,is_mobile) VALUES(?,'SIMPANAN SUKARELA',?,?,'SYNTH',100000,100000,1,0)",[`SYNTHBASE${id}`,`SYN000000${id}`,`SYNTHETIC MEMBER ${id}`]);
+   await db.execute("INSERT IGNORE INTO m_simpanan_aktif(doc_no,jenis_simpanan,nik_kar,nama_kar,kd_group,potongan_old,potongan_payroll,status,is_mobile) SELECT ?,'SIMPANAN WAJIB',nik_kar,nama_kar,kd_group,sim_wajib,sim_wajib,1,0 FROM m_anggota WHERE id=? AND nik_kar=? AND sim_wajib>0",[`SYNTHWAJIB${id}`,id,`SYN000000${id}`]);
    await db.execute("INSERT IGNORE INTO pss_member_evidence(member_id,contact_version,contact_verified_ms,eligible,payroll_active,branch) VALUES(?,'synthetic-contact-v1',?,1,1,'SYNTHETIC BRANCH')",[id,now-86400000]);
   }
   const today=new Date(now+7*3600000);
   for(let offset=0;offset<=2;offset++){const date=new Date(Date.UTC(today.getUTCFullYear(),today.getUTCMonth()+offset,1));await db.execute("INSERT IGNORE INTO pss_calendar VALUES(?,?,'OPEN',0)",[date.getUTCFullYear(),date.getUTCMonth()+1]);}
  }finally{await db.end();}
+}
+export async function upgrade(){
+ const config=await loadConfig();
+ const db=await connect('admin');
+ const migration=await readFile(resolve(root,'integration/public-savings/migrations/002_wajib_savings.sql'),'utf8');
+ const checksum=createHash('sha256').update(migration).digest('hex');
+ try{
+  await db.execute('CREATE TABLE IF NOT EXISTS pss_schema_migration(version VARCHAR(50) PRIMARY KEY,checksum CHAR(64) NOT NULL,applied_at DATETIME NOT NULL) ENGINE=InnoDB');
+  const [rows]=await db.execute("SELECT checksum FROM pss_schema_migration WHERE version='002_wajib_savings'");
+  if(rows.length&&rows[0].checksum!==checksum)safeError('LOCAL_MIGRATION_CHECKSUM_MISMATCH');
+  if(!rows.length){
+   const [columns]=await db.execute("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='m_anggota' AND COLUMN_NAME='sim_wajib'",[database]);
+   const introducedWajib=columns.length===0;
+   await db.execute('ALTER TABLE m_anggota ADD COLUMN IF NOT EXISTS sim_wajib DOUBLE(18,2) NULL DEFAULT 0');
+   await adminSql(`USE ${database};\n${migration}\nGRANT EXECUTE ON PROCEDURE ${database}.pss_legacy_transition TO ${quote(config.legacy.user)}@'%';`);
+   if(introducedWajib)await db.execute("UPDATE m_anggota SET sim_wajib=100000 WHERE id IN(1,2,3) AND nik_kar IN('SYN0000001','SYN0000002','SYN0000003') AND sim_wajib=0");
+   await db.execute("INSERT INTO pss_schema_migration VALUES('002_wajib_savings',?,UTC_TIMESTAMP())",[checksum]);
+  }
+ }finally{await db.end();}
+ await seed();
 }
 export async function refreshCommands(){
  const config=await loadConfig();
@@ -109,6 +131,7 @@ export async function setup(){
  const probe=await mysql.createConnection({host:'127.0.0.1',port:3318,user:'root',password});
  let existsDatabase=false;try{const [rows]=await probe.execute('SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=?',[database]);existsDatabase=rows.length===1;}finally{await probe.end();}
  if(existsDatabase){const verified=await connect('admin');await verified.end();}else await applySchema();
+ await upgrade();
  return{mode:config.mode,host:config.host,port:config.port,database:config.database,installationId:config.installationId};
 }
 export async function stop(){
