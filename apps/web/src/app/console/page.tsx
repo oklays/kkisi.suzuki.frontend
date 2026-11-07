@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -20,6 +21,7 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
+import { parseFinancePeriod, readKosipaFinanceKpis, type FinanceKpis } from '@koperasi/application/kosipa/dashboard-finance';
 import type { CapabilitySet } from '@koperasi/domain/console/capabilities';
 import { resolvePostLoginLanding } from '@koperasi/domain/console/landing-policy';
 import { nestNavigation, visibleNavigation } from '@koperasi/domain/console/navigation';
@@ -33,6 +35,7 @@ import {
   type OpsSummaryData,
 } from '@/components/console/DashboardClientWidgets';
 import { CONSOLE_ICONS } from '@/components/console/icons';
+import { KosipaFinanceCards, KosipaFinanceCardsLoading } from '@/components/console/KosipaFinanceCards';
 import { CONSOLE_MODULES, CONSOLE_NAVIGATION, deployedNavigation } from '@/features/console/navigation';
 import { publicSavingsConsoleEnabled } from '@/features/public-savings/flags';
 import { kosipaWriteGrantsEnabled } from '@/infrastructure/console/kosipa-ownership';
@@ -206,11 +209,10 @@ async function loadDashboardLiveMetrics(
       tasks.push(
         (async () => {
           try {
-            const memberRows = await kServices.opsReports.membershipCounts(todayStr);
-            totalMembersCount = memberRows.reduce((acc, r) => acc + r.members, 0);
-            activeMembersCount = memberRows
-              .filter((r) => (r.status ?? '').trim().toUpperCase() === 'AKTIVE')
-              .reduce((acc, r) => acc + r.members, 0);
+            // Same rule as the Keanggotaan card and the legacy KOSIPA dashboard (AKTIVE + potong wajib, not NON ANGGOTA).
+            const counts = await kServices.members.counts();
+            totalMembersCount = counts.total;
+            activeMembersCount = counts.active;
           } catch {
             // Degrade cleanly
           }
@@ -534,6 +536,12 @@ function SparklineBars({ tone }: { tone: 'blue' | 'green' | 'orange' | 'red' }) 
   );
 }
 
+/** Awaits the finance read inside the Suspense boundary; a read that failed as a whole (e.g. FORBIDDEN race) renders nothing. */
+async function KosipaFinanceSection({ kpis, currentYear }: { kpis: Promise<FinanceKpis | null>; currentYear: number }) {
+  const data = await kpis;
+  return data ? <KosipaFinanceCards kpis={data} currentYear={currentYear} /> : null;
+}
+
 export default async function ConsoleDashboard({
   searchParams,
 }: {
@@ -561,7 +569,18 @@ export default async function ConsoleDashboard({
   }
 
   const now = services.deps.clock.now();
+  const jakartaDate = new Date(now.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+  // Legacy KOSIPA dashboard finance cards: only for a linked/role KOSIPA session that may read loans or savings.
+  const financeServices =
+    (auth.kosipa === 'linked' || auth.kosipa === 'role') &&
+    (capabilities.has('kosipa.loan.view') || capabilities.has('kosipa.savings.view'))
+      ? kosipaServices()
+      : null;
   const live = await loadDashboardLiveMetrics(ctx.companyId, capabilities, auth.kosipa, now);
+  // Started here, awaited inside <Suspense>: the dashboard renders at once and the finance cards stream in when ready.
+  const finance = financeServices
+    ? readKosipaFinanceKpis(financeServices.finance, capabilities, parseFinancePeriod(await searchParams, jakartaDate)).catch(() => null)
+    : null;
 
   const visible = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled(), kosipaWriteGrantsEnabled()), capabilities);
   const visibleHrefs = new Set(visible.flatMap((g) => g.items.map((i) => i.href)));
@@ -602,7 +621,6 @@ export default async function ConsoleDashboard({
   ]);
   const extraQuickEntries = quick.filter((entry) => !coveredHrefs.has(entry.href));
 
-  const jakartaDate = new Date(now.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
   const todayLabel = `${Number(jakartaDate.slice(8, 10))} ${SHORT_MONTHS[Number(jakartaDate.slice(5, 7)) - 1] ?? ''} ${jakartaDate.slice(0, 4)}`;
 
   const announcementItems: AnnouncementItem[] = [
@@ -807,6 +825,13 @@ export default async function ConsoleDashboard({
           <SparklineBars tone="red" />
         </article>
       </section>
+
+      {/* 2b. KOSIPA FINANCE CARDS (legacy dashboard parity) */}
+      {finance && (
+        <Suspense fallback={<KosipaFinanceCardsLoading />}>
+          <KosipaFinanceSection kpis={finance} currentYear={Number(jakartaDate.slice(0, 4))} />
+        </Suspense>
+      )}
 
       {/* 3. MIDDLE GRID: AKSES CEPAT + PENGUMUMAN & INFORMASI */}
       <div className="console-mid-grid">

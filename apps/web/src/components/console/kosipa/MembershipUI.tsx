@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Database, Eye, Info, Pencil, RotateCcw, UserPlus, Users, UsersRound } from 'lucide-react';
-import { ALL_VALUES, DIRECTORY_EMPLOYMENT, DIRECTORY_GROUPS, DIRECTORY_PAGE_SIZES, DIRECTORY_STATUSES, type MemberCounts, type MemberDirectory, type MemberSummary } from '@koperasi/application/kosipa/member-360';
+import { ALL_VALUES, DEFAULT_DIRECTORY_STATUS, DIRECTORY_ACTIVE_LEGACY, DIRECTORY_EMPLOYMENT, DIRECTORY_GROUPS, DIRECTORY_PAGE_SIZES, DIRECTORY_STATUSES, type MemberCounts, type MemberDirectory, type MemberSummary } from '@koperasi/application/kosipa/member-360';
 import { FeedbackState, FinancialTable, Provenance } from './KosipaUI';
 import { MembershipPageSize, MembershipSearchField, MembershipSelect } from './MembershipControls';
 import { initialsOf, avatarTone } from './membership-format';
@@ -34,7 +34,7 @@ export function MembershipPageHeader({ readOnly }: { readOnly: boolean }) {
 /** Cards show whole-table counts; each one says which rule it counts. A failed count shows an unavailable state, never a made-up number. */
 export function MembershipStats({ counts, canCreate }: { counts: MemberCounts | null; canCreate: boolean }) {
   const cards = [
-    { key: 'active', label: 'Anggota Aktif', rule: 'status AKTIVE', value: counts?.active, Icon: Users, tone: 'green' },
+    { key: 'active', label: 'Anggota Aktif', rule: 'AKTIVE + potong wajib (sama dengan KOSIPA lama)', value: counts?.active, Icon: Users, tone: 'green' },
     { key: 'non', label: 'Non Anggota', rule: 'grup NON ANGGOTA, semua status', value: counts?.nonMember, Icon: Users, tone: 'gray' },
     { key: 'total', label: 'Total Data', rule: 'seluruh catatan anggota', value: counts?.total, Icon: Database, tone: 'blue' },
   ] as const;
@@ -51,13 +51,13 @@ export function MembershipStats({ counts, canCreate }: { counts: MemberCounts | 
 
 const option = (value: string, label = value) => ({ value, label });
 const GROUP_OPTIONS = [option(ALL_VALUES, 'Semua'), ...DIRECTORY_GROUPS.map((g) => option(g))];
-const STATUS_OPTIONS = [option(ALL_VALUES, 'Semua'), ...DIRECTORY_STATUSES.map((s) => option(s))];
+const STATUS_OPTIONS = [option(DIRECTORY_ACTIVE_LEGACY, 'Anggota aktif (potong wajib)'), option(ALL_VALUES, 'Semua'), ...DIRECTORY_STATUSES.map((s) => option(s, s === 'AKTIVE' ? 'AKTIVE (semua grup)' : s))];
 const EMPLOYMENT_OPTIONS = [option(ALL_VALUES, 'Semua'), ...DIRECTORY_EMPLOYMENT.map((e) => option(e, e === 'KOSONG' ? 'Tidak tercatat' : e))];
 
 /** Everything inside ONE private form (data-kosipa-private): search, filters, page size and page buttons post together, so nothing is lost between pages. */
 export function MembershipWorkspace({ directory, canUpdate, failed }: { directory: MemberDirectory | null; canUpdate: boolean; failed: boolean }) {
-  const sel = directory?.selected ?? { q: '', grup: ALL_VALUES, status: 'AKTIVE', karyawan: ALL_VALUES };
-  const filtered = sel.q !== '' || sel.grup !== ALL_VALUES || sel.status !== 'AKTIVE' || sel.karyawan !== ALL_VALUES;
+  const sel = directory?.selected ?? { q: '', grup: ALL_VALUES, status: DEFAULT_DIRECTORY_STATUS, karyawan: ALL_VALUES };
+  const filtered = sel.q !== '' || sel.grup !== ALL_VALUES || sel.status !== DEFAULT_DIRECTORY_STATUS || sel.karyawan !== ALL_VALUES;
   return <form action={BASE} method="post" data-kosipa-private className="membership-workspace">
     <div className="membership-toolbar" role="search">
       <MembershipSearchField defaultValue={sel.q} />

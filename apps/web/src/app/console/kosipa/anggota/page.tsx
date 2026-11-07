@@ -11,7 +11,7 @@ export const metadata = { title: 'Keanggotaan · KOSIPA · KKISI TB2' };
 
 /**
  * Member directory. Search text and filters arrive through the private POST (PrivateWorkspace -> searchKosipa) and stay out of the URL;
- * a plain GET shows the default list (status AKTIVE, 10 per page). Every capability and parser check is unchanged.
+ * a plain GET shows the default list (legacy active rule, same as the "Anggota Aktif" card; 10 per page). Every capability and parser check is unchanged.
  */
 export default async function MemberDirectoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (!consoleEnabled()) notFound();
