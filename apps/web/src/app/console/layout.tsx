@@ -33,7 +33,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     viewer = { userId: ctx.userId, userName: ctx.userName, branchName: company?.name ?? 'Cabang', companyId: ctx.companyId,
       canSwitchBranch: ctx.canSwitchBranch, companies, csrfToken: services.keys.csrfToken(ctx.sidHash) };
   } catch { return <Unavailable />; }
-  const groups: ConsoleNavGroup[] = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled(), kosipaWriteGrantsEnabled()), capabilities)
+  const entries = deployedNavigation(publicSavingsConsoleEnabled(), kosipaWriteGrantsEnabled()).filter((e) => !(auth.cashier && e.id === 'dashboard'));
+  const groups: ConsoleNavGroup[] = visibleNavigation(entries, capabilities)
     .map((g) => ({ section: g.section, label: SECTION_LABELS[g.section], items: g.items }));
   const jar = await cookies();
   const prefs = parseSidebarPrefs(jar.get(SIDEBAR_COOKIE)?.value, jar.get(SIDEBAR_THEME_COOKIE)?.value);

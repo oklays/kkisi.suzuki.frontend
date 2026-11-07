@@ -69,12 +69,12 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'warehouse-receiving', section: 'warehouse', label: 'Penerimaan & Selisih', href: '/console/warehouse/penerimaan', order: 5, anyOf: ['warehouse.preview.view'], readiness: 'available', icon: 'receiving', description: 'Penerimaan dan rekonsiliasi (pratinjau sintetis, baca saja)' },
 
   { id: 'settings-identity', section: 'settings', label: 'Tautan Akun KOSIPA', href: '/console/settings/identitas', order: 1, anyOf: ['iam.link.manage'], readiness: 'available', icon: 'identity', description: 'Tautkan akun console ke akun KOSIPA' },
-  // KOSIPA native write foundation (kosipa-full-access FA-01): listed only where that deployment is switched on (see deployedNavigation).
+  // Master Data is read-only for every KOSIPA viewer; managing it still needs an explicit grant. Grant administration is listed only where grants are switched on (see deployedNavigation).
   { id: 'kosipa-master', section: 'kosipa', label: 'Master Data', href: '/console/kosipa/master', order: 13, anyOf: ['kosipa.member.view'], readiness: 'available', icon: 'masterData', description: 'Lokasi, bagian, jenis dokumen, rekening bank, periode angsuran; ubah dengan hak kelola master KOSIPA' },
   { id: 'settings-kosipa-access', section: 'settings', label: 'Hak Ubah KOSIPA', href: '/console/settings/akses-kosipa', order: 2, anyOf: ['iam.kosipa.grant'], readiness: 'available', icon: 'access', description: 'Beri atau cabut hak ubah KOSIPA per akun' },
 ];
 
-const WRITE_FOUNDATION_ENTRIES = new Set(['kosipa-master', 'settings-kosipa-access']);
+const WRITE_FOUNDATION_ENTRIES = new Set(['settings-kosipa-access']);
 
 /** Registry minus entries whose deployment flag is off. The flag is read by the caller (server side); every page still enforces its own gate. */
 export function deployedNavigation(publicSavingsConsole: boolean, kosipaWriteFoundation = false): readonly ConsoleNavEntry[] {

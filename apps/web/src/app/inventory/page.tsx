@@ -3,6 +3,7 @@ import { requirePagePermission } from "@/infrastructure/auth/page-guard";
 import { inventoryWritesAvailable } from "@/infrastructure/inventory/services";
 import type { PosSession } from "@/features/pos/types";
 import { consoleEnabled } from "@/infrastructure/console/flags";
+import { isCashierRole } from "@/infrastructure/auth/cashier-role";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function InventoryPage() {
       userName: ctx.userName, userLogin: user?.username, branchName: company?.name ?? "Cabang", companyId: ctx.companyId,
       userId: ctx.userId, canSwitchBranch: ctx.canSwitchBranch, companies,
       csrfToken: services.keys.csrfToken(ctx.sidHash), checkoutAvailable: false,
-      canInventory: stockOpname || warehouse, canProducts, canCheckout, canSales, canReturns, consoleAvailable: consoleEnabled(), register: { open: null, multiple: false },
+      canInventory: stockOpname || warehouse, canProducts, canCheckout, canSales, canReturns, consoleAvailable: consoleEnabled(), dashboardHidden: await isCashierRole(services.deps.permissions, ctx.roleId), register: { open: null, multiple: false },
     };
     capabilities = { stockOpname, warehouse, writes: inventoryWritesAvailable() };
   } catch {

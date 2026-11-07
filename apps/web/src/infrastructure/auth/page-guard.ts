@@ -8,6 +8,7 @@ import { resolveConsoleAccess, type ConsoleAccess } from '@koperasi/application/
 import { kosipaServices } from '../console/services.ts';
 import { warehousePreviewEnabled } from '../warehouse/preview-flag.ts';
 import { getContainer } from './container.ts';
+import { isCashierRole } from './cashier-role.ts';
 import type { AuthServices } from './http.ts';
 
 export type PageAuth =
@@ -41,7 +42,7 @@ export async function requirePagePermission(permission: string | readonly string
 }
 
 export type ConsoleAuth =
-  | ({ kind: 'ok'; ctx: AuthContext; services: AuthServices } & ConsoleAccess)
+  | ({ kind: 'ok'; ctx: AuthContext; services: AuthServices; cashier: boolean } & ConsoleAccess)
   | { kind: 'unavailable' };
 
 /** One validation + capability resolution per request, shared by the console layout and its page. */
@@ -52,7 +53,8 @@ const loadConsoleSession = cache(async (): Promise<ConsoleAuth | 'login'> => {
     const ctx = await validateSession(container.services.deps, jar.get(container.services.config.cookieName)?.value ?? null);
     const kosipa = kosipaServices();
     const access = await resolveConsoleAccess({ permissions: container.capabilities, kosipa, features: { warehousePreview: warehousePreviewEnabled() } }, { userId: ctx.userId, roleId: ctx.roleId, canSwitchBranch: ctx.canSwitchBranch });
-    return { kind: 'ok', ctx, services: container.services, ...access };
+    const cashier = await isCashierRole(container.services.deps.permissions, ctx.roleId);
+    return { kind: 'ok', ctx, services: container.services, cashier, ...access };
   } catch (error) {
     if (error instanceof AuthError && error.code === 'UNAUTHENTICATED') return 'login';
     return { kind: 'unavailable' };
