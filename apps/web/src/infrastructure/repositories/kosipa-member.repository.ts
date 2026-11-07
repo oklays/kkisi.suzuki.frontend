@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { toMinorUnits } from '@koperasi/domain/money';
 import { KosipaError, nikLookupKeys } from '@koperasi/domain/kosipa';
-import type { KosipaMemberReader, LoanHeader, MemberCounts, MemberDirectoryFilter, MemberRecordRow, MemberSummary, SavingsAggregate } from '@koperasi/application/kosipa/member-360';
+import { DIRECTORY_ACTIVE_LEGACY, LEGACY_ACTIVE_GROUPS, type KosipaMemberReader, type LoanHeader, type MemberCounts, type MemberDirectoryFilter, type MemberRecordRow, type MemberSummary, type SavingsAggregate } from '@koperasi/application/kosipa/member-360';
 import { kreditReturnedSen } from './sales-return-ledger.ts';
 
 // Anggota 360 reads (spec REQ-022..024) through the existing SELECT-only reader. The 30 Sep 2026 production dump shows only
@@ -15,6 +15,8 @@ const keysFor = (nik: string) => { try { return nikLookupKeys(nik); } catch (e) 
 
 type SummaryRow = { id: Num; nik: string | null; name: string | null; grp: string | null; status: string | null; employment: string | null };
 const summary = (r: SummaryRow): MemberSummary => ({ id: Number(r.id), nik: r.nik ?? '', name: r.name ?? '', group: r.grp, status: r.status, employment: r.employment });
+/** Legacy KOSIPA dashboard "anggota aktif" (dashboard_private_m::getInfoTarget). One fragment for the card AND the default list. */
+const LEGACY_ACTIVE = Prisma.sql`(kd_group IN (${Prisma.join([...LEGACY_ACTIVE_GROUPS])}) AND status_pot_wajib > 0 AND status_anggota = 'AKTIVE')`;
 const SUMMARY = Prisma.sql`id, nik_kar AS nik, nama_kar AS name, kd_group AS grp, status_anggota AS status, status_karyawan AS employment`;
 
 export class PrismaKosipaMemberReader implements KosipaMemberReader {
@@ -32,7 +34,8 @@ export class PrismaKosipaMemberReader implements KosipaMemberReader {
     if (q.nikKeys) conditions.push(Prisma.sql`nik_kar IN (${Prisma.join(q.nikKeys)})`);
     if (q.nameLike) conditions.push(Prisma.sql`nama_kar LIKE ${`%${q.nameLike}%`}`);
     if (q.group) conditions.push(Prisma.sql`kd_group = ${q.group}`);
-    if (q.status) conditions.push(Prisma.sql`status_anggota = ${q.status}`);
+    if (q.status === DIRECTORY_ACTIVE_LEGACY) conditions.push(LEGACY_ACTIVE);
+    else if (q.status) conditions.push(Prisma.sql`status_anggota = ${q.status}`);
     if (q.employment === 'KOSONG') conditions.push(Prisma.sql`(status_karyawan IS NULL OR TRIM(status_karyawan) = '')`);
     else if (q.employment) conditions.push(Prisma.sql`status_karyawan = ${q.employment}`);
     const where = conditions.length ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}` : Prisma.empty;
@@ -43,7 +46,7 @@ export class PrismaKosipaMemberReader implements KosipaMemberReader {
 
   async counts(): Promise<MemberCounts> {
     const [r] = await this.db.$queryRaw<{ total: Num; active: Num | null; non_member: Num | null }[]>`SET STATEMENT max_statement_time=5 FOR
-      SELECT COUNT(*) AS total, SUM(status_anggota = 'AKTIVE') AS active, SUM(kd_group = 'NON ANGGOTA') AS non_member FROM m_anggota`;
+      SELECT COUNT(*) AS total, SUM(${LEGACY_ACTIVE}) AS active, SUM(kd_group = 'NON ANGGOTA') AS non_member FROM m_anggota`;
     return { total: Number(r?.total ?? 0), active: Number(r?.active ?? 0), nonMember: Number(r?.non_member ?? 0) };
   }
 

@@ -1,5 +1,6 @@
 import type { IdentityPorts } from '@koperasi/application/console/identity-links';
 import type { KosipaMemberReader } from '@koperasi/application/kosipa/member-360';
+import type { KosipaDashboardFinanceReader } from '@koperasi/application/kosipa/dashboard-finance';
 import type { StoreColumnMap } from '@koperasi/domain/kosipa';
 import type { ReportReader } from '@koperasi/application/kosipa/reports';
 import type { OpsReportReader } from '@koperasi/application/kosipa/reports-ops';
@@ -11,6 +12,7 @@ import type { PayrollReader } from '@koperasi/application/kosipa/payroll';
 import { consolePrisma } from '../db/prisma-console.ts';
 import { prisma } from '../db/prisma.ts';
 import { PrismaKosipaMemberReader } from '../repositories/kosipa-member.repository.ts';
+import { PrismaKosipaDashboardFinanceReader } from '../repositories/kosipa-dashboard-finance.repository.ts';
 import { PrismaKosipaLoanReader } from '../repositories/kosipa-loan.repository.ts';
 import { PrismaKosipaOpsReportReader } from '../repositories/kosipa-ops-report.repository.ts';
 import { PrismaKosipaReportReader } from '../repositories/kosipa-report.repository.ts';
@@ -50,12 +52,12 @@ export function consoleServices(env: Record<string, string | undefined> = proces
 }
 
 /** KOSIPA read access needs BOTH the flag and a usable console store (identity links live there). */
-export function kosipaServices(env: Record<string, string | undefined> = process.env): (ConsoleServices & KosipaWriteSources & { members: KosipaMemberReader; payroll: PayrollReader; loans: LoanReader; savings: SavingsReader; reports: ReportReader; opsReports: OpsReportReader; storeColumnMap: StoreColumnMap; exportPolicy: ExportPolicy; exportThrottle: ExportThrottle }) | null {
+export function kosipaServices(env: Record<string, string | undefined> = process.env): (ConsoleServices & KosipaWriteSources & { members: KosipaMemberReader; finance: KosipaDashboardFinanceReader; payroll: PayrollReader; loans: LoanReader; savings: SavingsReader; reports: ReportReader; opsReports: OpsReportReader; storeColumnMap: StoreColumnMap; exportPolicy: ExportPolicy; exportThrottle: ExportThrottle }) | null {
   if (!kosipaReadEnabled(env)) return null;
   const services = consoleServices(env);
   // Write grants (FD-16) are read only where the console store has db/console/004 and the flag says so; otherwise no write capability.
   const write: KosipaWriteSources = services && kosipaWriteGrantsEnabled(env) ? { roleWriteGrantsEnabled: true, grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) } : {};
-  return services ? { ...services, ...write, members: new PrismaKosipaMemberReader(prisma), payroll: new PrismaKosipaPayrollReader(prisma), loans: new PrismaKosipaLoanReader(prisma), savings: new PrismaKosipaSavingsReader(prisma), reports: new PrismaKosipaReportReader(prisma), opsReports: new PrismaKosipaOpsReportReader(prisma), storeColumnMap: storeColumnMapFromEnv(env), exportPolicy: exportPolicyFromEnv(env), exportThrottle } : null;
+  return services ? { ...services, ...write, members: new PrismaKosipaMemberReader(prisma), finance: new PrismaKosipaDashboardFinanceReader(prisma), payroll: new PrismaKosipaPayrollReader(prisma), loans: new PrismaKosipaLoanReader(prisma), savings: new PrismaKosipaSavingsReader(prisma), reports: new PrismaKosipaReportReader(prisma), opsReports: new PrismaKosipaOpsReportReader(prisma), storeColumnMap: storeColumnMapFromEnv(env), exportPolicy: exportPolicyFromEnv(env), exportThrottle } : null;
 }
 
 /** Native KOSIPA commands (FA-01): KOSIPA read services + ownership gate + writer repositories. The writer is attached only when its

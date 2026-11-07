@@ -120,14 +120,14 @@ function directoryReader(total = 23) {
     async counts() { return { total: 9276, active: 5459, nonMember: 6297 }; } } };
 }
 
-test('directory: default = status AKTIVE, 10 per page, no other filter; needs member view', async () => {
+test('directory: default = legacy active rule (AKTIF_WAJIB, same as the card), 10 per page, no other filter; needs member view', async () => {
   const d = directoryReader();
   await assert.rejects(listMemberDirectory(d.value, new Set(), {}), { code: 'FORBIDDEN' });
   await assert.rejects(readMemberCounts(d.value, new Set()), { code: 'FORBIDDEN' });
   const first = await listMemberDirectory(d.value, ALL, {});
   assert.deepEqual({ page: first.page, pageCount: first.pageCount, total: first.total, n: first.items.length, size: first.pageSize, queryTooShort: first.queryTooShort }, { page: 1, pageCount: 3, total: 23, n: 10, size: 10, queryTooShort: false });
-  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: null, status: 'AKTIVE', employment: null, limit: 10, offset: 0 });
-  assert.deepEqual(first.selected, { q: '', grup: 'SEMUA', status: 'AKTIVE', karyawan: 'SEMUA' });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: null, status: 'AKTIF_WAJIB', employment: null, limit: 10, offset: 0 });
+  assert.deepEqual(first.selected, { q: '', grup: 'SEMUA', status: 'AKTIF_WAJIB', karyawan: 'SEMUA' });
   assert.deepEqual(await readMemberCounts(d.value, ALL), { total: 9276, active: 5459, nonMember: 6297 });
 });
 
@@ -136,7 +136,9 @@ test('directory: filters are allow-listed, "SEMUA" removes a filter, unknown val
   await listMemberDirectory(d.value, ALL, { grup: 'non anggota', status: 'SEMUA', karyawan: 'kosong' });
   assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: 'NON ANGGOTA', status: null, employment: 'KOSONG', limit: 10, offset: 0 });
   await listMemberDirectory(d.value, ALL, { grup: "ANGGOTA' OR 1=1 --", status: 'DROP TABLE', karyawan: ['TETAP'] });
-  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: null, status: 'AKTIVE', employment: null, limit: 10, offset: 0 }, 'unknown values never reach the reader');
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: null, status: 'AKTIF_WAJIB', employment: null, limit: 10, offset: 0 }, 'unknown values never reach the reader');
+  await listMemberDirectory(d.value, ALL, { status: 'aktive' });
+  assert.equal(d.calls.at(-1).status, 'AKTIVE', 'plain AKTIVE (all groups) is still selectable');
   await listMemberDirectory(d.value, ALL, { status: 'RESIGN', karyawan: 'TETAP', grup: 'BMP' });
   assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: null, group: 'BMP', status: 'RESIGN', employment: 'TETAP', limit: 10, offset: 0 });
 });
@@ -146,7 +148,7 @@ test('directory: search keeps the NIK/name semantics and combines with filters; 
   await listMemberDirectory(d.value, ALL, { q: ' 00123 ', status: 'SEMUA' });
   assert.deepEqual(d.calls.at(-1), { nikKeys: ['00123', '123'], nameLike: null, group: null, status: null, employment: null, limit: 10, offset: 0 });
   await listMemberDirectory(d.value, ALL, { q: 'Budi 50%_x', grup: 'ANGGOTA' });
-  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: 'Budi 50\\%\\_x', group: 'ANGGOTA', status: 'AKTIVE', employment: null, limit: 10, offset: 0 });
+  assert.deepEqual(d.calls.at(-1), { nikKeys: null, nameLike: 'Budi 50\\%\\_x', group: 'ANGGOTA', status: 'AKTIF_WAJIB', employment: null, limit: 10, offset: 0 });
   const before = d.calls.length;
   const short = await listMemberDirectory(d.value, ALL, { q: 'a' });
   assert.deepEqual({ tooShort: short.queryTooShort, items: short.items.length, total: short.total }, { tooShort: true, items: 0, total: 0 });

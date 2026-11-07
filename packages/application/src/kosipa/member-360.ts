@@ -9,9 +9,12 @@ export type MemberRecordRow = MemberSummary & { exitOn: string | null; joinedOn:
 export type SavingsAggregate = { type: string; docStatus: string; creditSen: number; debitSen: number; interestSen: number };
 export type LoanHeader = { docNo: string; docDate: string | null; type: string | null; method: string | null; principalSen: number; months: number | null; installmentSen: number; docStatus: string | null; disbursement: string | null; repayment: string | null };
 
-/** `employment === 'KOSONG'` matches a missing/blank status_karyawan. Every other value is an exact match; null = no filter. */
+/** `employment === 'KOSONG'` matches a missing/blank status_karyawan. `status === 'AKTIF_WAJIB'` applies the legacy active rule. Every other value is an exact match; null = no filter. */
 export type MemberDirectoryFilter = { nikKeys: string[] | null; nameLike: string | null; group: string | null; status: string | null; employment: string | null; limit: number; offset: number };
-/** total = every m_anggota row; active = status_anggota AKTIVE (same rule as the console dashboard); nonMember = kd_group NON ANGGOTA (any status). */
+/**
+ * total = every m_anggota row; active = the legacy KOSIPA dashboard rule (see LEGACY_ACTIVE_GROUPS / DIRECTORY_ACTIVE_LEGACY);
+ * nonMember = kd_group NON ANGGOTA (any status).
+ */
 export type MemberCounts = { total: number; active: number; nonMember: number };
 
 /** Read-only port over the business database (SELECT-only reader; every statement time-capped). */
@@ -52,7 +55,15 @@ export const DIRECTORY_STATUSES = ['AKTIVE', 'LUAR BIASA', 'KONTRAK', 'RESIGN', 
 export const DIRECTORY_EMPLOYMENT = ['TETAP', 'KONTRAK', 'KOSONG'] as const;
 export const DIRECTORY_PAGE_SIZES = [10, 25, 50] as const;
 export const ALL_VALUES = 'SEMUA';
-export const DEFAULT_DIRECTORY_STATUS = 'AKTIVE';
+/**
+ * "Anggota aktif" exactly as the legacy KOSIPA dashboard counts it (dashboard_private_m::getInfoTarget):
+ * kd_group in these groups AND status_pot_wajib > 0 (simpanan wajib dipotong payroll) AND status_anggota = 'AKTIVE'.
+ * Plain status AKTIVE also matches ~4.4k NON ANGGOTA rows, which is why it must not be shown as "anggota aktif".
+ */
+export const LEGACY_ACTIVE_GROUPS = ['ANGGOTA', 'BMP', 'KOPERASI'] as const;
+/** Pseudo status value for the directory: the legacy active rule above. Never passed to SQL as a literal status. */
+export const DIRECTORY_ACTIVE_LEGACY = 'AKTIF_WAJIB';
+export const DEFAULT_DIRECTORY_STATUS = DIRECTORY_ACTIVE_LEGACY;
 
 export type DirectoryParams = { q?: unknown; grup?: unknown; status?: unknown; karyawan?: unknown; page?: unknown; size?: unknown };
 export type MemberDirectory = {
@@ -64,14 +75,14 @@ export type MemberDirectory = {
 };
 const oneOf = <T extends string>(raw: unknown, allowed: readonly T[], fallback: string): string => (typeof raw === 'string' && (allowed as readonly string[]).includes(raw.trim().toUpperCase()) ? raw.trim().toUpperCase() : fallback);
 
-/** Member directory: default = active members, 10 per page. Search + group/status/employment filters + pagination are all server-side, on one filtered set. */
+/** Member directory: default = active members by the legacy rule (same number as the "Anggota Aktif" card), 10 per page. Search + group/status/employment filters + pagination are all server-side, on one filtered set. */
 export async function listMemberDirectory(reader: KosipaMemberReader, capabilities: CapabilitySet, raw: DirectoryParams): Promise<MemberDirectory> {
   if (!capabilities.has('kosipa.member.view')) throw new KosipaError('FORBIDDEN');
   const q = typeof raw.q === 'string' ? raw.q.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 50) : '';
   const selected = {
     q,
     grup: oneOf(raw.grup, DIRECTORY_GROUPS, ALL_VALUES),
-    status: oneOf(raw.status, [...DIRECTORY_STATUSES, ALL_VALUES], DEFAULT_DIRECTORY_STATUS),
+    status: oneOf(raw.status, [DIRECTORY_ACTIVE_LEGACY, ...DIRECTORY_STATUSES, ALL_VALUES], DEFAULT_DIRECTORY_STATUS),
     karyawan: oneOf(raw.karyawan, DIRECTORY_EMPLOYMENT, ALL_VALUES),
   };
   const pageSize = typeof raw.size === 'string' && (DIRECTORY_PAGE_SIZES as readonly number[]).includes(Number(raw.size)) ? Number(raw.size) : DIRECTORY_PAGE_SIZES[0];

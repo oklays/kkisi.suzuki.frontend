@@ -342,3 +342,30 @@
 .console-year-list strong { background:var(--c-blue); color:white; border-color:var(--c-blue); }
 .console-synthetic { border-left:4px solid #b54708; background:#fff4e5; color:#7a2e0e; }
 .console-scroll { overflow-x:auto; max-width:100%; }
+
+/* KOSIPA finance cards on the dashboard (legacy dashboard parity) */
+.console-finance { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.console-finance-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.console-finance-head h2 { margin:0; font-size:15px; font-weight:700; color:var(--c-ink); }
+.console-finance-head p { margin:2px 0 0; font-size:12px; color:var(--c-muted); }
+.console-finance-filter { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.console-finance-filter select, .console-finance-filter button { min-height:36px; padding:6px 12px; border-radius:999px; font:inherit; font-size:13px; }
+.console-finance-filter select { border:1px solid #b9d0f5; background:white; color:var(--c-ink); }
+.console-finance-filter button { border:1px solid var(--c-blue); background:var(--c-blue); color:white; font-weight:600; cursor:pointer; }
+.console-finance-filter select:focus-visible, .console-finance-filter button:focus-visible { outline:2px solid var(--c-blue); outline-offset:2px; }
+.console-finance-card .console-kpi-value { font-size:clamp(15px,1.05vw,17px); }
+.console-finance-icon-red { background:#fee2e2; color:#b91c1c; }
+.console-finance-icon-blue { background:#dbeafe; color:#1d4ed8; }
+.console-finance-icon-purple { background:#ede9fe; color:#6d28d9; }
+.console-finance-icon-teal { background:#ccfbf1; color:#0f766e; }
+@media (max-width: 767px) {
+  .console-finance-head { align-items:flex-start; }
+  .console-finance-filter { width:100%; }
+  .console-finance-filter label { flex:1 1 120px; }
+  .console-finance-filter select { width:100%; }
+}
+.console-finance-icon-loading { background:#eef2f7; }
+.console-finance-skeleton { display:block; width:70%; height:18px; margin-top:4px; border-radius:6px; background:linear-gradient(90deg,#eef2f7 0%,#f8fafc 50%,#eef2f7 100%); background-size:200% 100%; animation:console-finance-shimmer 1.4s ease-in-out infinite; }
+@keyframes console-finance-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
+@media (prefers-reduced-motion: reduce) { .console-finance-skeleton { animation:none; } }
+.console-finance-empty { color:#b45309; white-space:normal; overflow:visible; }
