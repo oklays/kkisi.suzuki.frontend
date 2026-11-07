@@ -41,6 +41,7 @@ Audit baseline:20 Oktober 2026. **Checkpoint0 architecture/readiness update:21 O
 | [11 Security policy](11_SECURITY_POLICY.md) |48h proposed token lifecycle, contact/provider findings, OTP recovery, threat model |
 | [12 Implementation readiness](12_IMPLEMENTATION_READINESS.md) | endpoint contracts, exact phase file plan/dependencies/tests/flags, independent Go/No-Go |
 | [13 Decision/blocker/risk register](13_DECISION_AND_BLOCKER_REGISTER.md) | status-controlled decisions, responsible owners, clearance actions and21 prioritised risks |
+| [21 Email OTP delivery (plan, 7 Nov 2026)](21_EMAIL_OTP_DELIVERY.md) | real OTP to the member's registered email: data findings, decisions E-01..E-08, assisted contact verification, SMTP wiring, phases and tests |
 | [06 Controlled implementation plan](06_IMPLEMENTATION_PLAN.md) | CP1 public foundation, CP2 operator management, CP3 native migration; all app tasks unchecked |
 
 Baseline evidence remains [01 mobile](01_AUDIT_EXISTING_MOBILE_FLOW.md), [02 legacy](02_AUDIT_LEGACY_KOSIPA_FLOW.md), [03 gaps](03_CROSS_SYSTEM_GAP_ANALYSIS.md), [04 token design](04_SECURITY_AND_TOKEN_DESIGN.md), [05 technical design](05_TECHNICAL_DESIGN.md), [07 acceptance](07_ACCEPTANCE_CRITERIA.md), [source register](evidence.md).04/05 updated for phase/default conflicts;08–13 authoritative for Checkpoint0 decisions. Existing numbered SQL in05 is conceptual, amended by09, not an executable migration.
