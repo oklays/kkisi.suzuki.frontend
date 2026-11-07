@@ -40,7 +40,7 @@ export function KosipaFinanceCards({ kpis, currentYear }: { kpis: FinanceKpis; c
               <span className="console-finance-card-label">{label}</span>
             </div>
             <strong className="console-finance-card-value">
-              {value.state === 'ok' ? <CurrencyText value={value.data} variant="document" /> : '—'}
+              {value.state === 'ok' ? <CurrencyText value={value.data} variant="document" /> : 'Tidak tersedia'}
             </strong>
             <small className="console-finance-card-note" data-empty={zero || undefined} title={note}>{note}</small>
           </article>

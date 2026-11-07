@@ -224,7 +224,7 @@ async function loadDashboardLiveMetrics(
         (async () => {
           try {
             const loans = await kServices.loans.listLoans(
-              { docStatus: null, disbursement: null, repayment: null, search: null, afterId: null, period: null },
+              { docStatus: null, disbursement: null, repayment: null, search: null, afterId: null, period: null, product: null, segment: null },
               100,
             );
             loanTotalDocs = loans.length;

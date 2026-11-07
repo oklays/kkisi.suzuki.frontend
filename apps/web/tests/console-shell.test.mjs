@@ -12,7 +12,8 @@ const walk = (dir) => readdirSync(dir).flatMap((n) => { const p = join(dir, n); 
 test('every available navigation entry points at an existing page and needs a declared capability', () => {
   for (const entry of CONSOLE_NAVIGATION.filter((e) => e.readiness === 'available')) {
     const page = join(ROOT, 'src/app', entry.href === '/' ? '' : entry.href, 'page.tsx');
-    assert.ok(existsSync(page), `${entry.id} -> ${entry.href} has no page`);
+    const dynProductPage = join(ROOT, 'src/app', entry.href.replace(/\/produk\/[^/]+$/, '/produk/[produk]'), 'page.tsx');
+    assert.ok(existsSync(page) || existsSync(dynProductPage), `${entry.id} -> ${entry.href} has no page`);
     if (entry.id !== 'dashboard') assert.ok(entry.anyOf.length > 0, `${entry.id} must require a capability`);
     for (const cap of entry.anyOf) assert.ok(ALL_CAPABILITIES.includes(cap), `${entry.id}: unknown capability ${cap}`);
   }
@@ -113,7 +114,7 @@ const kosipaPages = () => walk(join(ROOT, 'src/app/console/kosipa')).filter((p) 
 
 test('route-to-navigation matrix: every static KOSIPA page is a registered, available entry; dynamic pages are reached from a registered parent page', () => {
   const registered = new Map(CONSOLE_NAVIGATION.map((e) => [e.href, e]));
-  const reachedFrom = { '/console/kosipa/anggota/[id]': '/console/kosipa/anggota', '/console/kosipa/simpanan/[id]': '/console/kosipa/simpanan', '/console/kosipa/pinjaman/[docNo]': '/console/kosipa/pinjaman',
+  const reachedFrom = { '/console/kosipa/anggota/[id]': '/console/kosipa/anggota', '/console/kosipa/simpanan/[id]': '/console/kosipa/simpanan', '/console/kosipa/pinjaman/[docNo]': '/console/kosipa/pinjaman', '/console/kosipa/pinjaman/produk/[produk]': '/console/kosipa/pinjaman',
     '/console/kosipa/payroll/[docNo]': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/rekonsiliasi': '/console/kosipa/payroll', '/console/kosipa/payroll/[docNo]/anggota/[nik]': '/console/kosipa/payroll',
     '/console/kosipa/master/[type]': '/console/kosipa/master', '/console/kosipa/master/[type]/baru': '/console/kosipa/master', '/console/kosipa/master/[type]/[id]/ubah': '/console/kosipa/master',
     '/console/kosipa/anggota/baru': '/console/kosipa/anggota', '/console/kosipa/anggota/[id]/ubah': '/console/kosipa/anggota/[id]' };

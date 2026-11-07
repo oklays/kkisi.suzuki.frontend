@@ -5,7 +5,7 @@ export type ConsoleIcon =
   // module (section) parents
   | 'dashboard' | 'kosipa' | 'toko' | 'warehouse' | 'reports' | 'settings'
   // KOSIPA
-  | 'overview' | 'members' | 'savings' | 'deposit' | 'voluntary' | 'loans' | 'installments' | 'payroll' | 'reportMembers' | 'reportSavings' | 'reportLoans' | 'reportPayroll' | 'quality'
+  | 'overview' | 'members' | 'savings' | 'deposit' | 'voluntary' | 'loans' | 'loanRegular' | 'loanBank' | 'loanCash' | 'loanFinancing' | 'loanSalary' | 'loanMortgage' | 'loanSettlement' | 'loanRollover' | 'loanAll' | 'installments' | 'payroll' | 'reportMembers' | 'reportSavings' | 'reportLoans' | 'reportPayroll' | 'quality'
   // TOKO & POS
   | 'pos' | 'history' | 'returns' | 'products'
   // Warehouse and administration
@@ -46,7 +46,17 @@ export const CONSOLE_NAVIGATION: readonly ConsoleNavEntry[] = [
   { id: 'kosipa-members', section: 'kosipa', label: 'Keanggotaan', href: '/console/kosipa/anggota', order: 1, anyOf: ['kosipa.member.view'], readiness: 'available', icon: 'members', description: 'Cari anggota dan lihat Anggota 360 (baca saja)' },
   { id: 'kosipa-savings', section: 'kosipa', label: 'Simpanan', href: '/console/kosipa/simpanan', order: 2, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'savings', description: 'Buku simpanan per anggota (baca saja)' },
   { id: 'kosipa-savings-deposits', section: 'kosipa', label: 'Setoran simpanan', href: '/console/kosipa/simpanan/setoran', order: 2.5, anyOf: ['kosipa.savings.view'], readiness: 'available', icon: 'deposit', description: 'Setoran simpanan sukarela tunai/transfer: buat, setujui, tolak' },
-  { id: 'kosipa-loans', section: 'kosipa', label: 'Pinjaman', href: '/console/kosipa/pinjaman', order: 3, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loans', description: 'Dokumen dan jadwal pinjaman (baca saja)' },
+  { id: 'kosipa-loans', section: 'kosipa', label: 'Pinjaman', href: '/console/kosipa/pinjaman', order: 3, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loans', description: 'Ringkasan pinjaman per produk, dokumen dan jadwal angsuran (baca saja)' },
+  // Legacy KOSIPA "Pinjaman" submenus, same order. Product pages apply the legacy list filter (loan-products.ts); Kartu Aktif = "Semua dokumen" filtered to active loans.
+  { id: 'kosipa-loan-regular', section: 'kosipa', parent: 'kosipa-loans', label: 'Pinjaman Reguler', href: '/console/kosipa/pinjaman/produk/reguler', order: 3.1, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanRegular' },
+  { id: 'kosipa-loan-bank', section: 'kosipa', parent: 'kosipa-loans', label: 'Pinjaman Bank', href: '/console/kosipa/pinjaman/produk/bank', order: 3.2, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanBank' },
+  { id: 'kosipa-loan-cash', section: 'kosipa', parent: 'kosipa-loans', label: 'Kasbon', href: '/console/kosipa/pinjaman/produk/kasbon', order: 3.3, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanCash' },
+  { id: 'kosipa-loan-financing', section: 'kosipa', parent: 'kosipa-loans', label: 'Pembiayaan', href: '/console/kosipa/pinjaman/produk/pembiayaan', order: 3.4, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanFinancing' },
+  { id: 'kosipa-loan-salary', section: 'kosipa', parent: 'kosipa-loans', label: 'Gaji Minus', href: '/console/kosipa/pinjaman/produk/gaji-minus', order: 3.5, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanSalary' },
+  { id: 'kosipa-loan-mortgage', section: 'kosipa', parent: 'kosipa-loans', label: 'KPR BTN', href: '/console/kosipa/pinjaman/produk/kpr-btn', order: 3.6, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanMortgage' },
+  { id: 'kosipa-loan-settlements', section: 'kosipa', parent: 'kosipa-loans', label: 'Pelunasan Pinjaman', href: '/console/kosipa/pinjaman/pelunasan', order: 3.7, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanSettlement' },
+  { id: 'kosipa-loan-rollovers', section: 'kosipa', parent: 'kosipa-loans', label: 'Roll Over Pinjaman', href: '/console/kosipa/pinjaman/roll-over', order: 3.8, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanRollover' },
+  { id: 'kosipa-loan-all', section: 'kosipa', parent: 'kosipa-loans', label: 'Semua dokumen', href: '/console/kosipa/pinjaman/daftar', order: 3.9, anyOf: ['kosipa.loan.view'], readiness: 'available', icon: 'loanAll' },
   { id: 'kosipa-installments', section: 'kosipa', label: 'Angsuran', href: '/console/kosipa/angsuran', order: 4, anyOf: [], readiness: 'planned', icon: 'installments' },
   { id: 'kosipa-payroll', section: 'kosipa', label: 'Payroll', href: '/console/kosipa/payroll', order: 5, anyOf: ['kosipa.payroll.view'], readiness: 'available', icon: 'payroll', description: 'Batch potongan bulanan, rekonsiliasi kredit TOKO untuk ditinjau (baca saja)' },
   { id: 'kosipa-reports', section: 'kosipa', label: 'Laporan', href: '/console/kosipa/laporan', order: 6, anyOf: KOSIPA_VIEW, readiness: 'available', icon: 'reports', description: 'Laporan pinjaman, payroll, keanggotaan, simpanan dan kualitas data (baca saja)' },

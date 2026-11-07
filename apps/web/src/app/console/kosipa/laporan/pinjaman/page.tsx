@@ -47,8 +47,8 @@ export default async function LoanReportPage({ searchParams }: { searchParams: P
               <FinancialTable label="Pinjaman per bulan dokumen" columns={[{ label: "Bulan" }, { label: "Dokumen", numeric: true }, { label: "Σ pokok (rencana)", numeric: true }, { label: "Per status (dokumen / pelunasan)" }]}>
                 <tbody>{r.months.map((m) => (
                   <tr key={m.bucket}>
-                    <td><Link prefetch={false} href={`/console/kosipa/pinjaman${qs({ periode: m.bucket })}`}>{m.bucket}</Link></td><td>{m.count}</td><td className="num">{formatAmount4(m.plan4)}</td>
-                    <td>{m.lines.map((l) => `${l.docStatus ?? '—'} / ${l.repayment ?? '—'}: ${l.count} (${formatAmount4(l.plan4)})`).join(' · ')}</td>
+                    <td><Link prefetch={false} href={`/console/kosipa/pinjaman/daftar${qs({ periode: m.bucket })}`}>{m.bucket}</Link></td><td>{m.count}</td><td className="num">{formatAmount4(m.plan4)}</td>
+                    <td>{m.lines.map((l) => `${l.docStatus ?? 'tanpa status'} / ${l.repayment ?? 'tanpa status'}: ${l.count} (${formatAmount4(l.plan4)})`).join(' · ')}</td>
                   </tr>
                 ))}</tbody>
               </FinancialTable>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { KosipaError } from '@koperasi/domain/kosipa';
-import { listLoans, readLoan } from '../src/kosipa/loans.ts';
+import { listLoans, listRollovers, listSettlements, readLoan, readLoanPortfolio, readUnpaidSchedule } from '../src/kosipa/loans.ts';
 import { makeLoanWorld, loanHdr, inst } from './helpers/loan-fakes.mjs';
 
 const code = async (p) => { try { await p; return null; } catch (e) { assert.ok(e instanceof KosipaError, String(e?.stack ?? e)); return e.code; } };
@@ -107,10 +107,73 @@ test('a stored amount that cannot be parsed is surfaced as an error, not silentl
 });
 
 test('the reader contract has no write capability', () => {
-  const w = makeLoanWorld(); assert.deepEqual(Object.keys(w.reader).sort(), ['listLoans', 'loanHeaders', 'scheduleAggregate', 'scheduleRows']);
+  const w = makeLoanWorld(); assert.deepEqual(Object.keys(w.reader).sort(), ['listLoans', 'listRollovers', 'listSettlements', 'loanHeaders', 'portfolioGroups', 'rolloverLinks', 'scheduleAggregate', 'scheduleRows', 'settlementSummary', 'unpaidSchedule'], 'read methods only');
 });
 
 test('an installment amount that cannot be parsed is surfaced as AMOUNT_INVALID, not hidden as "unavailable" or treated as zero', async () => {
   const w = makeLoanWorld({ headers: [loanHdr(1)], installments: [inst(1, 'PIN000001', 1, { principal: 'oops' })] });
   assert.equal(await code(readLoan(mk(w).deps, actor(), { docNo: 'PIN000001' })), 'AMOUNT_INVALID');
+});
+
+// ------------------------------------------------------------------------------------------------ products, portfolio, settlements, roll-over
+const KAS = (id, over = {}) => loanHdr(id, { docNo: `BON${id}`, type: 'KASBON', financier: 'FAMILY DAY', ...over });
+
+test('portfolio: capability first, audited as a list view, header figures per legacy product; the schedule read is separate and fails soft', async () => {
+  const w = makeLoanWorld({ headers: [loanHdr(1), KAS(2), KAS(3, { financier: 'DANA PENDIDIKAN', disbursement: 'OPEN' }), loanHdr(4, { type: 'REGULLER', financier: 'GAJI MINUS' })], installments: [inst(10, 'BON2', 1), inst(11, 'BON2', 2, { status: 'Bayar' })] });
+  const { deps, events } = mk(w);
+  assert.equal(await code(readLoanPortfolio(deps, actor([]), {})), 'FORBIDDEN'); assert.equal(w.calls.length, 0);
+  const p = await readLoanPortfolio(deps, actor());
+  assert.equal(events.at(-1).subjectId, 'loan:portfolio');
+  const kasbon = p.lines.find((l) => l.product === 'kasbon');
+  assert.deepEqual([kasbon.documents, kasbon.active, kasbon.awaitingDisbursement], [2, 1, 1]);
+  assert.equal(kasbon.unpaidPrincipal4, null, 'the portfolio itself never reads the schedule');
+  assert.equal(p.lines.find((l) => l.product === 'lainnya').documents, 1);
+  assert.deepEqual(w.calls.map((c) => c[0]), ['portfolioGroups']);
+  const s = await readUnpaidSchedule(deps, actor());
+  assert.equal(s.state, 'ok'); assert.equal(s.portfolio.lines.find((l) => l.product === 'kasbon').unpaidPrincipal4, 1000000000, 'only Belum Bayar rows of active documents');
+  w.failures.add('unpaidSchedule');
+  assert.deepEqual(await readUnpaidSchedule(deps, actor()), { state: 'unavailable' }, 'a timeout is an explicit unavailable, never zero');
+  w.failures.add('portfolioGroups');
+  await assert.rejects(readLoanPortfolio(deps, actor()), /timeout/, 'a header outage propagates to the page error state');
+});
+
+test('list: product and segment filters follow the legacy product rules; unknown product refused before any read', async () => {
+  const w = makeLoanWorld({ headers: [loanHdr(1), KAS(2), KAS(3, { financier: 'DANA PENDIDIKAN' }), loanHdr(4, { type: 'PINJAMAN REGULAR', financier: '0' })] }); const { deps } = mk(w);
+  assert.deepEqual((await listLoans(deps, actor(), { produk: 'kasbon' })).items.map((l) => l.header.id), [3, 2]);
+  assert.deepEqual((await listLoans(deps, actor(), { produk: 'kasbon', segmen: 'FAMILY DAY' })).items.map((l) => l.header.id), [2]);
+  assert.deepEqual((await listLoans(deps, actor(), { produk: 'reguler' })).items.map((l) => l.header.id), [1], 'Reguler requires the KOPERASI financier');
+  assert.deepEqual((await listLoans(deps, actor(), { produk: 'lainnya' })).items.map((l) => l.header.id), [4]);
+  const before = w.calls.length;
+  assert.equal(await code(listLoans(deps, actor(), { produk: 'arisan' })), 'FILTER_INVALID'); assert.equal(w.calls.length, before);
+});
+
+test('settlements: legacy rows only (pelunasan=1, not ROLLOVER), filters, keyset paging, summary per remark, total = pokok + admin + penalti', async () => {
+  const set = (id, over) => loanHdr(id, { settlement: 1, remark: 'LUNAS DIPERCEPAT', settledOn: '2026-09-10', settledPrincipal: '1000.00', settledAdmin: '10.00', settledPenalty: '1.00', repayment: 'LUNAS', ...over });
+  const headers = [...Array.from({ length: 27 }, (_, i) => set(100 + i, {})), set(200, { remark: 'ROLLOVER' }), set(201, { remark: 'LUNAS PENSIUN', type: 'KASBON', financier: 'FAMILY DAY', settledOn: '2026-08-05' }), loanHdr(202)];
+  const w = makeLoanWorld({ headers }); const { deps, events } = mk(w);
+  const p1 = await listSettlements(deps, actor(), {});
+  assert.equal(events.at(-1).subjectId, 'loan:settlements');
+  assert.equal(p1.items.length, 25); assert.equal(p1.items[0].id, 201); assert.ok(!p1.items.some((s) => s.id === 200), 'ROLLOVER settlements belong to the roll-over list');
+  assert.equal(p1.items[1].total4, 10110000);
+  const p2 = await listSettlements(deps, actor(), { after: String(p1.nextCursor) });
+  assert.equal(p1.items.length + p2.items.length, 28); assert.equal(p2.nextCursor, null);
+  assert.deepEqual(p1.summary.map((s) => [s.remark, s.documents]), [['LUNAS DIPERCEPAT', 27], ['LUNAS PENSIUN', 1]]);
+  assert.deepEqual((await listSettlements(deps, actor(), { produk: 'kasbon' })).items.map((s) => s.id), [201]);
+  assert.deepEqual((await listSettlements(deps, actor(), { periode: '2026-08' })).items.map((s) => s.id), [201]);
+  const pensiun = await listSettlements(deps, actor(), { keterangan: 'LUNAS PENSIUN' });
+  assert.deepEqual(pensiun.items.map((s) => s.id), [201]); assert.equal(pensiun.summary.length, 2, 'the summary ignores the selected remark');
+  assert.equal(await code(listSettlements(deps, actor(), { keterangan: 'ROLLOVER' })), 'FILTER_INVALID');
+});
+
+test('roll-over: newest first, keyset paging, search on either document; the loan detail lists the links naming it and fails soft', async () => {
+  const ro = (id, over = {}) => ({ id, newDocNo: `PINNEW${id}`, oldDocNo: 'PIN000001', nik: '00100', name: 'SYNTH', oldType: 'PINJAMAN REGULAR', remainingInstallments: 6, remainingPrincipal: '500000.00', fee: '1000.00', ...over });
+  const w = makeLoanWorld({ headers: [loanHdr(1)], rollovers: [...Array.from({ length: 26 }, (_, i) => ro(i + 1)), ro(50, { oldDocNo: 'PINOLD9', newDocNo: 'PIN000001' })] }); const { deps, events } = mk(w);
+  const p = await listRollovers(deps, actor(), {});
+  assert.equal(events.at(-1).subjectId, 'loan:rollovers'); assert.equal(p.items[0].id, 50); assert.equal(p.items.length, 25);
+  assert.equal((await listRollovers(deps, actor(), { after: String(p.nextCursor) })).items.length, 2);
+  assert.deepEqual((await listRollovers(deps, actor(), { q: 'PINOLD9' })).items.map((r) => r.id), [50]);
+  const d = await readLoan(deps, actor(), { docNo: 'PIN000001' });
+  assert.equal(d.rollovers.state, 'ok'); assert.equal(d.rollovers.rows.length, 20, 'bounded'); assert.equal(d.rollovers.rows[0].remainingPrincipal4, 5000000000);
+  w.failures.add('rolloverLinks');
+  assert.deepEqual((await readLoan(deps, actor(), { docNo: 'PIN000001' })).rollovers, { state: 'unavailable' });
 });

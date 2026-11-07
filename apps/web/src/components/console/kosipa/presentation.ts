@@ -18,10 +18,14 @@ export function exportFeedback(status: number): string {
 }
 
 /** Only these existing presentation routes accept private search POSTs. Business parsers still validate their inputs. */
-export function privateSearchTarget(path: string): { kind: 'members' | 'savings' | 'loans' | 'batch' | 'reconciliation'; docNo?: string } | null {
+export function privateSearchTarget(path: string): { kind: 'members' | 'savings' | 'loans' | 'loanProduct' | 'settlements' | 'rollovers' | 'batch' | 'reconciliation'; docNo?: string; product?: string } | null {
   if (path === '/console/kosipa/anggota') return { kind: 'members' };
   if (path === '/console/kosipa/simpanan') return { kind: 'savings' };
-  if (path === '/console/kosipa/pinjaman') return { kind: 'loans' };
+  if (path === '/console/kosipa/pinjaman' || path === '/console/kosipa/pinjaman/daftar') return { kind: 'loans' };
+  if (path === '/console/kosipa/pinjaman/pelunasan') return { kind: 'settlements' };
+  if (path === '/console/kosipa/pinjaman/roll-over') return { kind: 'rollovers' };
+  const product = /^\/console\/kosipa\/pinjaman\/produk\/([a-z-]{3,20})$/.exec(path);
+  if (product) return { kind: 'loanProduct', product: product[1] };
   const match = /^\/console\/kosipa\/payroll\/([A-Za-z0-9_-]{1,64})(\/rekonsiliasi)?$/.exec(path);
   return match ? { kind: match[2] ? 'reconciliation' : 'batch', docNo: match[1] } : null;
 }

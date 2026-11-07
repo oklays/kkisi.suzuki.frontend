@@ -1,76 +1,147 @@
-import { KosipaPageHeader, FeedbackState, StatusBadge, FinancialTable, FilterContext } from '@/components/console/kosipa/KosipaUI';
-import { PrivatePagination } from '@/components/console/kosipa/PrivateWorkspace';
-import { maskIdentifier } from '@/components/console/kosipa/presentation';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { Search } from 'lucide-react';
-import { KosipaError, LOAN_DISBURSEMENT_STATUSES, LOAN_DOC_STATUSES, LOAN_REPAYMENT_STATUSES } from '@koperasi/domain/kosipa';
-import { listLoans, type LoanListPage } from '@koperasi/application/kosipa/loans';
+import { ArrowRight, BadgeCheck, Repeat2, Search } from 'lucide-react';
+import { readLoanPortfolio, readUnpaidSchedule } from '@koperasi/application/kosipa/loans';
+import type { LoanPortfolio } from '@koperasi/domain/kosipa';
+import { FeedbackState, ContextNotice, Provenance } from '@/components/console/kosipa/KosipaUI';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
-import { STATUS_FLAG_TEXT } from '@/components/console/kosipa/loan-format';
-import { formatAmount4, formatLegacyDate, qs } from '@/components/console/kosipa/payroll-format';
+import { LoanFigure, LoanFigureStrip, LoanPageHeader, Money, UnpaidFallback, UnpaidValue, actionCount, type UnpaidPromise } from '@/components/console/kosipa/LoanUI';
+import { LOAN_HUB, LOAN_LIST, count, productHref, shortDate } from '@/components/console/kosipa/loan-format';
+import { qs } from '@/components/console/kosipa/payroll-format';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
 import { kosipaServices } from '@/infrastructure/console/services';
 
+import LoanListPage from './daftar/page';
+
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Pinjaman · KOSIPA · KKISI TB2' };
 
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
+const FILTER_KEYS = ['q', 'status', 'cair', 'bayar', 'periode', 'produk', 'after'] as const;
 
-export default async function LoanListPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+/**
+ * Pinjaman hub: every loan document summarised per legacy product (the old KOSIPA submenus), what is waiting for someone, and the
+ * way into each product, the settlement history and the roll-over history. Header figures render at once; the recorded unpaid
+ * schedule streams in per cell because it needs one scan of the unindexed schedule table.
+ */
+export default async function LoanHubPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   if (!consoleEnabled()) notFound();
-  const auth = await requireConsoleSession({ next: '/console/kosipa/pinjaman' });
+  const auth = await requireConsoleSession({ next: LOAN_HUB });
   if (auth.kind !== 'ok') return null;
   if (!auth.capabilities.has('kosipa.loan.view')) return <KosipaNotice state={auth.kosipa === 'linked' ? 'linked' : auth.kosipa} />;
   const services = kosipaServices();
   if (!services) return <KosipaNotice state="unavailable" />;
-  const params = await searchParams;
-  const q = one(params.q).slice(0, 50); const status = one(params.status); const cair = one(params.cair); const bayar = one(params.bayar);
-  const periode = one(params.periode);
-  let page: LoanListPage | null = null; let failed = false; let invalid = false;
-  try {
-    page = await listLoans({ reader: services.loans, audit: services.audit, now: services.now }, { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() }, params);
-  } catch (error) { if (error instanceof KosipaError) invalid = true; else failed = true; }
+  const sp = searchParams ? await searchParams : {};
+  if (FILTER_KEYS.some((k) => sp[k] !== undefined && sp[k] !== '')) return <LoanListPage searchParams={Promise.resolve(sp)} />;
+  const deps = { reader: services.loans, audit: services.audit, now: services.now };
+  const actor = { userId: auth.ctx.userId, capabilities: auth.capabilities, requestId: crypto.randomUUID() };
+  let portfolio: LoanPortfolio | null = null;
+  try { portfolio = await readLoanPortfolio(deps, actor); } catch { /* rendered as the error state below */ }
+  const unpaid: UnpaidPromise = portfolio ? readUnpaidSchedule(deps, actor).catch(() => ({ state: 'unavailable' as const })) : Promise.resolve({ state: 'unavailable' as const });
+  const latest = shortDate(portfolio?.total.latestDocDate);
 
   return (
-    <div className="console-page">
-      <KosipaPageHeader title={<> Pinjaman </>}>
-        <p>Telusuri dokumen dan jadwal angsuran berdasarkan nilai tercatat. Outstanding resmi belum tersedia.</p>
-      </KosipaPageHeader>
-      <form className="console-search console-search-wide" action="/console/kosipa/pinjaman" method="post" data-kosipa-private role="search" aria-label="Filter pinjaman">
-        <div className="console-filter-row console-filter-row-4">
-          <label>NIK, nomor dokumen atau nama<input name="q" minLength={2} placeholder="NIK, nama, atau nomor dokumen" defaultValue={q} maxLength={50} autoComplete="off" /></label>
-          <label>Status dokumen<select name="status" defaultValue={status}><option value="">Semua</option>{LOAN_DOC_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
-          <label>Pencairan<select name="cair" defaultValue={cair}><option value="">Semua</option>{LOAN_DISBURSEMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
-          <label>Pelunasan<select name="bayar" defaultValue={bayar}><option value="">Semua</option>{LOAN_REPAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
-          <label>Periode dokumen<input name="periode" type="month" min="2000-01" max="2100-12" defaultValue={periode} /></label>
-          <button type="submit"><Search size={16} aria-hidden="true" />Terapkan filter</button><button type="submit" name="_reset" value="1" formNoValidate>Reset filter</button>
-        </div>
+    <div className="console-page kloan-page">
+      <LoanPageHeader title={<> Pinjaman </>}>
+        <p>Ringkasan semua pinjaman KOSIPA per produk, dikelompokkan dengan aturan yang sama seperti submenu Pinjaman di KOSIPA lama.{latest && <> Dokumen terbaru tercatat <strong>{latest}</strong>.</>}</p>
+      </LoanPageHeader>
+
+      <form className="kloan-quicksearch" action={LOAN_LIST} method="post" data-kosipa-private role="search" aria-label="Cari dokumen pinjaman">
+        <label htmlFor="loan-q">Cari dokumen atau anggota</label>
+        <div><Search size={17} aria-hidden="true" /><input id="loan-q" name="q" minLength={2} maxLength={50} required autoComplete="off" placeholder="NIK, nama anggota, atau nomor dokumen (PIN…, BON…, PEMBYN…)" /><button type="submit">Terapkan filter</button></div>
       </form>
-      <FilterContext privateReset reset="/console/kosipa/pinjaman" filters={[{ label: 'Status', value: status }, { label: 'Pencairan', value: cair }, { label: 'Pelunasan', value: bayar }, { label: 'Periode', value: periode }, { label: 'Pencarian', value: q ? 'Aktif' : '' }]} />
-      {invalid && <FeedbackState kind="error" title={<> Filter tidak valid </>} reset="/console/kosipa/pinjaman"><p>Periksa status dan periode dokumen. Gunakan pilihan yang tersedia dan periode yang valid. Tidak ada data yang dibaca.</p></FeedbackState>}
-      {failed && <FeedbackState kind="error" title={<> Daftar pinjaman tidak dapat dibaca </>} reset="/console/kosipa/pinjaman"><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
-      {page && page.items.length === 0 && <FeedbackState kind="empty" title={<> Tidak ada pinjaman </>} reset="/console/kosipa/pinjaman"><p>Tidak ada pinjaman yang cocok dengan filter ini.</p></FeedbackState>}
-      {page && page.items.length > 0 && (
-        <section aria-label="Daftar pinjaman" className="console-section">
-          <FinancialTable label="Daftar dokumen pinjaman" columns={[{ label: "Dokumen" }, { label: "NIK tersamar", type: "text" }, { label: "Nama" }, { label: "Jenis" }, { label: "Pokok (rencana)", numeric: true }, { label: "Tenor", numeric: true }, { label: "Tgl. pencairan" }, { label: "Status" }]}>
-            <tbody>{page.items.map((l) => (
-              <tr key={l.header.id}>
-                <td><Link prefetch={false} href={`/console/kosipa/pinjaman/${encodeURIComponent(l.header.docNo)}${qs({ periode, status, cair, bayar })}`}>{l.header.docNo}</Link>{page!.items.some((other) => other.header.docNo === l.header.docNo && other.header.id !== l.header.id) && <span className="console-badge" data-state="partial">Nomor ganda pada halaman ini</span>}</td>
-                <td>{maskIdentifier(l.header.nik)}</td><td>{l.header.name || '—'}</td>
-                <td>{[l.header.type, l.header.method].filter(Boolean).join(' · ') || '—'}</td>
-                <td className="num">{formatAmount4(l.planPrincipal4)}</td><td>{l.header.planMonths ? `${l.header.planMonths} bln` : '—'}</td>
-                <td>{formatLegacyDate(l.disbursedDate)}</td>
-                <td><div className="kosipa-status-stack"><StatusBadge value={l.header.docStatus} /><small>Pencairan: {l.header.disbursement || 'Tidak tercatat'}</small><small>Pelunasan: {l.header.repayment || 'Tidak tercatat'}</small></div>{l.statusFlags.map((f) => <span key={f} className="console-badge" data-state="partial"> {STATUS_FLAG_TEXT[f]}</span>)}</td>
-              </tr>
-            ))}</tbody>
-          </FinancialTable>
-          <p className="console-notice">Menampilkan {page.items.length} dokumen pada halaman ini. Jumlah seluruh dokumen tidak dihitung.</p>
-          {page.nextCursor !== null && <PrivatePagination path="/console/kosipa/pinjaman" params={{ q, status, cair, bayar, periode, after: String(page.nextCursor) }}>Muat pinjaman lebih lama</PrivatePagination>}
-          <p className="console-notice">Status ditampilkan sebagaimana tercatat; kombinasi yang saling bertentangan ditandai, tidak diperbaiki.</p>
-        </section>
-      )}
+
+      {!portfolio ? (
+        <FeedbackState kind="error" title={<> Ringkasan pinjaman tidak dapat dibaca </>} reset={LOAN_HUB}><p>Database tidak menjawab tepat waktu. Daftar dokumen per produk tetap bisa dibuka dari menu samping.</p></FeedbackState>
+      ) : portfolio.total.documents === 0 ? (
+        <FeedbackState kind="empty" title={<> Belum ada pinjaman tercatat </>}><p>Belum ada dokumen pinjaman di KOSIPA. Ringkasan akan muncul setelah dokumen pertama dibuat di KOSIPA lama.</p></FeedbackState>
+      ) : <Hub portfolio={portfolio} unpaid={unpaid} />}
     </div>
   );
+}
+
+function Hub({ portfolio, unpaid }: { portfolio: LoanPortfolio; unpaid: UnpaidPromise }) {
+  const t = portfolio.total;
+  const lines = portfolio.lines.filter((l) => l.product !== 'lainnya' || l.documents > 0);
+  const attention = [
+    { label: 'Diajukan, belum diproses', hint: 'Status dokumen OPEN', n: t.submitted, href: `${LOAN_LIST}${qs({ status: 'OPEN', bayar: 'BELUM LUNAS' })}` },
+    { label: 'Menunggu persetujuan', hint: 'Status dokumen POSTING', n: t.posted, href: `${LOAN_LIST}${qs({ status: 'POSTING', bayar: 'BELUM LUNAS' })}` },
+    { label: 'Disetujui, belum dicairkan', hint: 'APPROVED, pencairan OPEN', n: t.awaitingDisbursement, href: `${LOAN_LIST}${qs({ status: 'APPROVED', cair: 'OPEN', bayar: 'BELUM LUNAS' })}` },
+  ];
+  return <>
+    <LoanFigureStrip label="Ringkasan seluruh pinjaman">
+      <LoanFigure lead label="Sisa pokok menurut jadwal" note={<>Angsuran belum dibayar dari {count(t.active)} pinjaman aktif</>}>
+        <Suspense fallback={<UnpaidFallback />}><UnpaidValue promise={unpaid} /></Suspense>
+      </LoanFigure>
+      <LoanFigure label="Pinjaman aktif" note={<>Disetujui, sudah cair, belum lunas · dari {count(t.documents)} dokumen</>}>{count(t.active)}</LoanFigure>
+      <LoanFigure label="Pokok awal pinjaman aktif" note="Jumlah pokok saat pinjaman aktif dicairkan"><Money units={t.activePrincipal4} compact /></LoanFigure>
+      <LoanFigure label="Perlu tindakan" note="Menunggu persetujuan atau pencairan">{count(actionCount(t))}</LoanFigure>
+    </LoanFigureStrip>
+
+    <div className="kloan-hub-grid">
+      <section className="kloan-ledger" aria-labelledby="ledger-title">
+        <header className="kloan-section-head">
+          <div><h2 id="ledger-title">Portofolio per produk</h2><p>Pilih produk untuk melihat dokumennya. Batang menunjukkan porsi sisa pokok tiap produk.</p></div>
+          <Provenance kind="recorded" />
+        </header>
+        <div className="kosipa-table-frame kloan-ledger-frame">
+          <div className="kosipa-table-scroll kloan-ledger-scroll" role="region" aria-labelledby="ledger-title" tabIndex={0} suppressHydrationWarning>
+            <table className="kloan-ledger-table">
+              <caption className="console-visually-hidden">Ringkasan pinjaman per produk</caption>
+              <thead><tr><th scope="col">Produk</th><th scope="col" className="num">Pinjaman aktif</th><th scope="col">Sisa pokok (jadwal)</th><th scope="col" className="num">Pokok awal aktif</th><th scope="col" className="num">Perlu tindakan</th><th scope="col" className="num">Total dokumen</th></tr></thead>
+              <tbody>{lines.map((l) => {
+                const named = l.segments.filter((s) => s.key !== null);
+                const preview = named.slice(0, 3).map((s) => s.key).join(' · ') + (named.length > 3 ? ` · +${named.length - 3} lainnya` : '');
+                return <tr key={l.product} data-unmapped={l.product === 'lainnya' || undefined}>
+                  <th scope="row">
+                    <Link prefetch={false} href={productHref(l.product)} className="kloan-ledger-product">{l.label}<ArrowRight size={14} aria-hidden="true" /></Link>
+                    <small>{l.product === 'lainnya' ? 'Tidak tampil di submenu legacy mana pun' : preview || l.rule}</small>
+                  </th>
+                  <td className="num" data-label="Pinjaman aktif"><strong>{count(l.active)}</strong></td>
+                  <td data-label="Sisa pokok (jadwal)"><Suspense fallback={<UnpaidFallback share />}><UnpaidValue promise={unpaid} product={l.product} share /></Suspense></td>
+                  <td className="num" data-label="Pokok awal aktif"><Money units={l.activePrincipal4} compact /></td>
+                  <td className="num" data-label="Perlu tindakan">{actionCount(l) ? <span className="kloan-attn">{count(actionCount(l))}</span> : <span className="kloan-muted">0</span>}</td>
+                  <td className="num" data-label="Total dokumen">{count(l.documents)}<small>{shortDate(l.latestDocDate) ? `terbaru ${shortDate(l.latestDocDate)}` : 'tanpa tanggal valid'}</small></td>
+                </tr>;
+              })}</tbody>
+              <tfoot><tr>
+                <th scope="row">Semua produk</th>
+                <td className="num" data-label="Pinjaman aktif"><strong>{count(t.active)}</strong></td>
+                <td data-label="Sisa pokok (jadwal)"><Suspense fallback={<UnpaidFallback />}><UnpaidValue promise={unpaid} /></Suspense></td>
+                <td className="num" data-label="Pokok awal aktif"><Money units={t.activePrincipal4} compact /></td>
+                <td className="num" data-label="Perlu tindakan">{count(actionCount(t))}</td>
+                <td className="num" data-label="Total dokumen">{count(t.documents)}</td>
+              </tr></tfoot>
+            </table>
+          </div>
+          <p className="kosipa-table-hint" hidden suppressHydrationWarning><ArrowRight size={13} aria-hidden="true" />Geser tabel untuk melihat kolom lainnya.</p>
+        </div>
+      </section>
+
+      <aside className="kloan-side" aria-label="Tindakan dan riwayat">
+        <section className="kloan-panel" aria-labelledby="attn-title">
+          <h2 id="attn-title">Perlu tindakan</h2>
+          <p>Dokumen yang belum selesai diproses. Persetujuan dan pencairan masih dilakukan di KOSIPA lama.</p>
+          <ul className="kloan-attn-list">{attention.map((a) => (
+            <li key={a.label}><Link prefetch={false} href={a.href} data-zero={a.n === 0 || undefined}>
+              <span><strong>{a.label}</strong><small>{a.hint}</small></span><span className="kloan-attn-n">{count(a.n)}</span>
+            </Link></li>
+          ))}</ul>
+          {t.conflicting > 0 && <p className="kloan-panel-foot">{count(t.conflicting)} dokumen punya kombinasi status yang saling bertentangan. <Link prefetch={false} href="/console/kosipa/laporan/kualitas-data">Lihat diagnostik kualitas data</Link></p>}
+        </section>
+        <section className="kloan-panel" aria-labelledby="hist-title">
+          <h2 id="hist-title">Riwayat penyelesaian</h2>
+          <ul className="kloan-history">
+            <li><Link prefetch={false} href={`${LOAN_HUB}/pelunasan`}><BadgeCheck size={18} aria-hidden="true" /><span><strong>Pelunasan Pinjaman</strong><small>Lunas dipercepat, pensiun, dan resign beserta nominalnya</small></span></Link></li>
+            <li><Link prefetch={false} href={`${LOAN_HUB}/roll-over`}><Repeat2 size={18} aria-hidden="true" /><span><strong>Roll Over Pinjaman</strong><small>Pinjaman lama yang dilunasi dengan pinjaman baru</small></span></Link></li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    <ContextNotice title="Angka tercatat, bukan outstanding resmi" expandable>
+      <p>Sisa pokok menjumlahkan angsuran berstatus Belum Bayar pada jadwal pinjaman aktif, persis seperti tercatat di KOSIPA lama. Saldo outstanding resmi belum tersedia karena definisinya belum diverifikasi. Pinjaman aktif berarti dokumen APPROVED, pencairan APPROVED, dan pelunasan BELUM LUNAS, sama seperti Kartu Aktif dan kartu Kas Pinjaman di dashboard.</p>
+    </ContextNotice>
+  </>;
 }

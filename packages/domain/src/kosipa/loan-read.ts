@@ -1,6 +1,7 @@
 import { KosipaError } from './errors.ts';
 import { nikLookupKeys } from './nik.ts';
 import { classifyLegacyDate, parseAmount4, parseCursor, type LegacyDate } from './payroll-read.ts';
+import { parseLoanProductFilter, type LoanProductFilter, type LoanSearch } from './loan-products.ts';
 
 /**
  * Read-only KOSIPA loan model (spec REQ-024, TASK-026). It separates what the legacy tables RECORDED (header + installment rows)
@@ -20,28 +21,32 @@ export type LoanDocStatus = (typeof LOAN_DOC_STATUSES)[number];
 // -------------------------------------------------------------------------------------------------------------- filters
 export type LoanListQuery = {
   docStatus: (typeof LOAN_DOC_STATUSES)[number] | null; disbursement: (typeof LOAN_DISBURSEMENT_STATUSES)[number] | null; repayment: (typeof LOAN_REPAYMENT_STATUSES)[number] | null;
-  search: { nikKeys: string[] | null; docNoPrefix: string | null; nameLike: string | null } | null; afterId: number | null;
+  search: LoanSearch | null; afterId: number | null;
   /** Month of the loan DOCUMENT date (YYYY-MM). Loans with a zero/invalid document date can never match a month. */
   period: { year: number; month: number } | null;
+  /** Legacy product list (loan-products.ts) and, within it, one segment (bank_pembiaya, or jenis for Reguler). */
+  product: LoanProductFilter | null; segment: string | null;
 };
 const first = (v: string | string[] | undefined): string => (Array.isArray(v) ? v[0] : v) ?? '';
 const member = <T extends readonly string[]>(list: T, raw: string): T[number] | null => { if (!raw) return null; if (!(list as readonly string[]).includes(raw)) throw new KosipaError('FILTER_INVALID'); return raw as T[number]; };
 
-/** Validated list filter. Unknown values are refused, never passed to SQL. `q` is a NIK, a document-number prefix or a name fragment. */
+/** `q` is a NIK, a document-number prefix or a name fragment (2-50 characters); LIKE wildcards in a name are escaped. */
+export function parseLoanSearch(raw: string): LoanSearch | null {
+  const q = raw.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 50);
+  if (q.length < 2) return null;
+  if (/^[A-Za-z]{2,12}[A-Za-z0-9_-]{0,28}$/.test(q) && /^(PIN|INV|KAS|POT|PEM|KPR|GM|BON)/i.test(q)) return { nikKeys: null, docNoPrefix: q, nameLike: null };
+  if (/^[0-9A-Za-z]{2,20}$/.test(q) && /\d/.test(q)) return { nikKeys: nikLookupKeys(q), docNoPrefix: null, nameLike: null };
+  return { nikKeys: null, docNoPrefix: null, nameLike: q.replace(/[%_\\]/g, (c) => `\\${c}`) };
+}
+
+/** Validated list filter. Unknown values are refused, never passed to SQL. */
 export function parseLoanListQuery(params: Record<string, string | string[] | undefined>): LoanListQuery {
-  const q = first(params.q).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 50);
-  let search: LoanListQuery['search'] = null;
-  if (q.length >= 2) {
-    if (/^[A-Za-z]{2,12}[A-Za-z0-9_-]{0,28}$/.test(q) && /^(PIN|INV|KAS|POT|PEM|KPR|GM)/i.test(q)) search = { nikKeys: null, docNoPrefix: q, nameLike: null };
-    else if (/^[0-9A-Za-z]{2,20}$/.test(q) && /\d/.test(q)) search = { nikKeys: nikLookupKeys(q), docNoPrefix: null, nameLike: null };
-    else search = { nikKeys: null, docNoPrefix: null, nameLike: q.replace(/[%_\\]/g, (c) => `\\${c}`) };
-  }
   return {
     docStatus: member(LOAN_DOC_STATUSES, first(params.status)), disbursement: member(LOAN_DISBURSEMENT_STATUSES, first(params.cair)), repayment: member(LOAN_REPAYMENT_STATUSES, first(params.bayar)),
-    search, afterId: parseCursor(first(params.after) || null), period: parseLoanPeriod(first(params.periode)),
+    search: parseLoanSearch(first(params.q)), afterId: parseCursor(first(params.after) || null), period: parseLoanPeriod(first(params.periode)), ...parseLoanProductFilter(params),
   };
 }
-function parseLoanPeriod(raw: string): { year: number; month: number } | null {
+export function parseLoanPeriod(raw: string): { year: number; month: number } | null {
   if (!raw) return null;
   const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(raw);
   if (!m || Number(m[1]) < 2000 || Number(m[1]) > 2100) throw new KosipaError('PERIOD_INVALID');
@@ -63,6 +68,8 @@ export const scheduleCursor = (row: { installmentNo: number | null; id: number }
 // -------------------------------------------------------------------------------------------------------------- headers
 export type LoanHeaderRaw = {
   id: number; docNo: string; docDate: string | null; type: string | null; method: string | null; rate: string | null; nik: string; name: string | null;
+  /** bank_pembiaya: the legacy financing source / sub-category (KOPERASI, BANK BSI, FAMILY DAY, PPOB...). Not a bank account. */
+  financier: string | null;
   docStatus: string | null; disbursement: string | null; repayment: string | null;
   planPrincipal: string; actualPrincipal: string; planInstallment: string; actualInstallment: string; planMonths: number | null; actualMonths: number | null;
   startDate: string | null; endDate: string | null; disbursedDate: string | null; disbursedAmount: string; adminFee: string; insuranceFee: string; totalDeduction: string; totalReceived: string;
