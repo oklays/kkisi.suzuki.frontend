@@ -1,5 +1,5 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
-import { kosipaRoleReadAllowed } from '@koperasi/domain/console/capabilities';
+import { isCashierRoleName, kosipaRoleReadAllowed } from '@koperasi/domain/console/capabilities';
 import type { PermissionSetSource } from '@koperasi/application/console/capabilities';
 import type { Company, CompanyRepository, OpenRegister, PermissionRepository, RegisterRepository, UserRecord, UserRepository } from '@koperasi/application/auth/ports';
 import { withStoreRetry, type StoreLog } from './store-errors.ts';
@@ -54,6 +54,12 @@ export class PrismaPermissionRepository implements PermissionRepository, Permiss
       const rows = await this.db.$queryRaw<{ role_name: string | null; status: number }[]>`SELECT role_name, status FROM db_roles WHERE id = ${roleId} LIMIT 1`;
       const role = rows[0];
       return role && kosipaRoleReadAllowed(role.role_name, Number(role.status)) ? 'allowed' : 'denied';
+    });
+  }
+  isCashierRole(roleId: number): Promise<boolean> {
+    return withStoreRetry(this.log, 'cashier_role', async () => {
+      const rows = await this.db.$queryRaw<{ role_name: string | null }[]>`SELECT role_name FROM db_roles WHERE id = ${roleId} LIMIT 1`;
+      return isCashierRoleName(rows[0]?.role_name ?? null);
     });
   }
   has(roleId: number, slug: string): Promise<boolean> {

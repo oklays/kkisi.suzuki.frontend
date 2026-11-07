@@ -29,6 +29,8 @@ export type PosSession = {
   canProducts?: boolean;
   /** CONSOLE_ENABLED: the sidebar links back to the unified /console dashboard. */
   consoleAvailable?: boolean;
+  /** KASIR/CASHIER role: the sidebar shows no Dashboard entry at all (POS / Kasir only). */
+  dashboardHidden?: boolean;
   register: { open: { noref: string; noKasir: string | null; openedOn: string; stale: boolean } | null; multiple: boolean };
 };
 

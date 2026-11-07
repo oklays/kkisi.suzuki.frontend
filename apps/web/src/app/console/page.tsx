@@ -543,6 +543,8 @@ export default async function ConsoleDashboard({
   const auth = await requireConsoleSession({ next: '/console' });
   if (auth.kind !== 'ok') return null; // the layout renders the unavailable state
   const { ctx, capabilities, services } = auth;
+  // KASIR/CASHIER roles work only in POS / Kasir: the dashboard is never shown to them (owner decision 7 Nov 2026).
+  if (auth.cashier) redirect('/pos');
 
   // Fresh login without `next`: the explicit R1 landing policy if configured, else the unchanged capability-derived rule (spec REQ-014).
   // Landing only picks a start page; /pos is chosen only for users who can check out, so it never loops back here and never widens access.

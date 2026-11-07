@@ -22,10 +22,15 @@ export type TokoCapability = (typeof TOKO_CAPABILITIES)[number];
 export const KOSIPA_CAPABILITIES = ['kosipa.member.view', 'kosipa.savings.view', 'kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.store-credit.view'] as const;
 export type KosipaCapability = (typeof KOSIPA_CAPABILITIES)[number];
 
+/** A legacy role whose name says KASIR/CASHIER (case-, width- and space-insensitive). Such users work only in POS / Kasir. */
+export function isCashierRoleName(roleName: string | null): boolean {
+  return /kasir|cashier/.test((roleName ?? '').normalize('NFKC').trim().toLowerCase());
+}
+
 /** Explicit role-based monitoring policy; never confers a legacy identity, mutation or export right. */
 export function kosipaRoleReadAllowed(roleName: string | null, status: number): boolean {
-  const name = (roleName ?? '').normalize('NFKC').trim().toLowerCase();
-  return status === 1 && name.length > 0 && !/kasir|cashier/.test(name);
+  const name = (roleName ?? '').normalize('NFKC').trim();
+  return status === 1 && name.length > 0 && !isCashierRoleName(name);
 }
 
 /**

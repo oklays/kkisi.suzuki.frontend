@@ -42,7 +42,11 @@ export interface UserRepository {
   findByUsername(username: string): Promise<UserRecord | null>;
   findById(id: number): Promise<UserRecord | null>;
 }
-export interface PermissionRepository { has(roleId: number, slug: string): Promise<boolean>; }
+export interface PermissionRepository {
+  has(roleId: number, slug: string): Promise<boolean>;
+  /** True when the role is a KASIR/CASHIER role (by name): such users see only POS / Kasir, never the console dashboard. */
+  isCashierRole?(roleId: number): Promise<boolean>;
+}
 export interface CompanyRepository {
   findActive(id: number): Promise<Company | null>;
   listActive(): Promise<Company[]>;
