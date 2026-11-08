@@ -21,9 +21,15 @@ export {
 } from './payroll-reconciliation.ts';
 export {
   LOAN_PAGE_SIZE, LOAN_SCHEDULE_PAGE_SIZE, LOAN_HEADER_LIMIT, LOAN_DOC_STATUSES, LOAN_DISBURSEMENT_STATUSES, LOAN_REPAYMENT_STATUSES, OFFICIAL_BALANCE,
-  parseLoanListQuery, parseLoanDocNo, parseScheduleCursor, scheduleCursor, statusFlags, describeLoan, assessSchedule, describeScheduleRow,
+  parseLoanListQuery, parseLoanSearch, parseLoanPeriod, parseLoanDocNo, parseScheduleCursor, scheduleCursor, statusFlags, describeLoan, assessSchedule, describeScheduleRow,
   type LoanListQuery, type LoanHeaderRaw, type LoanView, type StatusFlag, type ScheduleRowRaw, type ScheduleAggregate, type ScheduleIssue, type ScheduleIntegrity, type ScheduleRowView,
 } from './loan-read.ts';
+export {
+  LOAN_PRODUCT_SLUGS, LOAN_PRODUCTS, UNMAPPED_PRODUCT, SETTLEMENT_PAGE_SIZE, ROLLOVER_PAGE_SIZE, SETTLEMENT_REMARKS,
+  loanProduct, classifyLoanProduct, loanSegment, parseLoanProductFilter, buildLoanPortfolio, parseSettlementQuery, parseRolloverQuery, describeSettlement, summarizeSettlements, describeRollover,
+  type LoanProductSlug, type LoanProductFilter, type LoanProductDef, type LoanSearch, type PortfolioGroupRaw, type UnpaidScheduleRaw, type PortfolioFigures, type PortfolioSegment, type PortfolioLine, type LoanPortfolio,
+  type SettlementQuery, type RolloverQuery, type SettlementRaw, type SettlementView, type SettlementSummaryRaw, type SettlementSummary, type RolloverRaw, type RolloverView,
+} from './loan-products.ts';
 export {
   SAVINGS_PAGE_SIZE, SAVINGS_BALANCE, parseLedgerQuery, parseMemberId, stateOfHeaderStatus, describeMovement, summarizeTypes,
   type LedgerQuery, type MovementState, type MovementRaw, type SavingsHeaderRef, type MovementFlag, type MovementView, type TypeSummaryRaw, type TypeSummary,
@@ -34,6 +40,11 @@ export {
   type Capped, type InstallmentDocRaw, type LoanDocRaw, type OrphanScan, type BatchTotalFinding,
 } from './report-read.ts';
 export { csvCell, csvLine, csvDocument, neutralizeFormula, amount4ToDecimal, type CsvCell } from './csv.ts';
+export { xlsxColName, xlsxDocument, type XlsxSheet } from './xlsx.ts';
+export {
+  KOSIPA_PDF_COLORS, measurePdfText, fitPdfText, wrapPdfText, renderKosipaPdfDocument,
+  type PdfBadgeTone, type PdfKpiItem, type PdfKvItem, type PdfTableColumn, type PdfSection, type KosipaPdfDocumentSpec,
+} from './pdf-document.ts';
 export {
   KNOWN_MEMBER_STATUS, KNOWN_EMPLOYMENT, KNOWN_MEMBER_GROUP, buildMembershipReport, buildSavingsMovementReport,
   type MembershipRaw, type MembershipGroupRaw, type MembershipLine, type MembershipReport, type SavingsDocAggregateRaw, type SavingsHeaderRaw, type SavingsMonthLine, type SavingsMovementReport,

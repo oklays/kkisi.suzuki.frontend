@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { PageBreadcrumbs } from '../PageBreadcrumbs';
+import { exportFeedback } from './presentation';
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,9 +14,11 @@ import {
   Clock,
   Coins,
   Database,
+  Download,
   FileSpreadsheet,
   FileText,
   Filter,
+  LoaderCircle,
   MoreVertical,
   Receipt,
   Search,
@@ -30,6 +33,7 @@ export type ReportCardItem = {
   srSuffix?: string;
   description: string;
   href: string;
+  exportHref?: string;
   supportsYearParam: boolean;
   tone: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'teal';
   format: 'csv' | 'web';
@@ -110,6 +114,56 @@ export function KosipaReportCenterClient({ data }: { data: KosipaReportCenterDat
   const [appliedFormat, setAppliedFormat] = useState<string>('all');
   const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
   const [showAllRecent, setShowAllRecent] = useState<boolean>(false);
+  const [busyDownload, setBusyDownload] = useState<string | null>(null);
+  const [downloadMsg, setDownloadMsg] = useState<string>('');
+  const [downloadErr, setDownloadErr] = useState<boolean>(false);
+
+  async function handleCardExport(card: ReportCardItem, fmt: 'pdf' | 'xlsx' | 'csv') {
+    if (!card.exportHref || busyDownload) return;
+    const key = `${card.id}:${fmt}`;
+    setBusyDownload(key);
+    setDownloadMsg('');
+    setDownloadErr(false);
+    const params = new URLSearchParams();
+    if (card.supportsYearParam) params.set('tahun', String(selectedYear));
+    params.set('format', fmt);
+    const url = `${card.exportHref}?${params.toString()}`;
+    const expectedMime =
+      fmt === 'pdf'
+        ? 'application/pdf'
+        : fmt === 'xlsx'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'text/csv';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45000);
+    try {
+      const response = await fetch(url, { cache: 'no-store', signal: controller.signal, redirect: 'error' });
+      if (!response.ok) {
+        const retry = response.status === 429 ? Number(response.headers.get('retry-after')) : 0;
+        setDownloadErr(true);
+        setDownloadMsg(exportFeedback(response.status) + (Number.isFinite(retry) && retry > 0 ? ` Coba lagi dalam ${retry} detik.` : ''));
+        return;
+      }
+      if (!response.headers.get('content-type')?.includes(expectedMime)) throw new Error('Unexpected download');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      const filename = response.headers.get('content-disposition')?.match(/filename="?([A-Za-z0-9_.-]+\.(?:csv|xlsx|pdf))/)?.[1];
+      link.download = filename ?? `${card.id}.${fmt}`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setDownloadMsg(`${card.title} (${fmt.toUpperCase()}) berhasil diunduh.`);
+    } catch {
+      setDownloadErr(true);
+      setDownloadMsg(exportFeedback(0));
+    } finally {
+      clearTimeout(timer);
+      setBusyDownload(null);
+    }
+  }
 
   const points: MonthlyReportPoint[] = data.monthlyByYear[selectedYear] ?? [];
 
@@ -418,12 +472,45 @@ export function KosipaReportCenterClient({ data }: { data: KosipaReportCenterDat
                         >
                           Lihat Laporan <ArrowRight size={13} aria-hidden="true" />
                         </Link>
+                        {data.canExport && card.exportHref && (
+                          <div className="kosipa-rc-card-exports" role="group" aria-label={`Unduh ${card.title}`}>
+                            {(['pdf', 'xlsx', 'csv'] as const).map((fmt) => {
+                              const isBusy = busyDownload === `${card.id}:${fmt}`;
+                              return (
+                                <button
+                                  key={fmt}
+                                  type="button"
+                                  className="kosipa-rc-export-chip"
+                                  data-primary={fmt === 'pdf' ? 'true' : undefined}
+                                  disabled={busyDownload !== null}
+                                  onClick={() => void handleCardExport(card, fmt)}
+                                >
+                                  {isBusy ? (
+                                    <LoaderCircle className="kosipa-spin" size={12} aria-hidden="true" />
+                                  ) : fmt === 'pdf' ? (
+                                    <FileText size={12} aria-hidden="true" />
+                                  ) : fmt === 'xlsx' ? (
+                                    <FileSpreadsheet size={12} aria-hidden="true" />
+                                  ) : (
+                                    <Download size={12} aria-hidden="true" />
+                                  )}
+                                  {fmt === 'pdf' ? 'Unduh PDF' : fmt === 'xlsx' ? 'Excel' : 'CSV'}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </article>
                 );
               })}
             </div>
+            {downloadMsg && (
+              <p className="kosipa-export-feedback" data-error={downloadErr} role={downloadErr ? 'alert' : 'status'} aria-live="polite" style={{ marginTop: 10 }}>
+                {downloadMsg}
+              </p>
+            )}
           </section>
 
           {/* BOTTOM ANALYTICS ROW */}
@@ -672,7 +759,7 @@ export function KosipaReportCenterClient({ data }: { data: KosipaReportCenterDat
                   >
                     <option value="all">Semua Format</option>
                     <option value="csv">Excel / CSV</option>
-                    <option value="web">PDF / Baca-Saja</option>
+                    <option value="web">PDF / Dokumen</option>
                   </select>
                 </span>
               </label>

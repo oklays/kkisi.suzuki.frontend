@@ -60,7 +60,7 @@ function roleWriter(overrides = {}) {
     kosipa: { async kosipaUser(id) { calls.push(['user', id]); return { id, active: true, activeGroups: 1 }; }, async allowedMenuUrls() { throw new Error('fenced menus must not control role entitlement or actor'); } },
     grants: { async activeCapabilities(id) { calls.push(['grant', id]); return ['kosipa.master.manage', 'kosipa.loan.disburse', 'kosipa.future.manage']; } },
     grantAdmins: new Set([23]),
-    exportPolicy: { enabled: true, allowedUserIds: new Set([23]) },
+    exportPolicy: { enabled: false, allowedUserIds: new Set([23]) },
     ...overrides,
   };
   const permissions = { async grantedAmong() { return new Set(['users_edit', 'items_view']); }, async kosipaRoleAccess() { return 'allowed'; } };
@@ -75,6 +75,8 @@ test('explicit role write opt-in resolves a real actor and implemented per-user 
   assert.deepEqual([...access.capabilities].filter(c => c.startsWith('kosipa.')).sort(), [...KOSIPA_CAPABILITIES, 'kosipa.master.manage'].sort());
   assert.equal(access.capabilities.has('iam.kosipa.grant'), true);
   assert.deepEqual(f.calls, [['link', 23], ['user', 9102], ['grant', 23]]);
+  const withExport = await resolveConsoleAccess(roleWriter({ exportPolicy: { enabled: true, allowedUserIds: new Set([23]) } }).sources, subject);
+  assert.equal(withExport.capabilities.has('kosipa.report.export'), true);
 });
 
 test('role write opt-out makes no identity or grant lookup even with configured grants', async () => {

@@ -112,7 +112,7 @@ test('verified intake writes one OPEN legacy header, immutable encrypted evidenc
   const text = await pdfText(pdf, t);
   // New submissions are pinned to template v2: Rupiah document format plus terbilang for the requested amount.
   const flat = text.replace(/\s+/g, ' ');
-  for (const expected of [f.name, 'Rp100.000,00', 'Rp150.000,00', 'Terbilang: Seratus lima puluh ribu rupiah.', 'Template: kkisi-pss-a4/v2', 'PENGAJUAN', 'BELUM DISETUJUI']) assert.ok(flat.includes(expected), expected);
+  for (const expected of [f.name, 'Rp100.000,00', 'Rp150.000,00', 'Terbilang: Seratus lima puluh ribu rupiah.', 'Template: kkisi-pss-a4/v3', 'PENGAJUAN', 'BELUM DISETUJUI']) assert.ok(flat.includes(expected), expected);
   assert.equal(text.includes('MUTATED CURRENT MEMBER'), false, 'render uses the submitted member display snapshot');
   assert.equal(/170000|170\.000/.test(text), false, 'render uses the submitted old deduction');
   await f.service.processOutbox();

@@ -43,7 +43,7 @@
 
 /* Nested levels: the guide line runs under the parent's icon; the child icon starts 20px right of the parent icon, so the line never touches an icon. */
 .console-nav-collapse { display:grid; grid-template-rows:0fr; visibility:hidden; transition:grid-template-rows .2s ease,visibility 0s linear .2s; }
-.console-nav-collapse[data-open="true"] { grid-template-rows:1fr; visibility:visible; transition:grid-template-rows .2s ease,visibility 0s; }
+.console-nav-collapse[data-open="true"] { grid-template-rows:1fr; visibility:inherit; transition:grid-template-rows .2s ease,visibility 0s; }
 .console-nav-sub { list-style:none; min-height:0; overflow:hidden; margin:0 0 0 calc(var(--sb-pad) + var(--sb-icon) / 2); padding:0 0 0 2px; border-left:1px solid var(--sb-guide); display:flex; flex-direction:column; gap:2px; }
 .console-nav-sub > li:first-child { margin-top:2px; }
 .console-nav-sub > li:last-child { margin-bottom:2px; }

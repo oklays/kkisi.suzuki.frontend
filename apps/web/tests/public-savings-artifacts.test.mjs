@@ -160,13 +160,14 @@ test('Wajib uses a distinct immutable template and never renders a Sukarela titl
  await assert.rejects(()=>store.renderSubmissionPdf({...input,templateVersion:'kkisi-pss-a4/v1'}),/PDF_TEMPLATE_UNSUPPORTED/);
 });
 
-test('new Wajib documents use v2 Rupiah and terbilang while recorded Wajib v1 keeps raw amounts',async(t)=>{
+test('new Wajib documents use v3 Rupiah and terbilang while recorded Wajib v2 and v1 stay intact',async(t)=>{
  const {parent,store}=await fixture(t);const sig=await store.stageSignature(await png());
  const input={reference:'PSS-WAJIB-VERSIONS',snapshot:{...snapshot(sig),savingsType:'SIMPANAN WAJIB',requestedAmount:'150000'},member:structuredClone(member),consentText:'Persetujuan simpanan wajib.'};
- const current=await store.renderSubmissionPdf(input);assert.equal(current.templateVersion,'kkisi-pss-wajib-a4/v2');assert.equal(current.rendererVersion,'pdf-lib-1.17.1/kkisi-pss-wajib-v2');
+ const current=await store.renderSubmissionPdf(input);assert.equal(current.templateVersion,'kkisi-pss-wajib-a4/v3');assert.equal(current.rendererVersion,'pdf-lib-1.17.1/kkisi-pss-wajib-v3');
+ const v2=await store.renderSubmissionPdf({...input,templateVersion:'kkisi-pss-wajib-a4/v2'});assert.equal(v2.rendererVersion,'pdf-lib-1.17.1/kkisi-pss-wajib-v2');
  const historical=await store.renderSubmissionPdf({...input,templateVersion:'kkisi-pss-wajib-a4/v1'});assert.equal(historical.rendererVersion,'pdf-lib-1.17.1/kkisi-pss-v1');
- for(const [label,result]of[['current',current],['historical',historical]]){
+ for(const [label,result]of[['current',current],['v2',v2],['historical',historical]]){
   const file=join(parent,`${label}.pdf`);await writeFile(file,await store.readPrivateArtifact(result.storageRef));const text=execFileSync('pdftotext',[file,'-'],{encoding:'utf8'});
-  if(label==='current'){assert.match(text,/Rp150\.000/);assert.match(text,/Terbilang: Seratus lima puluh ribu rupiah/);}else{assert.match(text,/Potongan yang diminta \(Rp\): 150000/);assert.doesNotMatch(text,/Terbilang:/);}
+  if(label==='current' || label==='v2'){assert.match(text,/Rp150\.000/);assert.match(text,/Terbilang: Seratus lima puluh ribu rupiah/);}else{assert.match(text,/Potongan yang diminta \(Rp\): 150000/);assert.doesNotMatch(text,/Terbilang:/);}
  }
 });

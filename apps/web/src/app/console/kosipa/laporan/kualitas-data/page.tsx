@@ -25,7 +25,7 @@ function Block<T>({ id, kind, title, source, part, children }: { id: string; kin
     <section className="console-card" aria-labelledby={`sec-${id}`}>
       <h2 id={`sec-${id}`}>{title}</h2>
       <p>{part.state === 'ok' ? <Kind kind={kind} /> : <Provenance kind="unavailable" />}{part.state === 'unavailable' && <span className="console-badge" data-state="partial">Scan tidak tersedia · {part.reason === 'SOURCE_TRUNCATED' ? 'pemindaian terpotong' : 'pemindaian gagal'}: bukan nol temuan</span>}</p>
-      <details className="kosipa-source"><summary>Rincian pemeriksaan</summary><p className="console-notice">Sumber: {source}. Dibaca saja; tidak ada perbaikan otomatis.</p></details>
+      <details className="kosipa-source"><summary>Rincian pemeriksaan</summary><p className="console-notice">Sumber: {source}. Tidak ada perbaikan otomatis atas nilai sumber.</p></details>
       {part.state === 'ok' ? children(part.data) : <p className="console-unavailable" role="status">{REASON_TEXT(part.reason)}</p>}
     </section>
   );
@@ -47,7 +47,7 @@ export default async function DataQualityPage() {
   return (
     <div className="console-page">
       <Link prefetch={false} className="console-back" href="/console/kosipa/laporan"><ArrowLeft size={16} aria-hidden="true" />Kembali ke laporan</Link>
-      <KosipaPageHeader title={<> Kualitas data keuangan </>}><p>Diagnostik baca-saja atas data lama KOSIPA. Temuan menunjukkan <strong>kondisi data yang tercatat</strong>; tidak ada yang diubah, dan sebuah selisih belum tentu kesalahan akuntansi.</p></KosipaPageHeader>
+      <KosipaPageHeader title={<> Kualitas data keuangan </>}><p>Diagnostik integritas atas data KOSIPA tercatat. Temuan menunjukkan <strong>kondisi data yang tercatat</strong>; tidak ada yang diubah, dan sebuah selisih belum tentu kesalahan akuntansi.</p></KosipaPageHeader>
       {failed && <FeedbackState kind="error" title={<> Diagnostik tidak dapat dibaca </>} reset="/console/kosipa/laporan/kualitas-data"><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {q && (<>
         <ContextNotice title="Cara membaca pemeriksaan" expandable><p>Temuan menunjukkan kondisi data tercatat, bukan otomatis kesalahan akuntansi. Contoh dibatasi maksimal 20 baris: <strong>sampel, bukan seluruh data</strong>. Jumlah temuan hanya tersedia bila pemeriksaan berhasil; pemindaian gagal atau terpotong tidak berarti nol masalah.</p></ContextNotice>

@@ -1,4 +1,5 @@
 import { KosipaPageHeader, FeedbackState, FinancialTable } from '@/components/console/kosipa/KosipaUI';
+import { ExportControl } from '@/components/console/kosipa/ExportControl';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -31,7 +32,8 @@ export default async function PayrollMemberPage({ params }: { params: Promise<{ 
   return (
     <div className="console-page">
       <Link prefetch={false} className="console-back" href={back}><ArrowLeft size={16} aria-hidden="true" />Kembali ke batch {docNo}</Link>
-      <KosipaPageHeader title={<> Potongan anggota </>} tail={[{ label: docNo, href: `/console/kosipa/payroll/${encodeURIComponent(docNo)}`, icon: 'batch' }, { label: 'Potongan anggota', icon: 'member' }]}><p>{member ? `NIK ${member.nik} · ${STATUS_LABEL[member.header.status]}` : 'Data payroll KOSIPA, baca saja.'}</p></KosipaPageHeader>
+      <KosipaPageHeader title={<> Potongan anggota </>} tail={[{ label: docNo, href: `/console/kosipa/payroll/${encodeURIComponent(docNo)}`, icon: 'batch' }, { label: 'Potongan anggota', icon: 'member' }]}><p>{member ? `NIK ${member.nik} · ${STATUS_LABEL[member.header.status]}` : 'Data potongan payroll KOSIPA tercatat.'}</p></KosipaPageHeader>
+      {member && auth.capabilities.has('kosipa.report.export') && <ExportControl href={`/api/kosipa/payroll/${encodeURIComponent(docNo)}/anggota/${encodeURIComponent(nik)}/pdf`} singlePdfLabel="Unduh Slip Potongan (PDF)" />}
       {failed && <FeedbackState kind="error" title={<> Data tidak dapat dibaca </>}><p>Data tidak tersedia saat ini. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {member && (<>
         {member.duplicateRows && <p className="console-notice" role="status">Anggota ini memiliki lebih dari satu baris di batch yang sama. Setiap baris ditampilkan terpisah, tidak digabung.</p>}
@@ -51,7 +53,7 @@ export default async function PayrollMemberPage({ params }: { params: Promise<{ 
 
         {member.installments.state !== 'restricted' && (
           <section className="console-card" aria-labelledby="sec-angsuran">
-            <h2 id="sec-angsuran">Referensi angsuran pinjaman (baca saja)</h2>
+            <h2 id="sec-angsuran">Referensi angsuran pinjaman tercatat</h2>
             {member.installments.state === 'unavailable' ? <p className="console-unavailable" role="status">{REASON_TEXT[member.installments.reason] ?? 'Tidak tersedia.'}</p> : (<>
               <p className="console-notice">Angsuran yang jatuh tempo {member.installments.data.window.from} s/d sebelum {member.installments.data.window.toExclusive}. Ini referensi, bukan perhitungan ulang potongan.</p>
               {member.installments.data.items.length === 0 ? <p>Tidak ada angsuran jatuh tempo pada bulan ini.</p> : (

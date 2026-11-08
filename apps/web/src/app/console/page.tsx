@@ -224,7 +224,7 @@ async function loadDashboardLiveMetrics(
         (async () => {
           try {
             const loans = await kServices.loans.listLoans(
-              { docStatus: null, disbursement: null, repayment: null, search: null, afterId: null, period: null },
+              { docStatus: null, disbursement: null, repayment: null, search: null, afterId: null, period: null, product: null, segment: null },
               100,
             );
             loanTotalDocs = loans.length;
@@ -578,8 +578,9 @@ export default async function ConsoleDashboard({
       : null;
   const live = await loadDashboardLiveMetrics(ctx.companyId, capabilities, auth.kosipa, now);
   // Started here, awaited inside <Suspense>: the dashboard renders at once and the finance cards stream in when ready.
+  const financePeriod = parseFinancePeriod(await searchParams, jakartaDate);
   const finance = financeServices
-    ? readKosipaFinanceKpis(financeServices.finance, capabilities, parseFinancePeriod(await searchParams, jakartaDate)).catch(() => null)
+    ? readKosipaFinanceKpis(financeServices.finance, capabilities, financePeriod).catch(() => null)
     : null;
 
   const visible = visibleNavigation(deployedNavigation(publicSavingsConsoleEnabled(), kosipaWriteGrantsEnabled()), capabilities);
@@ -828,7 +829,7 @@ export default async function ConsoleDashboard({
 
       {/* 2b. KOSIPA FINANCE CARDS (legacy dashboard parity) */}
       {finance && (
-        <Suspense fallback={<KosipaFinanceCardsLoading />}>
+        <Suspense fallback={<KosipaFinanceCardsLoading period={financePeriod} currentYear={Number(jakartaDate.slice(0, 4))} />}>
           <KosipaFinanceSection kpis={finance} currentYear={Number(jakartaDate.slice(0, 4))} />
         </Suspense>
       )}

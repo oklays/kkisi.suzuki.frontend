@@ -109,18 +109,44 @@ test('v2 whole-rupiah, fractional and first-registration amounts read correctly'
 
 test('an unknown or malformed template version fails closed, and an unrepresentable amount is not printed', async (t) => {
   const { live, input } = await twoStores(t);
-  for (const bad of ['kkisi-pss-a4/v3', 'unsupported-v99', '', 'toString', '__proto__', 'constructor']) {
+  for (const bad of ['kkisi-pss-a4/v4', 'unsupported-v99', '', 'toString', '__proto__', 'constructor']) {
     await assert.rejects(() => live.renderSubmissionPdf({ ...input, templateVersion: bad }), /PDF_TEMPLATE_UNSUPPORTED/, bad);
   }
-  await assert.rejects(() => live.renderSubmissionPdf({ ...input, templateVersion: 'kkisi-pss-a4/v2', snapshot: { ...input.snapshot, requestedAmount: '1000.505' } }), /PDF_INPUT_INVALID/);
+  await assert.rejects(() => live.renderSubmissionPdf({ ...input, templateVersion: 'kkisi-pss-a4/v3', snapshot: { ...input.snapshot, requestedAmount: '1000.505' } }), /PDF_INPUT_INVALID/);
 });
 
-test('version registry: new submissions pin v2, v1 stays registered, and each version names its own renderer', () => {
-  assert.equal(CURRENT_PDF_TEMPLATE, 'kkisi-pss-a4/v2');
+test('v3 renders the redesigned KKISI Financial Document Standard card layout with side-by-side deduction comparison, terbilang banner, signature card, and SHA-256 seal', async (t) => {
+  const { parent, live, input } = await twoStores(t);
+  const out = await live.renderSubmissionPdf({ ...input, templateVersion: 'kkisi-pss-a4/v3' });
+  assert.equal(out.templateVersion, 'kkisi-pss-a4/v3');
+  assert.equal(out.rendererVersion, 'pdf-lib-1.17.1/kkisi-pss-v3');
+  const v2 = await live.renderSubmissionPdf({ ...input, templateVersion: 'kkisi-pss-a4/v2' });
+  assert.notEqual(out.contentDigest, v2.contentDigest, 'v3 has a distinct visual layout from v2');
+  const text = (await pdfText(parent, 'v3.pdf', await live.readPrivateArtifact(out.storageRef))).replace(/\s+/g, ' ');
+  assert.match(text, /KOPERASI KARYAWAN PT SUZUKI INDOMOBIL/);
+  assert.match(text, /Potongan sebelumnya: Rp100\.000,25/);
+  assert.match(text, /Potongan yang diminta: Rp9\.007\.199\.254\.740\.993,00/);
+  assert.match(text, /Terbilang: Sembilan kuadriliun tujuh triliun seratus sembilan puluh sembilan miliar dua ratus lima puluh empat juta tujuh ratus empat puluh ribu sembilan ratus sembilan puluh tiga rupiah\./);
+  assert.match(text, /Template: kkisi-pss-a4\/v3 \| Renderer: pdf-lib-1\.17\.1\/kkisi-pss-v3/);
+  assert.match(text, /SHA-256 snapshot: [0-9a-f]{64}/);
+  assert.match(text, /SHA-256 tanda tangan: [0-9a-f]{64}/);
+  for (const kept of ['PENGAJUAN', 'BELUM DISETUJUI', 'PSS-SYNTHETIC-0001', '11/2026', 'ANGGOTA SINTETIS', '****1234', 'Saya menyetujui']) assert.ok(text.includes(kept), kept);
+});
+
+test('version registry: new submissions pin v3, v1 and v2 stay registered, and each version names its own renderer', () => {
+  assert.equal(CURRENT_PDF_TEMPLATE, 'kkisi-pss-a4/v3');
   assert.equal(LEGACY_PDF_TEMPLATE, 'kkisi-pss-a4/v1');
-  assert.deepEqual(Object.keys(PDF_TEMPLATES), ['kkisi-pss-a4/v1', 'kkisi-pss-a4/v2', 'kkisi-pss-wajib-a4/v1', 'kkisi-pss-wajib-a4/v2']);
+  assert.deepEqual(Object.keys(PDF_TEMPLATES), [
+    'kkisi-pss-a4/v1',
+    'kkisi-pss-a4/v2',
+    'kkisi-pss-a4/v3',
+    'kkisi-pss-wajib-a4/v1',
+    'kkisi-pss-wajib-a4/v2',
+    'kkisi-pss-wajib-a4/v3',
+  ]);
   assert.equal(PDF_TEMPLATES['kkisi-pss-a4/v1'].renderer, 'pdf-lib-1.17.1/kkisi-pss-v1');
   assert.notEqual(PDF_TEMPLATES['kkisi-pss-a4/v1'].renderer, PDF_TEMPLATES['kkisi-pss-a4/v2'].renderer);
+  assert.notEqual(PDF_TEMPLATES['kkisi-pss-a4/v2'].renderer, PDF_TEMPLATES['kkisi-pss-a4/v3'].renderer);
 });
 
 test('version binding: retries render with the persisted version, new submissions pin the current one', async () => {

@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
+import { inflateRawSync } from 'node:zlib';
 import { KosipaError } from '@koperasi/domain/kosipa';
-import { exportLoanReportCsv, exportPayrollReportCsv, exportDataQualityCsv, WindowThrottle, EXPORT_MAX_BYTES } from '../src/kosipa/report-export.ts';
+import {
+  exportLoanReport, exportLoanReportCsv, exportPayrollReport, exportPayrollReportCsv,
+  exportDataQuality, exportDataQualityCsv, exportMembershipReport, exportSavingsMovement,
+  parseExportFormat, WindowThrottle, EXPORT_MAX_BYTES,
+} from '../src/kosipa/report-export.ts';
 import { makeReportWorld, bucket, header, aggregate } from './helpers/report-fakes.mjs';
 
 const code = async (p) => { try { await p; return null; } catch (e) { assert.ok(e instanceof KosipaError, String(e?.stack ?? e)); return e.code; } };
@@ -132,4 +141,115 @@ test('the limiter is in-memory per instance: two instances each grant the full b
 test('a refused or failed export attempt still consumes the user\'s own budget only (users do not share a window)', () => {
   let t = 0; const th = new WindowThrottle(1, 60_000, () => t);
   assert.equal(th.consume(1).allowed, true); assert.equal(th.consume(1).allowed, false); assert.equal(th.consume(2).allowed, true, 'another user is unaffected');
+});
+
+function pdfTextFromBytes(bytes) {
+  const dir = mkdtempSync(join(tmpdir(), 'kosipa-rep-pdf-'));
+  try {
+    const file = join(dir, 'report.pdf');
+    writeFileSync(file, bytes);
+    return execFileSync('pdftotext', ['-layout', file, '-'], { encoding: 'utf8' });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function firstSheetXml(bytes) {
+  const buf = Buffer.from(bytes);
+  let offset = 0;
+  while (offset + 4 <= buf.length && buf.readUInt32LE(offset) === 0x04034b50) {
+    const compSize = buf.readUInt32LE(offset + 18);
+    const nameLen = buf.readUInt16LE(offset + 26);
+    const extraLen = buf.readUInt16LE(offset + 28);
+    const name = buf.subarray(offset + 30, offset + 30 + nameLen).toString('utf8');
+    const dataStart = offset + 30 + nameLen + extraLen;
+    if (name === 'xl/worksheets/sheet1.xml') {
+      return inflateRawSync(buf.subarray(dataStart, dataStart + compSize)).toString('utf8');
+    }
+    offset = dataStart + compSize;
+  }
+  throw new Error('sheet1.xml not found');
+}
+
+test('parseExportFormat defaults to csv, accepts xlsx and pdf, and rejects invalid formats with FORMAT_INVALID before any rate-limit, audit, or DB read', async () => {
+  assert.equal(parseExportFormat({}), 'csv');
+  assert.equal(parseExportFormat({ format: 'csv' }), 'csv');
+  assert.equal(parseExportFormat({ format: 'xlsx' }), 'xlsx');
+  assert.equal(parseExportFormat({ format: 'pdf' }), 'pdf');
+  for (const bad of ['xls', 'doc', 'json', '../pdf']) {
+    assert.throws(() => parseExportFormat({ format: bad }), (e) => e instanceof KosipaError && e.code === 'FORMAT_INVALID');
+  }
+  const w = makeReportWorld({ loanBuckets: [bucket('2026-01', 'APPROVED', 'LUNAS', 1, '100.00')] });
+  const { deps, events } = mk(w, { throttle: new WindowThrottle(1, 60_000) });
+  assert.equal(await code(exportLoanReport(deps, LOANX, { tahun: '2026', format: 'xls' })), 'FORMAT_INVALID');
+  assert.equal(w.calls.length, 0);
+  assert.equal(events.length, 0);
+  assert.deepEqual(deps.throttle.consume(7), { allowed: true });
+});
+
+test('multi-format report exports produce valid XLSX (numeric cells + Info sheet) and Executive A4 PDF across all 5 reports', async () => {
+  const w = makeReportWorld({
+    loanBuckets: [bucket('2026-03', 'APPROVED', 'BELUM LUNAS', 4, '12500000.50')],
+    headers: [header('PB-01', { headerTotal: '250000.00' })],
+    aggregates: [aggregate('PB-01', { rowsTotal: '250000.00', componentTotals: { SIMPANAN_POKOK: '100000.00', PINJAMAN_REGULER: '150000.00' } })],
+  });
+  const ops = {
+    membershipCounts: async () => [{ status: 'AKTIVE', employment: 'TETAP', members: 10, withExitDate: 1, exitDateBeforeToday: 1, withoutNik: 0 }],
+    membershipGroups: async () => [{ group: 'ANGGOTA', members: 10 }],
+    savingsDocAggregates: async () => [{ docNo: 'S1', type: 'WAJIB', rows: 2, credit: '500000.00', debit: '100000.00', interest: '25000.00' }],
+    savingsHeaders: async () => [{ docNo: 'S1', docDate: '2026-03-10', status: 'APPROVED' }],
+  };
+  const { deps } = mk(w, { ops });
+  const ALL = actor('kosipa.loan.view', 'kosipa.payroll.view', 'kosipa.member.view', 'kosipa.savings.view', EXP);
+
+  // 1. Loans XLSX & PDF
+  const loanXlsx = await exportLoanReport(deps, ALL, { tahun: '2026', format: 'xlsx' });
+  assert.equal(loanXlsx.filename, 'laporan-pinjaman-2026.xlsx');
+  assert.equal(loanXlsx.contentType, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  assert.ok(firstSheetXml(loanXlsx.body).includes('<v>12500000.50</v>'));
+
+  const loanPdf = await exportLoanReport(deps, ALL, { tahun: '2026', format: 'pdf' });
+  assert.equal(loanPdf.filename, 'laporan-pinjaman-2026.pdf');
+  assert.equal(loanPdf.contentType, 'application/pdf');
+  const loanText = pdfTextFromBytes(loanPdf.body);
+  for (const s of ['LAPORAN PINJAMAN TERCATAT', '2026-03', 'APPROVED', 'Rp12.500.000,50', 'OFFICIAL_BALANCE_UNVERIFIED']) {
+    assert.ok(loanText.includes(s), `loan PDF missing ${s}`);
+  }
+
+  // 2. Payroll XLSX & PDF
+  const payXlsx = await exportPayrollReport(deps, ALL, { tahun: '2026', format: 'xlsx' });
+  assert.equal(payXlsx.filename, 'laporan-payroll-2026.xlsx');
+  assert.ok(firstSheetXml(payXlsx.body).includes('<v>250000.00</v>'));
+
+  const payPdf = await exportPayrollReport(deps, ALL, { tahun: '2026', format: 'pdf' });
+  assert.equal(payPdf.filename, 'laporan-payroll-2026.pdf');
+  const payText = pdfTextFromBytes(payPdf.body);
+  for (const s of ['LAPORAN BATCH POTONGAN PAYROLL', 'PB-01', 'Rp250.000,00', 'REVIEW_ONLY']) {
+    assert.ok(payText.includes(s), `payroll PDF missing ${s}`);
+  }
+
+  // 3. Data Quality XLSX & PDF
+  const dqXlsx = await exportDataQuality(deps, ALL, { format: 'xlsx' });
+  assert.equal(dqXlsx.filename, 'kualitas-data-keuangan.xlsx');
+  const dqPdf = await exportDataQuality(deps, ALL, { format: 'pdf' });
+  assert.equal(dqPdf.filename, 'kualitas-data-keuangan.pdf');
+  assert.ok(pdfTextFromBytes(dqPdf.body).includes('LAPORAN DIAGNOSTIK KUALITAS DATA'));
+
+  // 4. Membership XLSX & PDF
+  const memXlsx = await exportMembershipReport(deps, ALL, { format: 'xlsx' });
+  assert.equal(memXlsx.filename, 'ringkasan-keanggotaan.xlsx');
+  const memPdf = await exportMembershipReport(deps, ALL, { format: 'pdf' });
+  assert.equal(memPdf.filename, 'ringkasan-keanggotaan.pdf');
+  assert.ok(pdfTextFromBytes(memPdf.body).includes('LAPORAN KOMPOSISI KEANGGOTAAN'));
+
+  // 5. Savings Movements XLSX & PDF
+  const savXlsx = await exportSavingsMovement(deps, ALL, { tahun: '2026', format: 'xlsx' });
+  assert.equal(savXlsx.filename, 'ringkasan-mutasi-simpanan-2026.xlsx');
+  assert.ok(firstSheetXml(savXlsx.body).includes('<v>500000.00</v>'));
+  const savPdf = await exportSavingsMovement(deps, ALL, { tahun: '2026', format: 'pdf' });
+  assert.equal(savPdf.filename, 'ringkasan-mutasi-simpanan-2026.pdf');
+  const savText = pdfTextFromBytes(savPdf.body);
+  for (const s of ['LAPORAN MUTASI SIMPANAN TERCATAT', '2026-03', 'Rp500.000,00', 'OFFICIAL_BALANCE_UNVERIFIED']) {
+    assert.ok(savText.includes(s), `savings PDF missing ${s}`);
+  }
 });

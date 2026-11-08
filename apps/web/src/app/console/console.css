@@ -343,29 +343,63 @@
 .console-synthetic { border-left:4px solid #b54708; background:#fff4e5; color:#7a2e0e; }
 .console-scroll { overflow-x:auto; max-width:100%; }
 
-/* KOSIPA finance cards on the dashboard (legacy dashboard parity) */
-.console-finance { display:flex; flex-direction:column; gap:10px; min-width:0; }
-.console-finance-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.console-finance-head h2 { margin:0; font-size:15px; font-weight:700; color:var(--c-ink); }
-.console-finance-head p { margin:2px 0 0; font-size:12px; color:var(--c-muted); }
-.console-finance-filter { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.console-finance-filter select, .console-finance-filter button { min-height:36px; padding:6px 12px; border-radius:999px; font:inherit; font-size:13px; }
-.console-finance-filter select { border:1px solid #b9d0f5; background:white; color:var(--c-ink); }
-.console-finance-filter button { border:1px solid var(--c-blue); background:var(--c-blue); color:white; font-weight:600; cursor:pointer; }
-.console-finance-filter select:focus-visible, .console-finance-filter button:focus-visible { outline:2px solid var(--c-blue); outline-offset:2px; }
-.console-finance-card .console-kpi-value { font-size:clamp(15px,1.05vw,17px); }
-.console-finance-icon-red { background:#fee2e2; color:#b91c1c; }
-.console-finance-icon-blue { background:#dbeafe; color:#1d4ed8; }
-.console-finance-icon-purple { background:#ede9fe; color:#6d28d9; }
-.console-finance-icon-teal { background:#ccfbf1; color:#0f766e; }
-@media (max-width: 767px) {
-  .console-finance-head { align-items:flex-start; }
-  .console-finance-filter { width:100%; }
-  .console-finance-filter label { flex:1 1 120px; }
-  .console-finance-filter select { width:100%; }
-}
-.console-finance-icon-loading { background:#eef2f7; }
-.console-finance-skeleton { display:block; width:70%; height:18px; margin-top:4px; border-radius:6px; background:linear-gradient(90deg,#eef2f7 0%,#f8fafc 50%,#eef2f7 100%); background-size:200% 100%; animation:console-finance-shimmer 1.4s ease-in-out infinite; }
+/* KOSIPA finance panel on the dashboard (legacy dashboard parity): heading + its own period filter + four cards, one bordered group */
+.console-finance { min-width:0; padding:14px; border:1px solid var(--c-border); border-radius:16px; background:white; box-shadow:0 2px 10px -4px rgba(15,23,42,.05); display:flex; flex-direction:column; gap:12px; }
+.console-finance-head { display:flex; align-items:center; justify-content:space-between; gap:10px 16px; flex-wrap:wrap; padding-bottom:12px; border-bottom:1px solid #eef2f7; }
+.console-finance-heading { display:flex; align-items:center; gap:10px; min-width:0; }
+.console-finance-badge { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; background:#e8f0ff; color:var(--c-blue); }
+.console-finance-heading h2 { margin:0; font-size:14.5px; font-weight:700; color:var(--c-ink); line-height:1.25; }
+.console-finance-heading p { margin:2px 0 0; font-size:12px; color:var(--c-muted); line-height:1.35; }
+.console-finance-heading p strong { color:var(--c-ink); font-weight:600; }
+
+/* Filter toolbar: one compact pill that reads "Periode [Bulanan|Tahunan] [Bulan] [Tahun]" */
+.console-finance-filter { display:flex; align-items:center; gap:4px; padding:3px; border:1px solid #dbe4f0; border-radius:999px; background:#f6f9fd; }
+.console-finance-filter-label { display:inline-flex; align-items:center; gap:5px; padding:0 6px 0 8px; font-size:12px; font-weight:600; color:#475569; white-space:nowrap; }
+.console-finance-seg { display:inline-flex; padding:2px; border-radius:999px; background:#e8eef7; }
+.console-finance-seg label { position:relative; display:inline-flex; align-items:center; min-height:26px; padding:0 11px; border-radius:999px; font-size:12px; font-weight:600; color:#475569; cursor:pointer; white-space:nowrap; transition:background .15s, color .15s, box-shadow .15s; }
+.console-finance-seg label[data-active] { background:white; color:var(--c-blue); box-shadow:0 1px 3px rgba(15,23,42,.12); }
+.console-finance-seg input { position:absolute; inset:0; margin:0; opacity:0; cursor:pointer; }
+.console-finance-seg label:has(input:focus-visible) { outline:2px solid var(--c-blue); outline-offset:1px; }
+.console-finance-filter select { appearance:none; min-height:30px; padding:0 26px 0 11px; border:1px solid transparent; border-radius:999px; font:inherit; font-size:12.5px; font-weight:600; color:var(--c-ink); cursor:pointer;
+  background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center; box-shadow:0 0 0 1px #dbe4f0 inset; }
+.console-finance-filter select:hover { box-shadow:0 0 0 1px #b9cbe6 inset; }
+.console-finance-filter select:focus-visible { outline:2px solid var(--c-blue); outline-offset:1px; }
+.console-finance-status { display:inline-grid; place-items:center; width:20px; color:var(--c-blue); }
+.console-finance-status:empty { display:none; }
+.console-finance-spin { animation:console-finance-spin .8s linear infinite; }
+@keyframes console-finance-spin { to { transform:rotate(360deg); } }
+.console-finance-apply { min-height:30px; padding:0 12px; border:0; border-radius:999px; background:var(--c-blue); color:white; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
+
+/* Cards: tinted tiles inside the white panel */
+.console-finance-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; transition:opacity .2s; }
+.console-finance-grid[data-pending] { opacity:.5; pointer-events:none; }
+.console-finance-card { --tone:#2563eb; --tone-bg:#dbeafe; position:relative; min-width:0; padding:12px 14px 12px 16px; border:1px solid #edf1f7; border-radius:12px; background:#fafcff; display:flex; flex-direction:column; gap:6px; overflow:hidden; }
+.console-finance-card::before { content:""; position:absolute; inset:10px auto 10px 0; width:3px; border-radius:0 3px 3px 0; background:var(--tone); }
+.console-finance-card[data-tone="red"] { --tone:#dc2626; --tone-bg:#fee2e2; }
+.console-finance-card[data-tone="blue"] { --tone:#2563eb; --tone-bg:#dbeafe; }
+.console-finance-card[data-tone="purple"] { --tone:#7c3aed; --tone-bg:#ede9fe; }
+.console-finance-card[data-tone="teal"] { --tone:#0d9488; --tone-bg:#ccfbf1; }
+.console-finance-card-top { display:flex; align-items:center; gap:8px; min-width:0; }
+.console-finance-card-icon { width:28px; height:28px; border-radius:8px; display:grid; place-items:center; flex-shrink:0; background:var(--tone-bg); color:var(--tone); }
+.console-finance-card-label { font-size:12px; font-weight:600; color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.console-finance-card-value { font-size:clamp(15px,1.15vw,18px); font-weight:800; color:#0f172a; letter-spacing:-.02em; line-height:1.2; font-variant-numeric:tabular-nums; min-width:0; overflow-wrap:anywhere; }
+.console-finance-card-value .money { white-space:normal; }
+.console-finance-card-note { font-size:11px; color:#64748b; line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.console-finance-card-note[data-empty] { color:#b45309; white-space:normal; }
+.console-finance-skeleton { display:block; width:72%; height:20px; border-radius:6px; background:linear-gradient(90deg,#eef2f7 0%,#f8fafc 50%,#eef2f7 100%); background-size:200% 100%; animation:console-finance-shimmer 1.4s ease-in-out infinite; }
 @keyframes console-finance-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
-@media (prefers-reduced-motion: reduce) { .console-finance-skeleton { animation:none; } }
-.console-finance-empty { color:#b45309; white-space:normal; overflow:visible; }
+@media (prefers-reduced-motion: reduce) { .console-finance-skeleton, .console-finance-spin { animation:none; } .console-finance-grid, .console-finance-seg label { transition:none; } }
+@media (max-width: 1180px) {
+  .console-finance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 767px) {
+  .console-finance { padding:12px; }
+  .console-finance-filter { width:100%; flex-wrap:wrap; border-radius:14px; }
+  .console-finance-filter-label { display:none; }
+  .console-finance-seg { flex:1 1 100%; }
+  .console-finance-seg label { flex:1; justify-content:center; min-height:30px; }
+  .console-finance-filter select { flex:1 1 0; min-width:0; }
+}
+@media (max-width: 420px) {
+  .console-finance-grid { grid-template-columns:minmax(0,1fr); }
+}
