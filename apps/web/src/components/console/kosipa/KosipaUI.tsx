@@ -8,7 +8,7 @@ import { Children, cloneElement, isValidElement, type ReactNode, type ReactEleme
 export function KosipaPageHeader({ title, children, review = false, editable = false, tail }: { title: ReactNode; children: ReactNode; review?: boolean; editable?: boolean; /** Crumbs after the registered page, e.g. the record this page shows. */ tail?: readonly TailCrumb[] }) {
   return <header className="console-page-head kosipa-page-head">
     <PageBreadcrumbs tail={tail} />
-    <div className="kosipa-title-row"><h1 tabIndex={-1}>{title}</h1>{!editable && <Provenance kind={review ? 'review' : 'readonly'} />}</div>
+    <div className="kosipa-title-row"><h1 tabIndex={-1}>{title}</h1>{!editable && <Provenance kind={review ? 'review' : 'recorded'} />}</div>
     <div className="kosipa-page-purpose">{children}</div>
   </header>;
 }

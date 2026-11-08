@@ -15,7 +15,7 @@ const MAX_PIXELS = MAX_BYTES / 4;
 const MAX_ARTIFACT_BYTES = 8 * MAX_BYTES;
 const MAGIC = Buffer.from('PSSART01');
 const PNG_MAGIC = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-export const WAJIB_PDF_TEMPLATE = Object.freeze({ templateVersion: 'kkisi-pss-wajib-a4/v2' as const, rendererVersion: PDF_TEMPLATES['kkisi-pss-wajib-a4/v2'].renderer });
+export const WAJIB_PDF_TEMPLATE = Object.freeze({ templateVersion: 'kkisi-pss-wajib-a4/v3' as const, rendererVersion: PDF_TEMPLATES['kkisi-pss-wajib-a4/v3'].renderer });
 const REF = /^pss-(signature|pdf)-[0-9a-f]{32}$/u;
 const digest = (bytes: Uint8Array | string) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 function fail(code: string): never { throw new Error(code); }
@@ -194,43 +194,130 @@ export function createPublicSavingsArtifactStore(config: { directory: string; en
       };
       const section = (title: string) => { room(45); y -= 9; line(title, 10, true, blue); };
       const field = (label: string, value: string) => wrapped(`${label}: ${value}`);
-      page.drawRectangle({ x: 0, y: H - 9, width: W, height: 9, color: blue });
-      line('KKISI  /  KOSIPA', 11, true, blue);
-      line(wajib ? 'PENGAJUAN SIMPANAN WAJIB' : 'PENGAJUAN SIMPANAN SUKARELA', 18, true);
-      line('PENGAJUAN / BELUM DISETUJUI', 10, true, blue);
-      y -= 5; field('Referensi', evidence.reference);
-      field('Diajukan (UTC)', submittedAt.toISOString().replace('T', ' ').replace('.000Z', ' UTC'));
-      section('01  DATA ANGGOTA SAAT PENGAJUAN');
-      field('Nama', member.name); field('Identitas anggota', member.maskedIdentifier); field('Bagian', member.departmentName);
-      field('Jenis simpanan', snapshot.savingsType);
-      section('02  PERUBAHAN POTONGAN YANG DIAJUKAN');
-      if (template.amounts === 'raw') {
-        field('Potongan sebelumnya (Rp)', snapshot.originalDeduction ?? 'Belum terdaftar (pendaftaran pertama)');
-        field('Potongan yang diminta (Rp)', snapshot.requestedAmount);
-      } else {
-        field('Potongan sebelumnya', snapshot.originalDeduction === null ? 'Belum terdaftar (pendaftaran pertama)' : formatRupiahDocument(snapshot.originalDeduction));
-        field('Potongan yang diminta', formatRupiahDocument(snapshot.requestedAmount));
+      if (template.layout === 'v3') {
+        const red = rgb(0.886, 0.039, 0.09);
+        const softBlue = rgb(0.91, 0.941, 1);
+        const softBorder = rgb(0.863, 0.902, 0.98);
+        const neutralFill = rgb(0.969, 0.973, 0.98);
+        const neutralBorder = rgb(0.851, 0.867, 0.89);
+        const contentW = W - 2 * margin;
+
+        // Top KKISI Masthead with Suzuki Blue & Suzuki Red rule
+        page.drawRectangle({ x: 0, y: H - 8, width: W, height: 8, color: blue });
+        page.drawRectangle({ x: 0, y: H - 10, width: 140, height: 2, color: red });
+        page.drawRectangle({ x: margin, y: y - 34, width: 4, height: 34, color: blue });
+        page.drawRectangle({ x: margin + 6, y: y - 34, width: 2, height: 34, color: red });
+        page.drawText('KOPERASI KARYAWAN PT SUZUKI INDOMOBIL', { x: margin + 14, y: y - 12, size: 11, font: bold, color: blue });
+        page.drawText('KKISI / KOSIPA · UNIT USAHA SIMPAN PINJAM', { x: margin + 14, y: y - 25, size: 8.5, font: regular, color: gray });
+
+        // Status pill badge on top-right
+        page.drawRectangle({ x: W - margin - 156, y: y - 24, width: 156, height: 18, color: softBlue, borderColor: softBorder, borderWidth: 0.75 });
+        page.drawText('PENGAJUAN / BELUM DISETUJUI', { x: W - margin - 148, y: y - 18, size: 8, font: bold, color: blue });
+        y -= 46;
+
+        line(wajib ? 'PENGAJUAN SIMPANAN WAJIB' : 'PENGAJUAN SIMPANAN SUKARELA', 16, true, ink);
+        field('Referensi', evidence.reference);
+        field('Diajukan (UTC)', submittedAt.toISOString().replace('T', ' ').replace('.000Z', ' UTC'));
+        page.drawLine({ start: { x: margin, y: y - 2 }, end: { x: W - margin, y: y - 2 }, thickness: 1, color: blue });
+        y -= 10;
+
+        // Section 01: Framed Member Identity Box
+        section('01  DATA ANGGOTA SAAT PENGAJUAN');
+        const memberBoxTop = y;
+        page.drawRectangle({ x: margin, y: memberBoxTop - 68, width: contentW, height: 68, color: neutralFill, borderColor: neutralBorder, borderWidth: 0.75 });
+        y -= 6;
+        field('Nama', member.name);
+        field('Identitas anggota', member.maskedIdentifier);
+        field('Bagian', member.departmentName);
+        field('Jenis simpanan', snapshot.savingsType);
+        y = Math.min(y, memberBoxTop - 72);
+
+        // Section 02: Side-by-Side Old vs New Deduction Highlight Cards + Terbilang Banner
+        section('02  PERUBAHAN POTONGAN YANG DIAJUKAN');
+        const prevText = snapshot.originalDeduction === null ? 'Belum terdaftar (pendaftaran pertama)' : formatRupiahDocument(snapshot.originalDeduction);
+        const reqText = formatRupiahDocument(snapshot.requestedAmount);
+        const periodStr = `${String(snapshot.requestedPeriod.month).padStart(2, '0')}/${snapshot.requestedPeriod.year}`;
+        const cardGap = 10;
+        const cardW = (contentW - cardGap) / 2;
+        const cardTop = y;
+        page.drawRectangle({ x: margin, y: cardTop - 44, width: cardW, height: 44, color: neutralFill, borderColor: neutralBorder, borderWidth: 0.75 });
+        page.drawRectangle({ x: margin + cardW + cardGap, y: cardTop - 44, width: cardW, height: 44, color: softBlue, borderColor: softBorder, borderWidth: 0.75 });
+        y -= 6;
+        field('Potongan sebelumnya', prevText);
+        field('Potongan yang diminta', reqText);
+        y = Math.min(y, cardTop - 48);
+
+        // Terbilang banner box
+        const terbilangTop = y;
+        page.drawRectangle({ x: margin, y: terbilangTop - 24, width: contentW, height: 24, color: softBlue, borderColor: softBorder, borderWidth: 0.75 });
+        y -= 4;
         field('Terbilang', `${formatRupiahTerbilang(snapshot.requestedAmount)}.`);
+        y = Math.min(y, terbilangTop - 28);
+        field('Periode yang diminta', periodStr);
+        wrapped('Berlaku pada siklus payroll pertama yang memenuhi syarat setelah persetujuan. Pengajuan ini belum mengubah potongan dan bukan bukti persetujuan.', 9, false, gray);
+
+        // Section 03: Consent Text
+        section('03  PERSETUJUAN ANGGOTA');
+        wrapped(evidence.consentText, 10);
+
+        // Section 04: Verification & Signature Card
+        section('04  BUKTI VERIFIKASI DAN TANDA TANGAN');
+        field('Metode', snapshot.verification.method);
+        field('Waktu verifikasi (UTC)', evidence.verifiedAtEpochMs === undefined ? 'Tidak tersedia dalam snapshot; waktu pengajuan tercantum di atas' : new Date(evidence.verifiedAtEpochMs).toISOString().replace('T', ' ').replace('.000Z', ' UTC'));
+        field('Referensi bukti', snapshot.verification.proofRef);
+        field('Versi kontak', snapshot.verification.contactVersion);
+        room(95);
+        const image = await doc.embedPng(signatureBytes);
+        const scale = Math.min(210 / image.width, 65 / image.height);
+        page.drawRectangle({ x: margin, y: y - 78, width: 230, height: 76, color: rgb(1, 1, 1), borderColor: softBorder, borderWidth: 0.75 });
+        page.drawImage(image, { x: margin + 10, y: y - 70, width: image.width * scale, height: image.height * scale });
+        y -= 90;
+
+        // Section 05: Cryptographic Integrity Seal
+        section('05  VERSI DOKUMEN DAN INTEGRITAS');
+        wrapped(`Kebijakan: ${snapshot.policyVersion} | Formulir: ${snapshot.formVersion} | Persetujuan: ${snapshot.consentTextVersion}`, 8);
+        wrapped(`Snapshot: ${snapshot.contractVersion} | Template: ${templateVersion} | Renderer: ${RENDERER_VERSION}`, 8);
+        wrapped(`SHA-256 snapshot: ${digest(canonicalSnapshot(snapshot)).slice(7)}`, 7);
+        wrapped(`SHA-256 tanda tangan: ${snapshot.signature.contentDigest.slice(7)}`, 7);
+      } else {
+        page.drawRectangle({ x: 0, y: H - 9, width: W, height: 9, color: blue });
+        line('KKISI  /  KOSIPA', 11, true, blue);
+        line(wajib ? 'PENGAJUAN SIMPANAN WAJIB' : 'PENGAJUAN SIMPANAN SUKARELA', 18, true);
+        line('PENGAJUAN / BELUM DISETUJUI', 10, true, blue);
+        y -= 5; field('Referensi', evidence.reference);
+        field('Diajukan (UTC)', submittedAt.toISOString().replace('T', ' ').replace('.000Z', ' UTC'));
+        section('01  DATA ANGGOTA SAAT PENGAJUAN');
+        field('Nama', member.name); field('Identitas anggota', member.maskedIdentifier); field('Bagian', member.departmentName);
+        field('Jenis simpanan', snapshot.savingsType);
+        section('02  PERUBAHAN POTONGAN YANG DIAJUKAN');
+        if (template.amounts === 'raw') {
+          field('Potongan sebelumnya (Rp)', snapshot.originalDeduction ?? 'Belum terdaftar (pendaftaran pertama)');
+          field('Potongan yang diminta (Rp)', snapshot.requestedAmount);
+        } else {
+          field('Potongan sebelumnya', snapshot.originalDeduction === null ? 'Belum terdaftar (pendaftaran pertama)' : formatRupiahDocument(snapshot.originalDeduction));
+          field('Potongan yang diminta', formatRupiahDocument(snapshot.requestedAmount));
+          field('Terbilang', `${formatRupiahTerbilang(snapshot.requestedAmount)}.`);
+        }
+        field('Periode yang diminta', `${String(snapshot.requestedPeriod.month).padStart(2, '0')}/${snapshot.requestedPeriod.year}`);
+        wrapped('Berlaku pada siklus payroll pertama yang memenuhi syarat setelah persetujuan. Pengajuan ini belum mengubah potongan dan bukan bukti persetujuan.', 9, false, gray);
+        section('03  PERSETUJUAN ANGGOTA');
+        wrapped(evidence.consentText, 10);
+        section('04  BUKTI VERIFIKASI DAN TANDA TANGAN');
+        field('Metode', snapshot.verification.method);
+        field('Waktu verifikasi (UTC)', evidence.verifiedAtEpochMs === undefined ? 'Tidak tersedia dalam snapshot; waktu pengajuan tercantum di atas' : new Date(evidence.verifiedAtEpochMs).toISOString().replace('T', ' ').replace('.000Z', ' UTC'));
+        field('Referensi bukti', snapshot.verification.proofRef);
+        field('Versi kontak', snapshot.verification.contactVersion);
+        room(95);
+        const image = await doc.embedPng(signatureBytes);
+        const scale = Math.min(210 / image.width, 65 / image.height);
+        page.drawRectangle({ x: margin, y: y - 78, width: 230, height: 76, borderColor: rgb(0.79, 0.82, 0.87), borderWidth: 0.5 });
+        page.drawImage(image, { x: margin + 10, y: y - 70, width: image.width * scale, height: image.height * scale }); y -= 90;
+        section('05  VERSI DOKUMEN DAN INTEGRITAS');
+        wrapped(`Kebijakan: ${snapshot.policyVersion} | Formulir: ${snapshot.formVersion} | Persetujuan: ${snapshot.consentTextVersion}`, 8);
+        wrapped(`Snapshot: ${snapshot.contractVersion} | Template: ${templateVersion} | Renderer: ${RENDERER_VERSION}`, 8);
+        wrapped(`SHA-256 snapshot: ${digest(canonicalSnapshot(snapshot)).slice(7)}`, 7);
+        wrapped(`SHA-256 tanda tangan: ${snapshot.signature.contentDigest.slice(7)}`, 7);
       }
-      field('Periode yang diminta', `${String(snapshot.requestedPeriod.month).padStart(2, '0')}/${snapshot.requestedPeriod.year}`);
-      wrapped('Berlaku pada siklus payroll pertama yang memenuhi syarat setelah persetujuan. Pengajuan ini belum mengubah potongan dan bukan bukti persetujuan.', 9, false, gray);
-      section('03  PERSETUJUAN ANGGOTA');
-      wrapped(evidence.consentText, 10);
-      section('04  BUKTI VERIFIKASI DAN TANDA TANGAN');
-      field('Metode', snapshot.verification.method);
-      field('Waktu verifikasi (UTC)', evidence.verifiedAtEpochMs === undefined ? 'Tidak tersedia dalam snapshot; waktu pengajuan tercantum di atas' : new Date(evidence.verifiedAtEpochMs).toISOString().replace('T', ' ').replace('.000Z', ' UTC'));
-      field('Referensi bukti', snapshot.verification.proofRef);
-      field('Versi kontak', snapshot.verification.contactVersion);
-      room(95);
-      const image = await doc.embedPng(signatureBytes);
-      const scale = Math.min(210 / image.width, 65 / image.height);
-      page.drawRectangle({ x: margin, y: y - 78, width: 230, height: 76, borderColor: rgb(0.79, 0.82, 0.87), borderWidth: 0.5 });
-      page.drawImage(image, { x: margin + 10, y: y - 70, width: image.width * scale, height: image.height * scale }); y -= 90;
-      section('05  VERSI DOKUMEN DAN INTEGRITAS');
-      wrapped(`Kebijakan: ${snapshot.policyVersion} | Formulir: ${snapshot.formVersion} | Persetujuan: ${snapshot.consentTextVersion}`, 8);
-      wrapped(`Snapshot: ${snapshot.contractVersion} | Template: ${templateVersion} | Renderer: ${RENDERER_VERSION}`, 8);
-      wrapped(`SHA-256 snapshot: ${digest(canonicalSnapshot(snapshot)).slice(7)}`, 7);
-      wrapped(`SHA-256 tanda tangan: ${snapshot.signature.contentDigest.slice(7)}`, 7);
       const pages = doc.getPages();
       pages.forEach((p, i) => {
         p.drawLine({ start: { x: margin, y: 48 }, end: { x: W - margin, y: 48 }, thickness: 0.5, color: rgb(0.8, 0.82, 0.86) });

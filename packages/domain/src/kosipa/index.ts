@@ -40,6 +40,11 @@ export {
   type Capped, type InstallmentDocRaw, type LoanDocRaw, type OrphanScan, type BatchTotalFinding,
 } from './report-read.ts';
 export { csvCell, csvLine, csvDocument, neutralizeFormula, amount4ToDecimal, type CsvCell } from './csv.ts';
+export { xlsxColName, xlsxDocument, type XlsxSheet } from './xlsx.ts';
+export {
+  KOSIPA_PDF_COLORS, measurePdfText, fitPdfText, wrapPdfText, renderKosipaPdfDocument,
+  type PdfBadgeTone, type PdfKpiItem, type PdfKvItem, type PdfTableColumn, type PdfSection, type KosipaPdfDocumentSpec,
+} from './pdf-document.ts';
 export {
   KNOWN_MEMBER_STATUS, KNOWN_EMPLOYMENT, KNOWN_MEMBER_GROUP, buildMembershipReport, buildSavingsMovementReport,
   type MembershipRaw, type MembershipGroupRaw, type MembershipLine, type MembershipReport, type SavingsDocAggregateRaw, type SavingsHeaderRaw, type SavingsMonthLine, type SavingsMovementReport,

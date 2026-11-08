@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { KosipaError, loanProduct, loanSegment, type LoanView, type ScheduleIntegrity } from '@koperasi/domain/kosipa';
 import { readLoan, type LoanDetail } from '@koperasi/application/kosipa/loans';
 import { FeedbackState, CursorPagination, FinancialTable, ContextNotice, Provenance } from '@/components/console/kosipa/KosipaUI';
+import { ExportControl } from '@/components/console/kosipa/ExportControl';
 import { KosipaNotice } from '@/components/console/kosipa/KosipaNotice';
 import { LoanFigure, LoanFigureStrip, LoanPageHeader, LoanStageBadge, Money } from '@/components/console/kosipa/LoanUI';
 import { LOAN_HUB, LOAN_LIST, LOAN_REASON_TEXT, SCHEDULE_ISSUE_TEXT, STATUS_FLAG_TEXT, count, productHref, productLabel, productOf, shortDate } from '@/components/console/kosipa/loan-format';
@@ -62,6 +63,7 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
       <LoanPageHeader title={<> Pinjaman {docNo} </>} tail={[...(product ? [{ label: productLabel(product), href: productHref(product) }] : []), { label: docNo, icon: 'detail' as const }]}>
         <p>{h ? <>{productLabel(product)}{segment ? ` · ${segment}` : ''}{h.method ? ` · metode ${h.method}` : ''}. Data dokumen dan jadwal angsuran sebagaimana tercatat di KOSIPA lama.</> : 'Data dokumen dan jadwal angsuran pinjaman KOSIPA.'}</p>
       </LoanPageHeader>
+      {detail && auth.capabilities.has('kosipa.report.export') && <ExportControl href={`/api/kosipa/loans/${encodeURIComponent(docNo)}/pdf`} singlePdfLabel="Unduh Kartu Pinjaman (PDF)" />}
       {failed && <FeedbackState kind="error" title={<> Pinjaman tidak dapat dibaca </>} reset={base}><p>Data tidak tersedia saat ini atau berisi nilai yang tidak dapat dibaca. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {detail && l && h && (<>
         <section className="kloan-hero" aria-label="Ringkasan dokumen">

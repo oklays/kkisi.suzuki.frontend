@@ -93,9 +93,12 @@
 .kosipa-module .console-year-list { gap:8px; }
 .kosipa-module .console-year-list a, .kosipa-module .console-year-list strong { font-size:13px; min-height:40px; border-radius:6px; text-decoration:none; }
 .kosipa-export { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; }
+.kosipa-export-actions { display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .kosipa-button-secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 16px; border:1px solid #c9d5e8; border-radius:7px; background:white; color:var(--c-blue); font-size:12px; font-weight:650; cursor:pointer; text-decoration:none; line-height:1.5; }
 .kosipa-button-secondary:hover { background:var(--k-soft); border-color:#91a8cd; }
-.kosipa-button-secondary:disabled { opacity:.6; cursor:wait; }
+.kosipa-button-secondary[data-primary="true"] { background:#003399; border-color:#003399; color:#ffffff; }
+.kosipa-button-secondary[data-primary="true"]:hover { background:#002673; border-color:#002673; }
+.kosipa-button-secondary:disabled { opacity:.6; cursor:not-allowed; }
 .kosipa-export-note { font-size:11px; color:#667085; }
 .kosipa-export-feedback { width:100%; padding:10px 12px; border-radius:7px; background:#f0f7f2; color:#24603c; font-size:12px; line-height:1.6; }
 .kosipa-export-feedback[data-error="true"] { background:#fff2f0; color:#a13227; }
@@ -609,6 +612,52 @@
 .kosipa-rc-report-cta:hover {
   background: #dbeafe;
   color: #0b46c4;
+}
+
+.kosipa-rc-card-exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.kosipa-rc-export-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  min-height: 28px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kosipa-rc-export-chip:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.kosipa-rc-export-chip[data-primary="true"] {
+  background: #003399;
+  border-color: #003399;
+  color: #ffffff;
+}
+
+.kosipa-rc-export-chip[data-primary="true"]:hover {
+  background: #002673;
+  border-color: #002673;
+}
+
+.kosipa-rc-export-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Bottom Analytics Row */

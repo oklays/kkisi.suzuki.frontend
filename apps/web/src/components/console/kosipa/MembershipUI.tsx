@@ -34,8 +34,8 @@ export function MembershipPageHeader({ readOnly }: { readOnly: boolean }) {
 /** Cards show whole-table counts; each one says which rule it counts. A failed count shows an unavailable state, never a made-up number. */
 export function MembershipStats({ counts, canCreate }: { counts: MemberCounts | null; canCreate: boolean }) {
   const cards = [
-    { key: 'active', label: 'Anggota Aktif', rule: 'AKTIVE + potong wajib (sama dengan KOSIPA lama)', value: counts?.active, Icon: Users, tone: 'green' },
-    { key: 'non', label: 'Non Anggota', rule: 'grup NON ANGGOTA, semua status', value: counts?.nonMember, Icon: Users, tone: 'gray' },
+    { key: 'active', label: 'Anggota Aktif', rule: 'AKTIVE + potong wajib', value: counts?.active, Icon: Users, tone: 'green' },
+    { key: 'non', label: 'Non Anggota', rule: 'Grup NON ANGGOTA, semua status', value: counts?.nonMember, Icon: Users, tone: 'gray' },
     { key: 'total', label: 'Total Data', rule: 'seluruh catatan anggota', value: counts?.total, Icon: Database, tone: 'blue' },
   ] as const;
   return <section className="membership-stats" aria-label="Ringkasan keanggotaan">

@@ -62,6 +62,8 @@ export async function resolveConsoleAccess(
         if (actor.kosipaUserId !== null) {
           const implemented = grants.filter(cap => (GRANTABLE_KOSIPA_CAPABILITIES as readonly string[]).includes(cap));
           for (const cap of writeCapabilitiesFromGrants(implemented, capabilities)) capabilities.add(cap);
+          const policy = sources.kosipa.exportPolicy;
+          if (policy?.enabled && policy.allowedUserIds.has(subject.userId)) capabilities.add('kosipa.report.export');
         }
         if (sources.kosipa.grants && capabilities.has('iam.link.manage') && sources.kosipa.grantAdmins?.has(subject.userId)) capabilities.add('iam.kosipa.grant');
         return { capabilities, kosipa: 'role', kosipaUserId: actor.kosipaUserId };
