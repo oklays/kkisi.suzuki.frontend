@@ -16,6 +16,10 @@ const CAPABILITY_LABEL: Record<string, string> = {
   'kosipa.member.create': 'Daftarkan anggota baru',
   'kosipa.member.update': 'Ubah profil anggota',
   'kosipa.member.status': 'Ubah status anggota',
+  'kosipa.savings.prepare': 'Siapkan setoran simpanan',
+  'kosipa.savings.approve': 'Setujui / tolak setoran simpanan',
+  'kosipa.loan.prepare': 'Siapkan pinjaman (posting dokumen)',
+  'kosipa.loan.approve': 'Setujui / tolak pinjaman',
 };
 
 export default async function KosipaAccessPage() {

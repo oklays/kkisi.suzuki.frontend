@@ -1,5 +1,5 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
-import { LOAN_PRODUCTS, loanProduct, type LoanHeaderRaw, type LoanListQuery, type LoanProductFilter, type LoanSearch, type PortfolioGroupRaw, type RolloverQuery, type RolloverRaw, type ScheduleAggregate, type ScheduleRowRaw, type SettlementQuery, type SettlementRaw, type SettlementSummaryRaw, type UnpaidScheduleRaw } from '@koperasi/domain/kosipa';
+import { LOAN_PENDING_STATUSES, LOAN_PRODUCTS, loanProduct, type LoanHeaderRaw, type LoanListQuery, type LoanProductFilter, type LoanSearch, type PortfolioGroupRaw, type RolloverQuery, type RolloverRaw, type ScheduleAggregate, type ScheduleRowRaw, type SettlementQuery, type SettlementRaw, type SettlementSummaryRaw, type UnpaidScheduleRaw } from '@koperasi/domain/kosipa';
 import type { LoanReader } from '@koperasi/application/kosipa/loans';
 
 // Read-only KOSIPA loan adapter (spec REQ-024, TASK-026) on the EXISTING SELECT-only reader pool: no new pool, no write.
@@ -57,9 +57,10 @@ export class PrismaKosipaLoanReader implements LoanReader {
   private readonly db: PrismaClient;
   constructor(db: PrismaClient) { this.db = db; }
 
-  async listLoans(q: Pick<LoanListQuery, 'docStatus' | 'disbursement' | 'repayment' | 'search' | 'afterId' | 'period' | 'product' | 'segment'>, limit: number): Promise<LoanHeaderRaw[]> {
+  async listLoans(q: Pick<LoanListQuery, 'docStatus' | 'pending' | 'disbursement' | 'repayment' | 'search' | 'afterId' | 'period' | 'product' | 'segment'>, limit: number): Promise<LoanHeaderRaw[]> {
     const parts: Prisma.Sql[] = [];
     if (q.docStatus) parts.push(Prisma.sql`doc_status = ${q.docStatus}`);
+    if (q.pending) parts.push(Prisma.sql`doc_status IN (${Prisma.join([...LOAN_PENDING_STATUSES])})`);
     if (q.disbursement) parts.push(Prisma.sql`status_pencairan = ${q.disbursement}`);
     if (q.repayment) parts.push(Prisma.sql`status_bayar = ${q.repayment}`);
     if (q.afterId !== null) parts.push(Prisma.sql`id < ${q.afterId}`);

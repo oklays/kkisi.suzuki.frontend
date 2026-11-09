@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { HandCoins, Search } from 'lucide-react';
-import { LOAN_DISBURSEMENT_STATUSES, LOAN_DOC_STATUSES, LOAN_REPAYMENT_STATUSES, type LoanPortfolio, type LoanProductFilter, type LoanView, type PortfolioFigures } from '@koperasi/domain/kosipa';
+import { LOAN_DISBURSEMENT_STATUSES, LOAN_DOC_STATUSES, LOAN_PENDING_FILTER, LOAN_REPAYMENT_STATUSES, type LoanPortfolio, type LoanProductFilter, type LoanView, type PortfolioFigures } from '@koperasi/domain/kosipa';
 import { CurrencyText } from '@/components/money/CurrencyText';
 import { PageBreadcrumbs } from '../PageBreadcrumbs';
 import type { TailCrumb } from '../breadcrumb-trail';
@@ -96,7 +96,7 @@ export function LoanFilterForm({ action, f, fixedProduct = false }: { action: st
     <div className="console-filter-row kloan-filter-row" data-product={!fixedProduct || undefined}>
       <label className="kloan-filter-search">NIK, nama, atau nomor dokumen<input name="q" minLength={2} placeholder="Contoh: 09002 atau BON2026" defaultValue={f.q} maxLength={50} autoComplete="off" /></label>
       {!fixedProduct && <label>Produk<select name="produk" defaultValue={f.produk}><option value="">Semua produk</option>{PRODUCT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>}
-      <label>Status dokumen<select name="status" defaultValue={f.status}><option value="">Semua</option>{LOAN_DOC_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
+      <label>Status dokumen<select name="status" defaultValue={f.status}><option value="">Semua</option><option value={LOAN_PENDING_FILTER}>Menunggu keputusan (OPEN + POSTING)</option>{LOAN_DOC_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
       <label>Pencairan<select name="cair" defaultValue={f.cair}><option value="">Semua</option>{LOAN_DISBURSEMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
       <label>Pelunasan<select name="bayar" defaultValue={f.bayar}><option value="">Semua</option>{LOAN_REPAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
       <label>Bulan dokumen<input name="periode" type="month" min="2000-01" max="2100-12" defaultValue={f.periode} /></label>

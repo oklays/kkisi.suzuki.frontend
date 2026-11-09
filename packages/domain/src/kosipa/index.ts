@@ -20,7 +20,7 @@ export {
   type StoreColumnMap, type KreditSaleRow, type KreditReturnRow, type Anomaly, type AnomalyCode, type Derived, type RecordedStoreRow, type Difference, type ReconciliationRow, type ReconciliationSummary,
 } from './payroll-reconciliation.ts';
 export {
-  LOAN_PAGE_SIZE, LOAN_SCHEDULE_PAGE_SIZE, LOAN_HEADER_LIMIT, LOAN_DOC_STATUSES, LOAN_DISBURSEMENT_STATUSES, LOAN_REPAYMENT_STATUSES, OFFICIAL_BALANCE,
+  LOAN_PAGE_SIZE, LOAN_SCHEDULE_PAGE_SIZE, LOAN_HEADER_LIMIT, LOAN_DOC_STATUSES, LOAN_PENDING_FILTER, LOAN_PENDING_STATUSES, LOAN_DISBURSEMENT_STATUSES, LOAN_REPAYMENT_STATUSES, OFFICIAL_BALANCE,
   parseLoanListQuery, parseLoanSearch, parseLoanPeriod, parseLoanDocNo, parseScheduleCursor, scheduleCursor, statusFlags, describeLoan, assessSchedule, describeScheduleRow,
   type LoanListQuery, type LoanHeaderRaw, type LoanView, type StatusFlag, type ScheduleRowRaw, type ScheduleAggregate, type ScheduleIssue, type ScheduleIntegrity, type ScheduleRowView,
 } from './loan-read.ts';

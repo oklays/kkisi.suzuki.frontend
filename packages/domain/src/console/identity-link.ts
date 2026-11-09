@@ -59,6 +59,7 @@ export const AUDIT_ACTIONS = ['identity_link.create', 'identity_link.revoke', 'i
   // KOSIPA native writes (kosipa-full-access FA-01): committed commands, refusals, and write-capability grants.
   'kosipa.member.register', 'kosipa.member.updateProfile', 'kosipa.member.changeStatus',
   'kosipa.savings.deposit.create', 'kosipa.savings.deposit.approve', 'kosipa.savings.deposit.reject',
+  'kosipa.loan.post', 'kosipa.loan.approve', 'kosipa.loan.reject',
   'kosipa.master.create', 'kosipa.master.update', 'kosipa.master.deactivate', 'kosipa.master.reactivate', 'kosipa.command.denied', 'kosipa.command.failed',
   'kosipa.grant.request', 'kosipa.grant.approve', 'kosipa.grant.reject', 'kosipa.grant.revoke', 'kosipa.grant.denied'] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

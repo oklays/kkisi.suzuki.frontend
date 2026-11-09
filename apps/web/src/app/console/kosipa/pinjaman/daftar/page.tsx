@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { KosipaError } from '@koperasi/domain/kosipa';
+import { KosipaError, LOAN_PENDING_FILTER } from '@koperasi/domain/kosipa';
 import { listLoans, type LoanListPage } from '@koperasi/application/kosipa/loans';
 import { FeedbackState, FilterContext } from '@/components/console/kosipa/KosipaUI';
 import { PrivatePagination } from '@/components/console/kosipa/PrivateWorkspace';
@@ -37,13 +37,14 @@ export default async function LoanListPage({ searchParams }: { searchParams: Pro
         <p>Seluruh dokumen dari semua produk, terbaru lebih dulu. Untuk kartu pinjaman aktif seperti di legacy, pilih status APPROVED, pencairan APPROVED, dan pelunasan BELUM LUNAS.</p>
       </LoanPageHeader>
       <LoanFilterForm action={LOAN_LIST} f={f} />
-      <FilterContext privateReset reset={LOAN_LIST} filters={[{ label: 'Produk', value: PRODUCT_OPTIONS.find((o) => o.value === f.produk)?.label ?? f.produk }, { label: 'Status', value: f.status }, { label: 'Pencairan', value: f.cair }, { label: 'Pelunasan', value: f.bayar }, { label: 'Bulan', value: f.periode }, { label: 'Pencarian', value: f.q ? 'Aktif' : '' }]} />
+      <FilterContext privateReset reset={LOAN_LIST} filters={[{ label: 'Produk', value: PRODUCT_OPTIONS.find((o) => o.value === f.produk)?.label ?? f.produk }, { label: 'Status', value: f.status === LOAN_PENDING_FILTER ? 'Menunggu keputusan' : f.status }, { label: 'Pencairan', value: f.cair }, { label: 'Pelunasan', value: f.bayar }, { label: 'Bulan', value: f.periode }, { label: 'Pencarian', value: f.q ? 'Aktif' : '' }]} />
       {invalid && <FeedbackState kind="error" title={<> Filter tidak valid </>} reset={LOAN_LIST}><p>Periksa produk, status, dan bulan dokumen. Gunakan pilihan yang tersedia. Tidak ada data yang dibaca.</p></FeedbackState>}
       {failed && <FeedbackState kind="error" title={<> Daftar pinjaman tidak dapat dibaca </>} reset={LOAN_LIST}><p>Database tidak menjawab tepat waktu. Coba lagi beberapa saat lagi.</p></FeedbackState>}
       {page && page.items.length === 0 && <FeedbackState kind="empty" title={<> Tidak ada dokumen yang cocok </>} reset={LOAN_LIST}><p>{page.filterActive || f.produk ? 'Tidak ada dokumen untuk kombinasi filter ini. Longgarkan salah satu filter, misalnya bulan dokumen.' : 'Belum ada dokumen pinjaman tercatat.'}</p></FeedbackState>}
       {page && page.items.length > 0 && (
         <section aria-label="Daftar pinjaman" className="console-section">
           {active && <p className="kloan-hint">Menampilkan pinjaman aktif: sudah disetujui, sudah cair, dan belum lunas.</p>}
+          {f.status === LOAN_PENDING_FILTER && <p className="kloan-hint">Menampilkan dokumen yang menunggu keputusan: OPEN (belum diposting) dan POSTING (menunggu persetujuan). Buka dokumen untuk memposting, menyetujui, atau menolak.</p>}
           <LoanTable items={page.items} detailQuery={{ dari: 'daftar' }} />
           <p className="console-notice">{page.items.length} dokumen di halaman ini. Jumlah seluruh dokumen tidak dihitung di daftar; lihat ringkasan Pinjaman untuk total per produk.</p>
           {page.nextCursor !== null && <PrivatePagination path={LOAN_LIST} params={{ q: f.q, status: f.status, cair: f.cair, bayar: f.bayar, periode: f.periode, produk: f.produk, after: String(page.nextCursor) }}>Muat dokumen lebih lama</PrivatePagination>}

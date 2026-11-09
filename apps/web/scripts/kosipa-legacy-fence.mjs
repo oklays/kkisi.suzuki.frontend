@@ -18,6 +18,7 @@ const [feature, ...rest] = process.argv.slice(2);
 const db = rest[rest.indexOf('--database') + 1] && rest.includes('--database') ? rest[rest.indexOf('--database') + 1] : '__PRODUCTION_DB__';
 if (!FEATURES[feature]) { console.error(`unknown feature; known: ${Object.keys(FEATURES).join(', ')}`); process.exit(1); }
 if (!/^[A-Za-z0-9_]{1,64}$/.test(db)) { console.error('invalid database name'); process.exit(1); }
+if (!FEATURES[feature].length) { console.log(`-- Feature "${feature}" has no legacy writer: nothing to fence.`); process.exit(0); }
 const urls = FEATURES[feature].map((u) => `UPPER('${u}')`).join(', ');
 const match = `UPPER(url) IN (${urls})`;
 const stamp = new Date().toISOString().slice(0, 10);

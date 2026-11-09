@@ -58,8 +58,9 @@ const pembiayaan = (code) => ({ pembiayaan_code: code, pembiayaan_name: `SYNTH P
 
 if (ENABLED) await q(`UPDATE ref_menu SET status = 0 WHERE url IN (${CONTROLLERS.map(() => '?').join(',')})`, CONTROLLERS);
 
-test('product masters are master.<key> features fenced by exactly their own legacy controller', () => {
-  for (const def of Object.values(PRODUCT_MASTER_DEFINITIONS)) assert.deepEqual(KOSIPA_WRITE_FEATURES[`master.${def.key}`], { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [def.legacyController] });
+test('product masters are master.<key> features fenced by exactly their own legacy controller (none when legacy only reads the table)', () => {
+  for (const def of Object.values(PRODUCT_MASTER_DEFINITIONS)) assert.deepEqual(KOSIPA_WRITE_FEATURES[`master.${def.key}`], { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: def.legacyWriter === false ? [] : [def.legacyController] });
+  assert.deepEqual(KOSIPA_WRITE_FEATURES['master.pinjaman_mobile'].legacyControllers, [], 'the legacy mobile loan screen only reads m_pinjaman_mobile and is never fenced');
 });
 
 test('review-only production grants equal the generated synthetic block; nothing broader', () => {

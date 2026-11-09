@@ -123,3 +123,14 @@ CREATE TABLE IF NOT EXISTS `__KOSIPA_DB__`.`m_suku_bunga` (
   `ud_usr` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci ROW_FORMAT=COMPACT;
+CREATE TABLE IF NOT EXISTS `__KOSIPA_DB__`.`m_pinjaman_mobile` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `jenis_pinjaman` varchar(50) DEFAULT NULL,
+  `min_nominal` int(20) DEFAULT NULL,
+  `max_nominal` int(20) DEFAULT NULL,
+  `min_jw` int(11) DEFAULT NULL,
+  `max_jw` int(11) DEFAULT NULL,
+  `jasa` varchar(50) DEFAULT NULL,
+  `status` int(1) DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci ROW_FORMAT=DYNAMIC;
