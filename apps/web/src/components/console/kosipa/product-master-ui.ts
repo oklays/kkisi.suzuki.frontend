@@ -6,6 +6,7 @@ export const PRODUCT_PURPOSE: Readonly<Record<ProductMasterType, string>> = {
   'jenis-pinjaman': 'Produk pinjaman: induk jenis, biaya, bunga, plafon dan akun.',
   'jenis-pembiayaan': 'Skema pembiayaan pinjaman: biaya, bunga, kunci angsuran dan akun.',
   'suku-bunga': 'Parameter yang dibaca saat pinjaman dihitung (tanggal jatuh tempo).',
+  'pinjaman-mobile': 'Master parameter pengajuan pinjaman pada aplikasi mobile anggota (nominal, tenor, jasa).',
 };
 
 /** List columns per product master: the identifying fields plus the parameters an operator checks first. */
@@ -14,6 +15,14 @@ export const PRODUCT_LIST_COLUMNS: Readonly<Record<ProductMasterType, readonly {
   'jenis-pinjaman': [{ key: 'jenis_pinjaman_code', label: 'Kode' }, { key: 'jenis_pinjaman_name', label: 'Nama' }, { key: 'parent_id', label: 'Induk' }, { key: 'jenis_bunga', label: 'Bunga' }, { key: 'biaya_bunga', label: 'Bunga (%)', numeric: true }, { key: 'max_angsuran', label: 'Maks. bulan', numeric: true }, { key: 'max_pinjaman', label: 'Maks. pinjaman (Rp)', numeric: true }],
   'jenis-pembiayaan': [{ key: 'pembiayaan_code', label: 'Kode' }, { key: 'pembiayaan_name', label: 'Nama' }, { key: 'jenis_bunga', label: 'Bunga' }, { key: 'biaya_jasa', label: 'Biaya jasa', numeric: true }, { key: 'lock_1angsuran', label: 'Kunci 1 angsuran' }, { key: 'akun_code', label: 'Akun' }],
   'suku-bunga': [{ key: 'code_suku_bunga', label: 'Kode' }, { key: 'desc_suku_bunga', label: 'Deskripsi' }, { key: 'field', label: 'Parameter' }, { key: 'nilai_persen', label: 'Nilai', numeric: true }],
+  'pinjaman-mobile': [
+    { key: 'jenis_pinjaman', label: 'Jenis Pinjaman' },
+    { key: 'min_nominal', label: 'Min. Nominal (Rp)', numeric: true },
+    { key: 'max_nominal', label: 'Maks. Nominal (Rp)', numeric: true },
+    { key: 'min_jw', label: 'Min. Tenor (Bulan)', numeric: true },
+    { key: 'max_jw', label: 'Maks. Tenor (Bulan)', numeric: true },
+    { key: 'jasa', label: 'Jasa/Bunga (%)', numeric: true },
+  ],
 };
 
 /** Form sections: field keys in display order. Keys missing here are appended to the last section, so no field can be lost. */
@@ -31,6 +40,11 @@ export const PRODUCT_FORM_GROUPS: Readonly<Record<ProductMasterType, readonly { 
     { id: 'angsuran', title: 'Angsuran dan akun', keys: ['tgl_tempo', 'lock_1angsuran', 'akun_code'] },
   ],
   'suku-bunga': [{ id: 'parameter', title: 'Parameter', keys: ['code_suku_bunga', 'desc_suku_bunga', 'field', 'nilai_persen', 'remarks_suku_bunga'] }],
+  'pinjaman-mobile': [
+    { id: 'identitas', title: 'Identitas', keys: ['jenis_pinjaman'] },
+    { id: 'nominal', title: 'Batas Nominal Pinjaman', keys: ['min_nominal', 'max_nominal'] },
+    { id: 'tenor', title: 'Jangka Waktu & Jasa', keys: ['min_jw', 'max_jw', 'jasa'] },
+  ],
 };
 
 export const PRODUCT_MESSAGES: Record<string, string> = {

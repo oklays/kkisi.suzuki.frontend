@@ -24,6 +24,7 @@ const LEGACY_ONLY: Readonly<Record<ProductMasterType, readonly string[]>> = {
   'jenis-pinjaman': ['dd', 'dd_usr', 'is_payroll'],
   'jenis-pembiayaan': ['doc_no', 'doc_date'],
   'suku-bunga': [],
+  'pinjaman-mobile': [],
 };
 const STAMPS = ['cd', 'cd_usr', 'ud', 'ud_usr'];
 const MAX_ROWS = 2000;
@@ -34,7 +35,12 @@ const raw = (identifier: string) => { if (!IDENTIFIER.test(identifier)) throw ne
 type Row = Record<string, string | null>;
 const written = (def: ProductMasterDefinition) => [...def.fields.map((f) => f.key), ...def.fields.filter((f) => f.descColumn).map((f) => f.descColumn as string)];
 /** Every column the repository reads (and versions), in a fixed order. Constants only, never input. */
-export const productColumns = (def: ProductMasterDefinition) => [...written(def), def.status.column, ...STAMPS, ...LEGACY_ONLY[def.type]];
+export const productColumns = (def: ProductMasterDefinition) => [
+  ...written(def),
+  def.status.column,
+  ...(def.stamps === false ? [] : STAMPS),
+  ...LEGACY_ONLY[def.type],
+];
 const selectList = (def: ProductMasterDefinition) => Prisma.raw(['`id`', ...productColumns(def).map((c) => `CAST(\`${c}\` AS CHAR) AS \`${c}\``)].join(', '));
 const isActive = (def: ProductMasterDefinition, v: string | null) => (def.status.kind === 'int' ? Number(v) === 1 : String(v ?? '').trim() === '1');
 const statusValue = (def: ProductMasterDefinition, active: boolean) => (def.status.kind === 'int' ? (active ? 1 : 0) : (active ? '1' : '0'));
@@ -141,8 +147,13 @@ export class PrismaKosipaProductMasterRepository implements ProductMasterReposit
       run: async (tx, locked) => {
         const planned = planProductCreate(def, values, locked.rows.map((r) => toRecord(def, r)), locked.facts);
         const columns = written(def);
-        await tx.$executeRaw(Prisma.sql`INSERT INTO ${raw(def.table)} (${Prisma.join(columns.map(raw))}, ${raw(def.status.column)}, cd, cd_usr)
-          VALUES (${Prisma.join(columns.map((c) => Prisma.sql`${planned.values[c] ?? ''}`))}, ${statusValue(def, true)}, ${JAKARTA_NOW}, ${await this.actorName(tx, envelope)})`);
+        if (def.stamps === false) {
+          await tx.$executeRaw(Prisma.sql`INSERT INTO ${raw(def.table)} (${Prisma.join(columns.map(raw))}, ${raw(def.status.column)})
+            VALUES (${Prisma.join(columns.map((c) => Prisma.sql`${planned.values[c] ?? ''}`))}, ${statusValue(def, true)})`);
+        } else {
+          await tx.$executeRaw(Prisma.sql`INSERT INTO ${raw(def.table)} (${Prisma.join(columns.map(raw))}, ${raw(def.status.column)}, cd, cd_usr)
+            VALUES (${Prisma.join(columns.map((c) => Prisma.sql`${planned.values[c] ?? ''}`))}, ${statusValue(def, true)}, ${JAKARTA_NOW}, ${await this.actorName(tx, envelope)})`);
+        }
         const [{ id }] = await tx.$queryRaw<{ id: bigint }[]>`SELECT LAST_INSERT_ID() AS id`;
         const stored = await this.verify(tx, def, Number(id), planned.values, true);
         const record = toRecord(def, stored);
@@ -162,7 +173,9 @@ export class PrismaKosipaProductMasterRepository implements ProductMasterReposit
         const references = productNeedsReferenceCount(def, current, values) ? await this.references(tx, def, current!.values[def.codeKey] ?? '') : 0;
         const change = planProductUpdate(def, current, values, reason, locked.rows.map((r) => toRecord(def, r)), locked.facts, references);
         const sets = change.changed.map((k) => Prisma.sql`${raw(k)} = ${change.after.values[k] ?? ''}`);
-        sets.push(Prisma.sql`ud = ${JAKARTA_NOW}`, Prisma.sql`ud_usr = ${await this.actorName(tx, envelope)}`);
+        if (def.stamps !== false) {
+          sets.push(Prisma.sql`ud = ${JAKARTA_NOW}`, Prisma.sql`ud_usr = ${await this.actorName(tx, envelope)}`);
+        }
         if ((await tx.$executeRaw(Prisma.sql`UPDATE ${raw(def.table)} SET ${Prisma.join(sets)} WHERE id = ${id}`)) !== 1) throw new KosipaError('POSTCONDITION_FAILED');
         const stored = await this.verify(tx, def, id, change.after.values, change.after.active);
         const ledger: LedgerFacts = {
@@ -180,7 +193,10 @@ export class PrismaKosipaProductMasterRepository implements ProductMasterReposit
       run: async (tx, row) => {
         if (row && versionOf(def, row) !== expectedVersion) throw new KosipaError('STALE');
         const change = planProductStatus(def, row ? toRecord(def, row) : null, active);
-        const sets = [Prisma.sql`${raw(def.status.column)} = ${statusValue(def, active)}`, Prisma.sql`ud = ${JAKARTA_NOW}`, Prisma.sql`ud_usr = ${await this.actorName(tx, envelope)}`];
+        const sets = [Prisma.sql`${raw(def.status.column)} = ${statusValue(def, active)}`];
+        if (def.stamps !== false) {
+          sets.push(Prisma.sql`ud = ${JAKARTA_NOW}`, Prisma.sql`ud_usr = ${await this.actorName(tx, envelope)}`);
+        }
         if ((await tx.$executeRaw(Prisma.sql`UPDATE ${raw(def.table)} SET ${Prisma.join(sets)} WHERE id = ${id}`)) !== 1) throw new KosipaError('POSTCONDITION_FAILED');
         const stored = await this.verify(tx, def, id, change.after.values, active);
         const ledger: LedgerFacts = { fromState: active ? 'INACTIVE' : 'ACTIVE', toState: active ? 'ACTIVE' : 'INACTIVE', reason, before: this.snapshot(def, change.before, []), after: this.snapshot(def, change.after, []) };

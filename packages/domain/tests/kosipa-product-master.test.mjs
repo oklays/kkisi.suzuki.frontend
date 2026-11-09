@@ -16,13 +16,16 @@ const simpanan = () => ({ jenis_simpanan_code: 'SIMPANAN BARU', jenis_simpanan_n
 const pembiayaan = () => ({ pembiayaan_code: 'PB-NEW', pembiayaan_name: 'Pembiayaan Baru', pembiayaan_remarks: '', jenis_bunga: 'Flat', biaya_asuransi: '0.5', biaya_jasa: '1.2345', biaya_admin: '10000', biaya_bunga: '1', biaya_pinalty: '0', tgl_tempo: '25', akun_code: '1-1300', lock_1angsuran: '0' });
 const pinjaman = () => ({ jenis_pinjaman_code: 'PJ-NEW', jenis_pinjaman_name: 'Pinjaman Baru', jenis_pinjaman_remarks: '', parent_id: '1', jenis_pembiayaan: 'PB-REG', jenis_bunga: 'Anuitas', biaya_asuransi: '0', biaya_jasa: '1', biaya_admin: '5000', biaya_bunga: '1.5', biaya_pinalty: '0', tgl_tempo: '25', lock_1angsuran: '1', akun_code: '1-1300', akun_code_pembiayaan: '', akun_code_pendapatan: '4-1100', max_angsuran: '36', max_pinjaman: '50000000' });
 const suku = () => ({ code_suku_bunga: 'TT', desc_suku_bunga: 'Tanggal jatuh tempo', field: 'tgl_tempo', nilai_persen: '25', remarks_suku_bunga: '' });
+const mobile = () => ({ jenis_pinjaman: 'PINJAMAN POT. DESEMBER', min_nominal: '500000', max_nominal: '2000000', min_jw: '1', max_jw: '1', jasa: '1' });
 
-test('exactly the four owner-approved native product masters (FD-32, FD-34); controllers and tables as legacy', () => {
-  assert.deepEqual([...PRODUCT_MASTER_TYPES], ['jenis-simpanan', 'jenis-pinjaman', 'jenis-pembiayaan', 'suku-bunga']);
+test('the native product masters (FD-32, FD-34, mobile loan master); controllers and tables as legacy', () => {
+  assert.deepEqual([...PRODUCT_MASTER_TYPES], ['jenis-simpanan', 'jenis-pinjaman', 'jenis-pembiayaan', 'suku-bunga', 'pinjaman-mobile']);
   assert.deepEqual(PRODUCT_MASTER_TYPES.map((t) => [def(t).table, def(t).legacyController, def(t).key]), [
     ['m_jenis_simpanan', 'master/jenis_simpanan_c', 'jenis_simpanan'], ['m_jenis_pinjaman', 'master/jenis_pinjaman_c', 'jenis_pinjaman'],
-    ['m_jenis_pembiayaan', 'master/jenis_pembiayaan_c', 'jenis_pembiayaan'], ['m_suku_bunga', 'master/suku_bunga_c', 'suku_bunga']]);
+    ['m_jenis_pembiayaan', 'master/jenis_pembiayaan_c', 'jenis_pembiayaan'], ['m_suku_bunga', 'master/suku_bunga_c', 'suku_bunga'],
+    ['m_pinjaman_mobile', 'mobile/pinjaman_mobile_c', 'pinjaman_mobile']]);
   assert.match(def('suku-bunga').deactivateEffect, /tidak berpengaruh/i, 'FD-34: the UI must not claim deactivation has an effect');
+  assert.equal(def('pinjaman-mobile').stamps, false);
 });
 
 test('typed parsing: exact decimals by column scale, enums, flags, bounded ints, printable latin1 text; unknown keys refused', () => {
@@ -135,4 +138,31 @@ test('real legacy accounts: a stored COA code that is empty or not in the chart 
   const current = row(5, { ...parseProductValues(d, simpanan()), akun_desc: 'Simpanan Pokok' });
   fail(() => planProductUpdate(d, current, { ...current.values, akun_code: '' }, 'hapus akun', [current], facts(), 0), 'PRODUCT_COA_INVALID', 'akun_code');
   fail(() => planProductUpdate(d, current, { ...current.values, akun_code: '7-7777' }, 'akun salah', [current], facts(), 0), 'PRODUCT_COA_INVALID', 'akun_code');
+});
+
+test('pinjaman-mobile: typed parsing and financial validation', () => {
+  const d = def('pinjaman-mobile');
+  const m = parseProductValues(d, mobile());
+  assert.equal(m.jenis_pinjaman, 'PINJAMAN POT. DESEMBER');
+  assert.equal(m.min_nominal, '500000');
+  assert.equal(m.max_nominal, '2000000');
+  assert.equal(m.min_jw, '1');
+  assert.equal(m.max_jw, '1');
+  assert.equal(m.jasa, '1');
+
+  fail(() => parseProductValues(d, { ...mobile(), min_nominal: '-100' }), 'PRODUCT_FIELD_INVALID', 'min_nominal');
+  fail(() => parseProductValues(d, { ...mobile(), min_jw: '0' }), 'PRODUCT_FIELD_INVALID', 'min_jw');
+  fail(() => parseProductValues(d, { ...mobile(), jasa: 'xyz' }), 'PRODUCT_FIELD_INVALID', 'jasa');
+
+  const created = planProductCreate(d, m, [], facts());
+  assert.equal(created.values.jenis_pinjaman, 'PINJAMAN POT. DESEMBER');
+
+  const r = row(6, m);
+  const updated = planProductUpdate(d, r, { ...m, max_nominal: '2500000' }, 'kenaikan plafon', [r], facts(), 0);
+  assert.deepEqual(updated.changed, ['max_nominal']);
+  assert.equal(updated.after.values.max_nominal, '2500000');
+
+  // Changing unreferenced code allowed when references = 0, refused when references > 0
+  fail(() => planProductUpdate(d, r, { ...m, jenis_pinjaman: 'KASBON LAIN' }, 'ubah kode', [r], facts(), 5), 'MASTER_REFERENCED');
+  assert.equal(planProductUpdate(d, r, { ...m, jenis_pinjaman: 'KASBON LAIN' }, 'ubah kode', [r], facts(), 0).after.values.jenis_pinjaman, 'KASBON LAIN');
 });

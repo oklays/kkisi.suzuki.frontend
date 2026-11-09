@@ -45,8 +45,12 @@ GRANT UPDATE (`pembiayaan_code`, `pembiayaan_name`, `pembiayaan_remarks`, `jenis
 GRANT SELECT (`id`, `code_suku_bunga`, `desc_suku_bunga`, `field`, `nilai_persen`, `remarks_suku_bunga`, `is_active`, `cd`, `cd_usr`, `ud`, `ud_usr`) ON `__KOSIPA_DB__`.`m_suku_bunga` TO 'kosipa_master_w'@'__HOST__';
 GRANT INSERT (`code_suku_bunga`, `desc_suku_bunga`, `field`, `nilai_persen`, `remarks_suku_bunga`, `is_active`, `cd`, `cd_usr`) ON `__KOSIPA_DB__`.`m_suku_bunga` TO 'kosipa_master_w'@'__HOST__';
 GRANT UPDATE (`code_suku_bunga`, `desc_suku_bunga`, `nilai_persen`, `remarks_suku_bunga`, `is_active`, `ud`, `ud_usr`) ON `__KOSIPA_DB__`.`m_suku_bunga` TO 'kosipa_master_w'@'__HOST__';
+GRANT SELECT (`id`, `jenis_pinjaman`, `min_nominal`, `max_nominal`, `min_jw`, `max_jw`, `jasa`, `status`) ON `__KOSIPA_DB__`.`m_pinjaman_mobile` TO 'kosipa_master_w'@'__HOST__';
+GRANT INSERT (`jenis_pinjaman`, `min_nominal`, `max_nominal`, `min_jw`, `max_jw`, `jasa`, `status`) ON `__KOSIPA_DB__`.`m_pinjaman_mobile` TO 'kosipa_master_w'@'__HOST__';
+GRANT UPDATE (`jenis_pinjaman`, `min_nominal`, `max_nominal`, `min_jw`, `max_jw`, `jasa`, `status`) ON `__KOSIPA_DB__`.`m_pinjaman_mobile` TO 'kosipa_master_w'@'__HOST__';
 GRANT SELECT (`id`, `coa_no`, `coa_desc`, `coa_group`) ON `__KOSIPA_DB__`.`m_acc_coa` TO 'kosipa_master_w'@'__HOST__';
 GRANT SELECT (`jenis_pinjaman`, `jenis_potongan`, `bank_pembiaya`, `pembiayaan_code`) ON `__KOSIPA_DB__`.`trans_pinjaman` TO 'kosipa_master_w'@'__HOST__';
+GRANT SELECT (`jenis_pinjaman`) ON `__KOSIPA_DB__`.`trans_pinjaman_pengajuan` TO 'kosipa_master_w'@'__HOST__';
 GRANT SELECT (`jenis_simpanan`) ON `__KOSIPA_DB__`.`trans_simpanan` TO 'kosipa_master_w'@'__HOST__';
 GRANT SELECT (`jenis_simpanan`) ON `__KOSIPA_DB__`.`trans_simpanan_dtl` TO 'kosipa_master_w'@'__HOST__';
 GRANT SELECT (`jenis_simpanan`) ON `__KOSIPA_DB__`.`m_simpanan_aktif` TO 'kosipa_master_w'@'__HOST__';

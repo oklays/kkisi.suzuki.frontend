@@ -10,7 +10,7 @@ import { sameMasterText } from './master.ts';
  * Unlike the five reference masters (master.ts: code/name/remarks text only) these rows carry typed financial parameters, server-derived COA
  * descriptions, a reference to another master and (loan types) a one-level hierarchy, so they have their own rule set. Keys are the legacy column names.
  */
-export const PRODUCT_MASTER_TYPES = ['jenis-simpanan', 'jenis-pinjaman', 'jenis-pembiayaan', 'suku-bunga'] as const;
+export const PRODUCT_MASTER_TYPES = ['jenis-simpanan', 'jenis-pinjaman', 'jenis-pembiayaan', 'suku-bunga', 'pinjaman-mobile'] as const;
 export type ProductMasterType = (typeof PRODUCT_MASTER_TYPES)[number];
 
 export type ProductFieldKind = 'code' | 'text' | 'decimal' | 'int' | 'enum' | 'flag' | 'coa' | 'financing' | 'parent';
@@ -54,6 +54,7 @@ export type ProductMasterDefinition = {
   deactivateEffect: string;
   /** Shown before a financial edit (FD-32 UI warning). */
   financialWarning?: string;
+  stamps?: boolean;
 };
 
 const text = (key: string, label: string, max: number, required = false): ProductField => ({ key, label, kind: 'text', max, required });
@@ -82,7 +83,12 @@ export const PRODUCT_MASTER_DEFINITIONS: Readonly<Record<ProductMasterType, Prod
   'jenis-pinjaman': {
     type: 'jenis-pinjaman', key: 'jenis_pinjaman', title: 'Master Jenis Pinjaman', table: 'm_jenis_pinjaman', legacyController: 'master/jenis_pinjaman_c',
     status: { column: 'is_active', kind: 'text' }, codeKey: 'jenis_pinjaman_code', fixedRoots: [1, 2, 3, 4, 28],
-    references: [{ table: 'trans_pinjaman', column: 'jenis_pinjaman' }, { table: 'trans_pinjaman', column: 'jenis_potongan' }, { table: 'trans_pinjaman', column: 'bank_pembiaya' }],
+    references: [
+      { table: 'trans_pinjaman', column: 'jenis_pinjaman' },
+      { table: 'trans_pinjaman', column: 'jenis_potongan' },
+      { table: 'trans_pinjaman', column: 'bank_pembiaya' },
+      { table: 'trans_pinjaman_pengajuan', column: 'jenis_pinjaman' },
+    ],
     fields: [
       code('jenis_pinjaman_code', 50, 'unreferenced', 'Tidak dapat diubah bila sudah dipakai pinjaman.'),
       text('jenis_pinjaman_name', 'Nama', 50, true), text('jenis_pinjaman_remarks', 'Keterangan', 150),
@@ -134,6 +140,23 @@ export const PRODUCT_MASTER_DEFINITIONS: Readonly<Record<ProductMasterType, Prod
     ],
     deactivateEffect: 'Tidak berpengaruh pada perhitungan: pembaca pinjaman KOSIPA mengabaikan status dan tetap memakai nilai baris ini.',
     financialWarning: 'Pinjaman baru membaca nilai ini saat dihitung. Mengubahnya mengubah tanggal jatuh tempo pinjaman berikutnya.',
+  },
+  // Pinjaman mobile: batas nominal, tenor, dan jasa yang dibaca aplikasi mobile anggota saat mengajukan pinjaman.
+  'pinjaman-mobile': {
+    type: 'pinjaman-mobile', key: 'pinjaman_mobile', title: 'Master Pinjaman Mobile', table: 'm_pinjaman_mobile', legacyController: 'mobile/pinjaman_mobile_c',
+    status: { column: 'status', kind: 'int' }, codeKey: 'jenis_pinjaman',
+    references: [{ table: 'trans_pinjaman_pengajuan', column: 'jenis_pinjaman' }],
+    stamps: false,
+    fields: [
+      { key: 'jenis_pinjaman', label: 'Jenis Pinjaman', kind: 'code', max: 50, required: true, unique: true, change: 'unreferenced', hint: 'Nama jenis pinjaman mobile (contoh: PINJAMAN REGULAR, KASBON, PINJAMAN POT. DESEMBER).' },
+      { key: 'min_nominal', label: 'Min. Nominal (Rp)', kind: 'int', min: 0, maxValue: 2_000_000_000, required: true, financial: true },
+      { key: 'max_nominal', label: 'Maks. Nominal (Rp)', kind: 'int', min: 0, maxValue: 2_000_000_000, required: true, financial: true },
+      { key: 'min_jw', label: 'Min. Tenor (Bulan)', kind: 'int', min: 1, maxValue: 120, required: true, financial: true },
+      { key: 'max_jw', label: 'Maks. Tenor (Bulan)', kind: 'int', min: 1, maxValue: 120, required: true, financial: true },
+      { key: 'jasa', label: 'Jasa/Bunga (%)', kind: 'decimal', precision: 10, scale: 2, required: true, financial: true },
+    ],
+    deactivateEffect: 'Tidak muncul lagi di dropdown pilihan pengajuan pinjaman pada aplikasi mobile anggota.',
+    financialWarning: 'Mengubah nominal, tenor, atau jasa pinjaman mobile akan langsung mengubah batasan pengajuan baru pada aplikasi mobile.',
   },
 };
 
