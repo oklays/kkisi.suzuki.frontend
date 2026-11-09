@@ -4,6 +4,48 @@ settings:
   excludeLinksFromLockfile: false
 importers:
   .: {}
+  apps/mobile_kkisi:
+    dependencies:
+      '@koperasi/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@koperasi/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      bcryptjs:
+        specifier: 3.0.3
+        version: 3.0.3
+      mysql2:
+        specifier: ^3.24.6
+        version: 3.24.6(@types/node@22.20.4)
+      next:
+        specifier: ^16.3.7
+        version: 16.3.7(@babel/core@7.29.7)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      react:
+        specifier: ^19.2.0
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.3.0(react@19.3.0)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.4
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.3.0(@types/react@19.3.0)
+      playwright:
+        specifier: ^1.64.1
+        version: 1.64.1
+      sharp:
+        specifier: ^0.35.5
+        version: 0.35.5(@types/node@22.20.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
   apps/web:
     dependencies:
       '@koperasi/application':

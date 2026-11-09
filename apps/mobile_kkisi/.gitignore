@@ -1,0 +1,8 @@
+.next/
+.next-*/
+.local/
+.env*.local
+.env.production
+next-env.d.ts
+tsconfig.tsbuildinfo
+test-results/

@@ -1,0 +1,40 @@
+{
+  "name": "@koperasi/mobile-kkisi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1 -p 3240",
+    "dev:synthetic": "node integration/with-stack.mjs next dev -H 127.0.0.1 -p 3240",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 -p 3240",
+    "start:synthetic": "node integration/with-stack.mjs next start -H 127.0.0.1 -p 3240",
+    "lint": "node ../web/node_modules/eslint/bin/eslint.js .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/unit/*.test.mjs",
+    "test:integration": "node integration/with-stack.mjs node --experimental-strip-types --test --test-concurrency=1 tests/integration/*.test.mjs",
+    "test:e2e": "node --experimental-strip-types tests/e2e/run.mjs",
+    "stack:up": "node integration/stack.mjs up",
+    "stack:seed": "node integration/stack.mjs seed",
+    "stack:status": "node integration/stack.mjs status",
+    "stack:down": "node integration/stack.mjs down",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "@koperasi/application": "workspace:*",
+    "@koperasi/domain": "workspace:*",
+    "bcryptjs": "3.0.3",
+    "mysql2": "^3.24.6",
+    "next": "^16.3.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "playwright": "^1.64.1",
+    "sharp": "^0.35.5",
+    "typescript": "^5.0.0"
+  }
+}
