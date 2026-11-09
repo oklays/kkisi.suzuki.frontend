@@ -17,10 +17,16 @@ export const LOAN_DOC_STATUSES = ['OPEN', 'POSTING', 'APPROVED', 'REJECTED'] as 
 export const LOAN_DISBURSEMENT_STATUSES = ['OPEN', 'APPROVED'] as const;
 export const LOAN_REPAYMENT_STATUSES = ['LUNAS', 'BELUM LUNAS'] as const;
 export type LoanDocStatus = (typeof LOAN_DOC_STATUSES)[number];
+/** Pseudo status of the list filter: documents that still wait for a decision (OPEN or POSTING). */
+export const LOAN_PENDING_FILTER = 'MENUNGGU_KEPUTUSAN';
+export const LOAN_PENDING_STATUSES = ['OPEN', 'POSTING'] as const;
 
 // -------------------------------------------------------------------------------------------------------------- filters
 export type LoanListQuery = {
-  docStatus: (typeof LOAN_DOC_STATUSES)[number] | null; disbursement: (typeof LOAN_DISBURSEMENT_STATUSES)[number] | null; repayment: (typeof LOAN_REPAYMENT_STATUSES)[number] | null;
+  docStatus: (typeof LOAN_DOC_STATUSES)[number] | null;
+  /** status=MENUNGGU_KEPUTUSAN: doc_status OPEN or POSTING (docStatus is then null). */
+  pending?: boolean;
+  disbursement: (typeof LOAN_DISBURSEMENT_STATUSES)[number] | null; repayment: (typeof LOAN_REPAYMENT_STATUSES)[number] | null;
   search: LoanSearch | null; afterId: number | null;
   /** Month of the loan DOCUMENT date (YYYY-MM). Loans with a zero/invalid document date can never match a month. */
   period: { year: number; month: number } | null;
@@ -41,8 +47,9 @@ export function parseLoanSearch(raw: string): LoanSearch | null {
 
 /** Validated list filter. Unknown values are refused, never passed to SQL. */
 export function parseLoanListQuery(params: Record<string, string | string[] | undefined>): LoanListQuery {
+  const pending = first(params.status) === LOAN_PENDING_FILTER;
   return {
-    docStatus: member(LOAN_DOC_STATUSES, first(params.status)), disbursement: member(LOAN_DISBURSEMENT_STATUSES, first(params.cair)), repayment: member(LOAN_REPAYMENT_STATUSES, first(params.bayar)),
+    docStatus: pending ? null : member(LOAN_DOC_STATUSES, first(params.status)), pending, disbursement: member(LOAN_DISBURSEMENT_STATUSES, first(params.cair)), repayment: member(LOAN_REPAYMENT_STATUSES, first(params.bayar)),
     search: parseLoanSearch(first(params.q)), afterId: parseCursor(first(params.after) || null), period: parseLoanPeriod(first(params.periode)), ...parseLoanProductFilter(params),
   };
 }

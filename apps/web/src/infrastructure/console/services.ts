@@ -24,13 +24,16 @@ import { exportPolicyFromEnv, exportThrottle } from './export-config.ts';
 import { PrismaAuditLog, PrismaIdentityLinkStore } from './console-store.ts';
 import { PrismaKosipaDirectory } from './kosipa-directory.ts';
 import { PrismaKosipaGrantStore } from './kosipa-grant-store.ts';
-import { kosipaGrantAdmins, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
+import { LOAN_DECISION_LEGACY_CONTROLLERS, kosipaGrantAdmins, kosipaLoanDecisionShared, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
 import { PrismaKosipaMasterRepository } from '../repositories/kosipa-master-write.repository.ts';
 import { kosipaMasterWritePrisma, kosipaMasterWritesAvailable, validateKosipaLedgerDatabase } from '../db/prisma-kosipa-master-write.ts';
 import { PrismaKosipaMemberRepository } from '../repositories/kosipa-member-write.repository.ts';
 import { PrismaKosipaProductMasterRepository } from '../repositories/kosipa-product-master.repository.ts';
 import { PrismaKosipaSavingsDepositRepository } from '../repositories/kosipa-savings-deposit.repository.ts';
 import { kosipaSavingsWritePrisma, kosipaSavingsWritesAvailable, validateKosipaSavingsLedgerDatabase } from '../db/prisma-kosipa-savings-write.ts';
+import { PrismaKosipaLoanDecisionRepository } from '../repositories/kosipa-loan-decision.repository.ts';
+import { kosipaLoanWritePrisma, kosipaLoanWritesAvailable, validateKosipaLoanLedgerDatabase } from '../db/prisma-kosipa-loan-write.ts';
+import type { LoanDecisionRepository } from '@koperasi/application/kosipa/commands/loan-decision';
 import { kosipaMemberWritePrisma, kosipaMemberWritesAvailable, validateKosipaMemberLedgerDatabase } from '../db/prisma-kosipa-member-write.ts';
 import type { KosipaWriteSources } from '@koperasi/application/console/capabilities';
 import type { WriteOwnership } from '@koperasi/application/kosipa/commands/pipeline';
@@ -47,7 +50,10 @@ export function consoleServices(env: Record<string, string | undefined> = proces
   if (!consoleStoreUsable(env)) return null;
   const db = consolePrisma();
   // Once Next.js owns member writes, the legacy member controllers are fenced (status 0); their group access rows must still grant member VIEW.
-  const directory = new PrismaKosipaDirectory(prisma, { fencedViewUrls: kosipaWriteOwnership(env).owns('member') ? ['anggota/anggota_c', 'master/anggota_c'] : [] });
+  // Same for the loan decision: pinjaman/pinjaman_c is fenced with the other loan controllers but also grants kosipa.loan.view.
+  const ownership = kosipaWriteOwnership(env);
+  const fencedViewUrls = [...(ownership.owns('member') ? ['anggota/anggota_c', 'master/anggota_c'] : []), ...(ownership.owns('loan.decision') && !kosipaLoanDecisionShared(env) ? LOAN_DECISION_LEGACY_CONTROLLERS : [])];
+  const directory = new PrismaKosipaDirectory(prisma, { fencedViewUrls });
   return { links: new PrismaIdentityLinkStore(db), audit: new PrismaAuditLog(db), kosipa: directory, consoleUsers: directory, directory, now: () => new Date() };
 }
 
@@ -62,7 +68,7 @@ export function kosipaServices(env: Record<string, string | undefined> = process
 
 /** Native KOSIPA commands (FA-01): KOSIPA read services + ownership gate + writer repositories. The writer is attached only when its
  *  guarded configuration is valid; otherwise reads work and every command answers 503 WRITE_NOT_CONFIGURED. */
-export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository };
+export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository; loanDecisions: LoanDecisionRepository };
 export function kosipaCommandServices(env: Record<string, string | undefined> = process.env): KosipaCommandServices | null {
   const services = kosipaServices(env);
   if (!services) return null;
@@ -76,7 +82,10 @@ export function kosipaCommandServices(env: Record<string, string | undefined> = 
   // Savings deposits (FA-03C T07): their own writer account, flag and ledger check.
   const savingsWritable = kosipaSavingsWritesAvailable(env);
   const deposits = new PrismaKosipaSavingsDepositRepository(prisma, savingsWritable ? kosipaSavingsWritePrisma() : undefined, { ledgerDatabase: savingsWritable ? validateKosipaSavingsLedgerDatabase(env) : undefined });
-  return { ...services, ownership: kosipaWriteOwnership(env), masters, members, products, deposits };
+  // Loan decisions (FA-04): their own writer account, flag and ledger check.
+  const loanWritable = kosipaLoanWritesAvailable(env);
+  const loanDecisions = new PrismaKosipaLoanDecisionRepository(prisma, loanWritable ? kosipaLoanWritePrisma() : undefined, { ledgerDatabase: loanWritable ? validateKosipaLoanLedgerDatabase(env) : undefined, sharedWithLegacy: kosipaLoanDecisionShared(env) });
+  return { ...services, ownership: kosipaWriteOwnership(env), masters, members, products, deposits, loanDecisions };
 }
 
 /** Grant administration needs the console store, the grant table (flag) and the KOSIPA directory for identity links. */

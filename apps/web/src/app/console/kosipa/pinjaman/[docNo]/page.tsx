@@ -11,7 +11,9 @@ import { LOAN_HUB, LOAN_LIST, LOAN_REASON_TEXT, SCHEDULE_ISSUE_TEXT, STATUS_FLAG
 import { formatAmount4, formatLegacyDate, qs } from '@/components/console/kosipa/payroll-format';
 import { requireConsoleSession } from '@/infrastructure/auth/page-guard';
 import { consoleEnabled } from '@/infrastructure/console/flags';
-import { kosipaServices } from '@/infrastructure/console/services';
+import { kosipaCommandServices, kosipaServices } from '@/infrastructure/console/services';
+import { readLoanDecision, type LoanDecisionState } from '@koperasi/application/kosipa/commands/loan-decision';
+import { LoanDecisionPanel, LoanDecisionRecord } from '@/components/console/kosipa/LoanDecisionPanel';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Detail Pinjaman · KOSIPA · KKISI TB2' };
@@ -55,6 +57,13 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
   const back = from === 'daftar' || !product ? { href: LOAN_LIST, label: 'semua dokumen' } : { href: productHref(product), label: productLabel(product) };
   const schedule = detail?.schedule.state === 'ok' ? detail.schedule : null;
   const integrity = schedule?.integrity ?? null;
+  // Decision panel (FA-04): a read failure hides the panel, never the document.
+  let decision: LoanDecisionState | null = null;
+  const commands = detail ? kosipaCommandServices() : null;
+  if (commands) {
+    try { decision = await readLoanDecision(commands, { capabilities: auth.capabilities, kosipaUserId: auth.kosipaUserId, userId: auth.ctx.userId }, docNo); } catch { decision = null; }
+  }
+  const pending = decision && (decision.status === 'OPEN' || decision.status === 'POSTING');
   const nextDue = after ? undefined : schedule?.rows.find((r) => r.status === 'Belum Bayar')?.id;   // only the first page knows which unpaid row comes next
 
   return (
@@ -76,6 +85,15 @@ export default async function LoanDetailPage({ params, searchParams }: { params:
             <li key={s.label} data-state={s.state} aria-current={s.state === 'current' ? 'step' : undefined}><span className="kloan-step-dot" aria-hidden="true" /><strong>{s.label}</strong><small>{s.detail}</small></li>
           ))}</ol>
         </section>
+
+        {decision && pending && h && (
+          <LoanDecisionPanel docNo={decision.docNo} status={decision.status ?? ''} version={decision.version} options={decision.options} writable={decision.writable} legacy={decision.legacy} owned={decision.owned} shared={decision.shared}
+            postedByViewer={decision.postedByViewer} csrfToken={auth.services.keys.csrfToken(auth.ctx.sidHash)}
+            summary={{ member: h.name || 'Nama tidak tercatat', nik: h.nik || 'tidak tercatat', product: `${productLabel(product)}${segment ? ` · ${segment}` : ''}`, principal: formatAmount4(l.planPrincipal4),
+              installment: formatAmount4(l.planInstallment4), tenor: h.planMonths ? `${h.planMonths} bulan` : 'tenor tidak tercatat',
+              rollovers: detail.rollovers.state === 'ok' ? detail.rollovers.rows.filter((r) => r.newDocNo === docNo).length : 0, mobile: decision.mobile }} />
+        )}
+        {decision && !pending && <LoanDecisionRecord stamps={decision.stamps} />}
 
         {(l.statusFlags.length > 0 || detail.headerCount > 1) && (
           <ContextNotice title="Data dokumen perlu diperiksa" tone="warning">

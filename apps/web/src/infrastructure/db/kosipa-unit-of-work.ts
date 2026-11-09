@@ -36,7 +36,11 @@ export type CommandSteps<L, R> = {
 };
 /** Failure injection for tests only (never wired by the services): after the business write / after the ledger row, before COMMIT. */
 export type UnitOfWorkHooks = { afterBusinessWrite?: (tx: Prisma.TransactionClient) => Promise<void>; afterLedgerWrite?: (tx: Prisma.TransactionClient) => Promise<void> };
-export type UnitOfWorkOptions = { ledgerDatabase: string; legacyControllers: readonly string[]; hooks?: UnitOfWorkHooks };
+/**
+ * `legacyFence`: 'enforced' (default) = step 2 below. 'shared' = an owner-approved coexistence period for ONE feature (FA-04 loan decision during UAT):
+ * the legacy screens stay open and step 2 is skipped; row locks, the optimistic version and guarded UPDATEs remain the only protection.
+ */
+export type UnitOfWorkOptions = { ledgerDatabase: string; legacyControllers: readonly string[]; legacyFence?: 'enforced' | 'shared'; hooks?: UnitOfWorkHooks };
 
 const IDENTIFIER = /^[A-Za-z0-9_]{1,64}$/;
 /** Fully qualified ledger table; the database name comes from validated configuration only, never from a request. */
@@ -88,7 +92,7 @@ export async function runCommandTransaction<L, R>(client: PrismaClient, envelope
     try {
       return await client.$transaction(async (tx) => {
         await capLockWait(tx);
-        await assertLegacyFenced(tx, options.legacyControllers);
+        if (options.legacyFence !== 'shared') await assertLegacyFenced(tx, options.legacyControllers);
         const locked = await steps.lock(tx);
         const [stored] = await tx.$queryRaw<LedgerRow[]>`SELECT id, command, request_hash, result_json FROM ${ledger}
           WHERE actor_console_user_id = ${envelope.actorConsoleUserId} AND idempotency_key = ${envelope.idempotencyKey} FOR UPDATE`;

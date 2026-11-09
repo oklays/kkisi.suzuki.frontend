@@ -13,15 +13,25 @@ import type { WriteOwnership } from '@koperasi/application/kosipa/commands/pipel
  * (docs/superpowers/specs/kosipa-full-access/fa-01/FD-03-legacy-fence-verification.md, FA-01.5 section).
  */
 export type KosipaWriteFeatureConfig = { flag: string; legacyControllers: readonly string[] };
+/** Shared with the loan writer's fence (kosipa-loan-decision.repository.ts) and the fenced VIEW urls (pinjaman/pinjaman_c also grants kosipa.loan.view). */
+export const LOAN_DECISION_LEGACY_CONTROLLERS = [
+  'pinjaman/pinjaman_c', 'pinjaman/pinjaman_reguler_c', 'pinjaman/pinjaman_bank_c', 'pinjaman/kasbon_c', 'pinjaman/pembiayaan_c', 'pinjaman/gaji_minus_c', 'pinjaman/kpr_btn_c',
+  'mobile/pinjaman_mobile_c',
+] as const;
 /** Reference masters (FA-01 Lokasi, FA-02 Bagian, Jenis Dokumen, Rekening Bank, Periode Angsuran): one feature per legacy controller. */
 export const KOSIPA_WRITE_FEATURES: Readonly<Record<string, KosipaWriteFeatureConfig>> = {
   ...Object.fromEntries(Object.values(MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }])),
   /** Product masters (FA-03B T06; FD-32/FD-34): same master writer and flag, one feature per legacy controller. */
-  ...Object.fromEntries(Object.values(PRODUCT_MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }])),
+  ...Object.fromEntries(Object.values(PRODUCT_MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: d.legacyWriter === false ? [] : [d.legacyController] }])),
   /** Members (FA-03B): every legacy controller that writes m_anggota / member deduction config must be fenced (MC01-MC11). */
   member: { flag: 'KOSIPA_MEMBER_WRITES_ENABLED', legacyControllers: ['master/anggota_c', 'anggota/anggota_c', 'mobile/users_c'] },
   /** Voluntary-savings deposits (FA-03C T07): the legacy Setor Simpanan screen. Other legacy savings screens stay legacy-owned until their own cutover. */
   'savings.deposit': { flag: 'KOSIPA_SAVINGS_WRITES_ENABLED', legacyControllers: ['simpanan/sim_setor_c'] },
+  /**
+   * Loan decision (FA-04, REQ-119): every legacy controller whose `ajax_posting` / `ajax_posting_all` writes trans_pinjaman.doc_status, plus the mobile
+   * loan screen that converts requests into POSTING loans. Legacy writes those statuses blindly, so both applications must never decide loans at once.
+   */
+  'loan.decision': { flag: 'KOSIPA_LOAN_WRITES_ENABLED', legacyControllers: LOAN_DECISION_LEGACY_CONTROLLERS },
 };
 
 export function kosipaWriteOwnership(env: Record<string, string | undefined> = process.env): WriteOwnership {
@@ -32,6 +42,20 @@ export function kosipaWriteOwnership(env: Record<string, string | undefined> = p
       return env[KOSIPA_WRITE_FEATURES[feature].flag] === 'true' && owned.has(feature);
     },
   };
+}
+
+/**
+ * FA-04 coexistence (owner decision 9 Nov 2026, UAT period): the loan decision runs while the legacy loan screens stay OPEN, so legacy keeps
+ * application, editing and disbursement. Only when this is exactly "true": the `loan.decision` fence is neither required by the command nor
+ * applied by the local setup script. Native commands still lock the rows, check the version and guard the status; a STALE legacy page can still
+ * overwrite a native decision (legacy writes blindly), which the owner accepted for UAT. Turn it off (strict fence) before production cutover.
+ */
+export function kosipaLoanDecisionShared(env: Record<string, string | undefined> = process.env): boolean {
+  return env.KOSIPA_LOAN_DECISION_LEGACY_SHARED === 'true';
+}
+/** Features whose legacy controllers must NOT be fenced in this environment (coexistence). */
+export function kosipaSharedFeatures(env: Record<string, string | undefined> = process.env): ReadonlySet<string> {
+  return new Set(kosipaLoanDecisionShared(env) ? ['loan.decision'] : []);
 }
 
 /** Grants table usage is opt-in so environments whose console store predates db/console/004 keep their read-only behaviour. */

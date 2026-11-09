@@ -43,6 +43,11 @@ export type ProductMasterDefinition = {
   title: string;
   table: string;
   legacyController: string;
+  /**
+   * false = no legacy KOSIPA screen writes this table: `legacyController` is only where legacy READS it, so it is never fenced (fencing it would
+   * close an unrelated legacy screen). Default true.
+   */
+  legacyWriter?: boolean;
   status: { column: string; kind: 'int' | 'text' };
   fields: readonly ProductField[];
   /** The field other data stores (reference count before it may change). */
@@ -143,7 +148,8 @@ export const PRODUCT_MASTER_DEFINITIONS: Readonly<Record<ProductMasterType, Prod
   },
   // Pinjaman mobile: batas nominal, tenor, dan jasa yang dibaca aplikasi mobile anggota saat mengajukan pinjaman.
   'pinjaman-mobile': {
-    type: 'pinjaman-mobile', key: 'pinjaman_mobile', title: 'Master Pinjaman Mobile', table: 'm_pinjaman_mobile', legacyController: 'mobile/pinjaman_mobile_c',
+    // mobile/pinjaman_mobile_c only reads m_pinjaman_mobile (dropdown); it is the legacy screen that turns mobile requests into loans and must stay open.
+    type: 'pinjaman-mobile', key: 'pinjaman_mobile', title: 'Master Pinjaman Mobile', table: 'm_pinjaman_mobile', legacyController: 'mobile/pinjaman_mobile_c', legacyWriter: false,
     status: { column: 'status', kind: 'int' }, codeKey: 'jenis_pinjaman',
     references: [{ table: 'trans_pinjaman_pengajuan', column: 'jenis_pinjaman' }],
     stamps: false,
