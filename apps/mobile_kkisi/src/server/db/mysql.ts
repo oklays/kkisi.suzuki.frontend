@@ -15,10 +15,12 @@ const SAFE: PoolOptions = {
   multipleStatements: false,
 };
 
+export const SLOW_QUERY_THRESHOLD_MS = 500;
+
 const g = globalThis as typeof globalThis & { __kkisiMobilePools?: Map<string, Pool> };
 
 /** One pool per (purpose, DSN) per process, even when Next evaluates this module in several module graphs. */
-export function pool(purpose: 'reader' | 'auth', uri: string, connectionLimit: number): Pool {
+export function pool(purpose: 'reader' | 'auth' | 'writer', uri: string, connectionLimit: number): Pool {
   g.__kkisiMobilePools ??= new Map();
   const key = `${purpose}:${uri}`;
   let p = g.__kkisiMobilePools.get(key);
@@ -33,8 +35,13 @@ export class StoreUnavailableError extends Error { constructor() { super('STORE_
 
 /** Runs a parameterised statement; driver errors become a code-only error (no SQL, host or value ever leaves this file). */
 export async function rows<T>(p: Pool, sql: string, params: unknown[] = []): Promise<T[]> {
+  const start = Date.now();
   try {
     const [result] = await p.query(sql, params);
+    const ms = Date.now() - start;
+    if (ms >= SLOW_QUERY_THRESHOLD_MS) {
+      console.warn(JSON.stringify({ at: new Date().toISOString(), app: 'mobile_kkisi', event: 'db.query.slow', ms }));
+    }
     return result as T[];
   } catch {
     throw new StoreUnavailableError();

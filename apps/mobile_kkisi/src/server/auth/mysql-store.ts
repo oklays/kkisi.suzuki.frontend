@@ -1,6 +1,6 @@
 import type { Pool, ResultSetHeader } from 'mysql2/promise';
 import { rows, StoreUnavailableError } from '../db/mysql.ts';
-import type { MemberSessionStore, RevokeReason, SessionRow, ThrottleState } from './types.ts';
+import type { MemberSessionStore, PinCredentialRow, RevokeReason, SessionRow, ThrottlePolicy, ThrottleState } from './types.ts';
 
 type Row = {
   id_hash: string; kid: string; user_id: string | number; member_id: string | number; nik: string; stage: 'pin' | 'active'; pin_failures: number;
@@ -63,6 +63,31 @@ export class MysqlMemberSessionStore implements MemberSessionStore {
     return (res as unknown as ResultSetHeader).affectedRows ?? 0;
   }
 
+  async revokePinSessions(userId: number, reason: RevokeReason, now: Date) {
+    const res = await rows<ResultSetHeader>(this.db, "UPDATE member_sessions SET revoked_at = ?, revoke_reason = ? WHERE user_id = ? AND stage = 'pin' AND revoked_at IS NULL", [toSql(now), reason, userId]);
+    return (res as unknown as ResultSetHeader).affectedRows ?? 0;
+  }
+
+  async pinCredentialGet(userId: number): Promise<PinCredentialRow | null> {
+    const r = await rows<{ user_id: string | number; source_digest: string; pin_hash: string; hash_scheme: string; updated_at: string }>(
+      this.db,
+      'SELECT user_id, source_digest, pin_hash, hash_scheme, updated_at FROM member_pin_credentials WHERE user_id = ? LIMIT 1',
+      [userId],
+    );
+    return r[0]
+      ? { userId: Number(r[0].user_id), sourceDigest: r[0].source_digest, pinHash: r[0].pin_hash, hashScheme: r[0].hash_scheme, updatedAt: fromSql(r[0].updated_at) }
+      : null;
+  }
+
+  async pinCredentialSet(row: PinCredentialRow): Promise<void> {
+    await rows(
+      this.db,
+      `INSERT INTO member_pin_credentials (user_id, source_digest, pin_hash, hash_scheme, updated_at) VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE source_digest = VALUES(source_digest), pin_hash = VALUES(pin_hash), hash_scheme = VALUES(hash_scheme), updated_at = VALUES(updated_at)`,
+      [row.userId, row.sourceDigest, row.pinHash, row.hashScheme, toSql(row.updatedAt)],
+    );
+  }
+
   async throttleGet(key: string): Promise<ThrottleState | null> {
     const r = await rows<{ failures: number; window_start: string; locked_until: string | null }>(this.db, 'SELECT failures, window_start, locked_until FROM member_auth_throttle WHERE key_hash = ?', [key]);
     return r[0] ? { failures: Number(r[0].failures), windowStart: fromSql(r[0].window_start), lockedUntil: r[0].locked_until ? fromSql(r[0].locked_until) : null } : null;
@@ -71,6 +96,25 @@ export class MysqlMemberSessionStore implements MemberSessionStore {
     await rows(this.db, `INSERT INTO member_auth_throttle (key_hash, failures, window_start, locked_until) VALUES (?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE failures = VALUES(failures), window_start = VALUES(window_start), locked_until = VALUES(locked_until)`,
     [key, s.failures, toSql(s.windowStart), s.lockedUntil ? toSql(s.lockedUntil) : null]);
+  }
+  /**
+   * One statement, so two parallel attempts can never both read the same count. ON DUPLICATE KEY UPDATE assigns left to right
+   * with already-updated values (MySQL/MariaDB default; MariaDB SIMULTANEOUS_ASSIGNMENT must stay off): locked_until is computed
+   * first from the OLD failures/window_start, then failures, then window_start.
+   */
+  async throttleHit(key: string, p: ThrottlePolicy): Promise<ThrottleState> {
+    const now = toSql(p.now);
+    const cutoff = toSql(new Date(p.now.getTime() - p.windowMs));
+    const lockUntil = toSql(new Date(p.now.getTime() + p.lockMs));
+    await rows(this.db, `INSERT INTO member_auth_throttle (key_hash, failures, window_start, locked_until) VALUES (?, 1, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        locked_until = IF(IF(window_start < ?, 1, failures + 1) >= ?, ?, NULL),
+        failures = IF(window_start < ?, 1, failures + 1),
+        window_start = IF(window_start < ?, ?, window_start)`,
+    [key, now, 1 >= p.limit ? lockUntil : null, cutoff, p.limit, lockUntil, cutoff, cutoff, now]);
+    const after = await this.throttleGet(key);
+    if (!after) throw new StoreUnavailableError();
+    return after;
   }
   async throttleClear(key: string) { await rows(this.db, 'DELETE FROM member_auth_throttle WHERE key_hash = ?', [key]); }
 

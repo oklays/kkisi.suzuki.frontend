@@ -3,26 +3,49 @@ import { useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { SubmissionNotice } from '@/components/feedback/SubmissionNotice';
+import { postJson } from '@/lib/api/client';
 import { parseWholeRupiah, rupiahSen } from '@/lib/utils/money';
 import { simulateLoan, type LoanProduct } from '../services/loans';
 
+const makeLoanIdempotencyKey = (productId: number, amountRp: number | null, months: string) =>
+  `loan-${productId}-${amountRp ?? 0}-${months.trim()}-${crypto.randomUUID().slice(0, 12)}`;
+
 /** Loan application form with a live, real simulation (domain loanSchedule + the master's own rate and limits). */
-export function LoanApplicationForm({ products }: { products: LoanProduct[] }) {
+export function LoanApplicationForm({ products, enabled = false }: { products: LoanProduct[]; enabled?: boolean }) {
   const [productId, setProductId] = useState(products[0]?.id ?? 0);
   const [amount, setAmount] = useState('');
   const [months, setMonths] = useState('');
   const [purpose, setPurpose] = useState('');
   const [touched, setTouched] = useState(false);
   const [notice, setNotice] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [recordedDocNo, setRecordedDocNo] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const product = products.find((p) => p.id === productId) ?? null;
   const result = useMemo(() => simulateLoan(products, { productId, amountRp: parseWholeRupiah(amount), months: /^\d{1,3}$/.test(months.trim()) ? Number(months) : null }), [products, productId, amount, months]);
   const err = (field: string) => (touched && !result.ok && result.field === field ? result.message : '');
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     setTouched(true);
     if (!result.ok) { document.getElementById(result.field === 'months' ? 'loan-tenor' : result.field === 'amount' ? 'loan-amount' : 'loan-type')?.focus(); return; }
     if (!purpose.trim()) { document.getElementById('loan-purpose')?.focus(); return; }
+    setRecordedDocNo(null);
+    setSubmitError(null);
+    if (!enabled) { setNotice(true); return; }
+    setSubmitting(true);
+    const idempotencyKey = makeLoanIdempotencyKey(productId, parseWholeRupiah(amount), months);
+    const r = await postJson<{ ok: boolean; docNo: string }>('/api/transaksi/ajukan', {
+      kind: 'loan_application',
+      idempotencyKey,
+      productId,
+      amountRp: parseWholeRupiah(amount),
+      months: Number(months.trim()),
+      purpose: purpose.trim(),
+    });
+    setSubmitting(false);
+    if (r.ok) setRecordedDocNo(r.data.docNo);
+    else setSubmitError('Pengajuan belum dapat disimpan saat ini. Silakan coba lagi atau hubungi pengurus koperasi.');
     setNotice(true);
   };
 
@@ -63,9 +86,10 @@ export function LoanApplicationForm({ products }: { products: LoanProduct[] }) {
       </form>
       <footer className="form-footer">
         <Link className="secondary" href="/pinjaman">Kembali</Link>
-        <button type="submit" form="loan-form" className="primary">Lanjut</button>
+        <button type="submit" form="loan-form" className="primary" disabled={submitting}>{submitting ? 'Memproses…' : 'Lanjut'}</button>
       </footer>
       <SubmissionNotice open={notice} onClose={() => setNotice(false)} title="Ringkasan pengajuan" channel="Pengajuan pinjaman"
+        recordedDocNo={recordedDocNo} errorMessage={submitError}
         rows={[['Jenis Pinjaman', product?.label ?? '-'], ['Nominal', amount ? `Rp${(parseWholeRupiah(amount) ?? 0).toLocaleString('id-ID')}` : '-'], ['Tenor', `${months} bulan`], ['Keperluan', purpose.trim() || '-'],
           ['Simulasi angsuran', result.ok ? rupiahSen(result.firstInstallmentSen) : '-']]} />
     </>

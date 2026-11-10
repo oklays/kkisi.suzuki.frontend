@@ -52,7 +52,8 @@ export async function readCatalog(db: Db, q: CatalogQuery): Promise<{ items: Cat
   let where = CATALOG_WHERE;
   if (q.q) { where += ' AND (i.item_name LIKE ? OR i.item_code LIKE ?)'; params.push(like(q.q), like(q.q)); }
   if (q.category) { where += " AND COALESCE(c.category_name, 'Tanpa kategori') = ?"; params.push(q.category); }
-  const [count] = await query<{ n: string }>(db, `SELECT COUNT(*) AS n FROM db_items i LEFT JOIN db_category c ON c.id = i.category_id WHERE ${where}`, params);
+  const countJoin = q.category ? ' LEFT JOIN db_category c ON c.id = i.category_id' : '';
+  const [count] = await query<{ n: string }>(db, `SELECT COUNT(*) AS n FROM db_items i${countJoin} WHERE ${where}`, params);
   const r = await query<Record<string, string | null>>(db, `SELECT i.id, i.item_name, i.item_code, COALESCE(c.category_name, 'Tanpa kategori') AS category, COALESCE(u.unit_name, '') AS unit, ${dec('i.sales_price')} AS price
     FROM db_items i LEFT JOIN db_category c ON c.id = i.category_id LEFT JOIN db_units u ON u.id = i.unit_id
     WHERE ${where} ORDER BY ${ORDER[q.sort]} LIMIT ? OFFSET ?`, [...params, q.limit, q.offset]);

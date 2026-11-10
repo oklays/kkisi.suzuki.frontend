@@ -14,10 +14,18 @@ export function PwaRuntime() {
 
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine);
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) window.location.reload();
+    };
     sync();
     window.addEventListener('online', sync);
     window.addEventListener('offline', sync);
-    return () => { window.removeEventListener('online', sync); window.removeEventListener('offline', sync); };
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('online', sync);
+      window.removeEventListener('offline', sync);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   }, []);
 
   useEffect(() => {

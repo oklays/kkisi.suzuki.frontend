@@ -45,8 +45,8 @@ export class MysqlSavingsReader implements SavingsReader {
         CAST(COALESCE(SUM(COALESCE(d.jasa_kredit, 0)), 0) AS DECIMAL(24,2)) AS interest, COUNT(*) AS n
       FROM trans_simpanan_dtl d
       LEFT JOIN (SELECT doc_no, MAX(jenis_simpanan) AS jenis_simpanan, IF(COUNT(DISTINCT doc_status) = 1 AND COUNT(*) = 1, MAX(doc_status), 'AMBIGUOUS') AS doc_status
-                 FROM trans_simpanan GROUP BY doc_no) h ON h.doc_no = d.doc_no
-      WHERE d.nik_kar IN (?) GROUP BY 1, 2 LIMIT 200`, [nikKeys]);
+                 FROM trans_simpanan WHERE doc_no IN (SELECT d2.doc_no FROM trans_simpanan_dtl d2 WHERE d2.nik_kar IN (?)) GROUP BY doc_no) h ON h.doc_no = d.doc_no
+      WHERE d.nik_kar IN (?) GROUP BY 1, 2 LIMIT 200`, [nikKeys, nikKeys]);
     return r.map((x) => ({ type: x.type, headerStatus: x.doc_status, credit: x.credit, debit: x.debit, interest: x.interest, rows: Number(x.n) }));
   }
 
@@ -145,7 +145,7 @@ export async function readScheduleAggregate(db: Db, docNo: string): Promise<Sche
 export async function readScheduleRows(db: Db, docNo: string, limit: number): Promise<ScheduleRowRaw[]> {
   const r = await query<Record<string, string | null>>(db, `SELECT id, ke_cicilan AS ke, ${txt('tgl_cicilan')} AS due, ${txt('tgl_bayar')} AS paid, ${dec('pokok_cicilan')} AS principal,
       ${dec('bunga_cicilan')} AS interest, ${dec('angsuran_cicilan')} AS total, status_cicilan AS status, type_cicilan AS type, blokir AS blocked, rool_over AS roll_over, doc_no_cicilan AS cicilan_doc_no
-    FROM trans_pinjaman_dtl WHERE doc_no = ? ORDER BY COALESCE(ke_cicilan, 0), id LIMIT ?`, [docNo, limit]);
+    FROM trans_pinjaman_dtl WHERE doc_no = ? ORDER BY ke_cicilan, id LIMIT ?`, [docNo, limit]);
   return r.map((x) => ({
     id: Number(x.id), installmentNo: x.ke === null ? null : Number(x.ke), dueRaw: x.due, paidRaw: x.paid, principal: x.principal ?? '0.00', interest: x.interest ?? '0.00', total: x.total ?? '0.00',
     status: x.status, type: x.type, blocked: x.blocked === null ? null : Number(x.blocked), rollOver: x.roll_over === null ? null : Number(x.roll_over), cicilanDocNo: x.cicilan_doc_no,

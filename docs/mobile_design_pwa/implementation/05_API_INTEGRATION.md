@@ -10,7 +10,7 @@ The PWA is a backend-for-frontend: the browser talks only to `app.kkisitb2.id` (
 | `POST /api/auth/pin` | PIN-stage cookie, CSRF | `{pin}` | `200` + rotated cookie · `401 PIN_INVALID {remaining}` · `401 PIN_LOCKED \| SESSION_EXPIRED` (cookie cleared) · `409 PIN_NOT_SET` · `400 PIN_MALFORMED` | |
 | `POST /api/auth/logout` | cookie, CSRF | `{}` | `200 {next:"/masuk"}`, cookie cleared, `Clear-Site-Data: "cache"` | revokes server-side |
 | `GET /api/belanja/harga?items=id:qty,…` | member | ≤ 50 items, qty 1–99 | `{lines:[{id,quantity,item|null}], credit:{remainingSen}|null}` | prices re-read from `db_items`; never trusts client prices |
-| `GET /health` | public | — | `{status,app,version,env}` | liveness only, no DB |
+| `GET /health` | public | — | `{status}` (internal callers: `{status,app,version,env,features}`) | liveness only, no DB |
 | `GET /sw.js`, `GET /manifest.webmanifest` | public | — | service worker / manifest | |
 
 All responses: `Cache-Control: no-store` (member) and the security headers listed in 02. Errors are codes only; the client maps them to Indonesian messages (`src/lib/api/client.ts`).

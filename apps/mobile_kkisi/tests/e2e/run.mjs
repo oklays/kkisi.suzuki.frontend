@@ -193,6 +193,28 @@ try {
       assert.ok(!html.includes('PJ-UJI-0002') && !html.includes('999.000') && !html.includes('7.770.000'), p);
     }
   });
+  await step('readiness health check and server-side mutation feature flag + CSRF enforcement', async () => {
+    const ready = await (await fetch(`${B}/health?check=ready`)).json();
+    assert.equal(ready.status, 'ok');
+    assert.equal(ready.checks.readerDb, 'ok');
+    assert.equal(ready.checks.authDb, 'ok');
+    assert.equal(ready.features.enableLoanApplication, false);
+    const cookie = (await ctx.cookies()).find((x) => x.name === 'kkisi_member');
+    const csrfRes = await fetch(`${B}/api/transaksi/ajukan`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'https://evil.example', cookie: `kkisi_member=${cookie.value}` },
+      body: JSON.stringify({ kind: 'loan_application', idempotencyKey: 'idem-e2e-test-0001' }),
+    });
+    assert.equal(csrfRes.status, 403);
+    assert.equal((await csrfRes.json()).error, 'CSRF');
+    const disabledRes = await fetch(`${B}/api/transaksi/ajukan`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: B, cookie: `kkisi_member=${cookie.value}` },
+      body: JSON.stringify({ kind: 'loan_application', idempotencyKey: 'idem-e2e-test-0001', productId: 1, amountRp: 5000000, months: 12, purpose: 'Uji' }),
+    });
+    assert.equal(disabledRes.status, 403);
+    assert.equal((await disabledRes.json()).error, 'FEATURE_DISABLED');
+  });
   await step('manifest and icons are installable', async () => {
     const m = await (await page.request.get(`${B}/manifest.webmanifest`)).json();
     assert.equal(m.display, 'standalone'); assert.equal(m.start_url, '/beranda?source=pwa'); assert.equal(m.scope, '/');

@@ -1,5 +1,6 @@
 // Fail-closed configuration of the member PWA. Pure: every function takes the environment as an argument so it is unit-tested
 // without touching process.env. Nothing here ever logs or returns a credential.
+import { createHmac } from 'node:crypto';
 
 export class ConfigError extends Error {
   readonly setting: string;
@@ -10,6 +11,14 @@ export type AppEnv = 'production' | 'staging' | 'development';
 export type Secret = { kid: string; key: Buffer };
 export type DsnInfo = { url: string; user: string; host: string; database: string };
 
+export type FeatureFlags = {
+  enableLoanApplication: boolean;
+  enableDeductionChange: boolean;
+  enableStoreCheckout: boolean;
+  enablePpob: boolean;
+  enableMemberFavouritesWrite: boolean;
+};
+
 export type AuthSettings = {
   appEnv: AppEnv;
   origin: string;
@@ -17,6 +26,7 @@ export type AuthSettings = {
   cookieName: string;
   trustedProxyHops: number;
   secrets: Secret[];
+  pinPeppers: Secret[];
   store: { kind: 'mysql'; dsn: DsnInfo } | { kind: 'memory' };
 };
 
@@ -44,22 +54,30 @@ export function parseOrigin(raw: string | undefined, mode: AppEnv): { origin: st
   return { origin: url.origin, secure: https };
 }
 
-export function parseSecrets(raw: string | undefined): Secret[] {
-  if (!raw || raw.length > 2000) throw new ConfigError('MEMBER_AUTH_SECRETS');
+export function parseSecrets(raw: string | undefined, settingName = 'MEMBER_AUTH_SECRETS'): Secret[] {
+  if (!raw || raw.length > 2000) throw new ConfigError(settingName);
   const seen = new Set<string>();
   const out: Secret[] = [];
   for (const part of raw.split(',')) {
     const i = part.indexOf(':');
     const kid = part.slice(0, i).trim();
     const b64 = part.slice(i + 1).trim();
-    if (i < 1 || !/^[a-z0-9]{1,16}$/.test(kid) || seen.has(kid) || !/^[A-Za-z0-9+/_-]+={0,2}$/.test(b64)) throw new ConfigError('MEMBER_AUTH_SECRETS');
+    if (i < 1 || !/^[a-z0-9]{1,16}$/.test(kid) || seen.has(kid) || !/^[A-Za-z0-9+/_-]+={0,2}$/.test(b64)) throw new ConfigError(settingName);
     const key = Buffer.from(b64, /[-_]/.test(b64) ? 'base64url' : 'base64');
-    if (key.length < 32) throw new ConfigError('MEMBER_AUTH_SECRETS');
+    if (key.length < 32) throw new ConfigError(settingName);
     seen.add(kid);
     out.push({ kid, key });
   }
-  if (out.length === 0) throw new ConfigError('MEMBER_AUTH_SECRETS');
+  if (out.length === 0) throw new ConfigError(settingName);
   return out;
+}
+
+/** Derives a domain-separated 32-byte PIN pepper ring when MEMBER_PIN_PEPPER is not set separately. */
+export function derivePinPeppers(secrets: readonly Secret[]): Secret[] {
+  return secrets.map((s) => ({
+    kid: s.kid,
+    key: createHmac('sha256', s.key).update('kkisi:pin-pepper:v1').digest(),
+  }));
 }
 
 export function parseDsn(name: string, raw: string | undefined, mode: AppEnv): DsnInfo {
@@ -73,13 +91,41 @@ export function parseDsn(name: string, raw: string | undefined, mode: AppEnv): D
   return { url: raw, user, host: url.hostname, database: decodeURIComponent(url.pathname.slice(1)) };
 }
 
+function parseFlag(name: string, raw: string | undefined): boolean {
+  const v = (raw ?? '').trim().toLowerCase();
+  if (v === '' || v === 'false' || v === '0') return false;
+  if (v === 'true' || v === '1') return true;
+  throw new ConfigError(name);
+}
+
+/**
+ * Centralized server-enforced feature capability flags (WS-03 §5.7).
+ * All writer-dependent features default to false (fail-closed).
+ */
+export function loadFeatureFlags(env: Env = process.env): FeatureFlags {
+  return {
+    enableLoanApplication: parseFlag('ENABLE_LOAN_APPLICATION', env.ENABLE_LOAN_APPLICATION),
+    enableDeductionChange: parseFlag('ENABLE_DEDUCTION_CHANGE', env.ENABLE_DEDUCTION_CHANGE),
+    enableStoreCheckout: parseFlag('ENABLE_STORE_CHECKOUT', env.ENABLE_STORE_CHECKOUT),
+    enablePpob: parseFlag('ENABLE_PPOB', env.ENABLE_PPOB),
+    enableMemberFavouritesWrite: parseFlag('ENABLE_MEMBER_FAVOURITES_WRITE', env.ENABLE_MEMBER_FAVOURITES_WRITE),
+  };
+}
+
 export function loadAuthSettings(env: Env): AuthSettings {
   const mode = appEnv(env);
   const { origin, secure } = parseOrigin(env.APP_ORIGIN, mode);
   const hopsRaw = env.TRUSTED_PROXY_HOPS ?? '';
   const trustedProxyHops = hopsRaw === '' ? 0 : Number(hopsRaw);
   if (!Number.isInteger(trustedProxyHops) || trustedProxyHops < 0 || trustedProxyHops > 5) throw new ConfigError('TRUSTED_PROXY_HOPS');
-  const secrets = parseSecrets(env.MEMBER_AUTH_SECRETS);
+  const secrets = parseSecrets(env.MEMBER_AUTH_SECRETS, 'MEMBER_AUTH_SECRETS');
+  // Production needs its own PIN pepper ring: a pepper derived from the session keys would change (and silently re-key every
+  // shadow PIN credential) whenever the session keys are rotated, and one leaked env value would expose both.
+  if (mode === 'production' && !env.MEMBER_PIN_PEPPER?.trim()) throw new ConfigError('MEMBER_PIN_PEPPER');
+  const pinPeppers = env.MEMBER_PIN_PEPPER?.trim()
+    ? parseSecrets(env.MEMBER_PIN_PEPPER, 'MEMBER_PIN_PEPPER')
+    : derivePinPeppers(secrets);
+  if (pinPeppers.some((p) => secrets.some((s) => s.key.equals(p.key)))) throw new ConfigError('MEMBER_PIN_PEPPER');
   let store: AuthSettings['store'];
   if (env.MEMBER_AUTH_STORE === 'memory') {
     if (mode === 'production') throw new ConfigError('MEMBER_AUTH_STORE');   // process memory cannot revoke across instances
@@ -91,7 +137,7 @@ export function loadAuthSettings(env: Env): AuthSettings {
     if (reader && (reader.user === dsn.user || (reader.host === dsn.host && reader.database === dsn.database))) throw new ConfigError('DATABASE_URL_MEMBER_AUTH');
     store = { kind: 'mysql', dsn };
   }
-  return { appEnv: mode, origin, secure, cookieName: secure ? '__Host-kkisi_member' : 'kkisi_member', trustedProxyHops, secrets, store };
+  return { appEnv: mode, origin, secure, cookieName: secure ? '__Host-kkisi_member' : 'kkisi_member', trustedProxyHops, secrets, pinPeppers, store };
 }
 
 export type ReaderSettings = { dsn: DsnInfo; poolLimit: number; catalogCompanyId: number };
@@ -103,4 +149,19 @@ export function loadReaderSettings(env: Env): ReaderSettings {
   const catalogCompanyId = env.MEMBER_CATALOG_COMPANY_ID ? Number(env.MEMBER_CATALOG_COMPANY_ID) : 1;
   if (!Number.isSafeInteger(catalogCompanyId) || catalogCompanyId <= 0) throw new ConfigError('MEMBER_CATALOG_COMPANY_ID');
   return { dsn, poolLimit, catalogCompanyId };
+}
+
+export type WriterSettings = { dsn: DsnInfo; poolLimit: number } | null;
+/**
+ * Optional dedicated least-privilege writer DSN for approved member intake tables.
+ * Never reuses the read-only account (`DATABASE_URL_MEMBER_READ`).
+ */
+export function loadWriterSettings(env: Env = process.env): WriterSettings {
+  const raw = env.DATABASE_URL_MEMBER_WRITE?.trim();
+  if (!raw) return null;
+  const mode = appEnv(env);
+  const dsn = parseDsn('DATABASE_URL_MEMBER_WRITE', raw, mode);
+  const reader = env.DATABASE_URL_MEMBER_READ ? parseDsn('DATABASE_URL_MEMBER_READ', env.DATABASE_URL_MEMBER_READ, mode) : null;
+  if (reader && reader.user === dsn.user) throw new ConfigError('DATABASE_URL_MEMBER_WRITE');
+  return { dsn, poolLimit: 1 };
 }

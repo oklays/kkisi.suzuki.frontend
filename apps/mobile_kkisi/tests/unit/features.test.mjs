@@ -11,6 +11,9 @@ import { validateDeductionChange } from '../../src/features/deductions/services/
 import { buildShuYears } from '../../src/features/shu/services/shu.ts';
 import { activeNav } from '../../src/lib/navigation/routes.ts';
 import { ppobService, normaliseAccount } from '../../src/features/ppob/services/ppob.ts';
+import { buildActiveLoan } from '../../src/features/loans/services/loans.ts';
+import { buildDeductionPeriods } from '../../src/features/deductions/services/deductions.ts';
+import { PAYROLL_COMPONENT_COLUMNS } from '@koperasi/domain/kosipa';
 
 test('money: exact id-ID formatting, missing is never zero', () => {
   assert.equal(rupiah4(12_500_000_000), 'Rp1.250.000');
@@ -109,4 +112,61 @@ test('catalog params, cart ids, deduction rules, SHU, navigation, PPOB validatio
   assert.equal(activeNav('/simpanan'), '/beranda'); assert.equal(activeNav('/transaksi'), '/transaksi'); assert.equal(activeNav('/unknown'), '/beranda');
   assert.ok(ppobService('pulsa').pattern.test(normaliseAccount('0812-3456 7890')));
   assert.ok(!ppobService('token').pattern.test('1234'));
+});
+
+test('WS-04 financial reconciliation: Anuitas vs Flat loan schedule, schedule integrity issues, and payroll sub-sen precision', () => {
+  // 1. Anuitas simulation and invariant: sum(principalSen + interestSen) == totalSen
+  const products = buildLoanProducts([
+    { id: 1, name: 'PINJAMAN ANUITAS', minAmount: '1000000.00', maxAmount: '50000000.00', minMonths: 6, maxMonths: 60, ratePercent: '1.5', method: 'Anuitas' },
+  ]);
+  const sim = simulateLoan(products, { productId: 1, amountRp: 12_000_000, months: 12 });
+  assert.equal(sim.ok, true);
+  assert.equal(sim.method, 'Anuitas');
+  assert.equal(sim.rateBp, 150);
+  assert.equal(sim.principalSen + sim.interestSen, sim.firstInstallmentSen);
+
+  // 2. Schedule integrity issues surfaced from @koperasi/domain assessSchedule (zero due dates, implausible year 9999, count mismatch)
+  const header = {
+    id: 10, docNo: 'PJ-ERR-1', docDate: '2026-01-01', type: 'PINJAMAN REGULAR', method: 'Flat', rate: '1.00', nik: '10234', name: 'UJI', financier: 'KOPERASI',
+    docStatus: 'APPROVED', disbursement: 'APPROVED', repayment: 'BELUM LUNAS',
+    planPrincipal: '12000000.00', actualPrincipal: '0.00', planInstallment: '1120000.00', actualInstallment: '0.00',
+    planMonths: 12, actualMonths: 0, startDate: '2026-01-25', endDate: '2026-12-25', disbursedDate: '2026-01-05', disbursedAmount: '12000000.00',
+    adminFee: '0.00', insuranceFee: '0.00', totalDeduction: '0.00', totalReceived: '12000000.00',
+    settlementStatus: null, settlementDate: null, settlementTotal: '0.00', rollOver: 'NO',
+  };
+  const aggregate = {
+    rows: 10, distinctNo: 10, minNo: 1, maxNo: 10,
+    principalSum: '10000000.00', interestSum: '1200000.00', totalSum: '11200000.00',
+    paidRows: 5, unpaidRows: 5, otherStatusRows: 0,
+    paidPrincipal: '5000000.00', unpaidPrincipal: '5000000.00', unpaidTotal: '5600000.00',
+    zeroDue: 1, missingDue: 0, implausibleDue: 1, componentMismatch: 0, paidWithoutPaidDate: 1,
+  };
+  const active = buildActiveLoan(header, aggregate, [
+    { id: 1, installmentNo: 6, dueRaw: '0000-00-00', paidRaw: null, principal: '1000000.00', interest: '120000.00', total: '1120000.00', status: 'Belum Bayar', type: 'PAYROLL', blocked: 0, rollOver: 0, cicilanDocNo: '0' },
+    { id: 2, installmentNo: 7, dueRaw: '9999-12-10', paidRaw: null, principal: '1000000.00', interest: '120000.00', total: '1120000.00', status: 'Belum Bayar', type: 'PAYROLL', blocked: 0, rollOver: 0, cicilanDocNo: '0' },
+  ], '2026-11');
+  assert.ok(active.scheduleIssues.includes('ROW_COUNT_DIFFERS_FROM_PLAN_MONTHS'));
+  assert.ok(active.scheduleIssues.includes('PRINCIPAL_SUM_DIFFERS_FROM_PLAN'));
+  assert.ok(active.scheduleIssues.includes('DUE_DATES_UNUSABLE'));
+  assert.equal(active.installments[0].month, 'Tanggal tidak tercatat');
+  assert.equal(active.installments[1].month, 'Tanggal tidak tercatat');
+
+  // 3. Payroll matrix reconciliation with 4-decimal sub-sen amounts (e.g. 0.1000 Rp = 1000 in amount4)
+  const zeroAmounts = Object.fromEntries([...PAYROLL_COMPONENT_COLUMNS, 'total_potongan', 'potongan_toko'].map((c) => [c, '0.0000']));
+  const rowAmounts = {
+    ...zeroAmounts,
+    SIMPANAN_WAJIB: '100000.0000',
+    SIMPANAN_SUKARELA: '50000.1000',
+    PIUTANG_DANA_KOP: '500000.0000',
+    TOKO_TAMBUN: '250000.0000',
+    potongan_toko: '250000.0000',
+    total_potongan: '900000.1000',
+  };
+  const payrollRows = [{ id: 1, docNo: 'POT-202610', total: rowAmounts.total_potongan, toko: { TOKO_TAMBUN: '250000.0000', TOKO_MJ: '0.0000', TOKO_GIIC: '0.0000' }, amounts: rowAmounts }];
+  const appHistory = [{ id: 1, docNo: 'POT-202610', header: { state: 'OK', period: '2026-10', status: 'APPROVED' }, total4: 9_000_001_000, toko4: 2_500_000_000 }];
+  const periods = buildDeductionPeriods(appHistory, payrollRows);
+  assert.equal(periods[0].status.label, 'Selesai');
+  assert.equal(periods[0].total4, 9_000_001_000);
+  assert.equal(periods[0].totalMatches, true);
+  assert.equal(periods[0].components.find((c) => c.key === 'SIMPANAN_SUKARELA')?.amount4, 500_001_000);
 });

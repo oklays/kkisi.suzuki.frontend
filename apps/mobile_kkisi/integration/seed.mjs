@@ -10,6 +10,8 @@ export const MEMBERS = {
   inactive: { userId: 103, nik: '30001', email: 'nonaktif@contoh.test', phone: '081200000003', pin: '1111' },
   deleted: { userId: 104, nik: '30002', email: 'dihapus@contoh.test', phone: '081200000004', pin: '1111' },
   noMember: { userId: 105, nik: '40001', email: 'bukan.anggota@contoh.test', phone: '081200000005', pin: '1111' },
+  duplicateNik: { userId: 108, nik: '60001', email: 'duplikat@contoh.test', phone: '081200000008', pin: '1111', name: 'ANGGOTA UJI DUPLIKAT' },
+  resignedAndActive: { userId: 109, memberId: 9008, nik: '60002', email: 'aktif.unik@contoh.test', phone: '081200000009', pin: '2222', name: 'ANGGOTA UJI AKTIF UNIK' },
   sharedPhone: '081299999999',
 };
 
@@ -29,6 +31,9 @@ export async function seed(_env, rootPassword, port, database) {
   for (const t of tables) await run(`TRUNCATE TABLE \`${t}\``);
   await run('DELETE FROM kkisi_member_auth.member_sessions');
   await run('DELETE FROM kkisi_member_auth.member_auth_throttle');
+  await run('DELETE FROM kkisi_member_auth.member_pin_credentials');
+  await run('DELETE FROM kkisi_member_auth.member_command_ledger');
+  await run('DELETE FROM kkisi_member_auth.member_write_lease');
 
   const hash = (await bcrypt.hash(TEST_PASSWORD, 10)).replace(/^\$2b\$/, '$2y$');   // Laravel stores $2y$
   const M = MEMBERS;
@@ -42,6 +47,8 @@ export async function seed(_env, rootPassword, port, database) {
   await user(M.noMember.userId, M.noMember.nik, M.noMember.email, M.noMember.phone, M.noMember.pin, true, false, 'PELANGGAN UJI');
   await user(106, '50001', 'ganda1@contoh.test', M.sharedPhone, '1111', true, false, 'ANGGOTA UJI GANDA 1');
   await user(107, '50002', 'ganda2@contoh.test', M.sharedPhone, '1111', true, false, 'ANGGOTA UJI GANDA 2');
+  await user(M.duplicateNik.userId, M.duplicateNik.nik, M.duplicateNik.email, M.duplicateNik.phone, M.duplicateNik.pin, true, false, M.duplicateNik.name);
+  await user(M.resignedAndActive.userId, M.resignedAndActive.nik, M.resignedAndActive.email, M.resignedAndActive.phone, M.resignedAndActive.pin, true, false, M.resignedAndActive.name);
 
   const member = (id, nik, name, status, limit) => run(`INSERT INTO m_anggota (id, nik_kar, nama_kar, kd_group, status_anggota, status_karyawan, divisi, dept, bagian, lokasi, no_telp, email,
       alamat_tinggal, kelurahan_tinggal, kecamatan_tinggal, kabupaten_tinggal, limit_toko, gaji_minus, limit_ppob, gaji, surat_kuasa, status_pot_wajib, tgl_daftar)
@@ -51,6 +58,10 @@ export async function seed(_env, rootPassword, port, database) {
   await member(M.b.memberId, M.b.nik, M.b.name, 'AKTIVE', 3000000);
   await member(9003, M.inactive.nik, 'ANGGOTA UJI NONAKTIF', 'RESIGN', 0);
   await member(9004, M.deleted.nik, 'ANGGOTA UJI DIHAPUS', 'AKTIVE', 0);
+  await member(9005, M.duplicateNik.nik, 'ANGGOTA UJI DUPLIKAT 1', 'AKTIVE', 1000000);
+  await member(9006, M.duplicateNik.nik, 'ANGGOTA UJI DUPLIKAT 2', 'AKTIVE', 1000000);
+  await member(9007, M.resignedAndActive.nik, 'ANGGOTA UJI LAMA RESIGN', 'RESIGN', 0);
+  await member(M.resignedAndActive.memberId, M.resignedAndActive.nik, M.resignedAndActive.name, 'AKTIVE', 2000000);
 
   const at = months();
   // ---- savings: header per document, detail per member line

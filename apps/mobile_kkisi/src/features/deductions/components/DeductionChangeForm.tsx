@@ -2,24 +2,47 @@
 import { useState, type FormEvent } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { SubmissionNotice } from '@/components/feedback/SubmissionNotice';
+import { postJson } from '@/lib/api/client';
 import { parseWholeRupiah, rupiahSen } from '@/lib/utils/money';
 import { validateDeductionChange, type DeductionOption } from '../services/deduction-change';
 
-export function DeductionChangeForm({ section, options, effective }: { section: string; options: DeductionOption[]; effective: string }) {
+const makeIdempotencyKey = (type: string, requestedRp: number) =>
+  `ded-${type.replace(/[^A-Za-z0-9]/g, '')}-${requestedRp}-${crypto.randomUUID().slice(0, 12)}`;
+
+export function DeductionChangeForm({ section, options, effective, enabled = false }: { section: string; options: DeductionOption[]; effective: string; enabled?: boolean }) {
   const [type, setType] = useState(options[0]?.type ?? '');
   const [amount, setAmount] = useState('');
   const [consent, setConsent] = useState(false);
   const [touched, setTouched] = useState(false);
   const [notice, setNotice] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [recordedDocNo, setRecordedDocNo] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const option = options.find((o) => o.type === type);
   const amountError = touched ? validateDeductionChange(option, amount) : null;
   const consentError = touched && !consent ? 'Setujui pemotongan payroll dan surat pernyataan untuk melanjutkan.' : null;
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     setTouched(true);
     if (validateDeductionChange(option, amount)) { document.getElementById('new-deduction')?.focus(); return; }
     if (!consent) { document.getElementById('payroll-consent')?.focus(); return; }
+    setRecordedDocNo(null);
+    setSubmitError(null);
+    if (!enabled) { setNotice(true); return; }
+    setSubmitting(true);
+    const requestedRp = parseWholeRupiah(amount) ?? 0;
+    const idempotencyKey = makeIdempotencyKey(type, requestedRp);
+    const r = await postJson<{ ok: boolean; docNo: string }>('/api/transaksi/ajukan', {
+      kind: 'deduction_change',
+      idempotencyKey,
+      savingsType: type,
+      requestedRp,
+      consent: true,
+    });
+    setSubmitting(false);
+    if (r.ok) setRecordedDocNo(r.data.docNo);
+    else setSubmitError('Pengajuan belum dapat disimpan saat ini. Silakan coba lagi atau hubungi pengurus koperasi.');
     setNotice(true);
   };
 
@@ -56,8 +79,9 @@ export function DeductionChangeForm({ section, options, effective }: { section: 
           <p id="consent-error" className="field-error">{consentError}</p>
         </div>
       </form>
-      <footer className="form-footer"><button type="submit" form="deduction-form" className="primary">Lanjut <Icon name="chevronRight" /></button></footer>
+      <footer className="form-footer"><button type="submit" form="deduction-form" className="primary" disabled={submitting}>{submitting ? 'Memproses…' : <>Lanjut <Icon name="chevronRight" /></>}</button></footer>
       <SubmissionNotice open={notice} onClose={() => setNotice(false)} title="Ringkasan perubahan potongan" channel="Pengajuan perubahan potongan"
+        recordedDocNo={recordedDocNo} errorMessage={submitError}
         rows={[['Jenis Simpanan', option?.label ?? '-'], ['Potongan Lama', option ? rupiahSen(option.monthlySen) : '-'], ['Potongan Baru', `Rp${(parseWholeRupiah(amount) ?? 0).toLocaleString('id-ID')}`], ['Mulai', effective]]} />
     </>
   );

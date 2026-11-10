@@ -42,6 +42,16 @@ export type SessionRow = {
 };
 
 export type ThrottleState = { failures: number; windowStart: Date; lockedUntil: Date | null };
+/** One counted attempt: a fresh window when the previous one is older than `windowMs`; a lock of `lockMs` once `limit` is reached. */
+export type ThrottlePolicy = { now: Date; windowMs: number; lockMs: number; limit: number };
+
+export type PinCredentialRow = {
+  userId: number;
+  sourceDigest: string;
+  pinHash: string;
+  hashScheme: string;
+  updatedAt: Date;
+};
 
 export interface MemberSessionStore {
   insert(row: SessionRow): Promise<void>;
@@ -50,8 +60,14 @@ export interface MemberSessionStore {
   /** Atomically revoke `oldHash` (reason rotated) and insert `row` (session-id rotation after the PIN step). */
   rotate(oldHash: string, row: SessionRow): Promise<void>;
   revokeUser(userId: number, reason: RevokeReason, now: Date): Promise<number>;
+  /** Revokes any open PIN-stage sessions for `userId` when a new login or lockout occurs. */
+  revokePinSessions?(userId: number, reason: RevokeReason, now: Date): Promise<number>;
+  pinCredentialGet?(userId: number): Promise<PinCredentialRow | null>;
+  pinCredentialSet?(row: PinCredentialRow): Promise<void>;
   throttleGet(keyHash: string): Promise<ThrottleState | null>;
   throttleSet(keyHash: string, state: ThrottleState): Promise<void>;
+  /** Counts one attempt ATOMICALLY (parallel requests can never read the same count) and returns the state after it. */
+  throttleHit(keyHash: string, policy: ThrottlePolicy): Promise<ThrottleState>;
   throttleClear(keyHash: string): Promise<void>;
   purge(now: Date): Promise<void>;
 }

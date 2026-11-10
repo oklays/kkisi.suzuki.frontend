@@ -10,7 +10,12 @@ export function sessionHashes(sid: string, secrets: readonly Secret[]): { kid: s
   return secrets.map((s) => ({ kid: s.kid, hash: createHmac('sha256', s.key).update(`sid:${sid}`).digest('hex') }));
 }
 
-/** Throttle keys never store a raw identity or IP address. */
-export function throttleKey(kind: 'identity' | 'ip', value: string, secret: Secret): string {
+/** Throttle keys never store a raw identity, user id or IP address. */
+export function throttleKey(kind: 'identity' | 'ip' | 'pin' | 'write', value: string, secret: Secret): string {
   return createHmac('sha256', secret.key).update(`throttle:${kind}:${value.toLowerCase()}`).digest('hex');
+}
+
+/** Keyed digest (active PIN pepper) of the upstream stored PIN so shadow PIN hashes detect upstream PIN resets without storing raw PINs. */
+export function pinSourceDigest(storedPin: string, secret: Secret): string {
+  return createHmac('sha256', secret.key).update(`pin-src:${storedPin.trim()}`).digest('hex');
 }
