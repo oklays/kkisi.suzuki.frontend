@@ -50,36 +50,47 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <>
-      <form className="auth-form" method="post" action="/api/auth/login" onSubmit={submit} noValidate aria-describedby="auth-hint">
-        {errors.form ? <p className="form-error auth-error" role="alert">{errors.form}</p> : null}
-        <label className="field" htmlFor="identity">
-          <span>NIK anggota / email / telepon</span>
-          <input ref={identityRef} id="identity" name="identity" type="text" placeholder="NIK, email, atau telepon" autoComplete="username" autoCapitalize="none" spellCheck={false}
-            maxLength={80} aria-invalid={errors.identity ? true : undefined} aria-describedby="identity-error" onInput={() => setErrors((x) => ({ ...x, identity: undefined }))} />
-          <small className="field-error" id="identity-error">{errors.identity}</small>
-        </label>
-        <label className="field" htmlFor="password">
-          <span>Password</span>
-          <div className="password-control">
-            <input ref={passwordRef} id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Masukkan password" autoComplete="current-password" maxLength={200}
-              aria-invalid={errors.password ? true : undefined} aria-describedby="password-error" onInput={() => setErrors((x) => ({ ...x, password: undefined }))} />
-            <button className="password-toggle" type="button" aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'} aria-pressed={showPassword} onClick={() => setShowPassword((v) => !v)}>
-              <Icon name={showPassword ? 'eyeOff' : 'eye'} />
-            </button>
+      <div className="auth-card">
+        <form className="auth-form" method="post" action="/api/auth/login" onSubmit={submit} noValidate aria-describedby="auth-hint">
+          {errors.form ? <p className="form-error auth-error" role="alert">{errors.form}</p> : null}
+          <label className="field" htmlFor="identity">
+            <span>NIK, email, atau nomor HP</span>
+            <div className="input-control">
+              <span className="input-leading-icon" aria-hidden="true"><Icon name="user" /></span>
+              <input ref={identityRef} id="identity" name="identity" type="text" placeholder="Masukkan NIK, email, atau nomor HP" autoComplete="username" autoCapitalize="none" spellCheck={false}
+                maxLength={80} required aria-invalid={errors.identity ? true : undefined} aria-describedby="identity-error" onInput={() => setErrors((x) => ({ ...x, identity: undefined }))} />
+            </div>
+            <small className="field-error" id="identity-error">{errors.identity}</small>
+          </label>
+          <label className="field" htmlFor="password">
+            <span>Password</span>
+            <div className="password-control input-control">
+              <span className="input-leading-icon" aria-hidden="true"><Icon name="lock" /></span>
+              <input ref={passwordRef} id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Masukkan password" autoComplete="current-password" maxLength={200}
+                required aria-invalid={errors.password ? true : undefined} aria-describedby="password-error" onInput={() => setErrors((x) => ({ ...x, password: undefined }))} />
+              <button className="password-toggle" type="button" aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'} aria-pressed={showPassword} onClick={() => setShowPassword((v) => !v)}>
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} />
+              </button>
+            </div>
+            <small className="field-error" id="password-error">{errors.password}</small>
+          </label>
+          <div className="forgot-row">
+            <button className="auth-link" type="button" onClick={() => setInfo({ title: 'Lupa password?', body: 'Pengaturan ulang password belum tersedia di aplikasi ini. Hubungi pengurus koperasi KKISI TB2 untuk mengatur ulang password akun S-MART kamu.' })}>Lupa password?</button>
           </div>
-          <small className="field-error" id="password-error">{errors.password}</small>
-        </label>
-        <div className="forgot-row">
-          <button className="auth-link" type="button" onClick={() => setInfo({ title: 'Lupa password?', body: 'Pengaturan ulang password belum tersedia di aplikasi ini. Hubungi pengurus koperasi KKISI TB2 untuk mengatur ulang password akun S-MART kamu.' })}>Lupa password?</button>
+          <button className="primary" type="submit" disabled={busy || !hydrated} aria-busy={busy}>
+            <span>{busy ? 'Memeriksa…' : 'Masuk'}</span>
+            {!busy ? <Icon name="arrowRight" /> : null}
+          </button>
+        </form>
+        <div className="signup">
+          <span>Belum punya akun?</span>
+          <button className="auth-link" type="button" onClick={() => setInfo({ title: 'Daftar', body: 'Pendaftaran anggota dilakukan melalui pengurus koperasi KKISI TB2. Setelah terdaftar, kamu akan mendapatkan akun untuk masuk ke aplikasi ini.' })}>Daftar sekarang</button>
         </div>
-        <button className="primary" type="submit" disabled={busy || !hydrated} aria-busy={busy}>{busy ? 'Memeriksa…' : 'Masuk'}</button>
-        <button className="secondary" type="button" onClick={() => setInfo({ title: 'Mode tamu', body: 'Semua layanan di aplikasi ini memakai data keanggotaan, jadi diperlukan akun anggota. Mode tamu belum tersedia.' })}>Lanjut sebagai tamu</button>
-        <p className="auth-hint" id="auth-hint">Gunakan akun S-MART KKISI TB2 yang sudah terdaftar. Password tidak pernah disimpan di perangkat.</p>
-      </form>
-      <div className="signup">
-        <span>Belum punya akun?</span>
-        <button className="auth-link" type="button" onClick={() => setInfo({ title: 'Daftar', body: 'Pendaftaran anggota dilakukan melalui pengurus koperasi KKISI TB2. Setelah terdaftar, kamu akan mendapatkan akun untuk masuk ke aplikasi ini.' })}>Daftar</button>
       </div>
+      <p className="auth-security" id="auth-hint">
+        <Icon name="shieldCheck" />
+        <span>Akses aman untuk anggota KKISI TB2</span>
+      </p>
       <Sheet open={info !== null} onClose={() => setInfo(null)} title={info?.title ?? ''} subtitle="Informasi akun">
         <p className="detail-copy">{info?.body}</p>
         <button type="button" className="primary" onClick={() => setInfo(null)}>Kembali</button>

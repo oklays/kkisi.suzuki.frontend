@@ -82,6 +82,232 @@
 .auth-hint { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 16px; }
 .auth-error { margin-bottom: 15px; }
 .signup { margin-top: auto; padding-top: 28px; display: flex; gap: 5px; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); }
+
+/* Masuk redesign: layered sky-blue/white cooperative atmosphere, centered S-MART landscape logo, storefront art, and elevated form card */
+[data-screen="masuk"] {
+  background:
+    radial-gradient(85% 26% at 50% 11%, #F6FAFF 0%, #DFEFFC 52%, #85B9E900 100%),
+    linear-gradient(180deg, #86BAEA 0%, #B8D8F6 20%, #E7F0FA 34%, #EFF4FA 42%, #F2F6FB 84%, #DAE9F8 94%, #9BC4EE 100%);
+  overflow: hidden;
+  isolation: isolate;
+}
+[data-screen="masuk"]::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 290px;
+  background:
+    linear-gradient(90deg, #85B9E9 0%, #C6E0F7 24%, #F2F8FE 50%, #C6E0F7 76%, #7FB3E5 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+[data-screen="masuk"]::after {
+  content: '';
+  position: absolute;
+  left: -14%;
+  right: -14%;
+  bottom: -52px;
+  height: 92px;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: linear-gradient(180deg, #B5D4F466 0%, #86B7EA99 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+.masuk-hero {
+  position: relative;
+  z-index: 1;
+  padding-top: calc(var(--safe-top) + 18px);
+  text-align: center;
+}
+.masuk-brand-wrap {
+  padding: 0 var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+[data-screen="masuk"] .brand {
+  width: min(74%, 252px);
+  flex: none;
+  margin: 0 auto;
+  filter: drop-shadow(0 2px 8px #0A1F4410);
+}
+.masuk-tagline {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #D5E7FC 0%, #C0DBF9 100%);
+  border: 1px solid #ADCBEF;
+  box-shadow: 0 2px 6px #0B3D9112, inset 0 1px 0 #FFFFFFB3;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.35;
+  letter-spacing: -0.1px;
+}
+.masuk-illustration {
+  position: relative;
+  z-index: 1;
+  margin: 2px auto 0;
+  width: 100%;
+  max-width: var(--app-width);
+  line-height: 0;
+}
+.masuk-illustration picture,
+.masuk-illustration img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 615 / 216;
+  object-fit: contain;
+  user-select: none;
+}
+[data-screen="masuk"] .content {
+  position: relative;
+  z-index: 2;
+  padding: 2px var(--gutter) calc(22px + var(--safe-bottom));
+}
+[data-screen="masuk"] .auth-intro {
+  text-align: center;
+  margin: 0 auto 14px;
+  max-width: 340px;
+}
+[data-screen="masuk"] .auth-intro h1 {
+  font-size: clamp(22px, 6.2vw, 26px);
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.2;
+  color: var(--navy);
+  max-width: none;
+  text-wrap: balance;
+}
+[data-screen="masuk"] .auth-intro p {
+  margin: 6px auto 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: none;
+}
+.masuk-reason {
+  margin: 0 0 14px;
+}
+.auth-card {
+  background: var(--surface);
+  border: 1px solid #DFEAFA;
+  border-radius: var(--radius-xl);
+  padding: 18px 16px 14px;
+  box-shadow: 0 12px 30px #0A1F4412, 0 2px 6px #0A1F4408;
+}
+[data-screen="masuk"] .auth-form .field {
+  margin-bottom: 14px;
+}
+[data-screen="masuk"] .auth-form .field > span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 7px;
+}
+.input-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-leading-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+.input-leading-icon svg {
+  width: 19px;
+  height: 19px;
+}
+[data-screen="masuk"] .auth-form input {
+  min-height: 48px;
+  padding: 11px 12px 11px 40px;
+  background: #F8FAFD;
+  border-color: #CBD6E6;
+  border-radius: 11px;
+}
+[data-screen="masuk"] .auth-form input::placeholder {
+  color: var(--muted-2);
+  font-size: clamp(12px, 3.6vw, 14px);
+  opacity: 1;
+}
+[data-screen="masuk"] .auth-form input:focus-visible {
+  background: var(--surface);
+}
+[data-screen="masuk"] .password-control input {
+  padding-right: 52px;
+}
+[data-screen="masuk"] .password-toggle {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  min-height: 44px;
+  right: 3px;
+}
+[data-screen="masuk"] .password-toggle:active {
+  transform: translateY(calc(-50% + 1px));
+}
+[data-screen="masuk"] .forgot-row {
+  margin-top: -10px;
+  margin-bottom: 8px;
+}
+[data-screen="masuk"] .primary {
+  min-height: 50px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #0E4DB5 0%, var(--blue) 100%);
+  box-shadow: 0 6px 16px #0B3D912B;
+  font-size: 15px;
+  font-weight: 700;
+  gap: 8px;
+}
+[data-screen="masuk"] .primary:disabled,
+[data-screen="masuk"] .primary[aria-disabled="true"] {
+  background: var(--disabled-bg);
+  color: var(--muted);
+  box-shadow: none;
+}
+[data-screen="masuk"] .signup {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  gap: 5px;
+  flex-wrap: wrap;
+}
+[data-screen="masuk"] .signup .auth-link {
+  font-weight: 700;
+}
+.auth-security {
+  margin: 14px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.4;
+}
+.auth-security svg {
+  width: 18px;
+  height: 18px;
+  color: var(--blue);
+  flex: none;
+}
+
 .pinpage .content { align-items: center; }
 .pinpage .auth-intro { text-align: center; margin-bottom: 0; width: 100%; }
 .pinpage .auth-intro h1 { font-size: 27px; margin: auto; }
@@ -99,6 +325,17 @@
 .pinpage .form-error { width: 100%; max-width: 286px; margin-top: 14px; text-align: center; }
 @media (max-width: 350px) {
   .authpage .topbar { padding: 20px 18px 14px; } .authpage .content { padding-inline: 18px; } .auth-intro h1 { font-size: 26px; } .auth-intro { margin-bottom: 23px; }
+  .masuk-hero { padding-top: calc(var(--safe-top) + 14px); }
+  [data-screen="masuk"] .brand { width: min(72%, 220px); }
+  .masuk-tagline { font-size: 11px; padding: 4px 14px; margin-top: 8px; }
+  [data-screen="masuk"] .content { padding-inline: 16px; }
+  [data-screen="masuk"] .auth-intro h1 { font-size: 21px; }
+  [data-screen="masuk"] .auth-intro p { font-size: 12px; }
+  .auth-card { padding: 15px 12px 12px; }
+  [data-screen="masuk"] .auth-form input { padding-left: 34px; padding-right: 8px; }
+  [data-screen="masuk"] .auth-form input::placeholder { font-size: 12px; }
+  [data-screen="masuk"] .password-control input { padding-right: 46px; }
+  .input-leading-icon { left: 9px; }
 }
 
 /* ------------------------------------------------------------------ Simpanan */
