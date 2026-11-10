@@ -1,0 +1,12 @@
+# /etc/systemd/system/kkisi-monitor.service — see kkisi-monitor.sh. Installed with:
+#   install -m 755 deploy/mobile_kkisi/monitor/kkisi-monitor.sh /usr/local/bin/kkisi-monitor.sh
+#   install -m 644 deploy/mobile_kkisi/monitor/kkisi-monitor.{service,timer} /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now kkisi-monitor.timer
+[Unit]
+Description=KKISI health monitor (PWA Anggota + genesis console on .178)
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/kkisi-monitor.sh
+SuccessExitStatus=0 1
+Nice=10

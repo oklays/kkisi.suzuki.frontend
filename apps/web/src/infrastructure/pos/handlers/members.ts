@@ -2,7 +2,7 @@ import type { PosRepository } from '@koperasi/application/pos/checkout';
 import { PosError } from '@koperasi/domain/pos/sale';
 import { guard, json, type AuthServices } from '../../auth/http.ts';
 import { PrismaPosRepository } from '../../repositories/prisma-pos.repository.ts';
-import { decodeMemberIdentifier } from '../member-qr.ts';
+import { decodeMemberIdentifier, resolveMemberQr } from '../member-qr.ts';
 import { posErrorResponse } from '../http-errors.ts';
 
 export async function handleMembers(services: AuthServices, request: Request, repo: Pick<PosRepository, 'member'> = new PrismaPosRepository()): Promise<Response> {
@@ -12,7 +12,13 @@ export async function handleMembers(services: AuthServices, request: Request, re
     const params = new URL(request.url).searchParams;
     const kind = params.get('kind') ?? 'identifier';
     if (kind !== 'identifier' && kind !== 'nik' && kind !== 'card' && kind !== 'id' && kind !== 'qr') throw new PosError('INVALID_INPUT');
+    if (kind === 'qr') {
+      const raw = params.get('identifier') ?? '';
+      if (!raw.trim() || raw.length > 512) throw new PosError('INVALID_INPUT');
+      const qr = resolveMemberQr(raw, process.env, services.deps.clock.now());
+      return json(200, { member: await repo.member(g.ctx, qr.identifier, services.deps.clock.now(), qr.kind) });
+    }
     const identifier = decodeMemberIdentifier(params.get('identifier') ?? '', kind);
-    return json(200, { member: await repo.member(g.ctx, identifier, services.deps.clock.now(), kind === 'qr' ? 'nik' : kind) });
+    return json(200, { member: await repo.member(g.ctx, identifier, services.deps.clock.now(), kind) });
   } catch (error) { return posErrorResponse(services, error); }
 }

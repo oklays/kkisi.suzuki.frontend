@@ -4,7 +4,8 @@ import { requireMember } from '../../../lib/auth/session.server.ts';
 import { attempt } from '../../../lib/errors/service-errors.ts';
 import { businessMonth } from '../../../lib/utils/dates.ts';
 import { readerDb } from '../../../server/container.ts';
-import { readLoanApplications, readLoanProducts, readLoans, readScheduleAggregate, readScheduleRows } from '../../../server/kosipa/member.reader.ts';
+import { readLoanApplications, readLoans, readScheduleAggregate, readScheduleRows } from '../../../server/kosipa/member.reader.ts';
+import { cachedLoanProducts } from '../../../server/cache/cached-reads.ts';
 import { buildActiveLoan, buildApplications, buildLoanHistory, buildLoanProducts, isActiveLoan } from './loans.ts';
 
 const getLoanHeaders = cache(async () => {
@@ -35,5 +36,5 @@ export const getLoanApplications = cache(async () => {
 
 export const getLoanProducts = cache(async () => {
   await requireMember();
-  return attempt(async () => buildLoanProducts(await readLoanProducts(readerDb())));
+  return attempt(async () => buildLoanProducts(await cachedLoanProducts(readerDb())));
 });

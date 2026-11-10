@@ -50,6 +50,7 @@ server {
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Request-Id $request_id;   # P2: one id from nginx access log to the app logs (echoed as X-Request-Id)
         proxy_read_timeout 30s;
     }
 
@@ -62,6 +63,7 @@ server {
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Request-Id $request_id;   # P2: one id from nginx access log to the app logs (echoed as X-Request-Id)
         proxy_read_timeout 30s;
     }
 
@@ -73,6 +75,7 @@ server {
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Request-Id $request_id;   # P2: one id from nginx access log to the app logs (echoed as X-Request-Id)
         proxy_read_timeout 60s;
         # Streaming responses (React Suspense) must not be buffered into one late page.
         proxy_buffering off;

@@ -3,6 +3,7 @@ import { Screen } from '@/components/layout/Screen';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Icon } from '@/components/ui/Icon';
 import { AccountMenu, type MenuSheet } from '@/features/account/components/AccountMenu';
+import { MemberQrCard } from '@/features/account/components/MemberQrCard';
 import { getProfile } from '@/features/member/services/member.server';
 import { getFaqs } from '@/features/account/services/account.server';
 import { dayLabel } from '@/lib/utils/dates';
@@ -23,11 +24,7 @@ export default async function LainnyaPage({ searchParams }: { searchParams: Prom
         <div><dt>Lokasi</dt><dd>{profile.location ?? '-'}</dd></div><div><dt>Telepon</dt><dd>{profile.phone ?? '-'}</dd></div>
         <div><dt>Email</dt><dd>{profile.email ?? '-'}</dd></div><div><dt>Terdaftar</dt><dd>{profile.joinedOn ? dayLabel(profile.joinedOn) : '-'}</dd></div>
       </dl>) },
-    { key: 'qr', label: 'QR ID Anggota', icon: 'scan', tone: 'gold', title: 'QR ID Anggota', subtitle: 'Identitas anggota', body: (
-      <>
-        <div className="qr-placeholder"><Icon name="qr" /><strong>NIK {profile.nik}</strong><p>QR ID anggota belum tersedia.<br />Tunjukkan NIK ini kepada kasir.</p></div>
-        <p className="detail-note">Format QR yang dapat dipindai kasir belum ditetapkan koperasi, jadi aplikasi ini belum membuat kode QR.</p>
-      </>) },
+    { key: 'qr', label: 'QR ID Anggota', icon: 'scan', tone: 'gold', title: 'QR ID Anggota', subtitle: 'Identitas anggota untuk kasir', body: <MemberQrCard nik={profile.nik} /> },
     { key: 'alamat', label: 'Alamat', icon: 'address', title: 'Alamat', subtitle: 'Alamat tinggal tercatat', body: (
       <><p className="detail-copy">{profile.address ?? 'Alamat belum tercatat di data anggota.'}</p><p className="detail-note">Perubahan alamat dilakukan melalui pengurus koperasi.</p></>) },
     { key: 'keamanan', label: 'Keamanan (Password & PIN)', icon: 'lock', tone: 'slate', title: 'Keamanan (Password & PIN)', subtitle: 'Akun S-MART', body: (

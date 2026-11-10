@@ -2,6 +2,7 @@
 // without touching process.env. Nothing here ever logs or returns a credential.
 import { createHmac } from 'node:crypto';
 import { parseIntakeKeys, type IntakeKey } from '@koperasi/application/member-intake/signature';
+import { parseMemberQrSigningKey, type MemberQrSigningKey } from '@koperasi/application/member-qr/token';
 
 export class ConfigError extends Error {
   readonly setting: string;
@@ -184,4 +185,14 @@ export function loadIntakeSettings(env: Env = process.env): IntakeSettings {
   let keys: IntakeKey[];
   try { keys = parseIntakeKeys(env.MEMBER_INTAKE_KEYS); } catch { throw new ConfigError('MEMBER_INTAKE_KEYS'); }
   return { baseUrl: url.origin, keys };
+}
+
+/**
+ * Dynamic member QR (P2): MEMBER_QR_SIGNING_KEY = "kid:base64(PKCS#8 Ed25519)". Unset = the QR screen explains that QR is not available
+ * yet (no fallback to a static or unsigned code). The matching public key goes to apps/web as MEMBER_QR_VERIFY_KEYS.
+ */
+export function loadQrSigningKey(env: Env = process.env): MemberQrSigningKey | null {
+  const raw = env.MEMBER_QR_SIGNING_KEY?.trim();
+  if (!raw) return null;
+  try { return parseMemberQrSigningKey(raw); } catch { throw new ConfigError('MEMBER_QR_SIGNING_KEY'); }
 }

@@ -16,7 +16,7 @@ const errors: Record<string, string> = {
   STOCK_OPNAME: "Produk sedang stock opname.", PPOB_UNSUPPORTED: "Produk PPOB belum dapat diproses melalui POS ini.", ITEM_UNAVAILABLE: "Produk tidak tersedia di cabang ini.",
   INSUFFICIENT_PAYMENT: "Uang bayar kurang dari total yang dihitung server.", REGISTER_CLOSED: "Buka sesi kasir sebelum membayar.", REGISTER_STALE: "Tutup sesi kasir hari sebelumnya terlebih dahulu.",
   REGISTER_AMBIGUOUS: "Ada lebih dari satu sesi kasir terbuka. Hubungi pengelola.", WRITE_NOT_CONFIGURED: "Pembayaran belum diaktifkan untuk lingkungan ini.",
-  QR_NOT_CONFIGURED: "QR terenkripsi belum dikonfigurasi. Gunakan NIK atau ID card.", INVALID_QR: "QR anggota tidak valid.", PAYMENT_PRECISION: "Total Kredit mengandung pecahan rupiah yang belum didukung pencatatan pembayaran.",
+  QR_NOT_CONFIGURED: "QR terenkripsi belum dikonfigurasi. Gunakan NIK atau ID card.", INVALID_QR: "QR anggota tidak valid.", QR_EXPIRED: "QR anggota sudah kedaluwarsa. Minta anggota membuka ulang QR di aplikasi.", QR_ALREADY_USED: "QR ini sudah dipindai. Minta anggota menampilkan QR terbaru.", PAYMENT_PRECISION: "Total Kredit mengandung pecahan rupiah yang belum didukung pencatatan pembayaran.",
   IDEMPOTENCY_CONFLICT: "Kunci pembayaran telah digunakan untuk transaksi berbeda.", CSRF: "Muat ulang halaman untuk memperbarui sesi pembayaran.", FORBIDDEN: "Akses POS ditolak.", INVALID_DATE: "Tanggal transaksi tidak valid. Maksimal 7 hari ke belakang dan tidak boleh melewati hari ini.",
 };
 const errorText = (code: string) => errors[code] ?? "Permintaan belum dapat diproses. Coba lagi.";

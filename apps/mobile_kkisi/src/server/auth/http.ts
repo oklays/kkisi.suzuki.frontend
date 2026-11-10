@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { ConfigError } from '../../lib/config/env.ts';
+import { requestContext } from '../observability/metrics.ts';
 import { clearedCookie, isJson, sameOrigin, sessionCookie } from '../../lib/security/request.ts';
 import { authDeps } from '../container.ts';
 import { StoreUnavailableError } from '../db/mysql.ts';
@@ -26,7 +28,9 @@ export async function authEndpoint(request: Request, handle: (ctx: { deps: Retur
   let body: unknown;
   try { body = JSON.parse((await request.text()).slice(0, 4096)); } catch { return json(400, { error: 'BAD_REQUEST' }); }
   try {
-    return await handle({ deps, body, sid: readCookie(request, deps.settings.cookieName) });
+    // Every log line and slow-query record of this request carries its id (X-Request-Id, set by the proxy from nginx).
+    const requestId = request.headers.get('x-request-id') ?? randomUUID();
+    return await requestContext.run({ requestId }, () => handle({ deps, body, sid: readCookie(request, deps.settings.cookieName) }));
   } catch (e) {
     if (e instanceof VerifierBusyError) return json(503, { error: 'BUSY' }, { 'Retry-After': '5' });
     if (e instanceof StoreUnavailableError || (e instanceof Error && e.message === 'SESSION_GONE')) return json(503, { error: 'UNAVAILABLE' });

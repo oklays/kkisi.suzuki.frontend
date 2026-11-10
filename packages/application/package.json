@@ -42,7 +42,8 @@
     "./kosipa/commands/savings-deposit": "./src/kosipa/commands/savings-deposit.ts",
     "./kosipa/commands/loan-decision": "./src/kosipa/commands/loan-decision.ts",
     "./kosipa/commands/member-request": "./src/kosipa/commands/member-request.ts",
-    "./member-intake/signature": "./src/member-intake/signature.ts"
+    "./member-intake/signature": "./src/member-intake/signature.ts",
+    "./member-qr/token": "./src/member-qr/token.ts"
   },
   "scripts": {
     "lint": "eslint .",

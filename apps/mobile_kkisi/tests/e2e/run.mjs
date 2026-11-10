@@ -180,9 +180,17 @@ try {
     await page.getByText('Belum ada yang dikirim.').waitFor();
     assert.equal(await page.getByText(/Rp\d/).count(), 0);
   });
-  await step('Lainnya: QR deep link, FAQ from the database', async () => {
+  await step('Lainnya: signed member QR (P2) verifies for the session member, FAQ from the database', async () => {
     await page.goto(`${B}/lainnya?buka=qr`);
-    await page.getByRole('dialog').getByText('NIK 10234').waitFor();
+    await page.getByRole('dialog').getByRole('img', { name: 'QR ID anggota untuk dipindai kasir' }).waitFor();
+    await page.getByRole('dialog').getByText(/Berlaku \d+ detik lagi/).waitFor();
+    const qr = await (await page.request.get(`${B}/api/qr`)).json();
+    assert.match(qr.image, /^data:image\/svg\+xml;base64,/);
+    const { parseMemberQrVerifyKeys, verifyMemberQr } = await import('@koperasi/application/member-qr/token');
+    const { syntheticQrKeys } = await import('../../integration/stack.mjs');
+    const v = verifyMemberQr(parseMemberQrVerifyKeys(syntheticQrKeys().verify), qr.token);
+    assert.equal(v.ok, true, 'the POS public key verifies the PWA token');
+    assert.equal(v.claims.memberId, 9001, 'the QR names the session member only');
     await page.getByRole('button', { name: 'Kembali', exact: true }).click();
     await page.getByRole('button', { name: 'FAQ' }).click();
     await page.getByText('Pertanyaan uji: bagaimana cara melihat simpanan?').waitFor();
@@ -192,6 +200,18 @@ try {
       const html = await (await page.request.get(`${B}${p}`)).text();
       assert.ok(!html.includes('PJ-UJI-0002') && !html.includes('999.000') && !html.includes('7.770.000'), p);
     }
+  });
+  await step('P2 observability: X-Request-Id on every response, internal metrics with per-query p95 and cache stats', async () => {
+    const res = await fetch(`${B}/masuk`);
+    assert.match(res.headers.get('x-request-id') ?? '', /^[A-Za-z0-9._-]{8,64}$/);
+    const kept = await fetch(`${B}/masuk`, { headers: { 'x-request-id': '0123456789abcdef0123456789abcdef' } });
+    assert.equal(kept.headers.get('x-request-id'), '0123456789abcdef0123456789abcdef', 'the nginx id is propagated');
+    const m = await (await fetch(`${B}/health?check=metrics`)).json();
+    assert.ok(['ok', 'warn', 'critical'].includes(m.status));
+    assert.deepEqual(m.checks, { readerDb: 'ok', authDb: 'ok' });
+    assert.ok(m.queries.some((q) => q.label === 'select m_anggota' && q.count > 0 && Number.isFinite(q.p95)), 'reader latency is recorded per table');
+    assert.ok(m.queries.every((q) => /^[a-z]+ [a-z_0-9]+$/.test(q.label)), 'labels never contain SQL text or values');
+    assert.ok(m.caches.some((c) => c.name === 'loan-products'), 'cache statistics are reported');
   });
   await step('readiness health check and server-side mutation feature flag + CSRF enforcement', async () => {
     const ready = await (await fetch(`${B}/health?check=ready`)).json();
