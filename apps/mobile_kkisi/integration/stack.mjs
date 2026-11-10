@@ -2,7 +2,7 @@
 // DDL subset (db/fixtures/legacy-schema.sql, no real rows), the PWA auth schema, least-privilege accounts and fictitious members.
 // Usage: node integration/stack.mjs up|seed|status|down
 import { execFileSync, spawnSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash, createPrivateKey, createPublicKey } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { seed } from './seed.mjs';
 
@@ -86,7 +86,19 @@ export function env(cfg = loadConfig()) {
     DATABASE_URL_MEMBER_AUTH: `mysql://mobile_auth:${encodeURIComponent(cfg.authPassword)}@127.0.0.1:${cfg.port}/${AUTH_DB}`,
     MEMBER_CATALOG_COMPANY_ID: '1',
     MEMBER_DB_POOL_LIMIT: '2',
+    // Tests check that a deactivation ends a session on the very next request: no account-state cache here (production default 30 s).
+    MEMBER_ACCOUNT_STATE_CACHE_MS: '0',
+    // P2 signed member QR: a deterministic synthetic Ed25519 key per installation (never a production key).
+    MEMBER_QR_SIGNING_KEY: `s1:${syntheticQrKeys(cfg).pkcs8}`,
   };
+}
+
+/** Ed25519 key pair derived from the stack's own secret (PKCS#8 = fixed prefix + 32-byte seed). Synthetic only. */
+export function syntheticQrKeys(cfg = loadConfig()) {
+  const seed = createHash('sha256').update(`member-qr:${cfg.authSecret}`).digest();
+  const pkcs8 = Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), seed]);
+  const spki = createPublicKey(createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' })).export({ format: 'der', type: 'spki' });
+  return { pkcs8: pkcs8.toString('base64'), verify: `s1:${spki.toString('base64')}` };
 }
 
 export function writerUrl(cfg = loadConfig()) {

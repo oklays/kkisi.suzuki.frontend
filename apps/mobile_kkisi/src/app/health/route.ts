@@ -1,6 +1,8 @@
 import { appEnv } from '@/lib/config/env';
 import { isInternalCaller } from '@/lib/security/request';
-import { authDb, featureFlags, readerDb } from '@/server/container';
+import { authDb, featureFlags, qrSigningKey, readerDb } from '@/server/container';
+import { allCacheStats } from '@/server/cache/ttl-cache';
+import { evaluateAlerts, querySummary, thresholdsFromEnv, uptimeSeconds } from '@/server/observability/metrics';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +35,11 @@ export async function GET(request: Request) {
   const detail = isInternalCaller(request.headers, trustedHops());
   const headers = { 'Cache-Control': 'no-store' };
   const check = new URL(request.url).searchParams.get('check');
+  if (check === 'metrics') return metrics(detail, env, headers);
   if (check !== 'ready') {
     const status = env === 'invalid' ? 'degraded' : 'ok';
     return Response.json(
-      detail ? { status, app: 'mobile_kkisi', version: process.env.APP_VERSION ?? null, env, features: featureFlags(process.env) } : { status },
+      detail ? { status, app: 'mobile_kkisi', version: process.env.APP_VERSION ?? null, env, features: { ...featureFlags(process.env), memberQr: qrSigningKey() !== null } } : { status },
       { status: env === 'invalid' ? 503 : 200, headers },
     );
   }
@@ -58,4 +61,26 @@ export async function GET(request: Request) {
       : { status },
     { status: ready ? 200 : 503, headers },
   );
+}
+
+/**
+ * GET /health?check=metrics — internal callers only (loopback / container network; through nginx: 404). Readiness of both pools, per-query
+ * p50/p95/max/errors over the last 512 samples, cache hit rates, process memory and the alerts evaluated against METRICS_* thresholds.
+ * status: ok | warn | critical (the host monitor notifies on changes). Labels are "<verb> <table>": no SQL text, parameters or member data.
+ */
+async function metrics(detail: boolean, env: string, headers: Record<string, string>) {
+  if (!detail) return Response.json({ error: 'NOT_FOUND' }, { status: 404, headers });
+  let checks: Record<string, string> = { readerDb: 'down', authDb: 'down' };
+  try {
+    const [readerStatus, authStatus] = await Promise.all([pingPool(readerDb(process.env)), pingPool(authDb(process.env))]);
+    checks = { readerDb: readerStatus, authDb: authStatus };
+  } catch { /* reported as down */ }
+  const queries = querySummary();
+  const alerts = evaluateAlerts(queries, thresholdsFromEnv(process.env), checks);
+  const status = alerts.some((a) => a.level === 'critical') ? 'critical' : alerts.length ? 'warn' : 'ok';
+  const mem = process.memoryUsage();
+  return Response.json({
+    status, app: 'mobile_kkisi', version: process.env.APP_VERSION ?? null, env, uptimeS: uptimeSeconds(), checks, alerts, queries, caches: allCacheStats(),
+    process: { rssMb: Math.round(mem.rss / 1048576), heapUsedMb: Math.round(mem.heapUsed / 1048576) },
+  }, { status: 200, headers });
 }

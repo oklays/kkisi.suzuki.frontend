@@ -1,6 +1,6 @@
 import type { Pool } from 'mysql2/promise';
 import {
-  loadAuthSettings, loadFeatureFlags, loadIntakeSettings, loadReaderSettings, loadWriterSettings,
+  loadAuthSettings, loadFeatureFlags, loadIntakeSettings, loadQrSigningKey, loadReaderSettings, loadWriterSettings,
   type AuthSettings, type FeatureFlags, type ReaderSettings,
 } from '../lib/config/env.ts';
 import type { AuthDeps } from './auth/auth-service.ts';
@@ -9,7 +9,9 @@ import { MysqlMemberSessionStore } from './auth/mysql-store.ts';
 import { WorkerPasswordVerifier } from './auth/password-verifier.ts';
 import type { MemberSessionStore } from './auth/types.ts';
 import { pool } from './db/mysql.ts';
+import { currentRequestId } from './observability/metrics.ts';
 import { MysqlMemberIdentityReader } from './kosipa/identity.reader.ts';
+import { withCachedAccountState } from './cache/cached-reads.ts';
 import {
   MemberMutationService, MemoryCommandLedgerStore, MysqlCommandLedgerStore, type CommandLedgerStore,
 } from './writers/member-mutations.ts';
@@ -23,7 +25,8 @@ const cache = (g.__kkisiMobile ??= {});
 
 export function log(event: string, detail: Record<string, string | number | boolean | null> = {}): void {
   // One JSON line per event. Callers never pass identities, NIKs, IPs, PINs or secrets.
-  console.info(JSON.stringify({ at: new Date().toISOString(), app: 'mobile_kkisi', event, ...detail }));
+  const requestId = currentRequestId();
+  console.info(JSON.stringify({ at: new Date().toISOString(), app: 'mobile_kkisi', event, ...(requestId ? { requestId } : {}), ...detail }));
 }
 
 export function readerSettings(env = process.env): ReaderSettings { return loadReaderSettings(env); }
@@ -79,7 +82,7 @@ export function authDeps(env = process.env): AuthDeps & { settings: AuthSettings
   const settings = loadAuthSettings(env);
   return {
     settings,
-    identity: new MysqlMemberIdentityReader(readerDb(env)),
+    identity: withCachedAccountState(new MysqlMemberIdentityReader(readerDb(env)), accountStateCacheMs(env)),
     store: sessionStore(settings),
     verifier: (cache.verifier ??= new WorkerPasswordVerifier()),
     secrets: settings.secrets,
@@ -115,4 +118,16 @@ function intakeClient(env = process.env): HttpMemberIntakeClient | null {
     const s = loadIntakeSettings(env);
     return s ? new HttpMemberIntakeClient(s) : null;
   } catch { return null; }   // misconfigured: the flags above are already off (fail closed)
+}
+
+/** Signing key of the dynamic member QR, or null when not configured (or malformed: fail closed, the screen says QR is unavailable). */
+export function qrSigningKey(env = process.env) {
+  try { return loadQrSigningKey(env); } catch { return null; }
+}
+
+/** MEMBER_ACCOUNT_STATE_CACHE_MS: 0..120000, default 30000 (P2). Out of range = default. */
+function accountStateCacheMs(env = process.env): number {
+  const raw = env.MEMBER_ACCOUNT_STATE_CACHE_MS;
+  const n = raw === undefined || raw === '' ? 30_000 : Number(raw);
+  return Number.isInteger(n) && n >= 0 && n <= 120_000 ? n : 30_000;
 }

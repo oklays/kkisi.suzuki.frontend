@@ -15,7 +15,7 @@ export interface MemberIdentityReader {
   findAccounts(query: IdentityQuery, limit: number): Promise<AccountRow[]>;
   /** Raw stored PIN (legacy: 4 plain digits; a bcrypt hash is also accepted). Read only to compare, never returned to a client. */
   storedPin(userId: number): Promise<string | null>;
-  /** Re-read on every request so a deactivated or deleted account loses access immediately. */
+  /** Re-read per request (or within the short account-state cache, P2) so a deactivated or deleted account loses access promptly. */
   accountState(userId: number): Promise<{ active: boolean; deleted: boolean } | null>;
   memberByNik(nikKeys: string[]): Promise<MemberRow[]>;
 }

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { acceptRequestId } from './lib/observability/request-id.ts';
 
 // Optimistic first gate only (Next docs: never rely on the proxy for authorization). It (1) forwards the requested path so a
 // server-side redirect to /masuk can keep the deep link, and (2) sends requests without any session cookie straight to /masuk.
@@ -18,7 +19,12 @@ export function proxy(request: NextRequest) {
   }
   const headers = new Headers(request.headers);
   headers.set('x-kkisi-path', path);
-  return NextResponse.next({ request: { headers } });
+  // One id per request (nginx $request_id when present): forwarded to the handlers and echoed to the client for support tickets.
+  const requestId = acceptRequestId(request.headers.get('x-request-id'), () => crypto.randomUUID());
+  headers.set('x-request-id', requestId);
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set('x-request-id', requestId);
+  return response;
 }
 
 export const config = { matcher: ['/((?!_next/|icons/|images/|favicon|offline.html).*)'] };

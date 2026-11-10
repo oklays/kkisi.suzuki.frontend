@@ -10,7 +10,8 @@ import { normaliseAccount, ppobService, type PpobService } from '../../features/
 import type { ActiveSession } from '../auth/auth-service.ts';
 import { throttleKey } from '../auth/crypto.ts';
 import type { MemberSessionStore } from '../auth/types.ts';
-import { readActiveDeductions, readLoanProducts, readProfile } from '../kosipa/member.reader.ts';
+import { readActiveDeductions, readProfile } from '../kosipa/member.reader.ts';
+import { cachedLoanProducts } from '../cache/cached-reads.ts';
 import { readCatalogItems, readCreditUsage } from '../kosipa/store.reader.ts';
 import { query, type Db } from '../kosipa/sql.ts';
 import { rows, StoreUnavailableError } from '../db/mysql.ts';
@@ -238,7 +239,7 @@ export class MemberMutationService {
   private async precheckLoan(cmd: Extract<MutationCommand, { kind: 'loan_application' }>): Promise<MutationOutcome | null> {
     const purpose = cmd.purpose.trim();
     if (!purpose || purpose.length > 120) return { ok: false, status: 422, code: 'INVALID_INPUT', message: 'Keperluan pinjaman wajib diisi (maksimal 120 karakter).' };
-    const sim = simulateLoan(buildLoanProducts(await readLoanProducts(this.deps.readerDb)), { productId: cmd.productId, amountRp: cmd.amountRp, months: cmd.months });
+    const sim = simulateLoan(buildLoanProducts(await cachedLoanProducts(this.deps.readerDb)), { productId: cmd.productId, amountRp: cmd.amountRp, months: cmd.months });
     return sim.ok ? null : { ok: false, status: 422, code: 'INVALID_INPUT', message: sim.message };
   }
 

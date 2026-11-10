@@ -3,7 +3,8 @@ import { cache } from 'react';
 import { requireMember } from '../../../lib/auth/session.server.ts';
 import { attempt } from '../../../lib/errors/service-errors.ts';
 import { readerDb, readerSettings } from '../../../server/container.ts';
-import { readCatalog, readCatalogCategories, readCatalogItems } from '../../../server/kosipa/store.reader.ts';
+import { readCatalog, readCatalogItems } from '../../../server/kosipa/store.reader.ts';
+import { cachedCatalogCategories } from '../../../server/cache/cached-reads.ts';
 import type { CatalogParams, CartLine } from './catalog.ts';
 
 export async function getCatalog(p: CatalogParams) {
@@ -13,7 +14,7 @@ export async function getCatalog(p: CatalogParams) {
 
 export const getCategories = cache(async () => {
   await requireMember();
-  return attempt(async () => readCatalogCategories(readerDb(), readerSettings().catalogCompanyId));
+  return attempt(async () => cachedCatalogCategories(readerDb(), readerSettings().catalogCompanyId));
 });
 
 /** Current prices for a cart; unknown, inactive or price-less items are reported back, never priced by the client. */

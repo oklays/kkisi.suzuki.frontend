@@ -296,6 +296,14 @@
 .qr-placeholder { border: 1px dashed #9DAEC5; border-radius: 15px; padding: 22px; margin: 15px auto; text-align: center; background: #F5F8FC; max-width: 240px; }
 .qr-placeholder svg { width: 65px; height: 65px; color: #526B8D; margin-bottom: 12px; }
 .qr-placeholder strong { display: block; font-size: 13px; line-height: 1.6; }
+.qr-placeholder button { margin-top: 12px; }
+/* Signed member QR (P2): white quiet zone, fixed square, readable on any phone. */
+.qr-card { display: grid; justify-items: center; gap: 8px; margin: 12px auto 4px; text-align: center; }
+.qr-frame { display: block; width: min(240px, 72vw); height: auto; aspect-ratio: 1; border-radius: 14px; background: #fff; border: 1px solid #DCE4EF; padding: 6px; }
+.qr-skeleton { background: linear-gradient(90deg, #F1F4F9 25%, #E6EBF3 50%, #F1F4F9 75%); background-size: 200% 100%; animation: qr-shimmer 1.2s infinite linear; }
+@media (prefers-reduced-motion: reduce) { .qr-skeleton { animation: none; } }
+@keyframes qr-shimmer { to { background-position: -200% 0; } }
+.qr-timer { font-size: 13px; font-weight: 600; color: #344A70; margin: 0; font-variant-numeric: tabular-nums; }
 .qr-placeholder p { font-size: 11px; line-height: 1.6; margin-top: 6px; color: var(--muted); }
 .legal-section { border-bottom: 1px solid var(--line); }
 .legal-section summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; list-style: none; }
