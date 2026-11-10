@@ -49,7 +49,10 @@ try {
   await step('unauthenticated deep link redirects to Masuk and keeps the target', async () => {
     await page.goto(`${B}/simpanan?tab=setoran`);
     assert.match(page.url(), /\/masuk\?next=%2Fsimpanan%3Ftab%3Dsetoran/);
-    assert.equal(await h1(page), 'Masuk ke S-MART');
+    assert.equal(await h1(page), 'Selamat datang kembali');
+    assert.equal(await page.getByText('Lanjut sebagai tamu').count(), 0);
+    await page.getByText('Bersama Membangun Kesejahteraan').waitFor();
+    await page.getByText('Akses aman untuk anggota KKISI TB2').waitFor();
   });
   await step('unauthenticated API call is 401 JSON, never data', async () => {
     const r = await fetch(`${B}/api/belanja/harga?items=1:1`);
