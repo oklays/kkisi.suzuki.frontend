@@ -1,0 +1,80 @@
+# Host nginx site for the PWA ONLY: /etc/nginx/sites-available/kkisi-mobile (symlinked into sites-enabled). Do not edit nginx.conf
+# or any other site. Certificate via the webroot authenticator (certbot never edits nginx files), AFTER the DNS record exists:
+#   certbot certonly --webroot -w /var/www/kkisi-mobile-acme -d app.kkisitb2.id --deploy-hook "systemctl reload nginx"
+# Same constraints as deploy/genesis/nginx: no ipv6only (already set by another site), no http2 directive on nginx 1.18.
+
+# First-layer rate limits (the app's own per-identity/PIN/account throttles stay the real control). Site files are included in
+# the http{} context, so the zones can live here; the names are unique to this site. Many members share one office/factory NAT
+# address, so the limits are generous per IP and only cut automated floods: ~1 login flow needs 3 requests (login, PIN, page).
+limit_req_zone $binary_remote_addr zone=kkisi_mobile_auth:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=kkisi_mobile_write:10m rate=20r/m;
+limit_req_status 429;
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name app.kkisitb2.id;
+    location ^~ /.well-known/acme-challenge/ { root /var/www/kkisi-mobile-acme; default_type text/plain; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name app.kkisitb2.id;
+
+    ssl_certificate     /etc/letsencrypt/live/app.kkisitb2.id/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.kkisitb2.id/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    # A PWA must stay on HTTPS: service workers and installation require it.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    client_max_body_size 64k;   # only small JSON bodies (login, PIN, logout) are ever posted
+
+    # The service worker must never be cached by nginx or a CDN (the app already sends no-cache).
+    location = /sw.js {
+        proxy_pass http://127.0.0.1:3150;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+    }
+
+    # Login, PIN and logout: password/PIN guessing floods are cut here before they reach bcrypt workers or the database.
+    location ^~ /api/auth/ {
+        limit_req zone=kkisi_mobile_auth burst=20 nodelay;
+        proxy_pass http://127.0.0.1:3150;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 30s;
+    }
+
+    # Member mutations (loan / deduction intake, checkout, PPOB).
+    location ^~ /api/transaksi/ {
+        limit_req zone=kkisi_mobile_write burst=10 nodelay;
+        proxy_pass http://127.0.0.1:3150;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 30s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3150;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # OVERWRITE (never append) X-Forwarded-For: the app trusts exactly one hop (TRUSTED_PROXY_HOPS=1).
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 60s;
+        # Streaming responses (React Suspense) must not be buffered into one late page.
+        proxy_buffering off;
+    }
+}

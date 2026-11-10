@@ -1,0 +1,30 @@
+-- P1 member requests: the legacy deduction-change request table, STRUCTURE ONLY, as in the 30 Sep 2026 production snapshot
+-- (docs/superpowers/specs/public-simpanan-sukarela/02_AUDIT_LEGACY_KOSIPA_FLOW.md S1): no index on doc_no or nik_kar, status_notif NOT NULL without default.
+CREATE TABLE IF NOT EXISTS `__KOSIPA_DB__`.`trans_simpanan_pengajuan` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `doc_no` varchar(50) DEFAULT NULL,
+  `doc_date` date DEFAULT NULL,
+  `doc_status` varchar(50) DEFAULT 'OPEN',
+  `jenis_simpanan` varchar(50) DEFAULT NULL,
+  `nik_kar` varchar(50) DEFAULT NULL,
+  `nama` varchar(50) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `bank` varchar(50) DEFAULT NULL,
+  `norek` varchar(50) DEFAULT NULL,
+  `bagian` varchar(100) DEFAULT NULL,
+  `lokasi` varchar(100) DEFAULT NULL,
+  `potongan_old` double(18,2) DEFAULT NULL,
+  `potongan` double(18,2) DEFAULT NULL,
+  `awal_potong_bulan` varchar(50) DEFAULT NULL,
+  `awal_potong_tahun` varchar(50) DEFAULT NULL,
+  `remarks` varchar(50) DEFAULT NULL,
+  `posting_date` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `cd_usr` varchar(50) DEFAULT NULL,
+  `ud_usr` varchar(50) DEFAULT NULL,
+  `status_notif` int(11) NOT NULL,
+  `ttd` varchar(100) DEFAULT NULL,
+  `is_mobile` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci ROW_FORMAT=DYNAMIC;

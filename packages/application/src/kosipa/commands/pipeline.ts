@@ -16,7 +16,8 @@ import type { AuditLog } from '../../console/identity-links.ts';
 export type CommandActor = { userId: number; kosipaUserId: number | null; capabilities: CapabilitySet; requestId: string };
 
 export type CommandEnvelope = {
-  command: string; capability: KosipaWriteCapability; idempotencyKey: string; requestHash: string; requestId: string;
+  /** A console write capability, or the member channel's own scope (runMemberIntakeCommand). */
+  command: string; capability: KosipaWriteCapability | 'member.intake'; idempotencyKey: string; requestHash: string; requestId: string;
   actorConsoleUserId: number; actorKosipaUserId: number; subjectType: string; subjectRef: string;
 };
 export type CommandOutcome<R> = { result: R; replayed: boolean; ledgerId: number };
@@ -74,6 +75,37 @@ export async function runKosipaCommand<I, R>(ports: CommandPorts, actor: Command
   } catch (error) {
     const code = error instanceof KosipaError ? error.code : 'UNAVAILABLE';
     await event('kosipa.command.failed', 'failed', subjectId, { command: spec.command, code });
+    throw error;
+  }
+}
+
+/**
+ * Member channel (P1 member requests): the PWA Anggota submits on behalf of an authenticated member, verified by a signed internal
+ * request, not a console session. There is no console actor and no console capability: the channel itself is the authority, and the
+ * ledger row records actor 0 / 0 with capability `member.intake`. Same order as runKosipaCommand otherwise: ownership -> parse ->
+ * request hash -> ONE business transaction (repository). Refusals are logged (code only); the ledger row is the audit of record.
+ */
+export const MEMBER_CHANNEL_ACTOR = 0;
+export const MEMBER_CHANNEL_CAPABILITY = 'member.intake' as const;
+export type MemberChannelPorts = { ownership: WriteOwnership; now: () => Date; log?: (event: string, fields: Record<string, string | number>) => void };
+export type MemberIntakeSpec<I, R> = {
+  command: string;
+  feature: string;
+  parse(body: unknown): { input: I; idempotencyKey: string; subject: { type: string; ref: string }; payload: unknown };
+  execute(envelope: CommandEnvelope, input: I): Promise<CommandOutcome<R>>;
+};
+
+export async function runMemberIntakeCommand<I, R>(ports: MemberChannelPorts, requestId: string, spec: MemberIntakeSpec<I, R>, body: unknown): Promise<CommandOutcome<R>> {
+  if (!ports.ownership.owns(spec.feature)) throw new KosipaError('WRITE_DISABLED');
+  try {
+    const { input, idempotencyKey, subject, payload } = spec.parse(body);
+    const requestHash = createHash('sha256').update(commandFingerprint(spec.command, subject, payload)).digest('hex');
+    return await spec.execute({
+      command: spec.command, capability: MEMBER_CHANNEL_CAPABILITY, idempotencyKey, requestHash, requestId,
+      actorConsoleUserId: MEMBER_CHANNEL_ACTOR, actorKosipaUserId: MEMBER_CHANNEL_ACTOR, subjectType: subject.type, subjectRef: subject.ref,
+    }, input);
+  } catch (error) {
+    ports.log?.('member_intake_refused', { command: spec.command, code: error instanceof KosipaError ? error.code : 'UNAVAILABLE' });
     throw error;
   }
 }

@@ -18,6 +18,10 @@ export const LOAN_DECISION_LEGACY_CONTROLLERS = [
   'pinjaman/pinjaman_c', 'pinjaman/pinjaman_reguler_c', 'pinjaman/pinjaman_bank_c', 'pinjaman/kasbon_c', 'pinjaman/pembiayaan_c', 'pinjaman/gaji_minus_c', 'pinjaman/kpr_btn_c',
   'mobile/pinjaman_mobile_c',
 ] as const;
+/** Legacy screens that decide deduction-change requests (F45): the menu one and its unlisted duplicate (F48). */
+export const DEDUCTION_REQUEST_LEGACY_CONTROLLERS = ['mobile/pengajuan_mobile_c', 'simpanan/pengajuan_mobile_c'] as const;
+/** The legacy screen that converts mobile loan requests into loans (F47); it stays open while F47 is legacy-owned. */
+export const LOAN_REQUEST_LEGACY_CONTROLLERS = ['mobile/pinjaman_mobile_c'] as const;
 /** Reference masters (FA-01 Lokasi, FA-02 Bagian, Jenis Dokumen, Rekening Bank, Periode Angsuran): one feature per legacy controller. */
 export const KOSIPA_WRITE_FEATURES: Readonly<Record<string, KosipaWriteFeatureConfig>> = {
   ...Object.fromEntries(Object.values(MASTER_DEFINITIONS).map((d) => [`master.${d.key}`, { flag: 'KOSIPA_MASTER_WRITES_ENABLED', legacyControllers: [d.legacyController] }])),
@@ -32,6 +36,15 @@ export const KOSIPA_WRITE_FEATURES: Readonly<Record<string, KosipaWriteFeatureCo
    * loan screen that converts requests into POSTING loans. Legacy writes those statuses blindly, so both applications must never decide loans at once.
    */
   'loan.decision': { flag: 'KOSIPA_LOAN_WRITES_ENABLED', legacyControllers: LOAN_DECISION_LEGACY_CONTROLLERS },
+  /**
+   * Member requests (P1). `member.intake`: the PWA Anggota creates OPEN requests through the signed internal endpoint; no legacy screen creates
+   * PWA requests, so nothing is fenced. `request.loan`: rejecting a mobile loan request; legacy mobile/pinjaman_mobile_c keeps converting requests
+   * into loans (F47 is not native), so it is never fenced and the command always runs shared (row lock + status guard + version).
+   * `request.deduction`: deduction-change approval/rejection (F45), fenced against both legacy request screens unless the owner approves coexistence.
+   */
+  'member.intake': { flag: 'KOSIPA_MEMBER_INTAKE_ENABLED', legacyControllers: [] },
+  'request.loan': { flag: 'KOSIPA_REQUEST_WRITES_ENABLED', legacyControllers: [] },
+  'request.deduction': { flag: 'KOSIPA_REQUEST_WRITES_ENABLED', legacyControllers: DEDUCTION_REQUEST_LEGACY_CONTROLLERS },
 };
 
 export function kosipaWriteOwnership(env: Record<string, string | undefined> = process.env): WriteOwnership {
@@ -53,9 +66,16 @@ export function kosipaWriteOwnership(env: Record<string, string | undefined> = p
 export function kosipaLoanDecisionShared(env: Record<string, string | undefined> = process.env): boolean {
   return env.KOSIPA_LOAN_DECISION_LEGACY_SHARED === 'true';
 }
+/**
+ * Deduction-request coexistence (P1): only when this is exactly "true", legacy mobile/pengajuan_mobile_c stays open while the console decides
+ * deduction requests (guarded UPDATEs, row locks and the version remain the protection). Off = strict fence.
+ */
+export function kosipaDeductionRequestShared(env: Record<string, string | undefined> = process.env): boolean {
+  return env.KOSIPA_DEDUCTION_REQUEST_LEGACY_SHARED === 'true';
+}
 /** Features whose legacy controllers must NOT be fenced in this environment (coexistence). */
 export function kosipaSharedFeatures(env: Record<string, string | undefined> = process.env): ReadonlySet<string> {
-  return new Set(kosipaLoanDecisionShared(env) ? ['loan.decision'] : []);
+  return new Set([...(kosipaLoanDecisionShared(env) ? ['loan.decision'] : []), ...(kosipaDeductionRequestShared(env) ? ['request.deduction'] : [])]);
 }
 
 /** Grants table usage is opt-in so environments whose console store predates db/console/004 keep their read-only behaviour. */

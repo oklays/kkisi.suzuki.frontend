@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>Offline · S-MART KKISI TB2</title>
+<style>
+  :root { --navy:#0A1F44; --blue:#0B3D91; --muted:#526078; --line:#E5E9F0; --yellow:#FFC400; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100dvh; background: #EEF1F6; color: var(--navy); font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif; }
+  .app { width: min(100%, 480px); margin: 0 auto; min-height: 100dvh; background: #fff; display: flex; flex-direction: column; padding: 24px 24px max(24px, env(safe-area-inset-bottom)); }
+  img { width: 160px; height: auto; display: block; }
+  main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .rule { width: 40px; height: 5px; background: var(--yellow); border-radius: 2px; margin: 0 0 19px; }
+  h1 { font: 700 27px/1.2 Archivo, system-ui, sans-serif; letter-spacing: -.8px; margin: 0; }
+  p { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 12px 0 0; }
+  .note { background: #F0F5FE; color: #345582; border-radius: 13px; padding: 13px; font-size: 12px; line-height: 1.6; margin-top: 20px; }
+  button { width: 100%; min-height: 52px; border: 0; border-radius: 12px; background: var(--blue); color: #fff; font: 600 14px system-ui, sans-serif; margin-top: 24px; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <img src="/images/logo-landscape.png" width="640" height="222" alt="S-MART KKISI Tambun 2">
+  <main>
+    <div class="rule" aria-hidden="true"></div>
+    <h1>Kamu sedang offline</h1>
+    <p>Simpanan, pinjaman, potongan dan transaksi anggota selalu diambil langsung dari koperasi, jadi halaman ini memerlukan koneksi internet.</p>
+    <p class="note">Demi keamanan, data anggota tidak disimpan di perangkat. Tidak ada saldo lama yang ditampilkan saat offline.</p>
+    <button type="button" id="retry">Coba lagi</button>
+  </main>
+</div>
+<script>
+  document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+  window.addEventListener('online', function () { location.reload(); });
+</script>
+</body>
+</html>

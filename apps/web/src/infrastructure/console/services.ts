@@ -24,7 +24,10 @@ import { exportPolicyFromEnv, exportThrottle } from './export-config.ts';
 import { PrismaAuditLog, PrismaIdentityLinkStore } from './console-store.ts';
 import { PrismaKosipaDirectory } from './kosipa-directory.ts';
 import { PrismaKosipaGrantStore } from './kosipa-grant-store.ts';
-import { LOAN_DECISION_LEGACY_CONTROLLERS, kosipaGrantAdmins, kosipaLoanDecisionShared, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
+import { LOAN_DECISION_LEGACY_CONTROLLERS, kosipaDeductionRequestShared, kosipaGrantAdmins, kosipaLoanDecisionShared, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
+import { PrismaKosipaMemberRequestRepository } from '../repositories/kosipa-member-request.repository.ts';
+import { kosipaRequestWritePrisma, kosipaRequestWritesAvailable, validateKosipaRequestLedgerDatabase } from '../db/prisma-kosipa-request-write.ts';
+import type { MemberRequestRepository } from '@koperasi/application/kosipa/commands/member-request';
 import { PrismaKosipaMasterRepository } from '../repositories/kosipa-master-write.repository.ts';
 import { kosipaMasterWritePrisma, kosipaMasterWritesAvailable, validateKosipaLedgerDatabase } from '../db/prisma-kosipa-master-write.ts';
 import { PrismaKosipaMemberRepository } from '../repositories/kosipa-member-write.repository.ts';
@@ -68,7 +71,7 @@ export function kosipaServices(env: Record<string, string | undefined> = process
 
 /** Native KOSIPA commands (FA-01): KOSIPA read services + ownership gate + writer repositories. The writer is attached only when its
  *  guarded configuration is valid; otherwise reads work and every command answers 503 WRITE_NOT_CONFIGURED. */
-export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository; loanDecisions: LoanDecisionRepository };
+export type KosipaCommandServices = ConsoleServices & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository; loanDecisions: LoanDecisionRepository; requests: MemberRequestRepository };
 export function kosipaCommandServices(env: Record<string, string | undefined> = process.env): KosipaCommandServices | null {
   const services = kosipaServices(env);
   if (!services) return null;
@@ -85,7 +88,9 @@ export function kosipaCommandServices(env: Record<string, string | undefined> = 
   // Loan decisions (FA-04): their own writer account, flag and ledger check.
   const loanWritable = kosipaLoanWritesAvailable(env);
   const loanDecisions = new PrismaKosipaLoanDecisionRepository(prisma, loanWritable ? kosipaLoanWritePrisma() : undefined, { ledgerDatabase: loanWritable ? validateKosipaLoanLedgerDatabase(env) : undefined, sharedWithLegacy: kosipaLoanDecisionShared(env) });
-  return { ...services, ownership: kosipaWriteOwnership(env), masters, members, products, deposits, loanDecisions };
+  // Member requests (P1): their own writer account, flag and ledger check; deduction coexistence is an owner decision.
+  const requests = memberRequestRepository(env);
+  return { ...services, ownership: kosipaWriteOwnership(env), masters, members, products, deposits, loanDecisions, requests };
 }
 
 /** Grant administration needs the console store, the grant table (flag) and the KOSIPA directory for identity links. */
@@ -93,4 +98,10 @@ export function kosipaGrantServices(env: Record<string, string | undefined> = pr
   const services = consoleServices(env);
   if (!services || !kosipaWriteGrantsEnabled(env)) return null;
   return { ...services, roleWriteGrantsEnabled: true, grants: new PrismaKosipaGrantStore(consolePrisma()), grantAdmins: kosipaGrantAdmins(env) };
+}
+
+/** Member-request repository (console decisions and the internal PWA intake share it). Reads use the KOSIPA reader. */
+export function memberRequestRepository(env: Record<string, string | undefined> = process.env): PrismaKosipaMemberRequestRepository {
+  const writable = kosipaRequestWritesAvailable(env);
+  return new PrismaKosipaMemberRequestRepository(prisma, writable ? kosipaRequestWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaRequestLedgerDatabase(env) : undefined, deductionShared: kosipaDeductionRequestShared(env) });
 }

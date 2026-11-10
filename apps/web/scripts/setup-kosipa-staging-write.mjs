@@ -27,6 +27,8 @@ if (!/^[1-9]\d{0,9}(,[1-9]\d{0,9})+$/.test(grantAdmins)) throw new Error('--gran
 const BUSINESS_DB = 'kkisi_staging', LEDGER_DB = 'kkisi_staging_ledger', CONSOLE_DB = 'kkisi_console_staging', HOST = '%', CONSOLE_HOST = '172.17.0.1';
 const MASTER_USER = 'kosipa_master_w', MEMBER_USER = 'kosipa_member_w', SAVINGS_USER = 'kosipa_savings_w', LOAN_USER = 'kosipa_loan_w';
 const loanShared = !args.includes('--loan-fence');
+// P1 member requests: the request writer is not provisioned here, so the legacy deduction-request screens stay open unless asked otherwise.
+const deductionShared = !args.includes('--deduction-fence');
 
 function docker(argv, input) {
   const r = spawnSync('docker', argv, { input, encoding: 'utf8', env: { ...process.env, MYSQL_PWD: process.env.MARIADB_ROOT_PASSWORD } });
@@ -44,7 +46,7 @@ if (process.env.APP_ENV && process.env.APP_ENV !== 'local') throw new Error('APP
 
 const stateDir = `${repo}.local/kosipa-staging-write`;
 // Features in coexistence keep their legacy screens open: their controllers are never fenced by this script.
-const fenceUrls = [...new Set(Object.entries(KOSIPA_WRITE_FEATURES).filter(([name]) => !(loanShared && name === 'loan.decision')).flatMap(([, f]) => f.legacyControllers))];
+const fenceUrls = [...new Set(Object.entries(KOSIPA_WRITE_FEATURES).filter(([name]) => !(loanShared && name === 'loan.decision') && !(deductionShared && name === 'request.deduction')).flatMap(([, f]) => f.legacyControllers))];
 const urlList = fenceUrls.map((u) => `UPPER('${u}')`).join(', ');
 const fencePrestateFile = () => `${stateDir}/fence-prestate.json`;
 
@@ -105,6 +107,7 @@ const envValues = {
   KOSIPA_SAVINGS_WRITES_ENABLED: 'true',
   KOSIPA_LOAN_WRITES_ENABLED: 'true',
   KOSIPA_LOAN_DECISION_LEGACY_SHARED: loanShared ? 'true' : 'false',
+  KOSIPA_DEDUCTION_REQUEST_LEGACY_SHARED: deductionShared ? 'true' : 'false',
   KOSIPA_LEDGER_DATABASE: LEDGER_DB,
   KOSIPA_MEMBER_VERSION_SECRET: versionSecret,
   KOSIPA_WRITE_GRANTS_ENABLED: 'true',

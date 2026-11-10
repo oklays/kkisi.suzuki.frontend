@@ -8,13 +8,14 @@ const nextVitals = require("eslint-config-next/core-web-vitals");
 const nextTs = require("eslint-config-next/typescript");
 const root = fileURLToPath(new URL(".", import.meta.url));
 const web = fileURLToPath(new URL("./apps/web/", import.meta.url));
+const mobile = fileURLToPath(new URL("./apps/mobile_kkisi/", import.meta.url));
 
 export default defineConfig([
   {
     basePath: root,
     extends: [globalIgnores([
       "**/*",
-      "!apps/", "!apps/web/", "!apps/web/**",
+      "!apps/", "!apps/web/", "!apps/web/**", "!apps/mobile_kkisi/", "!apps/mobile_kkisi/**",
       "!packages/", "!packages/**",
       "!integration/", "!integration/public-savings/", "!integration/public-savings/**", "!integration/kosipa-full-access/", "!integration/kosipa-full-access/**",
       "**/node_modules/**", "**/.next/**", "**/.next-*/**", "**/out/**", "**/build/**", "**/next-env.d.ts",
@@ -24,6 +25,19 @@ export default defineConfig([
     basePath: web,
     extends: [...nextVitals, ...nextTs],
     settings: { next: { rootDir: web } },
+  },
+  {
+    basePath: mobile,
+    extends: [...nextVitals, ...nextTs],
+    settings: { next: { rootDir: mobile } },
+  },
+  {
+    basePath: mobile,
+    // The PWA never imports the console app's infrastructure; shared code comes only through @koperasi/* packages.
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [{ group: ["**/apps/web/**", "@/infrastructure/**"], message: "apps/mobile_kkisi must stay independent of apps/web; share through packages/." }] }],
+    },
   },
   {
     basePath: root,

@@ -1,0 +1,23 @@
+# Allowlist for the PWA image only. Docs, legacy PHP source, dumps, tests, fixtures and env files never enter the context.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!packages/domain/package.json
+!packages/domain/tsconfig.json
+!packages/domain/src
+!packages/application/package.json
+!packages/application/tsconfig.json
+!packages/application/src
+!apps/mobile_kkisi/package.json
+!apps/mobile_kkisi/next.config.ts
+!apps/mobile_kkisi/tsconfig.json
+!apps/mobile_kkisi/public
+!apps/mobile_kkisi/src
+
+**/.env*
+**/.local
+**/node_modules
+**/*.sql
+**/*.sql.gz

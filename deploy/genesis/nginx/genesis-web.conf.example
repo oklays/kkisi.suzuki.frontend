@@ -34,6 +34,10 @@ server {
         proxy_pass http://127.0.0.1:3140;
     }
 
+    # Internal service endpoints (P1 member intake from the PWA Anggota) are reached over the Docker network kkisi-internal only.
+    # The application also refuses public callers and unsigned requests; this keeps them off the public domain entirely.
+    location ^~ /api/internal/ { return 404; }
+
     location / {
         proxy_pass http://127.0.0.1:3140;
         proxy_http_version 1.1;

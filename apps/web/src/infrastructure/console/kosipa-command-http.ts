@@ -8,6 +8,7 @@ import { createMaster, listMaster, setMasterStatus, updateMaster, type MasterRep
 import { createProductMaster, listProductMaster, setProductMasterStatus, updateProductMaster, type ProductMasterRepository } from '@koperasi/application/kosipa/commands/product-master';
 import { approveSavingsDeposit, createSavingsDeposit, listSavingsDeposits, lookupDepositMember, rejectSavingsDeposit, type SavingsDepositRepository } from '@koperasi/application/kosipa/commands/savings-deposit';
 import { decideLoan, readLoanDecision, type LoanDecisionRepository } from '@koperasi/application/kosipa/commands/loan-decision';
+import { decideMemberRequest, listMemberRequests, type MemberRequestRepository } from '@koperasi/application/kosipa/commands/member-request';
 import { changeMemberStatus, getMemberForEdit, registerMember, updateMemberProfile, type MemberRepository } from '@koperasi/application/kosipa/commands/member';
 import { errorResponse, guard, json, readJson, type AuthServices } from '../auth/http.ts';
 
@@ -16,7 +17,7 @@ import { errorResponse, guard, json, readJson, type AuthServices } from '../auth
  * JSON content type for every state change, SEC-105) -> services present -> server-side capabilities (fresh per request, from the
  * live identity link and explicit grants, SEC-108) -> use case. Responses are code-only (SEC-111) and never cached.
  */
-export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository; loanDecisions: LoanDecisionRepository };
+export type KosipaCommandPorts = Pick<IdentityPorts, 'links' | 'kosipa' | 'audit' | 'now'> & KosipaWriteSources & { ownership: WriteOwnership; masters: MasterRepository; members: MemberRepository; products: ProductMasterRepository; deposits: SavingsDepositRepository; loanDecisions: LoanDecisionRepository; requests: MemberRequestRepository };
 export type KosipaCommandDeps = { enabled: boolean; permissions: PermissionSetSource; ports: KosipaCommandPorts | null; log?: (event: string, fields: Record<string, string | number>) => void };
 
 const STATUS: Record<string, number> = {
@@ -31,6 +32,8 @@ const STATUS: Record<string, number> = {
   MASTER_CODE_DUPLICATE: 422, MASTER_NAME_DUPLICATE: 422, MASTER_REFERENCED: 422, MASTER_FIELD_IMMUTABLE: 422, NO_CHANGE: 422,
   NOT_FOUND: 404, DOC_NO_INVALID: 400, LOAN_NOT_FOUND: 404, LOAN_STATUS_INVALID: 409, LOAN_MAKER_CHECKER: 403, LOAN_DUPLICATE_HEADER: 422, LOAN_STATE_INCONSISTENT: 422, LOAN_PPOB_ORDER: 422,
   LOAN_MOBILE_REQUEST_CONFLICT: 422, LOAN_AMOUNT_INVALID: 422, LOAN_MEMBER_NOT_FOUND: 422, LOAN_MEMBER_AMBIGUOUS: 422, LOAN_MEMBER_INACTIVE: 422,
+  REQUEST_FIELD_INVALID: 422, REQUEST_MEMBER_INVALID: 422, REQUEST_OPEN_LIMIT: 409, REQUEST_STATUS_INVALID: 409, REQUEST_TYPE_UNSUPPORTED: 422, REQUEST_NIK_TOO_LONG: 422,
+  REQUEST_AMOUNT_INVALID: 422, REQUEST_STATE_INCONSISTENT: 422, REQUEST_ALREADY_CONVERTED: 409,
   WRITE_DISABLED: 503, WRITE_NOT_CONFIGURED: 503, LEGACY_ACTIVE: 503, MASTER_TOO_LARGE: 503, MEMBER_TOO_LARGE: 503, POSTCONDITION_FAILED: 503,
 };
 const BODY_LIMIT = 4096;
@@ -196,5 +199,25 @@ export async function handleLoanDecision(services: AuthServices, request: Reques
     const a = await actorFor(services, request, deps, true);
     if ('response' in a) return a.response;
     return ok(200, await decideLoan(commandPorts(a.ports, deps), a.actor, rawDocNo, action, await readJson(request, BODY_LIMIT)));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** GET /api/kosipa/member-requests?type=loan|deduction&status=&month=  (loan/savings view + member view; private, never cached) */
+export async function handleListMemberRequests(services: AuthServices, request: Request, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    const a = await actorFor(services, request, deps, false);
+    if ('response' in a) return a.response;
+    const url = new URL(request.url);
+    return json(200, await listMemberRequests(a.ports, a.actor, { type: url.searchParams.get('type') ?? undefined, status: url.searchParams.get('status') ?? undefined, month: url.searchParams.get('month') ?? undefined }));
+  } catch (error) { return failure(services, deps, error); }
+}
+
+/** POST /api/kosipa/member-requests/[type]/[docNo]/approve|reject  { idempotencyKey, expectedVersion, reason (reject only) } */
+export async function handleDecideMemberRequest(services: AuthServices, request: Request, rawType: string, rawDocNo: string, action: string, deps: KosipaCommandDeps): Promise<Response> {
+  try {
+    if ((rawType !== 'loan' && rawType !== 'deduction') || (action !== 'approve' && action !== 'reject')) return json(404, { error: 'NOT_FOUND' });
+    const a = await actorFor(services, request, deps, true);
+    if ('response' in a) return a.response;
+    return ok(200, await decideMemberRequest(commandPorts(a.ports, deps), a.actor, rawType, rawDocNo, action, await readJson(request, BODY_LIMIT)));
   } catch (error) { return failure(services, deps, error); }
 }

@@ -1,0 +1,78 @@
+# PWA Anggota (app.kkisitb2.id): its own compose project, containers, network and loopback port. It does not reference,
+# reuse or restart genesis.web or any other application on the server.
+#   docker compose --env-file /opt/apps/kkisi-mobile/compose.env -f deploy/mobile_kkisi/docker-compose.yml up -d
+# Secrets live on the server only: ${MOBILE_ENV_FILE} (mode 600) and ${MOBILE_TUNNEL_DIR}/{id_ed25519,known_hosts}.
+# Same "pod" layout as deploy/genesis: netns owns the network namespace, the SSH tunnel and the app join it, the tunnel port
+# is never published.
+name: kkisi-mobile
+
+services:
+  netns:
+    image: registry.k8s.io/pause:3.10
+    container_name: kkisi-mobile-netns
+    ports:
+      - "127.0.0.1:${MOBILE_HOST_PORT:-3150}:3000"
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 16m
+    networks: [kkisi-mobile]
+
+  db-tunnel:
+    # The same reviewed tunnel image as genesis.web (deploy/genesis/tunnel), run as a separate container with its own key.
+    image: genesis-db-tunnel:${MOBILE_TUNNEL_TAG:?set MOBILE_TUNNEL_TAG to the tunnel image tag}
+    container_name: kkisi-mobile-db-tunnel
+    network_mode: "service:netns"
+    environment:
+      TUNNEL_SSH_HOST: ${TUNNEL_SSH_HOST:?set TUNNEL_SSH_HOST}
+      TUNNEL_SSH_PORT: ${TUNNEL_SSH_PORT:?set TUNNEL_SSH_PORT}
+      TUNNEL_SSH_USER: ${TUNNEL_SSH_USER:?set TUNNEL_SSH_USER}
+      TUNNEL_LOCAL_PORT: ${TUNNEL_LOCAL_PORT:-3307}
+      TUNNEL_REMOTE_PORT: ${TUNNEL_REMOTE_PORT:-3306}
+    volumes:
+      - ${MOBILE_TUNNEL_DIR:-/opt/apps/kkisi-mobile/tunnel}/id_ed25519:/run/tunnel/id_ed25519:ro
+      - ${MOBILE_TUNNEL_DIR:-/opt/apps/kkisi-mobile/tunnel}/known_hosts:/run/tunnel/known_hosts:ro
+    restart: always
+    init: true
+    read_only: true
+    tmpfs: ["/home/tunnel:uid=10001,gid=10001,mode=0700"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, SETUID, SETGID, KILL]
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 ${TUNNEL_LOCAL_PORT:-3307}"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging: { driver: json-file, options: { max-size: "5m", max-file: "3" } }
+
+  web:
+    image: kkisi-mobile:${MOBILE_TAG:?set MOBILE_TAG to the image tag to run}
+    container_name: kkisi-mobile-web
+    network_mode: "service:netns"
+    env_file:
+      - ${MOBILE_ENV_FILE:-/opt/apps/kkisi-mobile/.env.production}
+    depends_on:
+      db-tunnel:
+        condition: service_healthy
+    # One process: MEMBER_DB_POOL_LIMIT (reader) + 2 (session store) connections. Recompute the cPanel connection budget
+    # before adding replicas (08_DEPLOYMENT_GUIDE.md, "Connection budget").
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/apps/mobile_kkisi/.next/cache:uid=1000,gid=1000
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 256
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
+
+networks:
+  kkisi-mobile:
+    name: kkisi-mobile

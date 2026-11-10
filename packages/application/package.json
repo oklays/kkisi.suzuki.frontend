@@ -40,7 +40,9 @@
     "./kosipa/commands/member": "./src/kosipa/commands/member.ts",
     "./kosipa/commands/product-master": "./src/kosipa/commands/product-master.ts",
     "./kosipa/commands/savings-deposit": "./src/kosipa/commands/savings-deposit.ts",
-    "./kosipa/commands/loan-decision": "./src/kosipa/commands/loan-decision.ts"
+    "./kosipa/commands/loan-decision": "./src/kosipa/commands/loan-decision.ts",
+    "./kosipa/commands/member-request": "./src/kosipa/commands/member-request.ts",
+    "./member-intake/signature": "./src/member-intake/signature.ts"
   },
   "scripts": {
     "lint": "eslint .",

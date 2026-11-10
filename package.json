@@ -32,6 +32,12 @@
     "pss:worker": "node --experimental-strip-types integration/public-savings/worker.mjs",
     "pss:start": "PSS_LOCAL_STAGING=1 pnpm --filter @koperasi/web exec next start -H 127.0.0.1 -p 3489",
     "pss:console": "bash integration/public-savings/console-local.sh",
+    "mobile:dev": "pnpm --filter @koperasi/mobile-kkisi dev",
+    "mobile:build": "pnpm --filter @koperasi/mobile-kkisi build",
+    "mobile:start": "pnpm --filter @koperasi/mobile-kkisi start",
+    "mobile:test": "pnpm --filter @koperasi/mobile-kkisi test",
+    "mobile:test:integration": "pnpm --filter @koperasi/mobile-kkisi test:integration",
+    "mobile:test:e2e": "pnpm --filter @koperasi/mobile-kkisi test:e2e",
     "pss:replica": "PSS_LOCAL_REPLICA_UAT=1 node --experimental-strip-types integration/public-savings/replica-stage.mjs"
   },
   "pnpm": {
