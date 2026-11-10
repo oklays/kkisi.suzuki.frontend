@@ -1,6 +1,7 @@
 // Fail-closed configuration of the member PWA. Pure: every function takes the environment as an argument so it is unit-tested
 // without touching process.env. Nothing here ever logs or returns a credential.
 import { createHmac } from 'node:crypto';
+import { parseIntakeKeys, type IntakeKey } from '@koperasi/application/member-intake/signature';
 
 export class ConfigError extends Error {
   readonly setting: string;
@@ -164,4 +165,23 @@ export function loadWriterSettings(env: Env = process.env): WriterSettings {
   const reader = env.DATABASE_URL_MEMBER_READ ? parseDsn('DATABASE_URL_MEMBER_READ', env.DATABASE_URL_MEMBER_READ, mode) : null;
   if (reader && reader.user === dsn.user) throw new ConfigError('DATABASE_URL_MEMBER_WRITE');
   return { dsn, poolLimit: 1 };
+}
+
+export type IntakeSettings = { baseUrl: string; keys: IntakeKey[] } | null;
+const PRIVATE_HOST = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|\[::1\]|[a-z0-9][a-z0-9-]{0,62})$/i;
+/**
+ * apps/web member-intake channel (P1): MEMBER_INTAKE_API_URL + MEMBER_INTAKE_KEYS. Unset URL = not configured (loan application and
+ * deduction change stay off). The URL must be a bare origin on the internal network: loopback, a private address or a single-label
+ * container name (e.g. http://genesis-web-netns:3000), never a public host — the endpoint does not exist through the public proxy.
+ */
+export function loadIntakeSettings(env: Env = process.env): IntakeSettings {
+  const raw = env.MEMBER_INTAKE_API_URL?.trim();
+  if (!raw) return null;
+  let url: URL;
+  try { url = new URL(raw); } catch { throw new ConfigError('MEMBER_INTAKE_API_URL'); }
+  if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')
+    || !PRIVATE_HOST.test(url.hostname)) throw new ConfigError('MEMBER_INTAKE_API_URL');
+  let keys: IntakeKey[];
+  try { keys = parseIntakeKeys(env.MEMBER_INTAKE_KEYS); } catch { throw new ConfigError('MEMBER_INTAKE_KEYS'); }
+  return { baseUrl: url.origin, keys };
 }

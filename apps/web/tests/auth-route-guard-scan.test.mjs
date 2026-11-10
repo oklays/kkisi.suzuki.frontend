@@ -37,6 +37,17 @@ function assertSavingsBoundary(source) {
   assert.doesNotMatch(source,/cookies\(|kkisi_sid/,'ambient management cookies cannot authorize savings requests');
 }
 
+// Service-to-service routes (P1 member intake from the PWA Anggota): no browser session at all. Authorization is an HMAC signature over the
+// exact body (shared key ring, timestamp window, nonce), and the caller must be internal (a public client address answers 404).
+const SIGNED_INTERNAL_ROUTES = new Set(['src/app/api/internal/member-requests/route.ts']);
+function assertSignedInternalBoundary(source) {
+  assert.match(source,/verifyIntakeRequest\(/);
+  assert.match(source,/isInternalCaller\(/);
+  assert.match(source,/INTAKE_HEADER/);
+  assert.match(source,/BODY_LIMIT/);
+  assert.doesNotMatch(source,/cookies\(|kkisi_sid|guard\(/,'a browser session can never authorize a service-to-service request');
+}
+
 function handlerSource(routeSource, method) {
   const out = [];
   const methodSource = method ? routeSource.match(new RegExp(`export\\s+async\\s+function\\s+${method}\\b[\\s\\S]*?(?=\\nexport\\s+|$)`))?.[0] : routeSource;
@@ -63,6 +74,7 @@ test('every API route is guarded (or explicitly public): the handler it delegate
     if (PUBLIC_ROUTES.has(rel(file))) continue;
     const handlers = handlerSource(src);
     if(PSS_ROUTES.has(rel(file))){assertSavingsBoundary(handlers);continue;}
+    if(SIGNED_INTERNAL_ROUTES.has(rel(file))){assertSignedInternalBoundary(handlers);continue;}
     // `kosipaActor(` is the shared KOSIPA gate (flag -> guard() -> capabilities); its own body is verified in the next test.
     if (!/\bguard\(/.test(handlers) && !/\bguard\(/.test(src) && !/\bkosipaActor\(/.test(handlers)) unguarded.push(rel(file));
   }
@@ -89,6 +101,7 @@ test('every state-changing handler demands CSRF (guard csrf:true or its own orig
   }
   for (const file of mutating) {
     if(PSS_ROUTES.has(rel(file))){assertSavingsBoundary(handlerSource(readFileSync(file,'utf8')));continue;}
+    if(SIGNED_INTERNAL_ROUTES.has(rel(file))){assertSignedInternalBoundary(handlerSource(readFileSync(file,'utf8')));continue;}
     if (PUBLIC_ROUTES.has(rel(file))) { const h = handlerSource(readFileSync(file, 'utf8')); assert.match(h, /checkOrigin\(/, `${rel(file)} must check the origin`); continue; }
     const src = readFileSync(file, 'utf8');
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {

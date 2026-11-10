@@ -3218,3 +3218,6 @@
   }
 }
 
+
+/* Pengajuan anggota (P1): a status badge never breaks inside a word in the narrow status column. */
+.member-requests .console-badge { white-space:nowrap; }

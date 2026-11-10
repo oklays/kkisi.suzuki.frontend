@@ -152,14 +152,14 @@ CREATE USER 'n1608204_nxmread'@'localhost' IDENTIFIED BY 'REPLACE_WITH_GENERATED
 GRANT SELECT ON n1608204_kkisi_member_view.* TO 'n1608204_nxmread'@'localhost';
 -- If the reader was created with the earlier plan: REVOKE SELECT ON n1608204_smart_kopkar.* FROM 'n1608204_nxmread'@'localhost';
 
--- 3C) Optional Future Stage (ONLY if/when owner enables ENABLE_LOAN_APPLICATION or ENABLE_DEDUCTION_CHANGE):
+-- 3C) Optional Future Stage (ONLY if/when owner enables ENABLE_MEMBER_FAVOURITES_WRITE):
+--    Loan applications and deduction changes are NOT written by the PWA any more (P1, 10 Nov 2026): apps/web records them through its
+--    KOSIPA command pipeline (docs/migration/sql/kosipa-member-request-writer-production.sql); the PWA only needs MEMBER_INTAKE_API_URL and
+--    MEMBER_INTAKE_KEYS. The PWA writer account remains for smartkkisi wishlists only:
 -- CREATE USER 'n1608204_nxmwrite'@'localhost' IDENTIFIED BY 'REPLACE_WITH_GENERATED_PASSWORD';
--- GRANT SELECT, INSERT ON n1608204_smart_kopkar.trans_pinjaman_pengajuan TO 'n1608204_nxmwrite'@'localhost';
--- GRANT SELECT, INSERT ON n1608204_smart_kopkar.trans_simpanan_pengajuan TO 'n1608204_nxmwrite'@'localhost';
---    The writer reserves a PENDING ledger row before each insert and reconciles by doc_no (reader views), so the legacy intake
---    tables need no unique key. Preferred long-term path: route member intake through the apps/web KOSIPA command pipeline (P1)
---    and drop this account entirely.
 -- GRANT SELECT, INSERT, DELETE ON n1608204_smart_kopkar.wishlists TO 'n1608204_nxmwrite'@'localhost';
+-- If an earlier plan granted it the intake tables: REVOKE ALL PRIVILEGES ON n1608204_smart_kopkar.trans_pinjaman_pengajuan FROM 'n1608204_nxmwrite'@'localhost';
+--                                                  REVOKE ALL PRIVILEGES ON n1608204_smart_kopkar.trans_simpanan_pengajuan FROM 'n1608204_nxmwrite'@'localhost';
 
 -- 3D) READ INDEXES — legacy schema change: ONLY with separate, explicit owner approval, as the cPanel owner, off-peak.
 --     Use docs/migration/sql/kosipa-read-indexes-proposed.sql (pre-check first; TIER 1 only). The PWA loan screen reads

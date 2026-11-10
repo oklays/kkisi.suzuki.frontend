@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { ConfigError, loadAuthSettings, loadFeatureFlags, loadReaderSettings, loadWriterSettings, parseOrigin, parseSecrets } from '../../src/lib/config/env.ts';
+import { ConfigError, loadAuthSettings, loadFeatureFlags, loadIntakeSettings, loadReaderSettings, loadWriterSettings, parseOrigin, parseSecrets } from '../../src/lib/config/env.ts';
+import { featureFlags } from '../../src/server/container.ts';
 import { clientIp, isInternalCaller, isJson, sameOrigin, sessionCookie } from '../../src/lib/security/request.ts';
 import { isWellFormedSid, newSessionId, pinSourceDigest, sessionHashes, throttleKey } from '../../src/server/auth/crypto.ts';
 
@@ -117,4 +118,19 @@ test('P0: the production reader view list is exactly the app view template (no t
   assert.equal(template.length, 27);
   assert.deepEqual(production, template);
   for (const [name, , source] of template) assert.equal(name, source, 'a view keeps its table name so the app SQL is unchanged');
+});
+
+test('P1: intake channel URL must be an internal bare origin with a valid key ring; loan/deduction flags need it', () => {
+  const keys = `k1:${key(7)}`;
+  assert.equal(loadIntakeSettings({}), null);
+  assert.deepEqual(loadIntakeSettings({ MEMBER_INTAKE_API_URL: 'http://genesis-web-netns:3000', MEMBER_INTAKE_KEYS: keys }).baseUrl, 'http://genesis-web-netns:3000');
+  assert.equal(loadIntakeSettings({ MEMBER_INTAKE_API_URL: 'http://172.20.0.4:3000/', MEMBER_INTAKE_KEYS: keys }).keys.length, 1);
+  for (const bad of ['https://tokonew.kkisitb2.id', 'http://8.8.8.8:3000', 'http://genesis-web-netns:3000/api', 'http://u:p@genesis-web-netns:3000', 'ftp://genesis-web-netns', 'not a url']) {
+    assert.throws(() => loadIntakeSettings({ MEMBER_INTAKE_API_URL: bad, MEMBER_INTAKE_KEYS: keys }), ConfigError, bad);
+  }
+  assert.throws(() => loadIntakeSettings({ MEMBER_INTAKE_API_URL: 'http://genesis-web-netns:3000', MEMBER_INTAKE_KEYS: 'k1:short' }), ConfigError);
+  const env = { ...base, ENABLE_LOAN_APPLICATION: 'true', ENABLE_DEDUCTION_CHANGE: 'true' };
+  assert.deepEqual([featureFlags(env).enableLoanApplication, featureFlags(env).enableDeductionChange], [false, false], 'no intake channel: off');
+  const on = featureFlags({ ...env, MEMBER_INTAKE_API_URL: 'http://genesis-web-netns:3000', MEMBER_INTAKE_KEYS: keys });
+  assert.deepEqual([on.enableLoanApplication, on.enableDeductionChange, on.enableMemberFavouritesWrite], [true, true, false], 'the PWA writer is no longer needed for requests');
 });

@@ -6,11 +6,26 @@ Every member-facing mutation flow was audited against the legacy database schema
 
 | Flow | UI Route | Target Table / External System | Classification | Rationale |
 |---|---|---|---|---|
-| **Loan Application** (`loan_application`) | `/pinjaman/ajukan` | `trans_pinjaman_pengajuan` (`doc_status = 'OPEN'`, `status_pencairan = 'OPEN'`, `is_online = 1`, `is_payroll = 1`) | `SAFE_TO_ENABLE_WITH_DB_WRITER` (Disabled by default: `ENABLE_LOAN_APPLICATION=false`) | `trans_pinjaman_pengajuan` is a dedicated pending-intake table. Inserting an `OPEN` row never mutates the active loan ledger (`trans_pinjaman` / `trans_pinjaman_dtl`), which is created only when a cooperative officer approves the application in KOSIPA. |
-| **Savings Deduction Change** (`deduction_change`) | `/potongan/ajukan` | `trans_simpanan_pengajuan` (`doc_status = 'OPEN'`, `is_mobile = 1`, `status_notif = 0`) | `SAFE_TO_ENABLE_WITH_DB_WRITER` (Disabled by default: `ENABLE_DEDUCTION_CHANGE=false`) | `trans_simpanan_pengajuan` is a dedicated pending-intake table. It never overwrites `m_simpanan_aktif` or `trans_potongan_matrix` directly; officer approval applies the change for `awal_potong_bulan` / `awal_potong_tahun`. |
+| **Loan Application** (`loan_application`) | `/pinjaman/ajukan` | `trans_pinjaman_pengajuan` (`doc_status = 'OPEN'`, `status_pencairan = 'OPEN'`, `is_online = 1`, `is_payroll = 1`) — **written by apps/web** (P1 intake) | `SAFE_TO_ENABLE_WITH_INTAKE_CHANNEL` (Disabled by default: `ENABLE_LOAN_APPLICATION=false`) | `trans_pinjaman_pengajuan` is a dedicated pending-intake table. Inserting an `OPEN` row never mutates the active loan ledger (`trans_pinjaman` / `trans_pinjaman_dtl`), which is created only when a cooperative officer approves the application in KOSIPA. |
+| **Savings Deduction Change** (`deduction_change`) | `/potongan/ajukan` | `trans_simpanan_pengajuan` (`doc_status = 'OPEN'`, `is_mobile = 1`, `status_notif = 0`) — **written by apps/web** (P1 intake) | `SAFE_TO_ENABLE_WITH_INTAKE_CHANNEL` (Disabled by default: `ENABLE_DEDUCTION_CHANGE=false`) | `trans_simpanan_pengajuan` is a dedicated pending-intake table. It never overwrites `m_simpanan_aktif` or `trans_potongan_matrix` directly; officer approval applies the change for `awal_potong_bulan` / `awal_potong_tahun`. |
 | **Member Favourites** (`favourite_toggle`) | `/favorit` | `wishlists` (`customer_id`, `product_id`) | `SAFE_TO_ENABLE_WITH_DB_WRITER` (Disabled by default: `ENABLE_MEMBER_FAVOURITES_WRITE=false`) | Non-financial member preference table scoped strictly to `customer_id = session.userId`. |
 | **Store Checkout** (`store_checkout`) | `/belanja/checkout` | `orders` + `order_details` (S-MART e-commerce) / `db_sales` (POS) | `CONTRACT_DEFINED_ONLY` (Disabled by default: `ENABLE_STORE_CHECKOUT=false`) | `orders` requires coupled writes to `order_details` (mapping POS `db_items` to e-commerce `products`), stock reservation, and cashier notification in `smartkkisi`. Server-side cart validation and credit checks are implemented, and the BFF fails closed with `503 UPSTREAM_WRITER_UNAVAILABLE` until an upstream S-MART order API is connected. |
 | **PPOB Services** (`ppob`) | `/layanan/[layanan]`, `/layanan/checkout` | External IAK (`mobilepulsa.net`) API + `orders` / `db_sales` | `BLOCKED_BY_EXTERNAL_PROVIDER` (Hard-disabled on server: `ENABLE_PPOB=false`) | Requires live third-party bill inquiry, product pricelist sync, balance debit, and signed webhook settlement. Number validation is available in the UI, and the BFF fails closed with `403 FEATURE_DISABLED` / `503 PROVIDER_UNAVAILABLE`. |
+
+### 1.1 P1 (10 Nov 2026): loan applications and deduction changes go through apps/web
+
+The PWA no longer writes `trans_pinjaman_pengajuan` / `trans_simpanan_pengajuan`. Its BFF parses the body strictly, applies its own UX pre-checks, member lease and write throttle, then POSTs a **signed** request (`x-kkisi-intake`, HMAC-SHA256 over method + path + timestamp + nonce + body hash, shared module `@koperasi/application/member-intake/signature`) to `apps/web` `POST /api/internal/member-requests` over the Docker network `kkisi-internal` (`MEMBER_INTAKE_API_URL`, `MEMBER_INTAKE_KEYS`). apps/web runs the KOSIPA command pipeline:
+
+- the member identity from the PWA session is re-verified under a row lock (`m_anggota` id + exact NIK + AKTIVE);
+- the product bounds and the 3-OPEN-requests limit are re-checked inside the same transaction;
+- the KOSIPA ledger row is written in that transaction (actor 0, capability `member.intake`, key = UUID of member + client key).
+
+A retry with the same Idempotency-Key replays the first document. Officers process the requests in the console under **KOSIPA → Pengajuan anggota**:
+
+- loan requests can only be rejected there (conversion into a loan stays legacy F47);
+- deduction changes can be approved (legacy F45 with corrections) or rejected, with the capability `kosipa.request.decide`.
+
+Spec: `docs/superpowers/specs/kosipa-full-access/fa-05/MEMBER_REQUESTS.md`. The PWA writer account is kept only for `wishlists`.
 
 ---
 
@@ -27,7 +42,7 @@ ENABLE_MEMBER_FAVOURITES_WRITE=false
 ```
 
 - All five flags default to `false`. Any value other than `'true' | '1' | 'false' | '0' | '' | undefined` throws `ConfigError` at startup.
-- In [`container.ts`](file:///Users/macbookprom2/Documents/Working_Space/OctopushStudio/Website/kkisi.suzuki.web/apps/mobile_kkisi/src/server/container.ts), a DB-backed writer flag (`enableLoanApplication`, `enableDeductionChange`, `enableMemberFavouritesWrite`) evaluates to `true` **only** when both the environment flag is `true` **and** `DATABASE_URL_MEMBER_WRITE` is configured with a dedicated non-root writer account distinct from `DATABASE_URL_MEMBER_READ`.
+- In [`container.ts`](file:///Users/macbookprom2/Documents/Working_Space/OctopushStudio/Website/kkisi.suzuki.web/apps/mobile_kkisi/src/server/container.ts), `enableLoanApplication` / `enableDeductionChange` evaluate to `true` **only** when the flag is `true` **and** the intake channel is configured (`MEMBER_INTAKE_API_URL` on an internal host + a valid `MEMBER_INTAKE_KEYS` ring). `enableMemberFavouritesWrite` still needs `DATABASE_URL_MEMBER_WRITE` (a dedicated non-root account distinct from `DATABASE_URL_MEMBER_READ`).
 - Current effective flags are reported by `GET /health` and `GET /health?check=ready` to internal callers only (loopback / container network); through nginx the endpoint answers `{status}` alone.
 
 ---

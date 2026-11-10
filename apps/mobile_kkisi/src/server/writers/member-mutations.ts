@@ -10,11 +10,12 @@ import { normaliseAccount, ppobService, type PpobService } from '../../features/
 import type { ActiveSession } from '../auth/auth-service.ts';
 import { throttleKey } from '../auth/crypto.ts';
 import type { MemberSessionStore } from '../auth/types.ts';
-import { readActiveDeductions, readLoanApplications, readLoanProducts, readProfile } from '../kosipa/member.reader.ts';
+import { readActiveDeductions, readLoanProducts, readProfile } from '../kosipa/member.reader.ts';
 import { readCatalogItems, readCreditUsage } from '../kosipa/store.reader.ts';
 import { query, type Db } from '../kosipa/sql.ts';
 import { rows, StoreUnavailableError } from '../db/mysql.ts';
 import { parseMutationCommand, type MutationCommand } from './mutation-commands.ts';
+import type { IntakeReply, MemberIntakeSubmitter } from './intake-client.ts';
 
 export type { MutationCommand } from './mutation-commands.ts';
 
@@ -143,7 +144,6 @@ export class MemoryCommandLedgerStore implements CommandLedgerStore {
 const WRITE_LIMIT_PER_WINDOW = 10;
 const WRITE_WINDOW_MS = 15 * 60_000;
 const WRITE_LOCK_MS = 15 * 60_000;
-const MAX_OPEN_APPLICATIONS = 3;
 const LEASE_TTL_MS = 30_000;              // > the sum of the 5 s statement caps a command can run; a crashed holder frees it
 const LEASE_ATTEMPTS = 10;
 const LEASE_RETRY_MS = 300;               // a double-tap waits ~3 s for the first request, then replays its result
@@ -151,25 +151,6 @@ const LEASE_RETRY_MS = 300;               // a double-tap waits ~3 s for the fir
 /** Fingerprint of a parsed command without its key (exported for reconciliation tests). */
 export function payloadHashOf(cmd: MutationCommand): string {
   return createHash('sha256').update(JSON.stringify({ ...cmd, idempotencyKey: undefined })).digest('hex');
-}
-
-function makeDocNo(prefix: string, now: Date, memberId: number, idempotencyKey: string): string {
-  const jkt = new Date(now.getTime() + 7 * 3600_000);
-  const ymd = `${jkt.getUTCFullYear()}${String(jkt.getUTCMonth() + 1).padStart(2, '0')}${String(jkt.getUTCDate()).padStart(2, '0')}`;
-  const suffix = createHash('sha256').update(`${memberId}:${idempotencyKey}`).digest('hex').slice(0, 6).toUpperCase();
-  return `${prefix}-${ymd}-${suffix}`;
-}
-
-/** The document number a command will write, fixed at reservation so a retry on another day reconciles the same document. */
-function plannedDocNo(member: ActiveSession, cmd: MutationCommand, now: Date): string | null {
-  if (cmd.kind === 'loan_application') return makeDocNo('PGJ-MBL', now, member.memberId, cmd.idempotencyKey);
-  if (cmd.kind === 'deduction_change') return makeDocNo('PPS-MBL', now, member.memberId, cmd.idempotencyKey);
-  return null;
-}
-
-function isoDate(now: Date): string {
-  const jkt = new Date(now.getTime() + 7 * 3600_000);
-  return `${jkt.getUTCFullYear()}-${String(jkt.getUTCMonth() + 1).padStart(2, '0')}-${String(jkt.getUTCDate()).padStart(2, '0')}`;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -181,6 +162,8 @@ type Deps = {
   ledger: CommandLedgerStore;
   readerDb: Db;
   writerDb: Db | null;
+  /** apps/web member-intake channel (P1): loan applications and deduction changes. null = not configured (503). */
+  intake: MemberIntakeSubmitter | null;
   companyId: number;
   now?: () => Date;
   leaseRetryMs?: number;
@@ -221,17 +204,56 @@ export class MemberMutationService {
     }
     if (!leased) return { ok: false, status: 409, code: 'BUSY_RETRY' };
     try {
-      return await this.executeLeased(member, cmd, tKey, now);
+      return cmd.kind === 'loan_application' || cmd.kind === 'deduction_change'
+        ? await this.executeIntake(member, cmd, tKey, now)
+        : await this.executeLeased(member, cmd, tKey, now);
     } finally {
       await this.deps.ledger.releaseLease(member.memberId, token).catch(() => undefined);   // expires on its own otherwise
     }
   }
 
-  /** Runs with this member's write lease held: the ledger check, the open-application count and the insert cannot interleave. */
+  private throttleHit(tKey: string, now: Date) {
+    return this.deps.store.throttleHit(tKey, { now, windowMs: WRITE_WINDOW_MS, lockMs: WRITE_LOCK_MS, limit: WRITE_LIMIT_PER_WINDOW });
+  }
+
+  /**
+   * Loan application / deduction change (P1): checked here for a helpful message, then submitted to apps/web, which re-checks
+   * everything under lock and owns idempotency (same Idempotency-Key -> same document, replayed). Nothing is written by the PWA.
+   */
+  private async executeIntake(member: ActiveSession, cmd: Extract<MutationCommand, { kind: 'loan_application' | 'deduction_change' }>, tKey: string, now: Date): Promise<MutationOutcome> {
+    const precheck = cmd.kind === 'loan_application' ? await this.precheckLoan(cmd) : await this.precheckDeduction(member, cmd);
+    if (precheck) return precheck;
+    if (!this.deps.intake) return { ok: false, status: 503, code: 'WRITER_NOT_CONFIGURED' };
+    const t = await this.throttleHit(tKey, now);
+    if (t.failures > WRITE_LIMIT_PER_WINDOW) return { ok: false, status: 429, code: 'THROTTLED' };
+    const identity = { memberId: member.memberId, userId: member.userId, nik: member.nik };
+    const reply = await this.deps.intake.submit(cmd.kind === 'loan_application'
+      ? { kind: 'loan', clientKey: cmd.idempotencyKey, member: identity, productId: cmd.productId, amountRp: cmd.amountRp, months: cmd.months, purpose: cmd.purpose.trim() }
+      : { kind: 'deduction', clientKey: cmd.idempotencyKey, member: identity, savingsType: cmd.savingsType, requestedRp: cmd.requestedRp });
+    if (reply.ok) return { ok: true, status: reply.status, replayed: reply.replayed, kind: cmd.kind, docNo: reply.docNo, summary: reply.summary };
+    if (reply.kind === 'unavailable') return { ok: false, status: 503, code: 'UPSTREAM_WRITER_UNAVAILABLE', message: 'Layanan pengajuan koperasi sedang tidak dapat dihubungi. Coba lagi beberapa saat lagi.' };
+    return intakeRefusal(reply);
+  }
+
+  private async precheckLoan(cmd: Extract<MutationCommand, { kind: 'loan_application' }>): Promise<MutationOutcome | null> {
+    const purpose = cmd.purpose.trim();
+    if (!purpose || purpose.length > 120) return { ok: false, status: 422, code: 'INVALID_INPUT', message: 'Keperluan pinjaman wajib diisi (maksimal 120 karakter).' };
+    const sim = simulateLoan(buildLoanProducts(await readLoanProducts(this.deps.readerDb)), { productId: cmd.productId, amountRp: cmd.amountRp, months: cmd.months });
+    return sim.ok ? null : { ok: false, status: 422, code: 'INVALID_INPUT', message: sim.message };
+  }
+
+  private async precheckDeduction(member: ActiveSession, cmd: Extract<MutationCommand, { kind: 'deduction_change' }>): Promise<MutationOutcome | null> {
+    if (cmd.consent !== true) return { ok: false, status: 422, code: 'INVALID_INPUT', message: 'Persetujuan pemotongan payroll wajib dicentang.' };
+    const option = buildActiveDeductions(await readActiveDeductions(this.deps.readerDb, member.nikKeys)).find((a) => a.type === cmd.savingsType);
+    const error = validateDeductionChange(option, String(cmd.requestedRp));
+    return option && !error ? null : { ok: false, status: 422, code: 'INVALID_INPUT', message: error ?? 'Pilih jenis simpanan.' };
+  }
+
+  /** Favourites, checkout and PPOB: this member's lease is held, so the ledger check and the write cannot interleave. */
   private async executeLeased(member: ActiveSession, cmd: MutationCommand, tKey: string, now: Date): Promise<MutationOutcome> {
     const payloadHash = payloadHashOf(cmd);
     const ref: LedgerKey = { memberId: member.memberId, kind: cmd.kind, key: cmd.idempotencyKey };
-    const reservation = await this.deps.ledger.reserve({ ...ref, nik: member.nik, payloadHash, docNo: plannedDocNo(member, cmd, now), now });
+    const reservation = await this.deps.ledger.reserve({ ...ref, nik: member.nik, payloadHash, docNo: null, now });
     if (!reservation.reserved) {
       const ex = reservation.existing;
       if (ex.payloadHash !== payloadHash) {
@@ -240,43 +262,25 @@ export class MemberMutationService {
       if (ex.status === 'RECORDED' && ex.docNo) {
         return { ok: true, status: 200, replayed: true, kind: cmd.kind, docNo: ex.docNo, summary: { status: 'OPEN' } };
       }
-      // PENDING under our lease: the earlier attempt ended without completing. If its business row exists, finish the ledger
-      // and replay; otherwise nothing was written and this attempt takes the reservation over.
-      if (ex.docNo && (await this.businessRowExists(member, cmd.kind, ex.docNo))) {
-        await this.deps.ledger.complete(ref, ex.docNo);
-        return { ok: true, status: 200, replayed: true, kind: cmd.kind, docNo: ex.docNo, summary: { status: 'OPEN' } };
-      }
+      // PENDING under our lease: an earlier attempt ended without completing. These operations are idempotent (favourite add checks
+      // existence, remove deletes), so this attempt takes the reservation over.
     }
-    // A taken-over reservation keeps its planned doc_no (possibly from an earlier day), so reconciliation always finds it.
-    const docNo = !reservation.reserved ? reservation.existing.docNo : plannedDocNo(member, cmd, now);
-
-    const t = await this.deps.store.throttleHit(tKey, { now, windowMs: WRITE_WINDOW_MS, lockMs: WRITE_LOCK_MS, limit: WRITE_LIMIT_PER_WINDOW });
+    const t = await this.throttleHit(tKey, now);
     if (t.failures > WRITE_LIMIT_PER_WINDOW) {
       await this.deps.ledger.release(ref);
       return { ok: false, status: 429, code: 'THROTTLED' };
     }
-
-    // A thrown error leaves the reservation PENDING on purpose: the insert may have reached the database before the error, and
-    // the next attempt reconciles it by doc_no instead of writing a duplicate.
-    const outcome = await this.run(member, cmd, docNo, now);
+    const outcome = await this.run(member, cmd, now);
     if (outcome.ok) await this.deps.ledger.complete(ref, outcome.docNo);
-    else await this.deps.ledger.release(ref);   // refused before any business write
+    else await this.deps.ledger.release(ref);   // refused before any write
     return outcome;
   }
 
-  private async businessRowExists(member: ActiveSession, kind: MutationCommand['kind'], docNo: string): Promise<boolean> {
-    const table = kind === 'loan_application' ? 'trans_pinjaman_pengajuan' : kind === 'deduction_change' ? 'trans_simpanan_pengajuan' : null;
-    if (!table) return false;   // favourites are idempotent operations; checkout and PPOB never write
-    const r = await query<{ n: string }>(this.deps.readerDb, `SELECT COUNT(*) AS n FROM ${table} WHERE doc_no = ? AND nik_kar = ?`, [docNo, member.nik]);
-    return Number(r[0]?.n ?? 0) > 0;
-  }
-
-  private run(member: ActiveSession, cmd: MutationCommand, docNo: string | null, now: Date): Promise<MutationOutcome> | MutationOutcome {
-    if (cmd.kind === 'loan_application') return this.submitLoanApplication(member, cmd, docNo ?? makeDocNo('PGJ-MBL', now, member.memberId, cmd.idempotencyKey), now);
-    if (cmd.kind === 'deduction_change') return this.submitDeductionChange(member, cmd, docNo ?? makeDocNo('PPS-MBL', now, member.memberId, cmd.idempotencyKey), now);
+  private run(member: ActiveSession, cmd: MutationCommand, now: Date): Promise<MutationOutcome> | MutationOutcome {
     if (cmd.kind === 'favourite_toggle') return this.submitFavouriteToggle(member, cmd, now);
     if (cmd.kind === 'store_checkout') return this.submitStoreCheckout(member, cmd, now);
-    return this.submitPpob(cmd);
+    if (cmd.kind === 'ppob') return this.submitPpob(cmd);
+    return { ok: false, status: 400, code: 'INVALID_INPUT' };
   }
 
   private checkFeatureFlag(kind: MutationCommand['kind']): { enabled: boolean; name: string } {
@@ -286,104 +290,6 @@ export class MemberMutationService {
     if (kind === 'favourite_toggle') return { enabled: f.enableMemberFavouritesWrite, name: 'ENABLE_MEMBER_FAVOURITES_WRITE' };
     if (kind === 'store_checkout') return { enabled: f.enableStoreCheckout, name: 'ENABLE_STORE_CHECKOUT' };
     return { enabled: f.enablePpob, name: 'ENABLE_PPOB' };
-  }
-
-  private async submitLoanApplication(
-    member: ActiveSession,
-    cmd: Extract<MutationCommand, { kind: 'loan_application' }>,
-    docNo: string,
-    now: Date,
-  ): Promise<MutationOutcome> {
-    const purpose = (cmd.purpose ?? '').trim();
-    if (!purpose || purpose.length > 120 || /[\u0000-\u001F]/.test(purpose)) {
-      return { ok: false, status: 422, code: 'INVALID_INPUT', message: 'Keperluan pinjaman wajib diisi (maksimal 120 karakter).' };
-    }
-    const products = buildLoanProducts(await readLoanProducts(this.deps.readerDb));
-    const sim = simulateLoan(products, { productId: cmd.productId, amountRp: cmd.amountRp, months: cmd.months });
-    if (!sim.ok) {
-      return { ok: false, status: 422, code: 'INVALID_INPUT', message: sim.message };
-    }
-    const product = products.find((p) => p.id === cmd.productId)!;
-    const existingApps = await readLoanApplications(this.deps.readerDb, member.nikKeys);
-    const openCount = existingApps.filter((a) => (a.status ?? '').toUpperCase() === 'OPEN').length;
-    if (openCount >= MAX_OPEN_APPLICATIONS) {
-      return { ok: false, status: 409, code: 'OPEN_APPLICATION_LIMIT', message: 'Masih ada pengajuan pinjaman berstatus OPEN yang menunggu verifikasi.' };
-    }
-    if (!this.deps.writerDb) {
-      return { ok: false, status: 503, code: 'WRITER_NOT_CONFIGURED' };
-    }
-    const profile = await readProfile(this.deps.readerDb, member.memberId, member.nikKeys);
-    if (!profile) return { ok: false, status: 403, code: 'FEATURE_DISABLED' };
-
-    const docDate = isoDate(now);
-    await this.deps.writerDb.query(
-      `INSERT INTO trans_pinjaman_pengajuan
-        (doc_no, doc_date, doc_status, status_pencairan, doc_remarks, nik_kar, nama, bagian, jenis_pinjaman_id, jenis_pinjaman, total_pinjaman, lama_angsuran, cd, cd_usr, created_at, is_payroll, is_online)
-       VALUES (?, ?, 'OPEN', 'OPEN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
-      [docNo, docDate, purpose, member.nik, profile.name.slice(0, 50), (profile.section ?? '').slice(0, 100), product.id, product.name, cmd.amountRp, cmd.months, now, member.nik, now],
-    );
-    return {
-      ok: true,
-      status: 201,
-      replayed: false,
-      kind: 'loan_application',
-      docNo,
-      summary: {
-        product: product.name,
-        amountRp: cmd.amountRp,
-        months: cmd.months,
-        firstInstallmentSen: sim.firstInstallmentSen,
-        totalSen: sim.totalSen,
-        status: 'OPEN',
-      },
-    };
-  }
-
-  private async submitDeductionChange(
-    member: ActiveSession,
-    cmd: Extract<MutationCommand, { kind: 'deduction_change' }>,
-    docNo: string,
-    now: Date,
-  ): Promise<MutationOutcome> {
-    if (cmd.consent !== true) {
-      return { ok: false, status: 422, code: 'INVALID_INPUT', message: 'Persetujuan pemotongan payroll wajib dicentang.' };
-    }
-    const active = buildActiveDeductions(await readActiveDeductions(this.deps.readerDb, member.nikKeys));
-    const option = active.find((a) => a.type === cmd.savingsType);
-    const validationError = validateDeductionChange(option, String(cmd.requestedRp ?? ''));
-    if (!option || validationError) {
-      return { ok: false, status: 422, code: 'INVALID_INPUT', message: validationError ?? 'Pilih jenis simpanan.' };
-    }
-    if (!this.deps.writerDb) {
-      return { ok: false, status: 503, code: 'WRITER_NOT_CONFIGURED' };
-    }
-    const profile = await readProfile(this.deps.readerDb, member.memberId, member.nikKeys);
-    if (!profile) return { ok: false, status: 403, code: 'FEATURE_DISABLED' };
-
-    const docDate = isoDate(now);
-    const nextMonth = businessMonth(now, 1);
-    const [yearStr, monthStr] = nextMonth.key.split('-');
-    const previousRp = Math.round(option.monthlySen / 100);
-    await this.deps.writerDb.query(
-      `INSERT INTO trans_simpanan_pengajuan
-        (doc_no, doc_date, doc_status, jenis_simpanan, nik_kar, nama, phone, bagian, lokasi, potongan_old, potongan, awal_potong_bulan, awal_potong_tahun, remarks, created_at, cd_usr, status_notif, is_mobile)
-       VALUES (?, ?, 'OPEN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PWA_ANGGOTA', ?, ?, 0, 1)`,
-      [docNo, docDate, option.type, member.nik, profile.name.slice(0, 50), (profile.phone ?? '').slice(0, 50), (profile.section ?? '').slice(0, 100), (profile.location ?? '').slice(0, 100), previousRp, cmd.requestedRp, monthStr, yearStr, now, member.nik],
-    );
-    return {
-      ok: true,
-      status: 201,
-      replayed: false,
-      kind: 'deduction_change',
-      docNo,
-      summary: {
-        savingsType: option.type,
-        previousRp,
-        requestedRp: cmd.requestedRp,
-        effectiveMonth: nextMonth.key,
-        status: 'OPEN',
-      },
-    };
   }
 
   private async submitFavouriteToggle(
@@ -456,5 +362,17 @@ export class MemberMutationService {
       return { ok: false, status: 422, code: 'INVALID_INPUT', message: service?.patternMessage ?? 'Nomor tujuan tidak valid.' };
     }
     return { ok: false, status: 503, code: 'PROVIDER_UNAVAILABLE', message: 'Penyedia PPOB belum terhubung ke aplikasi anggota.' };
+  }
+}
+
+/** apps/web refusal codes -> the PWA's codes and Indonesian messages (field names only, never values). */
+function intakeRefusal(reply: Extract<IntakeReply, { kind: 'refused' }>): MutationOutcome {
+  switch (reply.code) {
+    case 'REQUEST_OPEN_LIMIT': return { ok: false, status: 409, code: 'OPEN_APPLICATION_LIMIT', message: 'Masih ada pengajuan pinjaman berstatus OPEN yang menunggu verifikasi.' };
+    case 'IDEMPOTENCY_CONFLICT': return { ok: false, status: 409, code: 'IDEMPOTENCY_CONFLICT', message: 'Idempotency-Key sudah dipakai untuk data berbeda.' };
+    case 'BUSY_RETRY': return { ok: false, status: 409, code: 'BUSY_RETRY' };
+    case 'REQUEST_MEMBER_INVALID': return { ok: false, status: 422, code: 'INVALID_INPUT', message: 'Data keanggotaan Anda belum dapat diverifikasi. Hubungi pengurus koperasi.' };
+    case 'REQUEST_FIELD_INVALID': return { ok: false, status: 422, code: 'INVALID_INPUT', ...(reply.field ? { field: reply.field } : {}), message: 'Data pengajuan tidak sesuai ketentuan koperasi. Periksa kembali lalu kirim ulang.' };
+    default: return { ok: false, status: 503, code: 'UPSTREAM_WRITER_UNAVAILABLE', message: 'Layanan pengajuan koperasi sedang tidak dapat dihubungi. Coba lagi beberapa saat lagi.' };
   }
 }

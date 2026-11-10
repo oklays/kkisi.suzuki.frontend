@@ -20,6 +20,7 @@ const CAPABILITY_LABEL: Record<string, string> = {
   'kosipa.savings.approve': 'Setujui / tolak setoran simpanan',
   'kosipa.loan.prepare': 'Siapkan pinjaman (posting dokumen)',
   'kosipa.loan.approve': 'Setujui / tolak pinjaman',
+  'kosipa.request.decide': 'Putuskan pengajuan anggota (PWA)',
 };
 
 export default async function KosipaAccessPage() {

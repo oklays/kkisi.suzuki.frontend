@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMutationCommand } from '../../src/server/writers/mutation-commands.ts';
 import { MemoryCommandLedgerStore } from '../../src/server/writers/member-mutations.ts';
+import { HttpMemberIntakeClient, INTAKE_PATH } from '../../src/server/writers/intake-client.ts';
+import { parseIntakeKeys, verifyIntakeRequest } from '@koperasi/application/member-intake/signature';
 
 const KEY = 'idem-unit-test-000001';
 const loan = { kind: 'loan_application', idempotencyKey: KEY, productId: 1, amountRp: 5_000_000, months: 12, purpose: 'Biaya sekolah' };
@@ -67,4 +69,24 @@ test('lease: one holder per member until release or expiry', async () => {
   await l.releaseLease(7, 'b');
   assert.equal(await l.acquireLease(7, 'b', now, 30_000), false, 'only the holder releases');
   assert.equal(await l.acquireLease(7, 'b', new Date(now.getTime() + 30_001), 30_000), true, 'an expired lease is taken over');
+});
+
+test('intake client: signs the exact body for the fixed path and maps replies', async () => {
+  const keys = parseIntakeKeys(`k1:${Buffer.alloc(32, 8).toString('base64')}`);
+  const sent = [];
+  const reply = (status, body) => async (url, init) => { sent.push({ url: String(url), init }); return new Response(JSON.stringify(body), { status }); };
+  const body = { kind: 'loan', clientKey: KEY, member: { memberId: 7, userId: 8, nik: '10234' }, productId: 1, amountRp: 5_000_000, months: 12, purpose: 'x' };
+  const ok = await new HttpMemberIntakeClient({ baseUrl: 'http://genesis-web-netns:3000', keys }, reply(201, { ok: true, replayed: false, docNo: 'PGJ-MBL-1', summary: { status: 'OPEN' } })).submit(body);
+  assert.deepEqual(ok, { ok: true, status: 201, replayed: false, docNo: 'PGJ-MBL-1', summary: { status: 'OPEN' } });
+  assert.equal(sent[0].url, `http://genesis-web-netns:3000${INTAKE_PATH}`);
+  assert.equal(sent[0].init.redirect, 'error');
+  assert.equal(verifyIntakeRequest(keys, sent[0].init.headers['x-kkisi-intake'], { method: 'POST', path: INTAKE_PATH, body: sent[0].init.body }).ok, true);
+  const client = (status, b) => new HttpMemberIntakeClient({ baseUrl: 'http://x:1', keys }, reply(status, b));
+  assert.deepEqual(await client(409, { error: 'REQUEST_OPEN_LIMIT' }).submit(body), { ok: false, kind: 'refused', status: 409, code: 'REQUEST_OPEN_LIMIT' });
+  assert.deepEqual(await client(422, { error: 'REQUEST_FIELD_INVALID', field: 'amountRp' }).submit(body), { ok: false, kind: 'refused', status: 422, code: 'REQUEST_FIELD_INVALID', field: 'amountRp' });
+  for (const [status, b] of [[401, { error: 'UNAUTHORIZED' }], [404, { error: 'NOT_FOUND' }], [503, { error: 'UNAVAILABLE' }], [200, { ok: false }]]) {
+    assert.deepEqual(await client(status, b).submit(body), { ok: false, kind: 'unavailable' }, String(status));
+  }
+  const thrown = await new HttpMemberIntakeClient({ baseUrl: 'http://x:1', keys }, async () => { throw new TypeError('fetch failed'); }).submit(body);
+  assert.deepEqual(thrown, { ok: false, kind: 'unavailable' });
 });

@@ -61,7 +61,7 @@ async function up() {
   sql(cfg.rootPassword, auth, AUTH_DB);
   sql(cfg.rootPassword, views, VIEW_DB);
   // Least privilege, as required in production: the reader can only SELECT the read views (never the legacy schema itself); the auth account only touches its store;
-  // the optional writer account can only INSERT into pending intake tables and manage wishlists.
+  // the optional writer account only manages wishlists (loan / deduction requests are written by apps/web, P1).
   sql(cfg.rootPassword, `
     DROP USER IF EXISTS 'mobile_reader'@'%'; DROP USER IF EXISTS 'mobile_auth'@'%'; DROP USER IF EXISTS 'mobile_writer'@'%';
     CREATE USER 'mobile_reader'@'%' IDENTIFIED BY '${cfg.readerPassword}';
@@ -69,8 +69,6 @@ async function up() {
     CREATE USER 'mobile_writer'@'%' IDENTIFIED BY '${cfg.writerPassword}';
     GRANT SELECT ON ${VIEW_DB}.* TO 'mobile_reader'@'%';
     GRANT SELECT, INSERT, UPDATE, DELETE ON ${AUTH_DB}.* TO 'mobile_auth'@'%';
-    GRANT SELECT, INSERT ON ${LEGACY_DB}.trans_pinjaman_pengajuan TO 'mobile_writer'@'%';
-    GRANT SELECT, INSERT ON ${LEGACY_DB}.trans_simpanan_pengajuan TO 'mobile_writer'@'%';
     GRANT SELECT, INSERT, DELETE ON ${LEGACY_DB}.wishlists TO 'mobile_writer'@'%';
     FLUSH PRIVILEGES;`);
   await seed(env(cfg), cfg.rootPassword, PORT, LEGACY_DB);

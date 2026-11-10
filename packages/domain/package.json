@@ -46,7 +46,8 @@
     "./kosipa/product-master": "./src/kosipa/product-master.ts",
     "./kosipa/product-master-version": "./src/kosipa/product-master-version.ts",
     "./kosipa/savings-deposit": "./src/kosipa/savings-deposit.ts",
-    "./kosipa/loan-decision": "./src/kosipa/loan-decision.ts"
+    "./kosipa/loan-decision": "./src/kosipa/loan-decision.ts",
+    "./kosipa/member-request": "./src/kosipa/member-request.ts"
   },
   "scripts": {
     "lint": "eslint .",

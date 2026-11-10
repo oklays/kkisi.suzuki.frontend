@@ -1,0 +1,12 @@
+# OPTIONAL overlay (P1 member intake): attaches genesis.web's network namespace to the shared internal network kkisi-internal, so the PWA Anggota
+# can reach POST /api/internal/member-requests at http://genesis-web-netns:3000 without the public domain. Nothing is published on the host.
+#   docker network create --internal kkisi-internal          (once, by the operator; --internal = no outbound route from this network)
+#   docker compose --env-file … -f deploy/genesis/docker-compose.yml -f deploy/genesis/docker-compose.intake.yml up -d
+# Without this overlay genesis.web is unchanged and the PWA keeps loan/deduction requests switched off (MEMBER_INTAKE_API_URL unreachable -> 503).
+services:
+  netns:
+    networks: [genesis-web, kkisi-internal]
+
+networks:
+  kkisi-internal:
+    external: true

@@ -1,6 +1,6 @@
 import type { Pool } from 'mysql2/promise';
 import {
-  loadAuthSettings, loadFeatureFlags, loadReaderSettings, loadWriterSettings,
+  loadAuthSettings, loadFeatureFlags, loadIntakeSettings, loadReaderSettings, loadWriterSettings,
   type AuthSettings, type FeatureFlags, type ReaderSettings,
 } from '../lib/config/env.ts';
 import type { AuthDeps } from './auth/auth-service.ts';
@@ -13,6 +13,7 @@ import { MysqlMemberIdentityReader } from './kosipa/identity.reader.ts';
 import {
   MemberMutationService, MemoryCommandLedgerStore, MysqlCommandLedgerStore, type CommandLedgerStore,
 } from './writers/member-mutations.ts';
+import { HttpMemberIntakeClient } from './writers/intake-client.ts';
 
 // Composition root. Built lazily on first use and cached per process; a configuration error is thrown (fail closed) and is
 // rendered by the app as "layanan belum tersedia", never as a fallback to defaults.
@@ -43,15 +44,17 @@ export function writerDb(env = process.env): Pool | null {
 
 /**
  * Effective server-side feature capabilities (WS-03 §5.7).
- * A writer flag is only active when BOTH the flag is true AND its required writer backend is configured.
+ * A writer flag is only active when BOTH the flag is true AND its backend is configured: loan application and deduction change need the
+ * apps/web intake channel (P1); favourites and checkout need the PWA's own writer account.
  */
 export function featureFlags(env = process.env): FeatureFlags {
   try {
     const raw = loadFeatureFlags(env);
     const hasWriter = loadWriterSettings(env) !== null;
+    const hasIntake = loadIntakeSettings(env) !== null;
     return {
-      enableLoanApplication: raw.enableLoanApplication && hasWriter,
-      enableDeductionChange: raw.enableDeductionChange && hasWriter,
+      enableLoanApplication: raw.enableLoanApplication && hasIntake,
+      enableDeductionChange: raw.enableDeductionChange && hasIntake,
       enableStoreCheckout: raw.enableStoreCheckout && hasWriter,
       enablePpob: false, // External IAK provider contract is not member-facing; always fail-closed on server
       enableMemberFavouritesWrite: raw.enableMemberFavouritesWrite && hasWriter,
@@ -101,7 +104,15 @@ export function mutationService(env = process.env): MemberMutationService {
     ledger: commandLedger(settings),
     readerDb: readerDb(env),
     writerDb: writerDb(env),
+    intake: intakeClient(env),
     companyId: reader.catalogCompanyId,
     now: () => new Date(),
   });
+}
+
+function intakeClient(env = process.env): HttpMemberIntakeClient | null {
+  try {
+    const s = loadIntakeSettings(env);
+    return s ? new HttpMemberIntakeClient(s) : null;
+  } catch { return null; }   // misconfigured: the flags above are already off (fail closed)
 }

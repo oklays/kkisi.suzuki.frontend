@@ -1,0 +1,10 @@
+# OPTIONAL overlay (P1 member intake): attaches the PWA's network namespace to kkisi-internal so its BFF reaches genesis.web's signed internal
+# endpoint at MEMBER_INTAKE_API_URL=http://genesis-web-netns:3000. Use together with deploy/genesis/docker-compose.intake.yml.
+#   docker compose --env-file /opt/apps/kkisi-mobile/compose.env -f deploy/mobile_kkisi/docker-compose.yml -f deploy/mobile_kkisi/docker-compose.intake.yml up -d
+services:
+  netns:
+    networks: [kkisi-mobile, kkisi-internal]
+
+networks:
+  kkisi-internal:
+    external: true

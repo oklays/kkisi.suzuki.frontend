@@ -1,5 +1,6 @@
-import { assessSchedule, describeLoan, describeScheduleRow, loanSchedule, type LoanHeaderRaw, type LoanView, type ScheduleAggregate, type ScheduleRowRaw } from '@koperasi/domain/kosipa';
+import { assessSchedule, describeLoan, describeScheduleRow, type LoanHeaderRaw, type LoanView, type ScheduleAggregate, type ScheduleRowRaw } from '@koperasi/domain/kosipa';
 import type { LoanApplicationRow, LoanProductRow } from '../../../server/kosipa/member.reader.ts';
+import { buildMobileLoanProducts, simulateMobileLoan, type LoanSimulation, type LoanSimulationInput, type MobileLoanProduct } from '@koperasi/domain/kosipa/member-request';
 import { dayLabel, legacyDayLabel, monthShort, titleCase } from '../../../lib/utils/dates.ts';
 import { senOf } from '../../../lib/utils/money.ts';
 import { requestStatus } from '../../savings/services/savings.ts';
@@ -70,29 +71,11 @@ export const buildApplications = (rows: readonly LoanApplicationRow[]): Applicat
 }));
 
 // ------------------------------------------------------------------------------------------------ simulation (application)
-export type LoanProduct = { id: number; name: string; label: string; minSen: number; maxSen: number; minMonths: number; maxMonths: number; rateBp: number | null; method: 'Flat' | 'Anuitas' };
-export function buildLoanProducts(rows: readonly LoanProductRow[]): LoanProduct[] {
-  return rows.map((r) => {
-    const rate = Number(r.ratePercent);
-    return { id: r.id, name: r.name, label: titleCase(r.name), minSen: senOf(r.minAmount), maxSen: senOf(r.maxAmount), minMonths: r.minMonths, maxMonths: r.maxMonths,
-      rateBp: Number.isFinite(rate) && rate >= 0 && rate <= 100 ? Math.round(rate * 100) : null, method: (r.method === 'Anuitas' ? 'Anuitas' : 'Flat') as LoanProduct['method'] };
-  }).filter((p) => p.maxSen > 0 && p.maxMonths > 0);
-}
+export type LoanProduct = MobileLoanProduct;
+/** Master Pinjaman Mobile -> products. Same rule as apps/web, which re-checks the bounds when it records the application. */
+export const buildLoanProducts = (rows: readonly LoanProductRow[]): LoanProduct[] => buildMobileLoanProducts(rows);
 
-export type SimulationInput = { productId: number; amountRp: number | null; months: number | null };
-export type SimulationResult =
-  | { ok: true; firstInstallmentSen: number; principalSen: number; interestSen: number; totalSen: number; method: 'Flat' | 'Anuitas'; rateBp: number }
-  | { ok: false; field: 'product' | 'amount' | 'months' | 'rate'; message: string };
-
+export type SimulationInput = LoanSimulationInput;
+export type SimulationResult = LoanSimulation;
 /** Uses the domain schedule engine with the master's own rate and method. An illustration, not an offer. */
-export function simulateLoan(products: readonly LoanProduct[], input: SimulationInput): SimulationResult {
-  const p = products.find((x) => x.id === input.productId);
-  if (!p) return { ok: false, field: 'product', message: 'Pilih jenis pinjaman.' };
-  if (input.amountRp === null || !Number.isSafeInteger(input.amountRp)) return { ok: false, field: 'amount', message: 'Isi nominal dalam Rupiah tanpa desimal.' };
-  const sen = input.amountRp * 100;
-  if (sen < p.minSen || sen > p.maxSen) return { ok: false, field: 'amount', message: `Nominal ${p.label} antara Rp${(p.minSen / 100).toLocaleString('id-ID')} dan Rp${(p.maxSen / 100).toLocaleString('id-ID')}.` };
-  if (input.months === null || !Number.isInteger(input.months) || input.months < p.minMonths || input.months > p.maxMonths) return { ok: false, field: 'months', message: `Tenor ${p.label} ${p.minMonths}–${p.maxMonths} bulan.` };
-  if (p.rateBp === null) return { ok: false, field: 'rate', message: 'Jasa pinjaman untuk jenis ini belum tercatat di master koperasi.' };
-  const s = loanSchedule({ method: p.method, principalSen: sen, months: input.months, monthlyRateBp: p.rateBp });
-  return { ok: true, firstInstallmentSen: s.rows[0].totalSen, principalSen: s.rows[0].principalSen, interestSen: s.rows[0].interestSen, totalSen: s.totalSen, method: p.method, rateBp: p.rateBp };
-}
+export const simulateLoan = (products: readonly LoanProduct[], input: SimulationInput): SimulationResult => simulateMobileLoan(products, input);

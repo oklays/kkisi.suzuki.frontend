@@ -2,12 +2,15 @@
 // Nothing here can reach a real database: the DSNs come only from apps/mobile_kkisi/.local/stack.json.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import { createConnection } from 'mysql2/promise';
+import { NonceCache, parseIntakeKeys, verifyIntakeRequest } from '@koperasi/application/member-intake/signature';
 import { loadConfig, writerUrl } from '../../integration/stack.mjs';
 import { MEMBERS, TEST_PASSWORD, seed } from '../../integration/seed.mjs';
 import { authDeps, readerDb } from '../../src/server/container.ts';
 import { login, verifyPin, resolveMember, logout, pendingPinSession } from '../../src/server/auth/auth-service.ts';
 import { MemberMutationService, MysqlCommandLedgerStore } from '../../src/server/writers/member-mutations.ts';
+import { HttpMemberIntakeClient } from '../../src/server/writers/intake-client.ts';
 import { MysqlSavingsReader, readProfile, readLoans, readScheduleAggregate, readScheduleRows, readPayrollRows, readPayrollHeaders, readShu, readLoanProducts, readActiveDeductions, readLoanApplications } from '../../src/server/kosipa/member.reader.ts';
 import { readCatalog, readCatalogCategories, readCatalogItems, readCreditUsage, readSales, readOrders } from '../../src/server/kosipa/store.reader.ts';
 import { readFavorites, readFaqs, readNotices } from '../../src/server/kosipa/content.reader.ts';
@@ -198,85 +201,99 @@ test('WS-01 integration: duplicate active NIK fails closed; unique active + hist
   assert.match(cred[0].pin_hash, /^\$scrypt-p\$/);
 });
 
-test('WS-03 integration: feature flags default to disabled; controlled writer records idempotent intake rows with least privilege', async () => {
+/** Stub of apps/web POST /api/internal/member-requests: verifies the signature with the SHARED verifier and replays by (member, client key). */
+async function intakeStub(keys) {
+  const calls = [];
+  const docs = new Map();
+  const nonces = new NonceCache();
+  const server = createServer((req, res) => {
+    let text = '';
+    req.on('data', (c) => { text += c; });
+    req.on('end', () => {
+      const send = (status, body) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+      const v = verifyIntakeRequest(keys, req.headers['x-kkisi-intake'] ?? null, { method: req.method, path: req.url, body: text }, new Date(), nonces);
+      if (!v.ok) return send(401, { error: 'UNAUTHORIZED' });
+      const body = JSON.parse(text);
+      calls.push(body);
+      if (body.purpose === 'limit') return send(409, { error: 'REQUEST_OPEN_LIMIT' });
+      if (body.purpose === 'boom') return send(503, { error: 'UNAVAILABLE' });
+      const key = `${body.member.memberId}|${body.clientKey}`;
+      const hash = JSON.stringify({ ...body, clientKey: undefined });
+      const seen = docs.get(key);
+      if (seen && seen.hash !== hash) return send(409, { error: 'IDEMPOTENCY_CONFLICT' });
+      const docNo = seen?.docNo ?? `${body.kind === 'loan' ? 'PGJ-MBL' : 'PPS-MBL'}-20261110-${String(docs.size + 1).padStart(6, '0')}`;
+      docs.set(key, { hash, docNo });
+      setTimeout(() => send(seen ? 200 : 201, { ok: true, replayed: Boolean(seen), docNo, status: 'OPEN', type: body.kind, summary: { status: 'OPEN' } }), 150);
+    });
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  return { url: `http://127.0.0.1:${server.address().port}`, calls, close: () => new Promise((r) => server.close(r)) };
+}
+
+test('P1 integration: loan / deduction go to the apps/web intake channel with the SESSION identity; replays, conflicts, refusals and outages map cleanly', async () => {
+  await root.query('DELETE FROM kkisi_member_auth.member_auth_throttle');
   const sid = await fullLogin(A.nik, A.pin);
   const member = await resolveMember(deps, sid);
+  const keys = parseIntakeKeys(`k1:${Buffer.alloc(32, 5).toString('base64')}`);
+  const stub = await intakeStub(keys);
   const authConn = await createConnection({ host: '127.0.0.1', port: cfg.port, user: 'mobile_auth', password: cfg.authPassword, database: 'kkisi_member_auth' });
   const writerConn = await createConnection(writerUrl(cfg));
   try {
-    const ledger = new MysqlCommandLedgerStore(authConn);
-    // 1. Default flags (all false): mutations are blocked on the server
-    const disabledSvc = new MemberMutationService({
-      flags: { enableLoanApplication: false, enableDeductionChange: false, enableStoreCheckout: false, enablePpob: false, enableMemberFavouritesWrite: false },
-      secrets: deps.secrets,
-      store: deps.store,
-      ledger,
-      readerDb: db,
-      writerDb: writerConn,
-      companyId: 1,
-    });
-    const blocked = await disabledSvc.execute(member, {
-      kind: 'loan_application', idempotencyKey: 'idem-loan-disabled-0001', productId: 1, amountRp: 5_000_000, months: 12, purpose: 'Biaya sekolah',
-    });
-    assert.deepEqual(blocked, { ok: false, status: 403, code: 'FEATURE_DISABLED', feature: 'ENABLE_LOAN_APPLICATION' });
+    const flags = { enableLoanApplication: true, enableDeductionChange: true, enableStoreCheckout: true, enablePpob: true, enableMemberFavouritesWrite: true };
+    const service = (intake, f = flags) => new MemberMutationService({ flags: f, secrets: deps.secrets, store: deps.store, ledger: new MysqlCommandLedgerStore(authConn), readerDb: db, writerDb: writerConn, intake, companyId: 1, leaseRetryMs: 100 });
+    const svc = service(new HttpMemberIntakeClient({ baseUrl: stub.url, keys }));
+    const loan = (key, extra = {}) => ({ kind: 'loan_application', idempotencyKey: key, productId: 1, amountRp: 5_000_000, months: 12, purpose: 'Biaya sekolah', ...extra });
 
-    // 2. Controlled writer mode: loan_application, deduction_change, favourite_toggle are recorded idempotently
-    const enabledSvc = new MemberMutationService({
-      flags: { enableLoanApplication: true, enableDeductionChange: true, enableStoreCheckout: true, enablePpob: true, enableMemberFavouritesWrite: true },
-      secrets: deps.secrets,
-      store: deps.store,
-      ledger,
-      readerDb: db,
-      writerDb: writerConn,
-      companyId: 1,
-    });
-    const loanCmd = { kind: 'loan_application', idempotencyKey: 'idem-loan-enabled-0001', productId: 1, amountRp: 6_000_000, months: 12, purpose: 'Renovasi atap' };
-    const created = await enabledSvc.execute(member, loanCmd);
-    assert.equal(created.ok, true);
-    assert.equal(created.status, 201);
-    assert.equal(created.replayed, false);
+    // Flags off: nothing is sent
+    const off = await service(null, { ...flags, enableLoanApplication: false }).execute(member, loan('idem-p1-off-00000001'));
+    assert.deepEqual([off.status, off.code], [403, 'FEATURE_DISABLED']);
+
+    // Created, then replayed with the same key; the identity sent is the session's, never the body's
+    const created = await svc.execute(member, loan('idem-p1-loan-0000001'));
+    assert.deepEqual([created.ok, created.status, created.replayed], [true, 201, false]);
     assert.match(created.docNo, /^PGJ-MBL-/);
+    assert.deepEqual(stub.calls[0].member, { memberId: A.memberId, userId: A.userId, nik: A.nik });
+    assert.deepEqual(Object.keys(stub.calls[0]).sort(), ['amountRp', 'clientKey', 'kind', 'member', 'months', 'productId', 'purpose']);
+    const replayed = await svc.execute(member, loan('idem-p1-loan-0000001'));
+    assert.deepEqual([replayed.status, replayed.replayed, replayed.docNo], [200, true, created.docNo]);
+    const conflict = await svc.execute(member, loan('idem-p1-loan-0000001', { amountRp: 6_000_000 }));
+    assert.deepEqual([conflict.status, conflict.code], [409, 'IDEMPOTENCY_CONFLICT']);
 
-    // Replay with the same Idempotency-Key returns 200 replayed: true without inserting a second row
-    const replayed = await enabledSvc.execute(member, loanCmd);
-    assert.equal(replayed.ok, true);
-    assert.equal(replayed.status, 200);
-    assert.equal(replayed.replayed, true);
-    assert.equal(replayed.docNo, created.docNo);
+    // A double tap waits on the member lease and replays the first result
+    const [x, y] = await Promise.all([svc.execute(member, loan('idem-p1-loan-double01')), svc.execute(member, loan('idem-p1-loan-double01'))]);
+    assert.deepEqual([x.status, y.status].sort(), [200, 201]);
+    assert.equal(x.docNo, y.docNo);
 
-    // Replay with the same Idempotency-Key but modified amountRp returns 409 IDEMPOTENCY_CONFLICT
-    const conflict = await enabledSvc.execute(member, { ...loanCmd, amountRp: 7_000_000 });
-    assert.equal(conflict.ok, false);
-    assert.equal(conflict.status, 409);
-    assert.equal(conflict.code, 'IDEMPOTENCY_CONFLICT');
+    // Refusal mapping, upstream outage, unreachable channel, PWA-side validation never calls apps/web
+    const limit = await svc.execute(member, loan('idem-p1-loan-limit001', { purpose: 'limit' }));
+    assert.deepEqual([limit.status, limit.code], [409, 'OPEN_APPLICATION_LIMIT']);
+    const boom = await svc.execute(member, loan('idem-p1-loan-boom0001', { purpose: 'boom' }));
+    assert.deepEqual([boom.status, boom.code], [503, 'UPSTREAM_WRITER_UNAVAILABLE']);
+    const down = await service(new HttpMemberIntakeClient({ baseUrl: 'http://127.0.0.1:9', keys, timeoutMs: 500 })).execute(member, loan('idem-p1-loan-down0001'));
+    assert.deepEqual([down.status, down.code], [503, 'UPSTREAM_WRITER_UNAVAILABLE']);
+    const before = stub.calls.length;
+    const tooBig = await svc.execute(member, loan('idem-p1-loan-big00001', { amountRp: 900_000_000 }));
+    assert.deepEqual([tooBig.status, tooBig.code, stub.calls.length], [422, 'INVALID_INPUT', before]);
+    const wrongKey = await service(new HttpMemberIntakeClient({ baseUrl: stub.url, keys: parseIntakeKeys(`k1:${Buffer.alloc(32, 6).toString('base64')}`) })).execute(member, loan('idem-p1-loan-key00001'));
+    assert.deepEqual([wrongKey.status, wrongKey.code], [503, 'UPSTREAM_WRITER_UNAVAILABLE'], 'a signature refusal is an outage for the member, never a business answer');
 
-    const [loanRows] = await root.query('SELECT doc_no, doc_status, total_pinjaman, is_online FROM trans_pinjaman_pengajuan WHERE doc_no = ?', [created.docNo]);
-    assert.equal(loanRows.length, 1, 'exactly one intake row inserted');
-    assert.equal(loanRows[0].doc_status, 'OPEN');
+    // Deduction change through the same channel
+    const ded = await svc.execute(member, { kind: 'deduction_change', idempotencyKey: 'idem-p1-ded-00000001', savingsType: 'SIMPANAN WAJIB', requestedRp: 150_000, consent: true });
+    assert.deepEqual([ded.status, stub.calls.at(-1).kind, stub.calls.at(-1).requestedRp], [201, 'deduction', 150_000]);
 
-    // Deduction change intake
-    const dedRes = await enabledSvc.execute(member, {
-      kind: 'deduction_change', idempotencyKey: 'idem-deduction-00001', savingsType: 'SIMPANAN WAJIB', requestedRp: 150_000, consent: true,
-    });
-    assert.equal(dedRes.ok, true);
-    assert.equal(dedRes.status, 201);
-
-    // Store checkout and PPOB still fail closed (503) even if flags are passed true because upstream contracts are absent
-    const storeRes = await enabledSvc.execute(member, {
-      kind: 'store_checkout', idempotencyKey: 'idem-checkout-000001', items: [{ id: 1, quantity: 2 }], payment: 'kredit',
-    });
-    assert.equal(storeRes.code, 'UPSTREAM_WRITER_UNAVAILABLE');
-    const ppobRes = await enabledSvc.execute(member, {
-      kind: 'ppob', idempotencyKey: 'idem-ppob-0000000001', serviceId: 'pulsa', account: '081234567890',
-    });
-    assert.equal(ppobRes.code, 'PROVIDER_UNAVAILABLE');
-
-    // Least privilege: mobile_writer cannot touch trans_pinjaman or users
+    // (more than 10 writes in this test: the member write throttle must be reset, it is working as designed)
+    await root.query('DELETE FROM kkisi_member_auth.member_auth_throttle');
+    // Checkout and PPOB still fail closed; the PWA writer has no grant on the intake tables any more
+    assert.equal((await svc.execute(member, { kind: 'store_checkout', idempotencyKey: 'idem-checkout-000001', items: [{ id: 1, quantity: 2 }], payment: 'kredit' })).code, 'UPSTREAM_WRITER_UNAVAILABLE');
+    assert.equal((await svc.execute(member, { kind: 'ppob', idempotencyKey: 'idem-ppob-0000000001', serviceId: 'pulsa', account: '081234567890' })).code, 'PROVIDER_UNAVAILABLE');
+    await assert.rejects(writerConn.query("INSERT INTO trans_pinjaman_pengajuan (doc_no) VALUES ('X')"));
+    await assert.rejects(writerConn.query("INSERT INTO trans_simpanan_pengajuan (doc_no, status_notif) VALUES ('X', 0)"));
     await assert.rejects(writerConn.query("UPDATE users SET pin = '0000' WHERE id = 101"));
-    await assert.rejects(writerConn.query("DELETE FROM trans_pinjaman WHERE id = 1"));
   } finally {
+    await stub.close();
     await authConn.end();
     await writerConn.end();
+    await root.query('DELETE FROM kkisi_member_auth.member_auth_throttle');
   }
 });
 
@@ -290,73 +307,6 @@ test('P0 integration: throttleHit is atomic on MariaDB (parallel attempts are ea
   const fresh = await deps.store.throttleHit('p0-parallel-hit', { ...policy, now: new Date(Date.now() + 16 * 60_000) });
   assert.deepEqual([fresh.failures, fresh.lockedUntil], [1, null], 'an old window starts over');
   await root.query('DELETE FROM kkisi_member_auth.member_auth_throttle');
-});
-
-test('P0 integration: writer is exactly-once under double submit, caps open applications under parallel load, reconciles PENDING', async () => {
-  await root.query('DELETE FROM kkisi_member_auth.member_auth_throttle');
-  const sid = await fullLogin(B.nik, B.pin);
-  const member = await resolveMember(deps, sid);
-  const authConn = await createConnection({ host: '127.0.0.1', port: cfg.port, user: 'mobile_auth', password: cfg.authPassword, database: 'kkisi_member_auth' });
-  const writerConn = await createConnection(writerUrl(cfg));
-  const openRows = async () => (await root.query("SELECT doc_no FROM trans_pinjaman_pengajuan WHERE nik_kar = ? AND doc_status = 'OPEN'", [B.nik]))[0];
-  try {
-    const ledger = new MysqlCommandLedgerStore(authConn);
-    const svc = new MemberMutationService({
-      flags: { enableLoanApplication: true, enableDeductionChange: true, enableStoreCheckout: false, enablePpob: false, enableMemberFavouritesWrite: false },
-      secrets: deps.secrets, store: deps.store, ledger, readerDb: db, writerDb: writerConn, companyId: 1, leaseRetryMs: 100,
-    });
-    const before = (await openRows()).length;
-    const loan = (key, amountRp = 5_000_000) => ({ kind: 'loan_application', idempotencyKey: key, productId: 1, amountRp, months: 12, purpose: 'Uji paralel' });
-
-    // 1. Unknown fields never reach the writer
-    const forged = await svc.execute(member, { ...loan('idem-p0-forged-000001'), doc_status: 'POSTING' });
-    assert.deepEqual([forged.status, forged.code, forged.field], [400, 'FIELD_NOT_ALLOWED', 'doc_status']);
-
-    // 2. Double submit of the same key: one insert, the other request replays it
-    const [x, y] = await Promise.all([svc.execute(member, loan('idem-p0-double-000001')), svc.execute(member, loan('idem-p0-double-000001'))]);
-    assert.deepEqual([x.ok, y.ok], [true, true]);
-    assert.deepEqual([x.status, y.status].sort(), [200, 201]);
-    assert.equal(x.docNo, y.docNo);
-    const [dup] = await root.query('SELECT COUNT(*) AS n FROM trans_pinjaman_pengajuan WHERE doc_no = ?', [x.docNo]);
-    assert.equal(Number(dup[0].n), 1, 'exactly one intake row');
-
-    // 3. Parallel submits with DIFFERENT keys cannot exceed the open-application limit (3)
-    const burst = await Promise.all([2, 3, 4, 5].map((i) => svc.execute(member, loan(`idem-p0-burst-00000${i}`, 5_000_000 + i))));
-    const open = (await openRows()).length;
-    assert.ok(open <= Math.max(3, before), `open applications ${open} must not exceed the limit`);
-    assert.ok(burst.some((r) => r.code === 'OPEN_APPLICATION_LIMIT'), 'the excess is refused');
-    const [refusedLedger] = await authConn.query("SELECT COUNT(*) AS n FROM member_command_ledger WHERE member_id = ? AND status = 'PENDING'", [B.memberId]);
-    assert.equal(Number(refusedLedger[0].n), 0, 'refused commands release their reservation');
-
-    // 4. A PENDING reservation whose business row exists (crash after insert) is reconciled, never written twice
-    await root.query("DELETE FROM trans_pinjaman_pengajuan WHERE nik_kar = ?", [B.nik]);
-    const crashKey = 'idem-p0-crash-0000001';
-    const planned = 'PGJ-MBL-20260101-ABCDEF';   // planned on an earlier day: reconciliation must use the reserved number
-    const crashCmd = loan(crashKey);
-    const { payloadHashOf } = await import('../../src/server/writers/member-mutations.ts');
-    await ledger.reserve({ memberId: B.memberId, kind: 'loan_application', key: crashKey, nik: B.nik, payloadHash: payloadHashOf(crashCmd), docNo: planned, now: new Date() });
-    await root.query("INSERT INTO trans_pinjaman_pengajuan (doc_no, doc_status, nik_kar, total_pinjaman, lama_angsuran) VALUES (?, 'OPEN', ?, 5000000, 12)", [planned, B.nik]);
-    const reconciled = await svc.execute(member, crashCmd);
-    assert.deepEqual([reconciled.ok, reconciled.status, reconciled.replayed, reconciled.docNo], [true, 200, true, planned]);
-    const [after] = await root.query('SELECT COUNT(*) AS n FROM trans_pinjaman_pengajuan WHERE nik_kar = ?', [B.nik]);
-    assert.equal(Number(after[0].n), 1);
-
-    // 5. A PENDING reservation with NO business row is taken over and written once, under its reserved doc_no
-    const lostKey = 'idem-p0-lost-00000001';
-    const lostCmd = loan(lostKey, 6_000_000);
-    const lostDoc = 'PGJ-MBL-20260101-123456';
-    await ledger.reserve({ memberId: B.memberId, kind: 'loan_application', key: lostKey, nik: B.nik, payloadHash: payloadHashOf(lostCmd), docNo: lostDoc, now: new Date() });
-    const retaken = await svc.execute(member, lostCmd);
-    assert.deepEqual([retaken.ok, retaken.status, retaken.docNo], [true, 201, lostDoc]);
-    const [ledgerRow] = await authConn.query('SELECT status, result_doc_no FROM member_command_ledger WHERE member_id = ? AND idempotency_key = ?', [B.memberId, lostKey]);
-    assert.deepEqual([ledgerRow[0].status, ledgerRow[0].result_doc_no], ['RECORDED', lostDoc]);
-    const [lease] = await authConn.query('SELECT COUNT(*) AS n FROM member_write_lease WHERE member_id = ?', [B.memberId]);
-    assert.equal(Number(lease[0].n), 0, 'the lease is released after every command');
-  } finally {
-    await authConn.end();
-    await writerConn.end();
-    await root.query('DELETE FROM kkisi_member_auth.member_auth_throttle');
-  }
 });
 
 test('P0 integration: the reader sees only the member read views, never the legacy schema or other columns', async () => {
