@@ -198,6 +198,17 @@
 }
 /* Sales returns */
 .sales-title-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.sales-export-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.sales-export-scope select { height:40px; padding:0 12px; border:1px solid #d5dce7; border-radius:8px; background:#fff; color:#101828; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+.sales-export-scope select:focus-visible { outline:3px solid #527cdd; outline-offset:2px; }
+.sales-export-btn { min-height:40px; padding:8px 13px; border-radius:8px; font-size:12px; font-weight:650; }
+.sales-export-btn--pdf { color:#912018; border-color:#fecdca; background:#fffbfa; }
+.sales-export-btn--pdf:hover:not(:disabled) { background:#fef3f2; border-color:#fda29b; }
+.sales-export-btn--xlsx { color:#067647; border-color:#abefc6; background:#f6fef9; }
+.sales-export-btn--xlsx:hover:not(:disabled) { background:#ecfdf3; border-color:#75e0a7; }
+.sales-export-btn:disabled { opacity:.6; cursor:default; }
+.sales-export-feedback { font-size:11px; font-weight:600; color:#067647; background:#ecfdf3; border:1px solid #abefc6; padding:6px 10px; border-radius:7px; }
+.sales-export-feedback--error { color:#b42318; background:#fef3f2; border-color:#fecdca; }
 .sales-return-table { min-width:880px; }
 .sales-qty { display:inline-grid; grid-template-columns:34px 56px 34px; align-items:center; gap:4px; }
 .sales-qty button { height:34px; display:inline-flex; align-items:center; justify-content:center; border:1px solid #d5dce7; border-radius:7px; background:#fff; color:#344054; cursor:pointer; }

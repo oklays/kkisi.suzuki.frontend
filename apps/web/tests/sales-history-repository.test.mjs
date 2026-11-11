@@ -110,3 +110,45 @@ test('normal saved round_off and Cash change metadata do not disable reprint', a
     assert.equal(detail.reprintFacts.hasAmbiguousTax, false, method);
   }
 });
+
+test('exportBundle queries active stores, filtered sales, m_anggota names, item categories, and returns', async () => {
+  const queries = [];
+  const db = {
+    async $queryRaw(query) {
+      const sql = sqlText(query);
+      queries.push({ sql, values: query.values });
+      if (/FROM db_company/.test(sql)) {
+        return [{ id: 1, company_name: 'TOKO S-MART TB II', company_code: 'TB2' }];
+      }
+      if (/FROM db_sales s/.test(sql)) {
+        return [{ ...header({ company_id: 1, nik_kar: '041142', customer_name: '041142 - DIDIT', grand_total: decimal('150000.00'), paid_amount: decimal('150000.00') }) }];
+      }
+      if (/FROM m_anggota/.test(sql)) {
+        return [{ nik: '041142', nama: 'DIDIT SETIAWAN' }];
+      }
+      if (/FROM db_salesreturn/.test(sql)) {
+        return [{ id: 9, company_id: 1, return_code: 'RTN-1', return_date: '2026-10-02', sales_code: 'INV42', customer_name: 'DIDIT', nik_kar: '041142', payment_type: 'Cash', grand_total: decimal('9500.00'), created_by: 'kasir', return_note: 'Rusak' }];
+      }
+      if (/GROUP BY s\.company_id/.test(sql)) {
+        return [{ company_id: 1, line_count: 2n, unique_items: 2n, total_qty: decimal('3.00'), total_revenue: decimal('150000.00'), est_cogs: decimal('130000.00') }];
+      }
+      if (/GROUP BY COALESCE\(c\.id/.test(sql)) {
+        return [{ category_id: 10, category_name: 'SEMBAKO', unique_items: 2n, tx_count: 1n, total_qty: decimal('3.00'), total_revenue: decimal('150000.00'), est_cogs: decimal('130000.00') }];
+      }
+      if (/GROUP BY si\.item_id/.test(sql)) {
+        return [{ item_id: 55, item_code: 'IT55', barcode: '899001', item_name: 'MINYAK GORENG 2L', category_name: 'SEMBAKO', unit_price: decimal('50000.00'), purchase_price: decimal('43000.00'), tx_count: 1n, total_qty: decimal('3.00'), total_revenue: decimal('150000.00') }];
+      }
+      return [];
+    },
+  };
+  const query = parseSalesHistoryQuery(new URLSearchParams('from=2026-10-01&to=2026-10-05'));
+  const bundle = await new PrismaSalesHistoryRepository(db).exportBundle(1, 'store', query, new Date('2026-10-05T10:00:00Z'));
+  assert.equal(bundle.scope, 'store');
+  assert.equal(bundle.stores.length, 1);
+  assert.equal(bundle.sales.length, 1);
+  assert.equal(bundle.sales[0].memberMasterName, 'DIDIT SETIAWAN');
+  assert.equal(bundle.returns.length, 1);
+  assert.equal(bundle.categories[0].categoryName, 'SEMBAKO');
+  assert.equal(bundle.topItems[0].itemName, 'MINYAK GORENG 2L');
+  assert.ok(queries.some((q) => /s\.company_id IN/.test(q.sql)));
+});
