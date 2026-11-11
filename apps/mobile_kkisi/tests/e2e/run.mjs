@@ -241,8 +241,43 @@ try {
   await step('manifest and icons are installable', async () => {
     const m = await (await page.request.get(`${B}/manifest.webmanifest`)).json();
     assert.equal(m.display, 'standalone'); assert.equal(m.start_url, '/beranda?source=pwa'); assert.equal(m.scope, '/');
+    assert.ok(m.icons.some((i) => i.src === '/icons/smart-icon-192.png' && i.purpose === 'any'));
+    assert.ok(m.icons.some((i) => i.src === '/icons/smart-icon-512.png' && i.purpose === 'any'));
+    assert.ok(m.icons.some((i) => i.src === '/icons/smart-maskable-192.png' && i.purpose === 'maskable'));
+    assert.ok(m.icons.some((i) => i.src === '/icons/smart-maskable-512.png' && i.purpose === 'maskable'));
     for (const size of ['192x192', '512x512']) assert.ok(m.icons.some((i) => i.sizes === size && i.purpose === 'any') && m.icons.some((i) => i.sizes === size && i.purpose === 'maskable'));
     for (const i of m.icons) assert.equal((await page.request.get(`${B}${i.src}`)).status(), 200);
+  });
+  await step('install toast badge shows only when installable and stays closed after dismiss', async () => {
+    await page.goto(`${B}/beranda`);
+    await page.locator('h1, .greeting').first().waitFor();
+    // Not always shown when browser has not offered installation
+    const hasNativeWebInstall = await page.evaluate(() => typeof Navigator.prototype.install === 'function');
+    if (!hasNativeWebInstall) assert.equal(await page.locator('.install-toast').count(), 0);
+    // Simulate Chromium beforeinstallprompt event
+    await page.evaluate(() => {
+      const ev = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+        prompt: async () => {},
+        userChoice: Promise.resolve({ outcome: 'accepted' }),
+      });
+      window.dispatchEvent(ev);
+    });
+    await page.locator('.install-toast').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('.install-toast-cta').textContent(), 'Install');
+    assert.equal(await page.locator('.install-toast-badge').getAttribute('src'), '/icons/smart-icon-192.png');
+    await page.getByRole('button', { name: 'Tutup ajakan instal aplikasi' }).click();
+    assert.equal(await page.locator('.install-toast').count(), 0);
+    // Stays hidden across reload even if beforeinstallprompt fires again during quiet period
+    await page.reload();
+    await page.evaluate(() => {
+      const ev = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+        prompt: async () => {},
+        userChoice: Promise.resolve({ outcome: 'accepted' }),
+      });
+      window.dispatchEvent(ev);
+    });
+    await page.waitForTimeout(150);
+    assert.equal(await page.locator('.install-toast').count(), 0);
   });
   await step('service worker controls the page; caches hold public assets only', async () => {
     await page.goto(`${B}/beranda`);

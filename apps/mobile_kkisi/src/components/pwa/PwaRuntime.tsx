@@ -1,16 +1,22 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
+import { InstallToast } from './InstallPrompt';
 
 let updateRequested = false;
 
 /**
  * Registers the service worker, announces a waiting update (the member chooses when to reload, so a half-filled form is never
- * lost) and shows a connection banner when the device goes offline. Rendered once in the root layout.
+ * lost), provides the shared notification region for install/update toasts, and shows a connection banner when offline.
  */
 export function PwaRuntime() {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
   const [offline, setOffline] = useState(false);
+  const [liveMessage, setLiveMessage] = useState('');
+
+  const handleAnnounce = useCallback((msg: string) => {
+    setLiveMessage(msg);
+  }, []);
 
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine);
@@ -61,13 +67,18 @@ export function PwaRuntime() {
           <span>Kamu sedang offline. Data anggota memerlukan koneksi; angka di layar bisa tidak terbaru.</span>
         </div>
       ) : null}
-      {waiting ? (
-        <div className="toast" role="status">
-          <p>Versi baru aplikasi tersedia.</p>
-          <button type="button" onClick={() => { updateRequested = true; waiting.postMessage({ type: 'SKIP_WAITING' }); }}>Muat ulang</button>
-          <button type="button" className="toast-dismiss" aria-label="Nanti saja" onClick={() => setWaiting(null)}>×</button>
-        </div>
-      ) : null}
+      <div className="toast-region" role="region" aria-label="Notifikasi aplikasi">
+        {liveMessage ? <p className="sr-only">Pengumuman aplikasi</p> : null}
+        <div className="sr-only" aria-live="polite" aria-atomic="true">{liveMessage}</div>
+        {waiting ? (
+          <div className="toast" role="status">
+            <p>Versi baru aplikasi tersedia.</p>
+            <button type="button" onClick={() => { updateRequested = true; waiting.postMessage({ type: 'SKIP_WAITING' }); }}>Muat ulang</button>
+            <button type="button" className="toast-dismiss" aria-label="Nanti saja" onClick={() => setWaiting(null)}>×</button>
+          </div>
+        ) : null}
+        <InstallToast stacked={waiting !== null} onAnnounce={handleAnnounce} />
+      </div>
     </>
   );
 }

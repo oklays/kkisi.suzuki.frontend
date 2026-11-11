@@ -172,6 +172,9 @@
   z-index: 2;
   padding: 2px var(--gutter) calc(22px + var(--safe-bottom));
 }
+body:has(.install-toast) [data-screen="masuk"] .content {
+  padding-bottom: calc(86px + var(--safe-bottom));
+}
 [data-screen="masuk"] .auth-intro {
   text-align: center;
   margin: 0 auto 14px;

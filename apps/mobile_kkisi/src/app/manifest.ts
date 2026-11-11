@@ -16,15 +16,15 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#FFFFFF',
     categories: ['finance', 'shopping'],
     icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-      { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icons/smart-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icons/smart-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/smart-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icons/smart-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     shortcuts: [
-      { name: 'Simpanan', url: '/simpanan', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
-      { name: 'Pinjaman', url: '/pinjaman', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
-      { name: 'Belanja', url: '/belanja', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
+      { name: 'Simpanan', url: '/simpanan', icons: [{ src: '/icons/smart-icon-192.png', sizes: '192x192' }] },
+      { name: 'Pinjaman', url: '/pinjaman', icons: [{ src: '/icons/smart-icon-192.png', sizes: '192x192' }] },
+      { name: 'Belanja', url: '/belanja', icons: [{ src: '/icons/smart-icon-192.png', sizes: '192x192' }] },
     ],
   };
 }

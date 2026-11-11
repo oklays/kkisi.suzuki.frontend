@@ -1,7 +1,7 @@
 import { classifyRequest } from './cache-policy.js';
 
 /** Files precached at install: the offline fallback and the brand assets it shows. No personalised content. */
-export const PRECACHE = ['/offline.html', '/icons/icon-192.png', '/images/logo-landscape.png'];
+export const PRECACHE = ['/offline.html', '/icons/smart-icon-192.png', '/images/logo-landscape.png'];
 export const STATIC_LIMIT = 150;
 
 /**
