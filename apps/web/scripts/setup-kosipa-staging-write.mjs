@@ -26,6 +26,7 @@ if (!/^[1-9]\d{0,9}(,[1-9]\d{0,9})+$/.test(grantAdmins)) throw new Error('--gran
 
 const BUSINESS_DB = 'kkisi_staging', LEDGER_DB = 'kkisi_staging_ledger', CONSOLE_DB = 'kkisi_console_staging', HOST = '%', CONSOLE_HOST = '172.17.0.1';
 const MASTER_USER = 'kosipa_master_w', MEMBER_USER = 'kosipa_member_w', SAVINGS_USER = 'kosipa_savings_w', LOAN_USER = 'kosipa_loan_w';
+const masterShared = !args.includes('--master-fence');
 const loanShared = !args.includes('--loan-fence');
 // P1 member requests: the request writer is not provisioned here, so the legacy deduction-request screens stay open unless asked otherwise.
 const deductionShared = !args.includes('--deduction-fence');
@@ -46,7 +47,7 @@ if (process.env.APP_ENV && process.env.APP_ENV !== 'local') throw new Error('APP
 
 const stateDir = `${repo}.local/kosipa-staging-write`;
 // Features in coexistence keep their legacy screens open: their controllers are never fenced by this script.
-const fenceUrls = [...new Set(Object.entries(KOSIPA_WRITE_FEATURES).filter(([name]) => !(loanShared && name === 'loan.decision') && !(deductionShared && name === 'request.deduction')).flatMap(([, f]) => f.legacyControllers))];
+const fenceUrls = [...new Set(Object.entries(KOSIPA_WRITE_FEATURES).filter(([name]) => !(masterShared && name.startsWith('master.')) && !(loanShared && name === 'loan.decision') && !(deductionShared && name === 'request.deduction')).flatMap(([, f]) => f.legacyControllers))];
 const urlList = fenceUrls.map((u) => `UPPER('${u}')`).join(', ');
 const fencePrestateFile = () => `${stateDir}/fence-prestate.json`;
 
@@ -103,6 +104,7 @@ const envValues = {
   DATABASE_URL_KOSIPA_SAVINGS_WRITE: dsn(SAVINGS_USER, savingsPw),
   DATABASE_URL_KOSIPA_LOAN_WRITE: dsn(LOAN_USER, loanPw),
   KOSIPA_MASTER_WRITES_ENABLED: 'true',
+  KOSIPA_MASTER_LEGACY_SHARED: masterShared ? 'true' : 'false',
   KOSIPA_MEMBER_WRITES_ENABLED: 'true',
   KOSIPA_SAVINGS_WRITES_ENABLED: 'true',
   KOSIPA_LOAN_WRITES_ENABLED: 'true',

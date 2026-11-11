@@ -7,7 +7,7 @@ import { planMasterCreate, planMasterStatus, planMasterUpdate } from '@koperasi/
 import { toMasterResult } from '@koperasi/application/kosipa/commands/master';
 import { handleLogin } from '../src/infrastructure/auth/handlers/login.ts';
 import { handleCreateMaster, handleListMaster, handleMasterStatus, handleUpdateMaster } from '../src/infrastructure/console/kosipa-command-http.ts';
-import { kosipaWriteOwnership } from '../src/infrastructure/console/kosipa-ownership.ts';
+import { kosipaMasterShared, kosipaSharedFeatures, kosipaWriteOwnership } from '../src/infrastructure/console/kosipa-ownership.ts';
 import { validateKosipaLedgerDatabase, validateKosipaMasterWriteConfig } from '../src/infrastructure/db/prisma-kosipa-master-write.ts';
 import { makeWorld, makeRequest, bodyOf, cookieOf } from './helpers/auth-fakes.mjs';
 
@@ -248,4 +248,31 @@ test('role command HTTP denies a cashier before looking up existing grants or li
   assert.equal(response.status, 403);
   assert.equal(lookups, 0);
   assert.deepEqual(f.writes, []);
+});
+
+test('master coexistence flag and production writer guard require explicit opt-in and dedicated production accounts', () => {
+  assert.equal(kosipaMasterShared({}), false);
+  assert.equal(kosipaMasterShared({ KOSIPA_MASTER_LEGACY_SHARED: 'true' }), true);
+  assert.equal(kosipaSharedFeatures({ KOSIPA_MASTER_LEGACY_SHARED: 'true' }).has('master.lokasi'), true);
+  assert.equal(kosipaSharedFeatures({ KOSIPA_MASTER_LEGACY_SHARED: 'true' }).has('master.pinjaman_mobile'), true);
+
+  const dsn = 'mysql://n1608204_nxkmas:pw@127.0.0.1:3307/n1608204_smart_kopkar?connection_limit=1&max_idle_connection_lifetime=10';
+  const prod = {
+    APP_ENV: 'production',
+    ALLOW_PRODUCTION_DB_WRITE: 'true',
+    KOSIPA_MASTER_WRITES_ENABLED: 'true',
+    LEGACY_DB_TRANSPORT: 'ssh-tunnel',
+    LEGACY_DB_HOST: '127.0.0.1',
+    LEGACY_DB_PORT: '3307',
+    LEGACY_DB_NAME: 'n1608204_smart_kopkar',
+    LEGACY_DB_SERVER_HOSTNAME: 'srv149.niagahoster.com',
+    LEGACY_DB_SERVER_PORT: '3306',
+    DATABASE_URL: 'mysql://n1608204_nxread:pw@127.0.0.1:3307/n1608204_smart_kopkar?connection_limit=3&max_idle_connection_lifetime=10',
+    DATABASE_URL_KOSIPA_MASTER_WRITE: dsn,
+    KOSIPA_LEDGER_DATABASE: 'n1608204_kosipa_ledger',
+  };
+  assert.equal(validateKosipaMasterWriteConfig(prod), dsn);
+  assert.equal(validateKosipaLedgerDatabase(prod), 'n1608204_kosipa_ledger');
+  assert.throws(() => validateKosipaMasterWriteConfig({ ...prod, ALLOW_PRODUCTION_DB_WRITE: 'false' }), { code: 'WRITE_NOT_CONFIGURED' });
+  assert.throws(() => validateKosipaLedgerDatabase({ ...prod, KOSIPA_LEDGER_DATABASE: 'n1608204_smart_kopkar' }), { code: 'WRITE_NOT_CONFIGURED' });
 });

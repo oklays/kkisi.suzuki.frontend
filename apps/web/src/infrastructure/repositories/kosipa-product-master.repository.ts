@@ -59,7 +59,7 @@ function storedEquals(def: ProductMasterDefinition, key: string, stored: string 
   return (stored ?? '') === expected;
 }
 
-export type ProductRepositoryOptions = { ledgerDatabase?: string; hooks?: UnitOfWorkHooks };
+export type ProductRepositoryOptions = { ledgerDatabase?: string; sharedWithLegacy?: boolean; hooks?: UnitOfWorkHooks };
 
 export class PrismaKosipaProductMasterRepository implements ProductMasterRepository {
   private readonly read: PrismaClient;
@@ -87,7 +87,7 @@ export class PrismaKosipaProductMasterRepository implements ProductMasterReposit
   }
 
   async fenceState(def: ProductMasterDefinition): Promise<LegacyFenceState> {
-    if (def.legacyWriter === false) return 'fenced';   // no legacy writer: nothing to fence, the reading screen stays open
+    if (def.legacyWriter === false || this.options.sharedWithLegacy) return 'fenced';   // no legacy writer or coexistence: the reading/legacy screen stays open
     const rows = await this.read.$queryRaw<{ status: number | bigint | null }[]>`SET STATEMENT max_statement_time=5 FOR
       SELECT status FROM ref_menu WHERE UPPER(url) = UPPER(${def.legacyController})`;
     return rows.some((r) => Number(r.status) === 1) ? 'legacy-active' : 'fenced';
@@ -95,7 +95,7 @@ export class PrismaKosipaProductMasterRepository implements ProductMasterReposit
 
   private run<L>(def: ProductMasterDefinition, envelope: CommandEnvelope, steps: Parameters<typeof runCommandTransaction<L, ProductResult>>[2]): Promise<CommandOutcome<ProductResult>> {
     if (!this.write || !this.options.ledgerDatabase) return Promise.reject(new KosipaError('WRITE_NOT_CONFIGURED'));
-    return runCommandTransaction(this.write, envelope, steps, { ledgerDatabase: this.options.ledgerDatabase, legacyControllers: [def.legacyController], legacyFence: def.legacyWriter === false ? 'shared' : 'enforced', hooks: this.options.hooks });
+    return runCommandTransaction(this.write, envelope, steps, { ledgerDatabase: this.options.ledgerDatabase, legacyControllers: [def.legacyController], legacyFence: def.legacyWriter === false || this.options.sharedWithLegacy ? 'shared' : 'enforced', hooks: this.options.hooks });
   }
 
   private async lockAll(tx: Prisma.TransactionClient, def: ProductMasterDefinition): Promise<Row[]> {

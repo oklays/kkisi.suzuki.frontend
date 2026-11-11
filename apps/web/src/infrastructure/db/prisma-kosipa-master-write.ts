@@ -1,22 +1,21 @@
 import { PrismaClient } from '@prisma/client';
 import { KosipaError } from '@koperasi/domain/kosipa';
-import { isProduction } from './deployment-guard.ts';
+import { assertProductionDsn, isProduction, productionWritesAllowed } from './deployment-guard.ts';
 
 /**
  * KOSIPA reference-master writer (FA-01 proof slice, TASK-114 / SEC-107): its own account (local kosipa_master_w, grants in
- * db/kosipa/002_master_writer_grants.sql.tpl), never shared with the reader, the auth/console stores or a TOKO writer.
+ * db/kosipa/002_master_writer_grants.sql.tpl; production cPanel writer in db/kosipa/003_cpanel_model_writer.sql.tpl), never shared with
+ * the reader, the auth/console stores or a TOKO writer.
  *
- * FA-01 boundary: the ONLY database this client may reach is the isolated synthetic KOSIPA database on the FA-01 container
- * (loopback, port 3322, kkisi_kfa_synthetic). DEV LOCAL and production are refused here, whatever the flags say. Production enablement is
- * a later cutover step (11, gates 1-8) and needs this guard extended deliberately.
- *
- * Owner-approved exception (6 Nov 2026, DDL on the local replica approved): the local COPY of production, container kkisi-staging
- * (loopback, port 3307, kkisi_staging) with its own ledger kkisi_staging_ledger. It is reachable ONLY when KOSIPA_LOCAL_STAGING_WRITES is
- * exactly "true" (explicit opt-in per environment file), the host is loopback and APP_ENV is not production. It is never a production target.
+ * Local: the isolated synthetic KOSIPA database on the FA-01 container (loopback, port 3322, kkisi_kfa_synthetic), or the local COPY of
+ * production (127.0.0.1:3307/kkisi_staging) when KOSIPA_LOCAL_STAGING_WRITES is exactly "true".
+ * Production (APP_ENV=production): requires ALLOW_PRODUCTION_DB_WRITE=true, the module's *_WRITES_ENABLED=true flag, a dedicated DSN
+ * passing assertProductionDsn('legacy', ...) with connection_limit <= 2, and a dedicated non-staging ledger database.
  */
 const LOCAL_TARGETS = new Set(['3322/kkisi_kfa_synthetic']);
 const LOCAL_STAGING_TARGETS = new Set(['3307/kkisi_staging']);
 const LOCAL_STAGING_LEDGERS = new Set(['kkisi_staging_ledger']);
+const PRODUCTION_STAGING_LEDGER = /staging|test|e2e|replace_me|example|fixture|synthetic/i;
 const localStagingOptIn = (env: Record<string, string | undefined>): boolean => env.KOSIPA_LOCAL_STAGING_WRITES === 'true';
 const OTHER_ACCOUNTS = ['DATABASE_URL', 'DATABASE_URL_AUTH', 'DATABASE_URL_CONSOLE', 'DATABASE_URL_WRITE', 'DATABASE_URL_REGISTER_WRITE', 'DATABASE_URL_INVENTORY_WRITE', 'DATABASE_URL_PRODUCT_WRITE', 'DATABASE_URL_RETURN_WRITE'];
 
@@ -24,7 +23,17 @@ const OTHER_ACCOUNTS = ['DATABASE_URL', 'DATABASE_URL_AUTH', 'DATABASE_URL_CONSO
 export function validateKosipaWriterConfig(env: Record<string, string | undefined>, flag: string, dsnVariable: string): string {
   const fail = (): never => { throw new KosipaError('WRITE_NOT_CONFIGURED'); };
   try {
-    if (env[flag] !== 'true' || isProduction(env)) return fail();
+    if (env[flag] !== 'true') return fail();
+    if (isProduction(env)) {
+      if (!productionWritesAllowed(env)) return fail();
+      const write = assertProductionDsn('legacy', env[dsnVariable], env);
+      if (write.connectionLimit > 2) return fail();
+      for (const key of [...OTHER_ACCOUNTS, ...KOSIPA_WRITER_DSNS].filter((k) => k !== dsnVariable)) {
+        const other = env[key];
+        if (other && decodeURIComponent(new URL(other).username) === write.user) return fail();
+      }
+      return write.url;
+    }
     const url = new URL(env[dsnVariable] ?? '');
     const user = decodeURIComponent(url.username);
     if (url.protocol !== 'mysql:' || !['127.0.0.1', 'localhost'].includes(url.hostname) || !(LOCAL_TARGETS.has(`${url.port}${url.pathname}`) || (localStagingOptIn(env) && LOCAL_STAGING_TARGETS.has(`${url.port}${url.pathname}`)))) return fail();
@@ -49,12 +58,19 @@ export function validateKosipaMasterWriteConfig(env: Record<string, string | und
 
 /**
  * The command ledger's database (FD-01b option b): a separate database on the SAME server as the business database, where the writer holds
- * SELECT, INSERT only. Required for every KOSIPA writer; FA-01.5 allows only the synthetic ledger database next to the synthetic business one.
+ * SELECT, INSERT only. Required for every KOSIPA writer.
  */
 const LOCAL_LEDGERS = new Set(['kkisi_kfa_ledger']);
 export function validateKosipaLedgerDatabase(env: Record<string, string | undefined> = process.env, url: string = validateKosipaMasterWriteConfig(env)): string {
   const ledger = env.KOSIPA_LEDGER_DATABASE ?? '';
-  if (!/^[A-Za-z0-9_]{1,64}$/.test(ledger) || !(new URL(url).port === '3322' ? LOCAL_LEDGERS.has(ledger) : localStagingOptIn(env) && LOCAL_STAGING_LEDGERS.has(ledger)) || `/${ledger}` === new URL(url).pathname) throw new KosipaError('WRITE_NOT_CONFIGURED');
+  const targetUrl = new URL(url);
+  if (!/^[A-Za-z0-9_]{1,64}$/.test(ledger) || `/${ledger}` === targetUrl.pathname) throw new KosipaError('WRITE_NOT_CONFIGURED');
+  if (isProduction(env)) {
+    const forbidden = new Set([env.LEGACY_DB_NAME, env.AUTH_DB_NAME, env.CONSOLE_DB_NAME, 'smart_kopkar'].filter(Boolean));
+    if (!productionWritesAllowed(env) || PRODUCTION_STAGING_LEDGER.test(ledger) || forbidden.has(ledger)) throw new KosipaError('WRITE_NOT_CONFIGURED');
+    return ledger;
+  }
+  if (!(targetUrl.port === '3322' ? LOCAL_LEDGERS.has(ledger) : localStagingOptIn(env) && LOCAL_STAGING_LEDGERS.has(ledger))) throw new KosipaError('WRITE_NOT_CONFIGURED');
   return ledger;
 }
 

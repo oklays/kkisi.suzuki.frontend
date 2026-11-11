@@ -24,7 +24,7 @@ import { exportPolicyFromEnv, exportThrottle } from './export-config.ts';
 import { PrismaAuditLog, PrismaIdentityLinkStore } from './console-store.ts';
 import { PrismaKosipaDirectory } from './kosipa-directory.ts';
 import { PrismaKosipaGrantStore } from './kosipa-grant-store.ts';
-import { LOAN_DECISION_LEGACY_CONTROLLERS, kosipaDeductionRequestShared, kosipaGrantAdmins, kosipaLoanDecisionShared, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
+import { LOAN_DECISION_LEGACY_CONTROLLERS, kosipaDeductionRequestShared, kosipaGrantAdmins, kosipaLoanDecisionShared, kosipaMasterShared, kosipaWriteGrantsEnabled, kosipaWriteOwnership } from './kosipa-ownership.ts';
 import { PrismaKosipaMemberRequestRepository } from '../repositories/kosipa-member-request.repository.ts';
 import { kosipaRequestWritePrisma, kosipaRequestWritesAvailable, validateKosipaRequestLedgerDatabase } from '../db/prisma-kosipa-request-write.ts';
 import type { MemberRequestRepository } from '@koperasi/application/kosipa/commands/member-request';
@@ -76,12 +76,13 @@ export function kosipaCommandServices(env: Record<string, string | undefined> = 
   const services = kosipaServices(env);
   if (!services) return null;
   const writable = kosipaMasterWritesAvailable(env);
-  const masters = new PrismaKosipaMasterRepository(prisma, writable ? kosipaMasterWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaLedgerDatabase(env) : undefined });
+  const masterShared = kosipaMasterShared(env);
+  const masters = new PrismaKosipaMasterRepository(prisma, writable ? kosipaMasterWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaLedgerDatabase(env) : undefined, sharedWithLegacy: masterShared });
   const memberWritable = kosipaMemberWritesAvailable(env);
   const versionSecret = (env.KOSIPA_MEMBER_VERSION_SECRET ?? '').length >= 32 ? env.KOSIPA_MEMBER_VERSION_SECRET : undefined;
   const members = new PrismaKosipaMemberRepository(prisma, memberWritable ? kosipaMemberWritePrisma() : undefined, { ledgerDatabase: memberWritable ? validateKosipaMemberLedgerDatabase(env) : undefined, versionSecret });
   // Product masters (FA-03B T06) share the master writer, its flag and its ledger.
-  const products = new PrismaKosipaProductMasterRepository(prisma, writable ? kosipaMasterWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaLedgerDatabase(env) : undefined });
+  const products = new PrismaKosipaProductMasterRepository(prisma, writable ? kosipaMasterWritePrisma() : undefined, { ledgerDatabase: writable ? validateKosipaLedgerDatabase(env) : undefined, sharedWithLegacy: masterShared });
   // Savings deposits (FA-03C T07): their own writer account, flag and ledger check.
   const savingsWritable = kosipaSavingsWritesAvailable(env);
   const deposits = new PrismaKosipaSavingsDepositRepository(prisma, savingsWritable ? kosipaSavingsWritePrisma() : undefined, { ledgerDatabase: savingsWritable ? validateKosipaSavingsLedgerDatabase(env) : undefined });
