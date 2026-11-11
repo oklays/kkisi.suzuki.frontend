@@ -1,9 +1,13 @@
+import { AuthError } from '@koperasi/domain/auth/errors';
 import { SalesHistoryError, parseSalesHistoryQuery } from '@koperasi/domain/sales/history';
+import { parseSalesExportQuery } from '@koperasi/domain/sales/export';
 import { readSaleDetail, readSalePayments, readSalesHistory, type SalesHistoryRepository } from '@koperasi/application/sales/history';
+import { exportSalesHistory, type SalesExportRepository } from '@koperasi/application/sales/export';
 import { errorResponse, guard, json, type AuthServices } from '../auth/http.ts';
 import { PrismaSalesHistoryRepository } from '../repositories/prisma-sales-history.repository.ts';
 
 function failure(services: AuthServices, error: unknown): Response {
+  if (error instanceof AuthError) return errorResponse(services, error);
   if (error instanceof SalesHistoryError) {
     if (error.code === 'INVALID_INPUT') return json(400, { error: error.code });
     if (error.code === 'NOT_FOUND') return json(404, { error: error.code });
@@ -65,5 +69,36 @@ export async function handleSalePayments(services: AuthServices, request: Reques
     const params = new URL(request.url).searchParams;
     const { page, pageSize } = smallPagination(params, 'page', 'pageSize', 25);
     return json(200, await readSalePayments(repository(repo), auth.ctx.companyId, id, page, pageSize));
+  } catch (error) { return failure(services, error); }
+}
+
+function exportRepository(factory?: () => SalesExportRepository): SalesExportRepository {
+  return factory ? factory() : new PrismaSalesHistoryRepository();
+}
+
+export async function handleSalesExport(services: AuthServices, request: Request, repo?: () => SalesExportRepository): Promise<Response> {
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return json(403, { error: 'CROSS_SITE' });
+  const auth = await guard(services, request, { permission: 'sales_view' });
+  if (!auth.ok) return auth.response;
+  try {
+    const now = services.deps.clock.now();
+    const query = parseSalesExportQuery(new URL(request.url).searchParams, now);
+    const file = await exportSalesHistory(
+      exportRepository(repo),
+      { companyId: auth.ctx.companyId, canSwitchBranch: auth.ctx.canSwitchBranch },
+      query,
+      now,
+    );
+    const safeFilename = file.filename.replace(/[^A-Za-z0-9._-]/g, '_');
+    return new Response(Buffer.from(file.body), {
+      status: 200,
+      headers: {
+        'Content-Type': file.contentType,
+        'Content-Disposition': `attachment; filename="${safeFilename}"`,
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Length': String(file.body.byteLength),
+      },
+    });
   } catch (error) { return failure(services, error); }
 }

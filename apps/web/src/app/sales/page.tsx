@@ -27,11 +27,17 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
     return <SalesScreen query={defaults} rows={[]} total={0} rawFilters={Object.fromEntries(Object.entries(search).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value ?? '']))} invalidFilter={error.message} today={defaults.to} />;
   }
   let result: Awaited<ReturnType<typeof readSalesHistory>>;
+  let branchName = 'Cabang Aktif';
   try {
-    result = await readSalesHistory(new PrismaSalesHistoryRepository(), ctx.companyId, query);
+    const [historyResult, company] = await Promise.all([
+      readSalesHistory(new PrismaSalesHistoryRepository(), ctx.companyId, query),
+      services.deps.companies.findActive(ctx.companyId).catch(() => null),
+    ]);
+    result = historyResult;
+    if (company?.name) branchName = company.name;
   } catch {
     services.deps.log('sales_history_page_unavailable');
     return <SalesScreen query={query} rows={[]} total={0} today={defaults.to} unavailable />;
   }
-  return <SalesScreen query={query} rows={result.items} total={result.pagination.total} today={defaults.to} />;
+  return <SalesScreen query={query} rows={result.items} total={result.pagination.total} today={defaults.to} canSwitchBranch={ctx.canSwitchBranch} branchName={branchName} />;
 }

@@ -152,3 +152,16 @@ test('return form caps each line at its remaining quantity and needs review befo
   assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""/);
   assert.doesNotMatch(html, /Konfirmasi &amp; proses retur/);
 });
+
+test('SalesScreen renders Export PDF and Export (.xlsx) buttons and shows scope selector only when canSwitchBranch is true', () => {
+  const kasirHtml = render(SalesScreen, { query, rows: [], total: 12, canSwitchBranch: false, branchName: 'TOKO S-MART TB II' });
+  assert.match(kasirHtml, /Export PDF/);
+  assert.match(kasirHtml, /Export \(\.xlsx\)/);
+  assert.doesNotMatch(kasirHtml, /Semua Toko \(Konsolidasi\)/);
+
+  const adminHtml = render(SalesScreen, { query, rows: [], total: 12, canSwitchBranch: true, branchName: 'TOKO S-MART TB II' });
+  assert.match(adminHtml, /Export PDF/);
+  assert.match(adminHtml, /Export \(\.xlsx\)/);
+  assert.match(adminHtml, /Semua Toko \(Konsolidasi\)/);
+  assert.match(adminHtml, /Toko Aktif · TOKO S-MART TB II/);
+});

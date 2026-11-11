@@ -4,15 +4,16 @@ import type { SalesHistoryQuery } from '@koperasi/domain/sales/history';
 import type { SalesHistoryItem } from '@koperasi/application/sales/history';
 import { SalesFilters } from './SalesFilters';
 import { SalesFeedback } from './SalesFeedback';
+import { SalesExportActions } from './SalesExportActions';
 import { PaymentMethodChip, StatusChip, formatSalesDate, formatSalesMoney, salesListHref } from './SalesChips';
 
-export function SalesScreen({ query, rows, total, today = query.to, rawFilters, invalidFilter, unavailable }: { query: SalesHistoryQuery; rows: SalesHistoryItem[]; total: number; today?: string; rawFilters?: Record<string, string>; invalidFilter?: string; unavailable?: boolean }) {
+export function SalesScreen({ query, rows, total, today = query.to, rawFilters, invalidFilter, unavailable, canSwitchBranch = false, branchName = 'Cabang Aktif' }: { query: SalesHistoryQuery; rows: SalesHistoryItem[]; total: number; today?: string; rawFilters?: Record<string, string>; invalidFilter?: string; unavailable?: boolean; canSwitchBranch?: boolean; branchName?: string }) {
   const pageCount = Math.max(1, Math.ceil(total / query.pageSize));
   const outOfRange = query.page > pageCount;
   const start = (query.page - 1) * query.pageSize + 1;
   const detailHref = (saleId: number) => `/sales/invoice/${saleId}?returnTo=${encodeURIComponent(salesListHref(query))}`;
   return <main className="sales-workspace" id="pos-workspace" tabIndex={-1}>
-    <div className="sales-title"><div><p className="sales-eyebrow"><ReceiptText size={15} aria-hidden="true" />PENJUALAN</p><h2>Riwayat Transaksi</h2><p>Telusuri penjualan, periksa pembayaran, dan cetak ulang bukti transaksi.</p></div>{!invalidFilter && !unavailable && <span className="sales-count"><strong>{total.toLocaleString('id-ID')}</strong> transaksi ditemukan</span>}</div>
+    <div className="sales-title"><div><p className="sales-eyebrow"><ReceiptText size={15} aria-hidden="true" />PENJUALAN</p><h2>Riwayat Transaksi</h2><p>Telusuri penjualan, periksa pembayaran, dan cetak ulang bukti transaksi.</p></div>{!invalidFilter && !unavailable && <div className="sales-title-actions"><SalesExportActions query={query} canSwitchBranch={canSwitchBranch} branchName={branchName} /><span className="sales-count"><strong>{total.toLocaleString('id-ID')}</strong> transaksi ditemukan</span></div>}</div>
     <SalesFilters key={JSON.stringify(rawFilters ?? query)} query={query} today={today} rawFilters={rawFilters} invalidFilter={invalidFilter} />
     {unavailable ? <SalesFeedback title="Transaksi belum dapat ditampilkan" text="Layanan sementara tidak tersedia. Filter Anda tetap tersimpan; coba muat kembali." retry /> : invalidFilter ? <section className="sales-empty-state"><FileSearch size={32} aria-hidden="true" /><h3>Perbaiki filter untuk melanjutkan</h3><p>Sesuaikan isian di atas atau reset untuk kembali ke periode bulan ini.</p><Link href="/sales" className="sales-secondary">Reset filter</Link></section> : <>
     <div className="sales-results-heading"><h3>Daftar transaksi</h3><span>{formatSalesDate(query.from)} – {formatSalesDate(query.to)}<small> · {query.sort === 'newest' ? 'Terbaru lebih dulu' : 'Terlama lebih dulu'}</small></span></div>
