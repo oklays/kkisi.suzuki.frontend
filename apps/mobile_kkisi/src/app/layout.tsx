@@ -14,7 +14,13 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: 'S-MART TB2', statusBarStyle: 'default' },
   formatDetection: { telephone: false },
   robots: { index: false, follow: false },
-  icons: { icon: [{ url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' }], apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }] },
+  icons: {
+    icon: [
+      { url: '/icons/smart-favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/smart-icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/smart-apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -25,10 +31,13 @@ export const viewport: Viewport = {
   colorScheme: 'light',
 };
 
+const EARLY_INSTALL_CAPTURE = "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__kkisiDeferredInstallPrompt=e;window.dispatchEvent(new Event('kkisi:installprompt'));});";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" className={`${archivo.variable} ${plex.variable}`}>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: EARLY_INSTALL_CAPTURE }} />
         <a className="skip-link" href="#main">Langsung ke konten</a>
         <PwaRuntime />
         {children}

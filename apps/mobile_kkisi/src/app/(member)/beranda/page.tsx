@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Screen } from '@/components/layout/Screen';
-import { InstallCard } from '@/components/pwa/InstallPrompt';
 import { HomeHeader } from '@/features/home/components/HomeHeader';
 import { PromoCarousel } from '@/features/home/components/PromoCarousel';
 import { BalanceCard, BalanceCardSkeleton, CoopGrid, CoopGridSkeleton, Reminders, RemindersSkeleton, ServicesGrid, StoreCard, StoreCardSkeleton } from '@/features/home/components/HomeSections';
@@ -25,7 +24,6 @@ export default function BerandaPage() {
           <Suspense fallback={<RemindersSkeleton />}><Reminders /></Suspense>
         </section>
         <Suspense fallback={<StoreCardSkeleton />}><StoreCard /></Suspense>
-        <InstallCard />
         <p className="footnote">Simpanan tercatat dihitung dari mutasi yang disetujui koperasi. Saldo resmi tetap mengacu pada catatan koperasi.</p>
       </main>
     </Screen>

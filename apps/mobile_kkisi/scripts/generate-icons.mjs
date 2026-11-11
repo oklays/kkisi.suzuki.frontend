@@ -1,5 +1,5 @@
 // Generates the PWA icon set and the header logo from the approved brand assets. Run: pnpm --filter @koperasi/mobile-kkisi icons
-// Sources: apps/web/public/illustrations/kopkar-emblem.png (1024x1024 approved emblem) and the landscape logo embedded in the
+// Sources: apps/mobile_kkisi/assets/smart-pwa-icon.jpg (1024x1024 approved S-MART KKISI TB2 app icon) and the landscape logo embedded in the
 // approved mockup (docs/mobile_design_pwa/S-MART_KKISI_TB2_Mockup_PWA Anggota.html, <script id="kkisi-landscape-logo-data">).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import sharp from 'sharp';
@@ -9,22 +9,46 @@ const out = new URL('../public/', import.meta.url);
 mkdirSync(new URL('icons/', out), { recursive: true });
 mkdirSync(new URL('images/', out), { recursive: true });
 
-const emblem = readFileSync(new URL('apps/web/public/illustrations/kopkar-emblem.png', root));
+const rawEmblem = readFileSync(new URL('../assets/smart-pwa-icon.jpg', import.meta.url));
+const { data: srcPixels, info: srcInfo } = await sharp(rawEmblem).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+// Normalize near-white JPEG compression artifacts on the background field to pure #FFFFFF so maskable composites have no edge seam.
+for (let i = 0; i < srcPixels.length; i += 4) {
+  if (srcPixels[i] >= 250 && srcPixels[i + 1] >= 250 && srcPixels[i + 2] >= 250) {
+    srcPixels[i] = 255;
+    srcPixels[i + 1] = 255;
+    srcPixels[i + 2] = 255;
+  }
+  srcPixels[i + 3] = 255;
+}
+const emblem = await sharp(srcPixels, { raw: { width: srcInfo.width, height: srcInfo.height, channels: 4 } }).png().toBuffer();
 const white = { r: 255, g: 255, b: 255, alpha: 1 };
 
-// "any" icons: emblem on white (the emblem has a white field already).
+// "any" icons: approved S-MART KKISI TB2 square icon on clean white field (both versioned smart-* and canonical filenames).
 for (const size of [192, 512]) {
-  await sharp(emblem).resize(size, size).flatten({ background: white }).png({ compressionLevel: 9 }).toFile(new URL(`icons/icon-${size}.png`, out).pathname);
+  const buf = await sharp(emblem).resize(size, size).flatten({ background: white }).png({ compressionLevel: 9 }).toBuffer();
+  writeFileSync(new URL(`icons/smart-icon-${size}.png`, out), buf);
+  writeFileSync(new URL(`icons/icon-${size}.png`, out), buf);
 }
-// Maskable: the emblem inside the 80 % safe zone so launchers can crop to a circle or squircle.
+// Maskable: fit the emblem inside the 80 % circular safe zone so Android/OS launchers can crop to a circle or squircle cleanly.
 for (const size of [192, 512]) {
-  const inner = Math.round(size * 0.72);
+  const inner = Math.round(size * 0.74);
   const pad = Math.round((size - inner) / 2);
   const art = await sharp(emblem).resize(inner, inner).png().toBuffer();
-  await sharp({ create: { width: size, height: size, channels: 4, background: white } }).composite([{ input: art, left: pad, top: pad }]).png({ compressionLevel: 9 }).toFile(new URL(`icons/maskable-${size}.png`, out).pathname);
+  const buf = await sharp({ create: { width: size, height: size, channels: 4, background: white } })
+    .composite([{ input: art, left: pad, top: pad }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+  writeFileSync(new URL(`icons/smart-maskable-${size}.png`, out), buf);
+  writeFileSync(new URL(`icons/maskable-${size}.png`, out), buf);
 }
-await sharp(emblem).resize(180, 180).flatten({ background: white }).png().toFile(new URL('icons/apple-touch-icon.png', out).pathname);
-await sharp(emblem).resize(32, 32).png().toFile(new URL('icons/favicon-32.png', out).pathname);
+
+const appleBuf = await sharp(emblem).resize(180, 180).flatten({ background: white }).png({ compressionLevel: 9 }).toBuffer();
+writeFileSync(new URL('icons/smart-apple-touch-icon.png', out), appleBuf);
+writeFileSync(new URL('icons/apple-touch-icon.png', out), appleBuf);
+
+const favBuf = await sharp(emblem).resize(32, 32).flatten({ background: white }).png({ compressionLevel: 9 }).toBuffer();
+writeFileSync(new URL('icons/smart-favicon-32.png', out), favBuf);
+writeFileSync(new URL('icons/favicon-32.png', out), favBuf);
 
 const mockup = readFileSync(new URL('docs/mobile_design_pwa/S-MART_KKISI_TB2_Mockup_PWA Anggota.html', root), 'utf8');
 const match = /<script id="kkisi-landscape-logo-data" type="image\/png">([A-Za-z0-9+/=\s]+)<\/script>/.exec(mockup);

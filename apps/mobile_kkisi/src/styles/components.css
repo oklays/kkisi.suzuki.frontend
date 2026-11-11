@@ -167,11 +167,126 @@ input[type=radio], input[type=checkbox] { accent-color: var(--blue); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px); z-index: 60; width: min(calc(100% - 32px), 448px);
   background: var(--navy); color: #fff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-size: 12px; line-height: 1.5; box-shadow: 0 6px 20px #0A1F4433; }
 .toast p { flex: 1; }
-.toast button { background: var(--yellow); color: var(--navy); font-weight: 600; font-size: 12px; border-radius: 9px; padding: 0 12px; min-height: 40px; flex: none; }
-.toast .toast-dismiss { background: transparent; color: #fff; min-width: 40px; font-size: 20px; padding: 0; }
+.toast button { background: var(--yellow); color: var(--navy); font-weight: 600; font-size: 12px; border-radius: 9px; padding: 0 12px; min-height: 44px; flex: none; }
+.toast .toast-dismiss { background: transparent; color: #fff; min-width: 44px; font-size: 20px; padding: 0; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.ios-install-steps { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8; color: var(--muted); }
+.ios-install-steps strong { color: var(--navy); }
+
+/* ------------------------------------------------------------------ PWA install toast badge */
+.install-toast {
+  position: fixed;
+  inset: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(14px, calc(var(--safe-bottom) + 10px));
+  z-index: 60;
+  width: min(calc(100% - 28px), 448px);
+  margin: 0;
+  padding: 8px 8px 8px 11px;
+  background: var(--surface);
+  border: 1px solid #C6DAF6;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px #0A1F4426, 0 2px 6px #0A1F4412;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: opacity 0.2s ease, transform 0.2s ease, display 0.2s ease;
+  transition-behavior: allow-discrete;
+}
+.install-toast.above-nav { bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px); }
+.install-toast.stacked { bottom: calc(max(14px, calc(var(--safe-bottom) + 10px)) + 68px); }
+.install-toast.above-nav.stacked { bottom: calc(var(--nav-height) + var(--safe-bottom) + 80px); }
+@supports selector(:popover-open) {
+  .install-toast[popover]:not(:popover-open) {
+    display: none;
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+@starting-style {
+  .install-toast {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .install-toast { transition: none; }
+}
+.install-toast-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #DCE7F7;
+  background: #fff;
+  box-shadow: 0 2px 5px #0A1F4410;
+  object-fit: cover;
+  flex: none;
+}
+.install-toast-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.install-toast-copy strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.install-toast-copy span {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.install-toast-cta {
+  min-height: 44px;
+  padding: 0 15px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #0E4DB5 0%, var(--blue) 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-shadow: 0 4px 10px #0B3D9128;
+}
+.install-toast-cta[aria-disabled="true"] {
+  background: var(--disabled-bg);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.install-toast-close {
+  width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  margin-left: -4px;
+}
+.install-toast-close svg { width: 18px; height: 18px; }
+.install-toast-close:hover { background: var(--surface-muted); color: var(--navy); }
 
 /* ------------------------------------------------------------------ small screens */
 @media (max-width: 350px) {
+  .install-toast { width: calc(100% - 20px); padding: 8px 6px 8px 9px; gap: 7px; }
+  .install-toast-badge { width: 36px; height: 36px; border-radius: 9px; }
+  .install-toast-copy strong { font-size: 12px; }
+  .install-toast-copy span { font-size: 10.5px; }
+  .install-toast-cta { padding: 0 11px; font-size: 12px; }
   .header-copy h1 { font-size: 18px; }
   .header-symbol { width: 40px; height: 40px; }
   .balance, .loan-card { padding-inline: 15px; }
