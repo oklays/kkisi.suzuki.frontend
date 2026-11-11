@@ -56,7 +56,7 @@ function toRecord(def: MasterDefinition, cfg: TableConfig, r: Row): MasterRecord
   return { id: Number(r.id), values, active: isActive(cfg, r.status) };
 }
 
-export type MasterRepositoryOptions = { ledgerDatabase?: string; hooks?: UnitOfWorkHooks };
+export type MasterRepositoryOptions = { ledgerDatabase?: string; sharedWithLegacy?: boolean; hooks?: UnitOfWorkHooks };
 
 export class PrismaKosipaMasterRepository implements MasterRepository {
   private readonly read: PrismaClient;
@@ -72,6 +72,7 @@ export class PrismaKosipaMasterRepository implements MasterRepository {
   }
 
   async fenceState(def: MasterDefinition): Promise<LegacyFenceState> {
+    if (this.options.sharedWithLegacy) return 'fenced';
     const rows = await this.read.$queryRaw<{ status: number | bigint | null }[]>`SET STATEMENT max_statement_time=5 FOR
       SELECT status FROM ref_menu WHERE UPPER(url) = UPPER(${def.legacyController})`;
     return rows.some((r) => Number(r.status) === 1) ? 'legacy-active' : 'fenced';
@@ -79,7 +80,7 @@ export class PrismaKosipaMasterRepository implements MasterRepository {
 
   private run<L, R>(def: MasterDefinition, envelope: CommandEnvelope, steps: Parameters<typeof runCommandTransaction<L, R>>[2]): Promise<CommandOutcome<R>> {
     if (!this.write || !this.options.ledgerDatabase) throw new KosipaError('WRITE_NOT_CONFIGURED');
-    return runCommandTransaction(this.write, envelope, steps, { ledgerDatabase: this.options.ledgerDatabase, legacyControllers: [def.legacyController], hooks: this.options.hooks });
+    return runCommandTransaction(this.write, envelope, steps, { ledgerDatabase: this.options.ledgerDatabase, legacyControllers: [def.legacyController], legacyFence: this.options.sharedWithLegacy ? 'shared' : 'enforced', hooks: this.options.hooks });
   }
 
   private async lockAll(tx: Prisma.TransactionClient, def: MasterDefinition): Promise<MasterRecord[]> {

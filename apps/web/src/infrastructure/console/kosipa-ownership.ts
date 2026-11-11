@@ -58,6 +58,14 @@ export function kosipaWriteOwnership(env: Record<string, string | undefined> = p
 }
 
 /**
+ * Master-data coexistence: when exactly "true", all 10 KOSIPA reference & product masters accept native commands while their legacy
+ * ref_menu screens remain enabled (status = 1), matching Master Pinjaman Mobile. Table-wide FOR UPDATE locks, version checks and
+ * post-condition verification remain enforced inside every command transaction. Off = strict fence.
+ */
+export function kosipaMasterShared(env: Record<string, string | undefined> = process.env): boolean {
+  return env.KOSIPA_MASTER_LEGACY_SHARED === 'true';
+}
+/**
  * FA-04 coexistence (owner decision 9 Nov 2026, UAT period): the loan decision runs while the legacy loan screens stay OPEN, so legacy keeps
  * application, editing and disbursement. Only when this is exactly "true": the `loan.decision` fence is neither required by the command nor
  * applied by the local setup script. Native commands still lock the rows, check the version and guard the status; a STALE legacy page can still
@@ -75,7 +83,8 @@ export function kosipaDeductionRequestShared(env: Record<string, string | undefi
 }
 /** Features whose legacy controllers must NOT be fenced in this environment (coexistence). */
 export function kosipaSharedFeatures(env: Record<string, string | undefined> = process.env): ReadonlySet<string> {
-  return new Set([...(kosipaLoanDecisionShared(env) ? ['loan.decision'] : []), ...(kosipaDeductionRequestShared(env) ? ['request.deduction'] : [])]);
+  const masters = kosipaMasterShared(env) ? Object.keys(KOSIPA_WRITE_FEATURES).filter((k) => k.startsWith('master.')) : [];
+  return new Set([...masters, ...(kosipaLoanDecisionShared(env) ? ['loan.decision'] : []), ...(kosipaDeductionRequestShared(env) ? ['request.deduction'] : [])]);
 }
 
 /** Grants table usage is opt-in so environments whose console store predates db/console/004 keep their read-only behaviour. */
